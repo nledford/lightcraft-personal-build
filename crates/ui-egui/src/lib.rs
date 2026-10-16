@@ -10,6 +10,7 @@ pub mod album_picker;
 pub mod brush_live;
 pub mod button;
 pub mod canvas_keys;
+pub mod check;
 mod command_error;
 pub mod control;
 pub mod credits;
@@ -74,6 +75,8 @@ mod tests_canvas_keys;
 mod tests_canvas_pan;
 #[cfg(test)]
 mod tests_capture_time;
+#[cfg(test)]
+mod tests_check;
 #[cfg(test)]
 mod tests_compare;
 #[cfg(test)]
