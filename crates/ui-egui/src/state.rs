@@ -1439,6 +1439,10 @@ pub enum Dialog {
         /// What the scan found (`None` while it runs).
         counts: Option<SyncCounts>,
         import_new: bool,
+        /// With `import_new`, the files whose content a photo already has come in too ("Don't
+        /// import files already in the library" unticked; the library's setting, saved on Synchronize).
+        #[serde(default)]
+        import_duplicates: bool,
         #[serde(default = "yes")]
         relink_moved: bool,
         remove_missing: bool,
@@ -1463,7 +1467,12 @@ pub struct SyncCounts {
     #[serde(default)]
     pub offline: bool,
     pub new: usize,
+    /// Files whose content a photo already has.
     pub duplicates: usize,
+    /// Of those, the ones "Don't import files already in the library" unticked brings in (not copies
+    /// of a photo in Recently Deleted: see `lightcraft_engine::sync::FolderChanges::importable_duplicates`).
+    #[serde(default)]
+    pub copies: usize,
     pub unreadable: usize,
     pub missing: usize,
     pub metadata: usize,
@@ -1473,9 +1482,11 @@ pub struct SyncCounts {
 
 impl SyncCounts {
     /// The folder is there and the scan found nothing to bring in, relink, remove or read: the
-    /// dialog only says so (files it skipped are not changes).
+    /// dialog only says so (files it skipped are not changes). Files the library has elsewhere
+    /// ([`SyncCounts::copies`]) can be brought in by unticking "Don't import files already in the
+    /// library", so the dialog keeps that choice for them.
     pub fn up_to_date(&self) -> bool {
-        !self.offline && self.new + self.moved + self.missing + self.metadata == 0
+        !self.offline && self.new + self.copies + self.moved + self.missing + self.metadata == 0
     }
 }
 
