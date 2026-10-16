@@ -445,7 +445,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                             ui.end_row();
                         }
                     });
-                    if ui.button(crate::i18n::tr("Copy to Clipboard")).clicked() {
+                    if crate::button::Button::new("Copy to Clipboard").show(ui).clicked() {
                         let text: String = rows.iter().map(|(k, v)| format!("{k}: {v}\n")).collect();
                         ui.ctx().copy_text(text);
                     }
@@ -1860,8 +1860,7 @@ fn sam_model_body(app: &mut LightcraftApp, ui: &mut egui::Ui, error: Option<&str
         ui.add_space(4.0);
         let text = format!("{:.2} / {:.2} GB · {}", gb(d.done), gb(d.total), d.file);
         crate::progress::Progress::new(crate::progress::fraction_of(d.done, d.total)).label(text).widget("progress:samDownload").show(ui);
-        let r = ui.button(crate::i18n::tr("Cancel Download"));
-        crate::widgets::register(ui, "button:samCancel", r.rect);
+        let r = crate::button::Button::new("Cancel Download").widget("button:samCancel").show(ui);
         if r.clicked() {
             app.session.segmenter.cancel_download();
         }
@@ -1880,8 +1879,7 @@ fn sam_model_body(app: &mut LightcraftApp, ui: &mut egui::Ui, error: Option<&str
         );
         ui.horizontal_wrapped(|ui| {
             if dir.is_some() && crate::menus::ui_enabled(app, "app.openSamModelFolder") {
-                let r = ui.button(crate::i18n::tr(crate::menus::reveal_label()));
-                crate::widgets::register(ui, "button:samFolder", r.rect);
+                let r = crate::button::Button::new(crate::menus::reveal_label()).widget("button:samFolder").show(ui);
                 if r.clicked()
                     && let Err(e) = app.run("app.openSamModelFolder", json!({}))
                 {
@@ -2176,13 +2174,11 @@ fn group_checklist(ui: &mut egui::Ui, tag: &str, groups: &mut Vec<String>) {
         }
     });
     ui.horizontal(|ui| {
-        let all = ui.small_button(crate::i18n::tr("All"));
-        crate::widgets::register(ui, format!("{tag}:all"), all.rect);
+        let all = crate::button::Button::new("All").small().widget(format!("{tag}:all")).show(ui);
         if all.clicked() {
             *groups = SettingsGroup::ALL.iter().map(key_of).collect();
         }
-        let none = ui.small_button(crate::i18n::tr("None"));
-        crate::widgets::register(ui, format!("{tag}:none"), none.rect);
+        let none = crate::button::Button::new("None").small().widget(format!("{tag}:none")).show(ui);
         if none.clicked() {
             groups.clear();
         }
