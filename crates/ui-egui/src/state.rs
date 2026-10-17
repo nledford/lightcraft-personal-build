@@ -211,7 +211,7 @@ impl InfoOverlay {
     }
 }
 
-/// One line of the loupe's info overlay, chosen in View ▸ View Options (Lightroom Classic's Loupe
+/// One line of the loupe's info overlay, chosen in View ▸ Loupe Overlay ▸ View Options… (Lightroom Classic's Loupe
 /// Info 1 / Loupe Info 2). A line with nothing to show for a photo is left out.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -491,7 +491,7 @@ pub struct AppSettings {
     pub film_badges: bool,
     /// Grid: when to show the rating / flag / edited badges.
     pub grid_badges: GridBadges,
-    /// View ▸ View Options ▸ Show message when loading or rendering photos: the loupe says
+    /// View ▸ Loupe Overlay ▸ View Options… ▸ Show message when loading or rendering photos: the loupe says
     /// "Rendering…" while the photo it shows is not the finished render.
     pub loupe_messages: bool,
     /// Shortcuts the user changed (Help ▸ Keyboard Shortcuts): command id → shortcut, `""` = none.
@@ -511,12 +511,12 @@ pub struct AppSettings {
     /// The Keywording box: whole keyword paths, or grouped by the keyword they are inside.
     #[serde(deserialize_with = "lenient")]
     pub keyword_chips: KeywordChips,
-    /// View ▸ Focus Point: draw the box the camera focused on (`view.focusPoint`).
+    /// View ▸ Loupe Overlay ▸ Focus Point: draw the box the camera focused on (`view.focusPoint`).
     pub focus_point: bool,
     /// View ▸ Zoom to Focus Point: Toggle Zoom (Z) centres the zoomed view on the camera's focus point
     /// when the photo has one (`view.zoomToFocus`).
     pub zoom_to_focus: bool,
-    /// View ▸ View Options: the lines the loupe's info overlay shows in Info 1 and Info 2.
+    /// View ▸ Loupe Overlay ▸ View Options…: the lines the loupe's info overlay shows in Info 1 and Info 2.
     #[serde(deserialize_with = "lenient")]
     pub loupe_info: LoupeInfo,
     /// File ▸ Import Lightroom Catalog…: ask whether the catalog merges into the open library or
@@ -1449,7 +1449,7 @@ pub enum Dialog {
     },
     About,
     Shortcuts,
-    /// View ▸ View Options (⌘J): the info overlay and the lines of Info 1 and Info 2. Changes apply
+    /// View ▸ Loupe Overlay ▸ View Options… (⌘J): the info overlay and the lines of Info 1 and Info 2. Changes apply
     /// as they are made.
     ViewOptions,
 }
