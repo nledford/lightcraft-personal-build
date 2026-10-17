@@ -2983,6 +2983,7 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
             }
             let img_area = Rect::from_min_max(cr.min + vec2(10.0, 22.0), cr.max - vec2(10.0, 8.0));
             super::grid::request_thumb(app, *id, (256.0 * ppp.min(2.0) / 2.0) as usize * 2, 8);
+            let mut badge = None;
             if let Some(photo) = app.session.catalog.photo(*id).cloned() {
                 let (photo_rect, failure) = if let Some(tex) = app.renderer.thumb(*id) {
                     let [tw, th] = tex.size;
@@ -3014,8 +3015,9 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                     marks: app.ui.settings.film_badges,
                     hot: false,
                     failure,
+                    surround: true,
                 };
-                crate::thumb::overlay(app, ui, &overlay);
+                badge = crate::thumb::overlay(app, ui, &overlay);
             }
             if resp.clicked() {
                 let m = ui.input(|i| i.modifiers);
@@ -3042,6 +3044,9 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
             }
             // the same photo actions as the grid and loupe (Restore / Delete Permanently in Recently Deleted)
             crate::widgets::context_menu(&resp, |ui| super::grid::context_menu(app, ui, *id));
+            if let Some(badge) = badge {
+                crate::widgets::context_menu(&badge, |ui| super::grid::context_menu(app, ui, *id));
+            }
         }
     });
 }
