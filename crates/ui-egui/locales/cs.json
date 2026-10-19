@@ -2411,5 +2411,5 @@
   "Finish Lightroom catalog import before adding photos": "Dokončete import katalogu Lightroom, než přidáte fotky",
   "Reduce Motion": "Omezit pohyb",
   "Reduce motion": "Omezit pohyb",
-  "Turns off zoom and spinner animations. Fades stay.": "Vypne animace přiblížení a načítacích indikátorů. Prolínání zůstává."
+  "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Vypne animace přiblížení a načítacích indikátorů. Prolínání zůstává. Dokud to zde nezměníte, řídí se nastavením Omezit pohyb v systému."
 }
