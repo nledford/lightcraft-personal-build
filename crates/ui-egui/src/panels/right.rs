@@ -442,7 +442,7 @@ fn remove(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
                         },
                     );
                 }
-                Err(e) => app.toast(ui.ctx(), e),
+                Err(e) => app.toast_error(ui.ctx(), e),
             }
         }
         ui.add_space(4.0);
@@ -775,7 +775,7 @@ fn info(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
             && (text != edit.start || edit.clears())
             && let Err(e) = app.run("photo.setMeta", json!({"ids": edit.ids, "gps": text}))
         {
-            app.toast(ui.ctx(), e);
+            app.toast_error(ui.ctx(), e);
         }
         // (one photo's place: not shown while the selected photos' places differ)
         if let Some((la, lo)) = m.gps.filter(|_| !gps_mixed) {
@@ -788,7 +788,7 @@ fn info(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
                 {
                     let url = format!("https://www.openstreetmap.org/?mlat={la:.6}&mlon={lo:.6}#map=15/{la:.6}/{lo:.6}");
                     if let Err(e) = crate::links::open(app, &url) {
-                        app.toast(ui.ctx(), e);
+                        app.toast_error(ui.ctx(), e);
                     }
                 }
             });
