@@ -31,6 +31,7 @@ pub mod menubar;
 pub mod menus;
 pub mod merge;
 mod model_setup;
+pub mod move_task;
 pub mod panels;
 pub mod pick;
 pub mod print_view;
@@ -418,6 +419,8 @@ pub struct LightcraftApp {
     pub(crate) notice_input: panels::notices::PromptInput,
     /// Quit Anyway was chosen: the window may close with unsaved changes.
     pub quit_confirmed: bool,
+    /// Quit Anyway was chosen while photos were moving: the move (which has no ✕) is cut short.
+    pub quit_cuts_move: bool,
     control_rx: Option<Receiver<ControlRequest>>,
     pending_screenshots: Vec<PendingShot>,
     /// Synthetic-input control requests waiting for a fresh layout and delivery (plan §4.5).
@@ -545,6 +548,10 @@ pub struct LightcraftApp {
     pub sync_owns_changes: bool,
     /// A Synchronize Folder at work in the background.
     pub sync_run: Option<sync::SyncRun>,
+    /// Photos being moved to another folder in the background (`move_task`).
+    pub move_run: Option<move_task::MoveRun>,
+    /// How the last background move ended (`ui.inspect` → `move.last`).
+    pub last_move: Option<Value>,
     /// A Lightroom catalog inspect/import in progress.
     pub lightroom: Option<lightroom_import::LightroomTask>,
     /// Last terminal Lightroom result, exposed by the command's status/wait response.
@@ -623,6 +630,7 @@ impl LightcraftApp {
             quit_prompt: None,
             notice_input: Default::default(),
             quit_confirmed: false,
+            quit_cuts_move: false,
             control_rx: None,
             pending_screenshots: vec![],
             pending_gestures: vec![],
@@ -682,6 +690,8 @@ impl LightcraftApp {
             sync: None,
             sync_owns_changes: false,
             sync_run: None,
+            move_run: None,
+            last_move: None,
             lightroom: None,
             lightroom_last: None,
             lightroom_result: None,
@@ -1962,6 +1972,7 @@ impl LightcraftApp {
         import::poll_scan(self, ctx);
         sync::poll(self, ctx);
         sync::poll_run(self, ctx);
+        move_task::poll(self, ctx);
         // Import commits batches and must not run twice in one host frame. The first layout pass
         // and a hidden logic tick both report pass index 0; a second pass reports 1. A wall-clock
         // gate cannot express that (a slow discarded first pass would re-run it).
