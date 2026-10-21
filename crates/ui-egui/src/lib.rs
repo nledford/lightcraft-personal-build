@@ -92,17 +92,17 @@ mod tests_dialog_primary;
 #[cfg(test)]
 mod tests_dialog_settings;
 #[cfg(test)]
+mod tests_dialog_settings_contrast;
+#[cfg(test)]
 mod tests_dialog_settings_filter;
 #[cfg(test)]
 mod tests_dialog_settings_filter_words;
 #[cfg(test)]
-mod tests_dialog_settings_contrast;
-#[cfg(test)]
-mod tests_dialog_settings_trust;
-#[cfg(test)]
 mod tests_dialog_settings_keys;
 #[cfg(test)]
 mod tests_dialog_settings_tabs;
+#[cfg(test)]
+mod tests_dialog_settings_trust;
 #[cfg(test)]
 mod tests_dialog_tab;
 #[cfg(test)]
