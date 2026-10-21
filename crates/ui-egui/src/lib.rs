@@ -190,6 +190,8 @@ mod tests_sam_setup;
 #[cfg(test)]
 mod tests_samples;
 #[cfg(test)]
+mod tests_samples_banner;
+#[cfg(test)]
 mod tests_scroll;
 #[cfg(test)]
 mod tests_slider_reset;
@@ -598,6 +600,10 @@ pub struct LightcraftApp {
     /// Whether each recent library can be opened, answered by a worker (issue #1290): the launch
     /// list and File ▸ Open Recent Library never look at a folder on the UI thread.
     pub recent_checks: panels::library_problem::RecentChecks,
+    /// Whether the library held sample photos last frame (`None` before the first): samples that
+    /// newly appear, however they came (the welcome, Help ▸ Add Sample Photos, an agent), bring
+    /// back a samples banner closed over earlier ones.
+    pub samples_present: Option<bool>,
     /// The activity stack shows every task, not just the first few ("+N more" was clicked).
     pub activity_expanded: bool,
 }
@@ -708,6 +714,7 @@ impl LightcraftApp {
             library_window_input: Default::default(),
             alt_asks_for_library: false,
             recent_checks: Default::default(),
+            samples_present: None,
             activity_expanded: false,
             model_setup: Default::default(),
         }
@@ -2669,6 +2676,7 @@ impl LightcraftApp {
         // right panels and left panel run to the bottom; the bottom bar sits between them).
         panels::topbar::show(self, ui);
         panels::library_problem::banner(self, ui);
+        panels::samples::banner(self, ui);
         panels::strip::show(self, ui);
         // filled: the gaps the dock leaves between its panes show chrome, not the dark clear colour
         let chrome = theme::Tokens::get(&ctx).chrome;
