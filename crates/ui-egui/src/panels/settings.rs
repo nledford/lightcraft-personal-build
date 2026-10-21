@@ -61,12 +61,22 @@ const PAGE_SIZE: egui::Vec2 = egui::vec2(560.0, 640.0);
 const PAGE_MIN_HEIGHT: f32 = 120.0;
 
 /// The share of the page's room the pinned slide preview of the Slideshow tab takes, when the page
-/// has more room than it needs to keep [`PAGE_MIN_HEIGHT`] for itself.
+/// has more room than it needs to keep [`PINNED_PAGE_MIN_HEIGHT`] for itself.
 const PINNED_PREVIEW_SHARE: f32 = 0.4;
 
 /// What the preview's heading, the one-line hint under the slide, its Photo / Intro / Ending
 /// choice and the rule under it take around the slide (at the default spacing, about 82 pt).
 const PREVIEW_CHROME: f32 = 82.0;
+
+/// What the same takes once the page has been drawn a second time (measured, at the default
+/// spacing: 104 pt). The room a pinned preview leaves for the page is checked against this, not
+/// against [`PREVIEW_CHROME`], so a window just tall enough never ends up with a page below
+/// its least and a dialog that grows a point on this tab.
+const PREVIEW_CHROME_DRAWN: f32 = 104.0;
+
+/// The least room the page keeps under the pinned preview: a few rows, with the filter row above
+/// them in the smallest window (900 x 560) that the preview is still pinned in.
+const PINNED_PAGE_MIN_HEIGHT: f32 = 100.0;
 
 /// The Settings window's content: the tab bar, which stays put, above the page of `tab`
 /// ([`body`]), which scrolls when it is taller than the room for it, with a scroll handle that
@@ -81,50 +91,87 @@ const PREVIEW_CHROME: f32 = 82.0;
 pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_height: f32) {
     ui.set_width((ui.ctx().content_rect().width() - 64.0).clamp(240.0, PAGE_SIZE.x));
     let top = ui.cursor().top();
+    // The filter, above the tabs it looks through. What is typed is kept from one frame of the
+    // window to the next only: Settings opened again starts with it empty.
+    let filter_id = egui::Id::unique("settings-filter");
+    let pass = ui.ctx().cumulative_pass_nr();
+    let kept: Option<Filter> = ui.data(|d| d.get_temp(filter_id));
+    let mut filter = kept.filter(|k| k.pass.checked_add(1) == Some(pass)).unwrap_or_default();
+    filter.pass = pass;
+    let had_text = !filter.text.is_empty();
+    let typed = crate::text_field::TextField::singleline("field:settingsFilter", &mut filter.text)
+        .hint(crate::i18n::tr("Filter settings"))
+        .width(ui.available_width())
+        .show(ui);
+    let filter_row = ui.cursor().top() - top;
+    // Esc with something typed empties the filter and is used up by that, wherever the focus is
+    // (in the box, or on a section that was found); the focus goes back to the box.
+    let escape = had_text && !crate::widgets::escape_taken(ui.ctx()) && ui.input(|i| i.key_pressed(egui::Key::Escape));
+    if typed.cancelled() || escape {
+        filter.text.clear();
+        if had_text {
+            crate::widgets::take_escape(ui.ctx());
+            typed.response.request_focus();
+        }
+    }
+    // (an emptied filter forgets what it read: the pages are read afresh the next time it is
+    // used, so what is found is what they show then)
+    if filter.text.trim().is_empty() {
+        filter.sections = None;
+    }
+    // ↓ in the box goes to the first section found
+    let to_first = typed.response.has_focus() && ui.input(|i| i.key_pressed(egui::Key::ArrowDown));
+    let open_first = typed.ending == Some(crate::text_field::Ending::Return);
+    // (with something typed the page is what was found, of any tab: no tab is the open one)
+    let filtering = !filter.text.trim().is_empty();
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
         for (id, label) in TABS {
-            if crate::widgets::text_button(ui, &format!("settingsTab-{id}"), label, tab == id).clicked() {
+            if crate::widgets::text_button(ui, &format!("settingsTab-{id}"), label, tab == id && !filtering).clicked() {
                 *tab = id.to_string();
+                // (a tab opened is its page asked for: the filter gives way)
+                filter.text.clear();
             }
         }
     });
     ui.separator();
+    // With something typed, the page gives way to the sections found, of whatever tab.
+    let words = filter.text.trim().to_lowercase();
+    let now = ui.input(|i| i.time);
+    let found = (!words.is_empty()).then(|| filter.found(app, &words, now));
+    let mut goto = None;
     // (a point less than the room left, so rounding never makes the dialog's own scroll area scroll)
     let room = max_height - (ui.cursor().top() - top) - 1.0;
-    if room < PAGE_MIN_HEIGHT {
-        body(app, ui, tab.as_str());
-        register(ui, "settings:page", ui.min_rect());
-        return;
-    }
     let mut height = room.min(PAGE_SIZE.y);
     // The slide preview stays above the page on Slideshow: hovering a template in the Template
     // Browser previews it there, so it has to stay in view however far down the templates are
     // scrolled to. With its heading and choice it takes [`PINNED_PREVIEW_SHARE`] of the room
-    // (at least the least tall slide); where that leaves less than [`PAGE_MIN_HEIGHT`] for the
-    // page, it scrolls with the page instead (as in the short window above).
+    // (at least the least tall slide); where that leaves less than [`PINNED_PAGE_MIN_HEIGHT`] for the
+    // page, it scrolls with the page instead (as in the short window above). What was found
+    // is drawn in its place while the filter has something typed.
     let mut pinned = false;
-    if tab == "slideshow" {
-        let slide_h = (height * PINNED_PREVIEW_SHARE - PREVIEW_CHROME).max(super::slide_layout::PREVIEW_MIN_H);
-        if height - (slide_h + PREVIEW_CHROME) >= PAGE_MIN_HEIGHT {
+    if tab == "slideshow" && found.is_none() && room >= PAGE_MIN_HEIGHT {
+        // (the filter row is taken off the page, not off the preview: the slide is as large as it was)
+        let slide_h = ((room + filter_row).min(PAGE_SIZE.y) * PINNED_PREVIEW_SHARE - PREVIEW_CHROME).max(super::slide_layout::PREVIEW_MIN_H);
+        if height - (slide_h + PREVIEW_CHROME_DRAWN) >= PINNED_PAGE_MIN_HEIGHT {
             let before = ui.cursor().top();
             super::slide_layout::preview(app, ui, &Tokens::get(ui.ctx()), slide_h);
             ui.add_space(2.0);
             ui.separator();
-            height = (height - (ui.cursor().top() - before)).max(PAGE_MIN_HEIGHT);
+            height = (height - (ui.cursor().top() - before)).max(PINNED_PAGE_MIN_HEIGHT);
             pinned = true;
         }
     }
-    // A page that goes on below shows its scroll handle all the time: without it, a page a line
-    // or two too long looks cut off, not scrollable.
-    ui.spacing_mut().scroll.dormant_handle_opacity = 0.6;
-    let page = egui::ScrollArea::vertical()
-        .id_salt(("settings-page", tab.as_str()))
-        .max_height(height)
-        .min_scrolled_height(height)
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            ui.add_space(2.0);
+    let mut page = |ui: &mut egui::Ui| match &found {
+        Some(found) => goto = results(ui, found, &words, open_first, to_first),
+        None => {
+            // (a section chosen that starts its tab, with no heading of its own: the page goes to its top)
+            if ui
+                .data(|d| d.get_temp::<(&'static str, String)>(egui::Id::unique(GOTO)))
+                .is_some_and(|(to, section)| to == tab.as_str() && section.is_empty())
+            {
+                ui.scroll_to_cursor(Some(egui::Align::TOP));
+            }
             if pinned {
                 slideshow_tab(app, ui, &Tokens::get(ui.ctx()), false);
             } else {
@@ -132,8 +179,209 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
             }
             // (what the page took: wider than the room for it would mean a control is cut off)
             register(ui, "settings:page", ui.min_rect());
+        }
+    };
+    if room < PAGE_MIN_HEIGHT {
+        page(ui);
+    } else {
+        // A page that goes on below shows its scroll handle all the time: without it, a page a
+        // line or two too long looks cut off, not scrollable.
+        ui.spacing_mut().scroll.dormant_handle_opacity = 0.6;
+        let salt = if found.is_some() { "found" } else { tab.as_str() };
+        let area = egui::ScrollArea::vertical()
+            .id_salt(("settings-page", salt))
+            .max_height(height)
+            .min_scrolled_height(height)
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                ui.add_space(2.0);
+                page(ui);
+            });
+        register(ui, "settings:pageRoom", area.inner_rect);
+    }
+    // A section chosen from what was found: its tab opens (on the next frame, as a clicked tab
+    // does), the filter is emptied, and the section's heading is scrolled to when it is drawn.
+    let goto_id = egui::Id::unique(GOTO);
+    if let Some((to, section)) = goto {
+        *tab = to.to_string();
+        filter.text.clear();
+        ui.data_mut(|d| d.insert_temp(goto_id, (to, section)));
+        ui.ctx().request_repaint();
+    } else if ui.data(|d| d.get_temp::<(&'static str, String)>(goto_id)).is_some_and(|(to, _)| to == tab.as_str()) {
+        // (the page it was for has been drawn: its heading has had its chance)
+        ui.data_mut(|d| d.remove::<(&'static str, String)>(goto_id));
+    }
+    ui.data_mut(|d| d.insert_temp(filter_id, filter));
+}
+
+/// Where the section to scroll to is kept between the click on a result and its page being drawn.
+const GOTO: &str = "settings-goto";
+
+/// A section of Settings as the filter knows it: the tab it is on, its heading's English name
+/// (empty for what a tab draws above its first heading) and every piece of text it draws.
+#[derive(Clone)]
+struct Section {
+    tab: &'static str,
+    name: String,
+    texts: Vec<String>,
+}
+
+/// The filter's state between frames: what is typed, and the sections of every tab with their
+/// text, read once for the language and library they were read in.
+#[derive(Clone, Default)]
+struct Filter {
+    pass: u64,
+    text: String,
+    sections: Option<(String, std::sync::Arc<Vec<Section>>)>,
+}
+
+impl Filter {
+    /// The sections that have every word of `words` (lower case), in the order of the tabs.
+    fn found(&mut self, app: &mut LightcraftApp, words: &str, now: f64) -> Vec<Section> {
+        let of = format!("{}|{}", app.ui.language.code(), app.session.library.as_ref().map(|l| l.dir.display().to_string()).unwrap_or_default());
+        let sections = match &self.sections {
+            Some((read_for, sections)) if *read_for == of => sections.clone(),
+            _ => {
+                let sections = std::sync::Arc::new(sections(app, now));
+                self.sections = Some((of, sections.clone()));
+                sections
+            }
+        };
+        sections.iter().filter(|section| section.has(words)).cloned().collect()
+    }
+}
+
+impl Section {
+    /// The name of the section's tab, in the language shown.
+    fn tab_name(&self) -> &'static str {
+        TABS.iter().find(|(id, _)| *id == self.tab).map_or("", |(_, label)| crate::i18n::tr(label))
+    }
+
+    /// Whether the section, with the name of its tab, has every word of `words` (lower case).
+    fn has(&self, words: &str) -> bool {
+        let all = format!("{} {}", self.tab_name(), self.texts.join(" ")).to_lowercase();
+        words.split_whitespace().all(|word| all.contains(word))
+    }
+
+    /// What the section is called in the list of what was found: its tab, then its heading.
+    fn title(&self) -> String {
+        let tab = self.tab_name();
+        if self.name.is_empty() { tab.to_string() } else { format!("{tab} › {}", crate::i18n::tr(&self.name)) }
+    }
+}
+
+/// Every section of every tab with the text it draws, read by drawing each tab's page once in a
+/// context of its own: nothing of it reaches the screen, the list of widgets or the window's own
+/// memory, and whatever a tab draws is found without a list kept by hand. Drawing a page asks
+/// what opening its tab asks (the smart previews folder, the installed models): the answers the
+/// app keeps (the installed denoise models) are filled as opening the tab fills them, those a
+/// page keeps in its own context (the smart previews folder, the face models) are asked again,
+/// and the slide preview of Slideshow may be asked to render, as that page does. No setting is
+/// changed by it, as nothing is clicked. What a page does not draw is not found: the choices of
+/// a closed list, tooltips, and rows scrolled out of a list inside a page.
+fn sections(app: &mut LightcraftApp, now: f64) -> Vec<Section> {
+    fn texts(shape: &egui::Shape, out: &mut Vec<(f32, String)>) {
+        match shape {
+            egui::Shape::Text(text) => out.push((text.pos.y, text.galley.job.text.clone())),
+            egui::Shape::Vec(shapes) => shapes.iter().for_each(|shape| texts(shape, out)),
+            _ => {}
+        }
+    }
+    let scratch = egui::Context::default();
+    crate::theme::install_fonts(&scratch);
+    // (tall enough that no page is cut off: what is outside the screen is not drawn)
+    let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(PAGE_SIZE.x + 32.0, 20_000.0));
+    let mut all = Vec::new();
+    for (tab, _) in TABS {
+        // (on the window's clock: what a page remembers with the time it asked is not left stamped
+        // with another)
+        let input = egui::RawInput { screen_rect: Some(screen), time: Some(now), ..Default::default() };
+        let mut output = scratch.run_ui(input, |ui| {
+            ui.set_width(PAGE_SIZE.x);
+            body(app, ui, tab);
         });
-    register(ui, "settings:pageRoom", page.inner_rect);
+        // (the font atlas this context made is for no screen: said so, or dropping it is an error)
+        output.textures_delta.clear();
+        // the page's headings, top to bottom, and each text under the last heading above it
+        let mut headings: Vec<(f32, String)> = crate::widgets::take_registry(&scratch)
+            .into_iter()
+            .filter_map(|(id, r)| Some((r.top(), id.strip_prefix("heading:")?.to_string())))
+            .collect();
+        headings.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let mut drawn = Vec::new();
+        output.shapes.iter().for_each(|clipped| texts(&clipped.shape, &mut drawn));
+        drawn.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let mut of_tab: Vec<Section> = std::iter::once(String::new())
+            .chain(headings.iter().map(|(_, name)| name.clone()))
+            .map(|name| Section { tab, name, texts: Vec::new() })
+            .collect();
+        for (y, text) in drawn {
+            // (a text counts as under a heading from a little above the heading's own top)
+            let under = headings.iter().take_while(|(top, _)| *top <= y + 1.0).count();
+            if let Some(section) = of_tab.get_mut(under)
+                && !text.trim().is_empty()
+            {
+                section.texts.push(text);
+            }
+        }
+        all.extend(of_tab.into_iter().filter(|section| !section.texts.is_empty()));
+    }
+    all
+}
+
+/// The sections found, each a row to choose (`settingsFound:{tab}:{section}`): its tab and
+/// heading, and under them the first texts of it that have a word of `words`. Gives the section
+/// chosen, by a click, by Return or Space with the focus on it, or (`open_first`) by Return in
+/// the filter, which chooses the first. `focus_first` gives the first row the keyboard focus.
+fn results(ui: &mut egui::Ui, found: &[Section], words: &str, open_first: bool, focus_first: bool) -> Option<(&'static str, String)> {
+    let t = Tokens::get(ui.ctx());
+    if found.is_empty() {
+        ui.add_space(8.0);
+        ui.label(RichText::new(crate::i18n::tr("No setting matches what is typed.")).color(t.text_label));
+        hint(ui, &t, "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.");
+        return None;
+    }
+    let mut chosen = open_first.then(|| found.first().map(|first| (first.tab, first.name.clone()))).flatten();
+    for (place, section) in found.iter().enumerate() {
+        let fill = ui.painter().add(egui::Shape::Noop);
+        let row = ui
+            .scope_builder(egui::UiBuilder::new().sense(egui::Sense::click()), |ui| {
+                ui.set_width(ui.available_width());
+                ui.spacing_mut().item_spacing.y = 2.0;
+                ui.add_space(3.0);
+                ui.add(egui::Label::new(RichText::new(section.title()).font(t.semibold(13.0)).color(t.text)).selectable(false));
+                // (what of it has a word that was typed; its heading is in the line above already)
+                let heading = crate::i18n::tr(&section.name);
+                let with: Vec<&str> = section
+                    .texts
+                    .iter()
+                    .map(String::as_str)
+                    .filter(|text| *text != heading && words.split_whitespace().any(|word| text.to_lowercase().contains(word)))
+                    .take(2)
+                    .collect();
+                for text in with {
+                    ui.add(egui::Label::new(RichText::new(text).size(11.0).color(t.text_dim)).selectable(false).truncate());
+                }
+                ui.add_space(3.0);
+            })
+            .response;
+        if focus_first && place == 0 {
+            row.request_focus();
+        }
+        let around = row.rect.expand2(egui::vec2(6.0, 0.0));
+        if row.hovered() || row.has_focus() {
+            ui.painter().set(fill, egui::Shape::rect_filled(around, egui::CornerRadius::same(4), t.hover));
+        }
+        if row.has_focus() {
+            ui.painter().rect_stroke(around, egui::CornerRadius::same(4), egui::Stroke::new(2.0, t.text), egui::StrokeKind::Inside);
+        }
+        row.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, section.title()));
+        register(ui, format!("settingsFound:{}:{}", section.tab, section.name), row.rect);
+        if row.clicked() {
+            chosen = Some((section.tab, section.name.clone()));
+        }
+    }
+    chosen
 }
 
 /// `path` shortened to fit `max` (as `width` measures it) by dropping leading folders, after
@@ -187,7 +435,15 @@ fn button_width(ui: &egui::Ui, text: &str) -> f32 {
 
 pub(super) fn heading(ui: &mut egui::Ui, t: &Tokens, text: &str) {
     ui.add_space(4.0);
-    ui.label(RichText::new(crate::i18n::tr(text)).font(t.semibold(12.5)).color(t.text));
+    // `text` is the heading's English name (its message key). It is shown translated and
+    // registered as `heading:{text}` whatever the language, where a section starts: for the
+    // filter, scripts and tests that look for one.
+    let r = ui.label(RichText::new(crate::i18n::tr(text)).font(t.semibold(12.5)).color(t.text));
+    register(ui, format!("heading:{text}"), r.rect);
+    // (chosen from what the filter found: the section is brought to the top of the page)
+    if ui.data(|d| d.get_temp::<(&'static str, String)>(egui::Id::unique(GOTO))).is_some_and(|(_, section)| section == text) {
+        r.scroll_to_me(Some(egui::Align::TOP));
+    }
 }
 
 pub(super) fn row<R>(ui: &mut egui::Ui, t: &Tokens, label: &str, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
@@ -244,7 +500,7 @@ fn general_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         });
         crate::i18n::set_language(app.ui.language);
     });
-    heading(ui, t, crate::i18n::tr("Library"));
+    heading(ui, t, "Library");
     let location = match &app.session.library {
         Some(l) => l.dir.display().to_string(),
         None => crate::i18n::tr("In memory — nothing is saved").to_string(),
@@ -292,7 +548,7 @@ fn general_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             &mut app.ui.settings.lightroom_import,
         );
     });
-    heading(ui, t, crate::i18n::tr("Startup"));
+    heading(ui, t, "Startup");
     row(ui, t, crate::i18n::tr("Open in"), |ui| {
         choices(
             ui,
@@ -301,13 +557,13 @@ fn general_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             &mut app.ui.settings.startup_view,
         );
     });
-    heading(ui, t, crate::i18n::tr("Culling"));
+    heading(ui, t, "Culling");
     check(ui, "settings.autoAdvance", &mut app.ui.auto_advance, "Auto Advance: move to the next photo after rating or flagging");
     check(ui, "settings.confirmDelete", &mut app.ui.settings.confirm_delete, "Confirm before moving photos to Recently Deleted");
     check(ui, "settings.askBeforeMove", &mut app.ui.settings.ask_before_move, "Confirm before moving photos to another folder on disk");
-    heading(ui, t, crate::i18n::tr("Dialogs"));
+    heading(ui, t, "Dialogs");
     check(ui, "settings.closeDialogsOutside", &mut app.ui.settings.close_dialogs_outside, "Close a dialog by clicking outside it");
-    heading(ui, t, crate::i18n::tr("External Editing"));
+    heading(ui, t, "External Editing");
     row(ui, t, crate::i18n::tr("PhotoCraft"), |ui| {
         crate::text_field::TextField::singleline("field:photocraftPath", &mut app.ui.settings.photocraft_path)
             .hint(crate::i18n::tr("Found automatically"))
@@ -401,7 +657,7 @@ fn cameras(app: &LightcraftApp) -> Vec<String> {
 
 fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     let d = app.session.import_defaults.clone();
-    heading(ui, t, crate::i18n::tr("Raw defaults"));
+    heading(ui, t, "Raw defaults");
     hint(ui, t, crate::i18n::tr("Settings new raw photos start from. Changing them doesn't touch photos already in the library."));
     row(ui, t, crate::i18n::tr("Raw photos"), |ui| {
         if let Some(v) = preset_combo(app, ui, "settingsRawPreset", crate::i18n::tr("Raw default"), d.raw_preset.as_deref(), "LightCraft Default") {
@@ -462,13 +718,13 @@ fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             }
         });
     }
-    heading(ui, t, crate::i18n::tr("Other images (JPEG, PNG, TIFF, HEIC…)"));
+    heading(ui, t, "Other images (JPEG, PNG, TIFF, HEIC…)");
     row(ui, t, crate::i18n::tr("Non-raw photos"), |ui| {
         if let Some(v) = preset_combo(app, ui, "settingsOtherPreset", crate::i18n::tr("Other preset"), d.other_preset.as_deref(), "None") {
             let _ = app.run("library.preferences", json!({"import": {"otherPreset": v}}));
         }
     });
-    heading(ui, t, crate::i18n::tr("Metadata"));
+    heading(ui, t, "Metadata");
     hint(ui, t, crate::i18n::tr("Added to photos you import that don't already have it."));
     for (key, label, hint_text, value) in
         [("copyright", "Copyright", "© 2026 Your Name", d.copyright.clone()), ("creator", "Creator", "Your Name", d.creator.clone())]
@@ -512,7 +768,7 @@ fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             }
         });
     }
-    heading(ui, t, crate::i18n::tr("XMP sidecars"));
+    heading(ui, t, "XMP sidecars");
     let mut xmp = app.session.xmp;
     if check(ui, "settings.autoWriteXmp", &mut xmp.auto_write, "Automatically write changes into XMP sidecars") {
         let _ = app.run("library.xmpPreferences", json!({"autoWrite": xmp.auto_write}));
@@ -526,14 +782,14 @@ fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         }
     });
     if !cfg!(target_arch = "wasm32") {
-        heading(ui, t, crate::i18n::tr("Dropped Files"));
+        heading(ui, t, "Dropped Files");
         check(ui, "settings.importDropped", &mut app.ui.settings.import_dropped_directly, "Import dropped files without review");
-        heading(ui, t, crate::i18n::tr("Cameras and Cards"));
+        heading(ui, t, "Cameras and Cards");
         let mut on_card = d.show_on_card;
         if check(ui, "settings.importOnCard", &mut on_card, "Show the import review when a camera or card is connected") {
             let _ = app.run("library.preferences", json!({"import": {"showOnCard": on_card}}));
         }
-        heading(ui, t, crate::i18n::tr("Auto Import"));
+        heading(ui, t, "Auto Import");
         hint(ui, t, crate::i18n::tr("Photos that arrive in this folder (tethering, a scanner, a sync app) are added as soon as they're complete."));
         row(ui, t, crate::i18n::tr("Watched folder"), |ui| {
             match &d.auto_folder {
@@ -587,7 +843,7 @@ fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 
 fn performance_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     use lightcraft_engine::gpu;
-    heading(ui, t, crate::i18n::tr("Rendering"));
+    heading(ui, t, "Rendering");
     check(ui, "settings.gpu", &mut app.ui.settings.gpu, "Use the GPU for rendering");
     let status = if !gpu::available() {
         match gpu::unavailable_reason() {
@@ -619,7 +875,7 @@ fn performance_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         let opts = [(0u32, auto.as_str()), (512, "512 MB"), (1024, "1 GB"), (2048, "2 GB"), (4096, "4 GB")];
         choices(ui, "settingsMemory", &opts, &mut app.ui.settings.memory_mb);
     });
-    heading(ui, t, crate::i18n::tr("Thumbnail cache"));
+    heading(ui, t, "Thumbnail cache");
     let cur = (app.session.cache_bytes() >> 20) as u32;
     row(ui, t, crate::i18n::tr("Size limit"), |ui| {
         let opts = [(512u32, "512 MB"), (1024, "1 GB"), (2048, "2 GB"), (4096, "4 GB"), (8192, "8 GB")];
@@ -640,7 +896,7 @@ fn performance_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             let _ = app.run("library.clearPreviews", json!({}));
         }
     });
-    heading(ui, t, crate::i18n::tr("Local folders"));
+    heading(ui, t, "Local folders");
     row(ui, t, crate::i18n::tr("Forget unchanged photos"), |ui| {
         let opts = [(0u32, "Never"), (7, "After 7 days"), (30, "After 30 days"), (90, "After 90 days"), (365, "After a year")];
         let mut v = app.session.forget_local_days;
@@ -677,7 +933,7 @@ fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     if loc.is_null() {
         return;
     }
-    heading(ui, t, crate::i18n::tr("Smart previews"));
+    heading(ui, t, "Smart previews");
     let path = loc["path"].as_str().unwrap_or_default().to_string();
     let available = loc["available"].as_bool().unwrap_or(true);
     let custom = loc["custom"].as_bool().unwrap_or(false);
@@ -769,7 +1025,7 @@ fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 /// The monitor profile (`app.displayProfile`): previews are shown through the display's ICC
 /// profile, so wide-gamut and calibrated displays show colours as they are.
 fn display_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
-    heading(ui, t, crate::i18n::tr("Monitor profile"));
+    heading(ui, t, "Monitor profile");
     let current = app.renderer.display().cloned();
     let screen = current.as_ref().is_some_and(|d| d.path == crate::SCREEN_PROFILE);
     row(ui, t, crate::i18n::tr("Profile"), |ui| {
@@ -840,10 +1096,10 @@ fn display_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 fn interface_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     let system = app.system_theme(ui.ctx());
     appearance(ui, t, &mut app.ui.settings, system);
-    heading(ui, t, crate::i18n::tr("Filmstrip"));
+    heading(ui, t, "Filmstrip");
     check(ui, "settings.filmNames", &mut app.ui.settings.film_names, "Show file names");
     check(ui, "settings.filmBadges", &mut app.ui.settings.film_badges, "Show ratings, flags and edit badges");
-    heading(ui, t, crate::i18n::tr("Grid"));
+    heading(ui, t, "Grid");
     row(ui, t, crate::i18n::tr("Ratings & flags"), |ui| {
         choices(
             ui,
@@ -853,7 +1109,7 @@ fn interface_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         );
     });
     check(ui, "settings.showFilenames", &mut app.ui.show_filenames, "Square Grid: show file names and formats");
-    heading(ui, t, crate::i18n::tr("Keywords"));
+    heading(ui, t, "Keywords");
     row(ui, t, crate::i18n::tr("Keywords of the selection"), |ui| {
         use crate::state::KeywordChips as K;
         choices(ui, "settingsKeywordChips", &[(K::Paths, "Whole names"), (K::Grouped, "Grouped by parent")], &mut app.ui.settings.keyword_chips);
@@ -863,7 +1119,7 @@ fn interface_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         t,
         crate::i18n::tr("Grouped: keywords inside the same keyword share a line naming it, and long lists and the suggestions are shortened."),
     );
-    heading(ui, t, crate::i18n::tr("Detail View"));
+    heading(ui, t, "Detail View");
     check(ui, "settings.navigator", &mut app.ui.navigator, "Show the Navigator while zoomed in");
     row(ui, t, crate::i18n::tr("Info overlay"), |ui| {
         use crate::state::InfoOverlay as I;
@@ -878,7 +1134,7 @@ fn interface_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 /// (`view.viewOptions`). Changes apply as they are made.
 pub(super) fn view_options(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     use crate::state::{InfoOverlay as I, LoupeInfo, LoupeInfoField as F};
-    heading(ui, t, crate::i18n::tr("Loupe View"));
+    heading(ui, t, "Loupe View");
     let mut show = app.ui.info_overlay != I::Off;
     if check(ui, "viewOptions.showInfo", &mut show, "Show Info Overlay") {
         app.ui.info_overlay = if show { I::Basic } else { I::Off };
@@ -889,7 +1145,7 @@ pub(super) fn view_options(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Token
         });
     });
     for (n, title, defaults) in [(1, "Loupe Info 1", LoupeInfo::INFO1), (2, "Loupe Info 2", LoupeInfo::INFO2)] {
-        heading(ui, t, crate::i18n::tr(title));
+        heading(ui, t, title);
         let lines = if n == 1 { &mut app.ui.settings.loupe_info.info1 } else { &mut app.ui.settings.loupe_info.info2 };
         for (i, line) in lines.iter_mut().enumerate() {
             let id = format!("viewOptionsInfo{n}Line{}", i + 1);
@@ -966,7 +1222,7 @@ fn slideshow_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, with_pr
 
 /// Export: PDF, JPEG sequence or video of the slideshow (View ▸ Export Slideshow…).
 fn export_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
-    heading(ui, t, crate::i18n::tr("Export"));
+    heading(ui, t, "Export");
     let running = app.session.slideshow_export.as_ref().is_some_and(|r| r.running());
     ui.horizontal_wrapped(|ui| {
         for (id, label, format) in [
@@ -986,7 +1242,7 @@ fn export_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 
 fn playback_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     use lightcraft_engine::slideshow::{FADE_MAX, SLIDE_MAX, SLIDE_MIN};
-    heading(ui, t, crate::i18n::tr("Playback"));
+    heading(ui, t, "Playback");
     let s = app.session.slideshow.clone();
     let mut v = s.manual;
     if check(ui, "settings.slideshowManual", &mut v, "Manual slideshow") {
@@ -1065,7 +1321,7 @@ fn playback_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 /// use is outlined. Applied on the next frame ([`LightcraftApp::sync_theme`]).
 fn appearance(ui: &mut egui::Ui, t: &Tokens, s: &mut crate::state::AppSettings, system: Option<egui::Theme>) {
     use crate::state::{AppearanceMode as M, DarkTheme, LightTheme};
-    heading(ui, t, crate::i18n::tr("Appearance"));
+    heading(ui, t, "Appearance");
     ui.label(RichText::new(crate::i18n::tr("Appearance Mode")).color(t.text_label));
     ui.horizontal_wrapped(|ui| {
         choices(ui, "settingsAppearance", &[(M::Auto, "Sync with System"), (M::Dark, "Dark Mode"), (M::Light, "Light Mode")], &mut s.appearance_mode);
