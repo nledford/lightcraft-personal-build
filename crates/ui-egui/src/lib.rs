@@ -50,6 +50,7 @@ pub mod tasks;
 pub mod text_field;
 pub mod theme;
 pub mod titlebar;
+pub mod trash_run;
 pub mod updates_ui;
 pub mod widgets;
 pub mod window_place;
@@ -208,6 +209,8 @@ mod tests_temp_slider;
 mod tests_titlebar;
 #[cfg(test)]
 mod tests_tool_overlay;
+#[cfg(test)]
+mod tests_trash_files;
 #[cfg(test)]
 mod tests_unsaved;
 #[cfg(test)]
@@ -544,6 +547,11 @@ pub struct LightcraftApp {
     pub sync_owns_changes: bool,
     /// A Synchronize Folder at work in the background.
     pub sync_run: Option<sync::SyncRun>,
+    /// Move Files to Trash at work in the background.
+    pub trash_run: Option<trash_run::TrashRun>,
+    /// An Erase question a finished Move Files to Trash has to ask (photo ids, library generation),
+    /// waiting for the dialog slot to be free.
+    pub trash_erase_later: Option<(Vec<u64>, u64)>,
     /// A Lightroom catalog inspect/import in progress.
     pub lightroom: Option<lightroom_import::LightroomTask>,
     /// Last terminal Lightroom result, exposed by the command's status/wait response.
@@ -680,6 +688,8 @@ impl LightcraftApp {
             sync: None,
             sync_owns_changes: false,
             sync_run: None,
+            trash_run: None,
+            trash_erase_later: None,
             lightroom: None,
             lightroom_last: None,
             lightroom_result: None,
@@ -1080,6 +1090,12 @@ impl LightcraftApp {
         }
     }
 
+    /// Quitting: file work in the background stops after the file in hand, and what it did is
+    /// kept (the photos whose files moved to the Trash leave the library). Waits at most a minute.
+    pub fn finish_background_file_work(&mut self) {
+        trash_run::settle_for_quit(self, std::time::Duration::from_secs(60));
+    }
+
     pub fn toast(&mut self, ctx: &egui::Context, text: impl Into<String>) {
         self.toast_for(ctx, text, TOAST_SECONDS);
     }
@@ -1094,6 +1110,17 @@ impl LightcraftApp {
             Ok(_) => {}
             Err(e) => self.toast(ctx, e),
         }
+    }
+
+    /// A notice from code that has no frame at hand (a dialog's action): shown for `secs` seconds.
+    pub fn say(&mut self, text: impl Into<String>, secs: f64) {
+        let now = self.now();
+        self.ui.toast = Some((text.into(), now + secs, None));
+    }
+
+    /// The interface's clock (seconds), for code that has no frame at hand.
+    pub fn now(&self) -> f64 {
+        self.tick_now()
     }
 
     /// A toast that stays `secs` seconds (messages that say where to look or what to do next).
@@ -1960,6 +1987,7 @@ impl LightcraftApp {
         import::poll_scan(self, ctx);
         sync::poll(self, ctx);
         sync::poll_run(self, ctx);
+        trash_run::poll(self, ctx);
         // Import commits batches and must not run twice in one host frame. The first layout pass
         // and a hidden logic tick both report pass index 0; a second pass reports 1. A wall-clock
         // gate cannot express that (a slow discarded first pass would re-run it).
