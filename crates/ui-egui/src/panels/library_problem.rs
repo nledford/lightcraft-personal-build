@@ -1010,7 +1010,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                 ui.label(RichText::new(crate::i18n::tr("LightCraft couldn't open the library at")).color(t.text_label));
                 ui.label(RichText::new(&problem.path).font(t.body_strong()).color(t.text));
             }
-            ui.add(egui::Label::new(RichText::new(&problem.error).color(t.caution)).wrap());
+            ui.add(egui::Label::new(RichText::new(&problem.error).color(t.text_caution())).wrap());
             ui.label(
                 RichText::new(
                     "Your photos and edits in it are untouched. You can try again (e.g. after closing another program that has it open \
@@ -1137,7 +1137,7 @@ fn show_chooser(app: &mut LightcraftApp, ctx: &egui::Context, problem: &LibraryP
                 }
             });
             if !problem.error.is_empty() {
-                ui.add(egui::Label::new(RichText::new(&problem.error).color(t.caution)).wrap());
+                ui.add(egui::Label::new(RichText::new(&problem.error).color(t.text_caution())).wrap());
             }
             let selected = chooser.selected.and_then(|i| chooser.libraries.get(i));
             let mut button = |ui: &mut egui::Ui, id: &str, label: &str, enabled: bool, c: Choice| {
@@ -1207,7 +1207,7 @@ fn recent_row(ui: &mut egui::Ui, t: &Tokens, i: usize, library: &RecentLibrary, 
         });
         ui.add(egui::Label::new(RichText::new(parent).size(11.0).color(dim)).truncate().selectable(false));
         if let Some(why) = &library.unavailable {
-            ui.add(egui::Label::new(RichText::new(why).size(11.0).color(t.caution)).wrap().selectable(false));
+            ui.add(egui::Label::new(RichText::new(why).size(11.0).color(t.text_caution())).wrap().selectable(false));
         } else if library.checking {
             let text =
                 if library.slow { crate::i18n::tr("Not answering yet: the drive may be asleep or offline") } else { crate::i18n::tr("Checking…") };

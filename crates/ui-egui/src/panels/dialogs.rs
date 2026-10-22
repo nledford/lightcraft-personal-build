@@ -515,7 +515,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                                 .color(t.text_dim),
                         );
                     } else {
-                        ui.label(egui::RichText::new(crate::i18n::tr("Fix the marked rules to save this album.")).color(t.caution));
+                        ui.label(egui::RichText::new(crate::i18n::tr("Fix the marked rules to save this album.")).color(t.text_caution()));
                     }
                 }
                 Dialog::NewSmartAlbum { name, .. } => {
@@ -693,7 +693,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                         confirm = true;
                     }
                     if let Some(why) = plan.block {
-                        ui.label(egui::RichText::new(crate::i18n::tr(why)).color(t.caution));
+                        ui.label(egui::RichText::new(crate::i18n::tr(why)).color(t.text_caution()));
                     } else {
                         ui.label(
                             egui::RichText::new(crate::i18n::tr_format!(
@@ -707,7 +707,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                     if plan.needs_merge {
                         ui.label(
                             egui::RichText::new(crate::i18n::tr_format!("“{to}” is already a person. Combining them makes one person; Undo separates them again.", to = to.trim()))
-                                .color(t.caution),
+                                .color(t.text_caution()),
                         );
                         let r = ui.checkbox(merge, crate::i18n::tr("Combine with the existing person"));
                         crate::widgets::register(ui, "check:personMerge", r.rect);
