@@ -156,6 +156,7 @@ mod tests_masking_layout;
 mod tests_menubar;
 #[cfg(test)]
 mod tests_merge_preview;
+#[cfg(test)]
 mod tests_missing_count;
 #[cfg(test)]
 mod tests_offline;
@@ -197,6 +198,8 @@ mod tests_slider_reset;
 mod tests_slideshow;
 #[cfg(test)]
 mod tests_solo_sections;
+#[cfg(test)]
+mod tests_sweep_yield;
 #[cfg(test)]
 mod tests_switch_library;
 #[cfg(test)]
@@ -1924,10 +1927,7 @@ impl LightcraftApp {
             // …which gives way to the file work of an import, a scan, a Synchronize Folder and the Local view's
             // listings: one share, one stream of reads. The task guards decide, so a task that ends, fails or
             // panics lets go; a listing hung on a dead mount holds the sweep back until it returns.
-            let (activity, listings) = (self.session.activity.clone(), ctx.clone());
-            self.session.media.availability.sweep_yields_to(std::sync::Arc::new(move || {
-                activity.any_of(&["scan", "import", "sync"]) || panels::left::fs_cached_running(&listings) > 0
-            }));
+            self.session.media.availability.sweep_yields_to(sweep_gives_way(self.session.activity.clone(), ctx));
             self.styled = true;
             self.font_language = self.ui.language;
         } else if self.font_language != self.ui.language {
@@ -2912,6 +2912,16 @@ impl AppClock {
 pub fn monotonic_ms() -> f64 {
     static START: std::sync::OnceLock<web_time::Instant> = std::sync::OnceLock::new();
     START.get_or_init(web_time::Instant::now).elapsed().as_secs_f64() * 1000.0
+}
+
+/// What the availability sweep gives way to: an import, a scan or a Synchronize Folder in flight, or a Local-view
+/// listing running. The sweep's worker asks this every few hundred milliseconds, so it must never take the egui
+/// `Context` lock: the frame, every `request_repaint` and the control server's repaint requests hold that lock
+/// (some across the window system's wake-up call), and a worker queued for it turns each of those into a wait for
+/// the others. The listing count is therefore fetched here, on the UI thread, and the worker only reads the atomic.
+pub(crate) fn sweep_gives_way(activity: lightcraft_engine::activity::Activity, ctx: &egui::Context) -> lightcraft_engine::availability::Busy {
+    let listings = panels::left::fs_running_counter(ctx);
+    std::sync::Arc::new(move || activity.any_of(&["scan", "import", "sync"]) || listings.load(std::sync::atomic::Ordering::Acquire) > 0)
 }
 
 /// Wall-clock milliseconds since the Unix epoch, only for names that must be unique in the world
