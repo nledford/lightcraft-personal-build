@@ -852,6 +852,11 @@ fn cell(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, r: Rect, square
         p.rect_filled(br, 2.0, chip);
         p.galley(br.min + vec2(4.0, 1.5), g, ink);
     }
+    // (a rejected photo is dimmed under its marks, not over them: over them it took the flag's
+    // red down with the photo, to under 3:1 on the shade)
+    if photo.flag == Flag::Reject {
+        p.rect_filled(img_rect, 0.0, Color32::from_black_alpha(110));
+    }
     let show_badges = match app.ui.settings.grid_badges {
         crate::state::GridBadges::Auto => resp.hovered() || selected || photo.rating > 0 || photo.flag != Flag::None || photo.label.is_some(),
         crate::state::GridBadges::Always => true,
@@ -865,19 +870,49 @@ fn cell(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, r: Rect, square
     }
     if show_badges {
         let bar = badge_bar;
+        // A picture has no theme: its marks are in one light ink on a shade, not in the theme's
+        // star and label colours (dark in the light themes). Each group of marks has a shade as
+        // wide as it is, so that a rated photo keeps its lower edge; shade and marks end where
+        // the photo ends (on a narrow one they ran on over the gap to the next). Under the
+        // pointer and on a chosen photo the band along the lower edge is there as it was: it is
+        // what says "this one", and in the light themes the outline of a chosen photo alone
+        // hardly shows.
+        let ink = Tokens::on_photo();
+        let flag_w = if photo.flag == Flag::None { 0.0 } else { 18.0 };
+        let right_w = if photo.is_edited() { 20.0 } else { 0.0 } + if photo.label.is_some() { 20.0 } else { 0.0 };
+        // (on a narrow photo the stars close up, so that the flag after them is still inside the bar it is clipped to,
+        // and clear of the shade under the marks at the right, 6 points beyond it)
+        let room = bar.width() - 9.0 - right_w - if right_w > 0.0 { 6.0 } else { 0.0 };
+        let pitch = crate::widgets::star_pitch(room, photo.rating as usize, flag_w, 13.0);
+        let marks_w = photo.rating as f32 * pitch;
+        let clipped = p.with_clip_rect(bar.intersect(p.clip_rect()));
+        let p = &clipped;
         if (resp.hovered() || selected) && (square || photo.label.is_none()) {
             p.rect_filled(bar, 0.0, Color32::from_black_alpha(120));
         }
+        let shade = |from: f32, to: f32| {
+            if to > from {
+                p.rect_filled(Rect::from_min_max(pos2(from, bar.top() + 3.0), pos2(to, bar.bottom() - 3.0)), 4.0, Tokens::photo_shade());
+            }
+        };
+        if marks_w + flag_w > 0.0 {
+            shade(bar.left() + 3.0, (bar.left() + 9.0 + marks_w + flag_w).min(bar.right()));
+        }
+        if right_w > 0.0 {
+            shade((bar.right() - right_w - 6.0).max(bar.left()), bar.right() - 3.0);
+        }
         let mut x = bar.left() + 6.0;
-        x += crate::rating::paint_rating(p, pos2(x, bar.center().y), photo.rating, crate::rating::RatingSize::Medium, t.star) + 4.0;
+        x += crate::rating::paint_rating_spaced(p, pos2(x, bar.center().y), photo.rating, crate::rating::RatingSize::Medium, pitch, ink) + 4.0;
         match photo.flag {
-            Flag::Pick => paint(p, Rect::from_min_size(pos2(x, bar.center().y - 7.0), vec2(14.0, 14.0)), Icon::FlagPickFilled, t.pick),
-            Flag::Reject => paint(p, Rect::from_min_size(pos2(x, bar.center().y - 7.0), vec2(14.0, 14.0)), Icon::FlagReject, t.reject),
+            Flag::Pick => paint(p, Rect::from_min_size(pos2(x, bar.center().y - 7.0), vec2(14.0, 14.0)), Icon::FlagPickFilled, ink),
+            Flag::Reject => {
+                paint(p, Rect::from_min_size(pos2(x, bar.center().y - 7.0), vec2(14.0, 14.0)), Icon::FlagReject, Tokens::on_photo_reject())
+            }
             Flag::None => {}
         }
         let mut right = bar.right();
         if photo.is_edited() {
-            paint(p, Rect::from_min_size(pos2(right - 20.0, bar.center().y - 7.0), vec2(14.0, 14.0)), Icon::Sliders, t.text_label);
+            paint(p, Rect::from_min_size(pos2(right - 20.0, bar.center().y - 7.0), vec2(14.0, 14.0)), Icon::Sliders, ink);
             right -= 20.0;
         }
         if let Some(l) = photo.label {
@@ -913,9 +948,6 @@ fn cell(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, r: Rect, square
         register(ui, format!("badge:previewOnly:{}", id.0), br);
         ui.interact(br, egui::Id::unique(("preview-only-badge", id.0)), Sense::hover())
             .on_hover_text(crate::i18n::tr_format!("Preview only — {}", crate::widgets::preview_only_explanation(why)));
-    }
-    if photo.flag == Flag::Reject {
-        p.rect_filled(img_rect, 0.0, Color32::from_black_alpha(110));
     }
     // interaction
     if let Some(k) = app.ui.keyword_painter.clone() {
