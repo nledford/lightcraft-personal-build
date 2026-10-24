@@ -874,14 +874,39 @@ pub(crate) fn move_all(fs: &dyn MoveFs, moves: &[(String, String)]) -> std::resu
     Ok(())
 }
 
-/// `op` with every `SetFile` a `Relink`: the same change to the catalog, but undo and redo move no file for it. For what is
-/// left of a rollback when the files it would move are already back where it puts the photos.
-pub(crate) fn without_file_moves(op: Op) -> Op {
-    match op {
-        Op::Batch { ops } => Op::Batch { ops: ops.into_iter().map(without_file_moves).collect() },
-        Op::SetFile { id, file_name, source } => Op::Relink { id, file_name, source, format: None },
-        op => op,
+/// `rest`, what is left of a rollback that failed part-way, once the files were moved back (`moved_back`, the result of
+/// `move_all` on the moves back): the `SetFile`s of a photo whose file did go back become `Relink`s, the same change to the
+/// catalog that moves no file; those of a photo whose file stayed where it went keep moving it. A photo is judged by the
+/// path its last `SetFile` points to, as `Session::file_moves` plans its move.
+pub(crate) fn rest_after_move_back(rest: Op, moved_back: &std::result::Result<(), BatchMoveError>) -> Op {
+    fn targets<'a>(op: &'a Op, out: &mut HashMap<PhotoId, &'a str>) {
+        match op {
+            Op::Batch { ops } => ops.iter().for_each(|op| targets(op, out)),
+            Op::SetFile { id, source: Source::File { path }, .. } => {
+                out.insert(*id, path);
+            }
+            _ => {}
+        }
     }
+    fn rewrite(op: Op, back: &HashSet<PhotoId>) -> Op {
+        match op {
+            Op::Batch { ops } => Op::Batch { ops: ops.into_iter().map(|op| rewrite(op, back)).collect() },
+            Op::SetFile { id, file_name, source } if back.contains(&id) => Op::Relink { id, file_name, source, format: None },
+            op => op,
+        }
+    }
+    let mut to = HashMap::new();
+    targets(&rest, &mut to);
+    // (on a failed move back, `stuck` holds the moves back that stayed done: those files are at their old path)
+    let back: HashSet<PhotoId> = to
+        .into_iter()
+        .filter(|(_, path)| match moved_back {
+            Ok(()) => true,
+            Err(e) => e.stuck.iter().any(|m| Path::new(&m.1) == Path::new(path)),
+        })
+        .map(|(id, _)| id)
+        .collect();
+    rewrite(rest, &back)
 }
 
 /// Final `SetFile` per photo (nested batches included), filtered by destination only afterward.
@@ -1106,14 +1131,18 @@ impl Session {
             && let Err(err) = self.commit(&label(n), op)
         {
             let back: Vec<(String, String)> = moves.iter().rev().map(|(a, b)| (b.clone(), a.clone())).collect();
-            if let Err(e) = move_all(fs, &back) {
-                return Err(EngineError::Other(format!("{err}; the renamed files could not all be moved back: {}", e.message)));
-            }
+            let moved_back = move_all(fs, &back);
             if matches!(err, EngineError::Catalog(CatalogError::PartlyApplied { .. }))
-                && let Some(step) = self.undo.last_mut()
+                && let Some(rest) = self.undo.last().map(|step| step.op.clone())
             {
-                // (the files are back: what is left of the rollback must point the photos at them, not move them)
-                step.op = without_file_moves(std::mem::replace(&mut step.op, Op::Batch { ops: Vec::new() }));
+                // (what is left of the rollback must follow the files as far as they went back, not move them again)
+                let rest = rest_after_move_back(rest, &moved_back);
+                if let Some(step) = self.undo.last_mut() {
+                    step.op = rest;
+                }
+            }
+            if let Err(e) = moved_back {
+                return Err(EngineError::Other(format!("{err}; the renamed files could not all be moved back: {}", e.message)));
             }
             return Err(err);
         }
@@ -1252,6 +1281,10 @@ pub(crate) mod tests {
         pub ci: bool,
         pub files: RefCell<Vec<(String, Vec<u8>)>>,
         pub fail: RefCell<Vec<String>>,
+        /// Renames made so far, and the numbers (from 0) of the ones that fail: a failure at a given moment, which a
+        /// source path alone cannot name (a file moved back is renamed from the path it was first moved from).
+        pub renames: std::cell::Cell<usize>,
+        pub fail_renames: RefCell<Vec<usize>>,
     }
 
     impl FakeFs {
@@ -1260,6 +1293,8 @@ pub(crate) mod tests {
                 ci,
                 files: RefCell::new(files.iter().map(|(p, c)| (p.to_string(), c.as_bytes().to_vec())).collect()),
                 fail: RefCell::new(Vec::new()),
+                renames: std::cell::Cell::new(0),
+                fail_renames: RefCell::new(Vec::new()),
             }
         }
         /// The model volume spells paths with `/`; the code under test joins them with the host's separator.
@@ -1296,7 +1331,9 @@ pub(crate) mod tests {
             self.idx(a).is_some() && self.idx(a) == self.idx(b)
         }
         fn rename_no_replace(&self, a: &Path, b: &Path) -> std::io::Result<()> {
-            if self.fail.borrow().iter().any(|f| Self::norm(a).contains(&f.replace('\\', "/"))) {
+            let nth = self.renames.get();
+            self.renames.set(nth + 1);
+            if self.fail_renames.borrow().contains(&nth) || self.fail.borrow().iter().any(|f| Self::norm(a).contains(&f.replace('\\', "/"))) {
                 return Err(std::io::Error::other("injected failure"));
             }
             if self.exists(b) {
