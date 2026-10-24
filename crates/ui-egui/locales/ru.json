@@ -2351,5 +2351,11 @@
   "Finish Lightroom catalog import before adding photos": "Завершите импорт каталога Lightroom, прежде чем добавлять фото",
   "Queued: it starts when the task ahead of it ends": "В очереди: начнётся, когда закончится задача перед ней",
   "Another library was opened: nothing was done": "Открыта другая библиотека: ничего не сделано",
-  "Starts next": "Начнётся следующей"
+  "Starts next": "Начнётся следующей",
+  "Queue without review": "Поставить в очередь без проверки",
+  "Review…": "Проверить…",
+  "A folder is already being scanned": "Папка уже сканируется",
+  "Without review: add in place": "Без проверки: добавить на месте",
+  "Without review: copy into the library": "Без проверки: копировать в библиотеку",
+  "Close the open dialog, then choose Review… again": "Закройте открытое окно и ещё раз выберите «Проверить…»"
 }

@@ -18,6 +18,7 @@ use serde_json::{Value, json};
 use std::sync::atomic::Ordering;
 
 use crate::LightcraftApp;
+use crate::import_queue::{self, Remembered, Transfer};
 use crate::render::Slot;
 use crate::theme::Tokens;
 use crate::widgets::register;
@@ -724,10 +725,16 @@ pub(crate) fn stall_scan(app: &mut LightcraftApp) -> Box<dyn std::any::Any> {
 /// Tests: the same, for a Local folder browse scan (`browse`) instead of the review's scan.
 #[cfg(test)]
 pub(crate) fn stall_scan_of(app: &mut LightcraftApp, browse: bool) -> Box<dyn std::any::Any> {
+    stall_scan_in(app, Vec::new(), browse)
+}
+
+/// Tests: the same, of `sources` (what a folder queued without its review is made of).
+#[cfg(test)]
+pub(crate) fn stall_scan_in(app: &mut LightcraftApp, sources: Vec<String>, browse: bool) -> Box<dyn std::any::Any> {
     let progress = std::sync::Arc::new(ScanProgress::default());
     let (tx, rx) = std::sync::mpsc::channel::<ScanOutput>();
     let guard = scan_guard(app, &progress, false);
-    app.scan = Some(ScanTask { progress, rx, copy: false, album: None, browse, sources: Vec::new(), guard });
+    app.scan = Some(ScanTask { progress, rx, copy: false, album: None, browse, sources, guard });
     Box::new(tx)
 }
 
@@ -736,6 +743,93 @@ pub(crate) fn stall_scan_of(app: &mut LightcraftApp, browse: bool) -> Box<dyn st
 /// finishes replaces `app.import`. A drop while an import runs is not refused: it waits in line ([`library_busy`]).
 pub fn drop_blocked(app: &LightcraftApp) -> bool {
     app.scan.is_some() || app.review_pending.is_some()
+}
+
+/// An import queued without its review: what the waiting row needs to say how it comes in and to review it after all.
+#[derive(Clone, Debug)]
+pub struct Unreviewed {
+    /// Its task in the line.
+    pub id: u64,
+    sources: Vec<String>,
+    /// Open the review with "copy into the library" checked (a camera / card).
+    card: bool,
+    /// The album the review would have offered.
+    album: Option<u64>,
+    /// How it brings its files in.
+    pub transfer: Transfer,
+}
+
+/// The review scan's task id when it can be queued without its review: the library lane is taken, so the review
+/// would wait in line anyway once confirmed (with a free lane the review simply opens when the scan is in).
+pub fn queueable_scan(app: &LightcraftApp) -> Option<u64> {
+    app.scan.as_ref().filter(|t| !t.browse && !t.sources.is_empty() && library_busy(app)).map(|t| t.guard.id())
+}
+
+/// Stop the review scan and put its folder in line, to be imported as the last review was confirmed (see
+/// [`import_queue::plan`]). Its row can still be reviewed ([`review_queued`]).
+pub fn queue_scan(app: &mut LightcraftApp) -> Result<Value, String> {
+    if queueable_scan(app).is_none() {
+        return Err("no folder scan is waiting for the library".into());
+    }
+    let Some(task) = app.scan.take() else { return Err("no folder scan is running".into()) };
+    let plan = import_queue::plan(app.last_import.as_ref(), task.copy);
+    let mut params = plan.params;
+    // the album an Import into this album chose is part of what was asked
+    if let Some(album) =
+        task.album.filter(|id| app.session.catalog.album(lightcraft_catalog::AlbumId(*id)).is_some_and(|a| !a.folder && !a.is_smart()))
+    {
+        params["album"] = json!(album);
+    }
+    let result = match wait_in_line(app, &task.sources, &params, false) {
+        Ok(result) => result,
+        Err(e) => {
+            // (the line is full: the scan goes on, and the review opens when it is in)
+            app.scan = Some(task);
+            return Err(e);
+        }
+    };
+    // (the worker stops at its next file: the scan is let go without a word, as one another replaced is)
+    task.progress.cancel.store(true, Ordering::Relaxed);
+    if let Some(id) = result["queued"].as_u64() {
+        app.unreviewed.push(Unreviewed {
+            id,
+            sources: task.sources.clone(),
+            card: task.copy,
+            album: params["album"].as_u64(),
+            transfer: plan.transfer,
+        });
+    }
+    Ok(result)
+}
+
+/// The waiting row's Review…: the folder leaves the line and its review scan starts, as if it had been opened now.
+/// Refused (the row stays) while another folder is being scanned, or while its review waits for a dialog to close.
+pub fn review_queued(app: &mut LightcraftApp, id: u64) -> Result<(), String> {
+    let Some(at) = app.unreviewed.iter().position(|u| u.id == id) else { return Err("it is no longer waiting".into()) };
+    // (what `open` refuses too, checked before the folder leaves the line: else it would be neither waiting nor scanned)
+    if app.scan.is_some() {
+        return Err(crate::i18n::tr("A folder is already being scanned").to_string());
+    }
+    if app.review_pending.is_some() {
+        return Err(crate::i18n::tr("Close the open dialog, then choose Review… again").to_string());
+    }
+    app.session.activity.cancel(id)?;
+    let u = app.unreviewed.remove(at);
+    open(app, u.sources)?;
+    if let Some(t) = app.scan.as_mut() {
+        t.copy = u.card;
+        t.album = u.album;
+    }
+    Ok(())
+}
+
+/// Forget the queued-without-review notes of imports that have left the line.
+pub fn prune_unreviewed(app: &mut LightcraftApp) {
+    if app.unreviewed.is_empty() {
+        return;
+    }
+    let waiting = app.session.activity.waiting();
+    app.unreviewed.retain(|u| waiting.iter().any(|w| w.id == u.id));
 }
 
 impl ScanTask {
@@ -802,9 +896,15 @@ pub fn start(app: &mut LightcraftApp, d: &ImportDialog) -> Result<Value, String>
     }
     // the review's thumbnails are done with, whether it runs now or later
     app.renderer.forget_imports();
+    // (what a folder queued without a review is asked: the way these files come in, never the batch's own choices;
+    // kept once the import is taken, not when the line is full)
+    let how = Remembered::of(&params);
     if waits {
-        return wait_in_line(app, &queue, &params, false);
+        let queued = wait_in_line(app, &queue, &params, false)?;
+        app.last_import = Some(how);
+        return Ok(queued);
     }
+    app.last_import = Some(how);
     let total = queue.len();
     app.import = Some(ImportTask::new(queue, params, undo0, false));
     Ok(json!({"importing": total}))

@@ -23,6 +23,7 @@ pub mod headless;
 pub mod i18n;
 pub mod icons;
 pub mod import;
+mod import_queue;
 pub mod lightroom_destination;
 pub mod lightroom_import;
 pub mod links;
@@ -175,6 +176,8 @@ mod tests_profile_menu;
 mod tests_profiles_layout;
 #[cfg(test)]
 mod tests_progress;
+#[cfg(test)]
+mod tests_queue_no_review;
 #[cfg(test)]
 mod tests_quit_unsaved;
 #[cfg(test)]
@@ -539,6 +542,10 @@ pub struct LightcraftApp {
     pub import: Option<import::ImportTask>,
     /// A folder scan in progress (feeds the import review).
     pub scan: Option<import::ScanTask>,
+    /// How the last confirmed import review brought its files in (this run only): what "Queue without review" asks.
+    pub(crate) last_import: Option<import_queue::Remembered>,
+    /// The imports waiting in line that were queued without a review, by their task id.
+    pub(crate) unreviewed: Vec<import::Unreviewed>,
     /// A Synchronize Folder scan in progress (feeds its dialog).
     pub sync: Option<sync::SyncTask>,
     /// `session.folder_changes` came from the Synchronize Folder dialog (and goes with it).
@@ -681,6 +688,8 @@ impl LightcraftApp {
             merge: merge::MergeState::default(),
             import: None,
             scan: None,
+            last_import: None,
+            unreviewed: Vec::new(),
             sync: None,
             sync_owns_changes: false,
             sync_run: None,
@@ -2544,6 +2553,8 @@ impl LightcraftApp {
             return;
         }
         self.shown_library = Some(generation);
+        // (how a review of another library was confirmed is no guide for this one)
+        self.last_import = None;
         if let Some(l) = self.session.library.as_ref().filter(|l| l.on_disk) {
             let path = l.dir.to_string_lossy().into_owned();
             panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);
