@@ -280,12 +280,20 @@ pub struct ImportTask {
     run: Option<ImportRun>,
     /// The import's row in the activity stack (its ✕ and `activity.cancel` set the run's cancel flag).
     guard: Option<lightcraft_engine::activity::TaskGuard>,
+    /// What it is about, for its row (a folder's name): [`subject_of`].
+    subject: String,
 }
 
 impl ImportTask {
     /// An import of `paths` (files or folders) with `library.import` params (without `paths`).
     pub fn new(paths: Vec<String>, params: Value, undo0: usize, browse: bool) -> Self {
         ImportTask { total: paths.len(), queue: paths, params, undo0, browse, ..Default::default() }
+    }
+
+    /// Say what the import is about: its row names it ([`subject_of`]).
+    pub fn about(mut self, subject: String) -> Self {
+        self.subject = subject;
+        self
     }
 
     /// An Auto Import (see [`ImportTask::auto`]).
@@ -452,8 +460,40 @@ fn scan_guard(app: &LightcraftApp, progress: &ScanProgress, browse: bool) -> lig
 /// `library.import` params.
 pub const IMPORT_REQUEST: &str = "app:import";
 
-fn import_request(paths: &[String], params: &Value, auto: bool) -> Request {
-    Request { command: IMPORT_REQUEST.into(), params: json!({"paths": paths, "params": params, "auto": auto}) }
+/// `sources`: the folders or files the person chose, which name the import; `counted`: `paths` are the photos the
+/// review counted (dropped folders are not counted until they are read).
+fn import_request(paths: &[String], params: &Value, auto: bool, sources: &[String], counted: bool) -> Request {
+    Request {
+        command: IMPORT_REQUEST.into(),
+        params: json!({"paths": paths, "params": params, "auto": auto}),
+        subject: subject_of(sources),
+        facts: facts_of(counted.then_some(paths.len()), params["mode"].as_str().unwrap_or("add")),
+    }
+}
+
+/// What an import is about, for its rows: the source folder's (or file's) name, or how many sources there are. Empty
+/// when it is not known where the photos come from.
+fn subject_of(sources: &[String]) -> String {
+    match sources {
+        [] => String::new(),
+        [one] => {
+            std::path::Path::new(one.trim_end_matches(['/', '\\'])).file_name().map_or_else(|| one.clone(), |n| n.to_string_lossy().into_owned())
+        }
+        many => crate::i18n::tr_format!("{} item{}", many.len(), "s"),
+    }
+}
+
+/// What else an import waiting in line says: how many photos (when the review counted them) and how they come in.
+fn facts_of(photos: Option<usize>, mode: &str) -> String {
+    let how = match mode {
+        "copy" => crate::i18n::tr("Copy"),
+        "move" => crate::i18n::tr("Move"),
+        _ => crate::i18n::tr("Add in place"),
+    };
+    match photos {
+        Some(n) => format!("{} · {how}", crate::i18n::tr_format!("{n} photo{}", if n == 1 { "" } else { "s" }, n = n)),
+        None => how.to_string(),
+    }
 }
 
 /// The library lane is taken: an import (or the reading of a Local folder) or a Synchronize Folder runs, or waits
@@ -470,8 +510,9 @@ pub(crate) fn library_busy(app: &LightcraftApp) -> bool {
 
 /// Put an import of `paths` with `params` in line behind what runs in the library lane, and say so (an Auto Import
 /// quietly: nobody asked for it).
-fn wait_in_line(app: &mut LightcraftApp, paths: &[String], params: &Value, auto: bool) -> Result<Value, String> {
-    let (id, place) = app.session.activity.enqueue("import", "Importing", import_request(paths, params, auto))?;
+fn wait_in_line(app: &mut LightcraftApp, request: Request) -> Result<Value, String> {
+    let auto = request.params["auto"].as_bool().unwrap_or(false);
+    let (id, place) = app.session.activity.enqueue("import", "Importing", request)?;
     if !auto {
         app.queued_toast(place as u64);
     }
@@ -495,7 +536,7 @@ pub(crate) fn auto_import_listed(app: &mut LightcraftApp, listing: Vec<(String, 
         o.remove("paths");
     }
     if library_busy(app) {
-        if let Err(e) = wait_in_line(app, &paths, &params, true) {
+        if let Err(e) = wait_in_line(app, import_request(&paths, &params, true, &[], true)) {
             log::warn!("auto import: {e}");
         }
         return;
@@ -803,10 +844,10 @@ pub fn start(app: &mut LightcraftApp, d: &ImportDialog) -> Result<Value, String>
     // the review's thumbnails are done with, whether it runs now or later
     app.renderer.forget_imports();
     if waits {
-        return wait_in_line(app, &queue, &params, false);
+        return wait_in_line(app, import_request(&queue, &params, false, &d.sources, true));
     }
     let total = queue.len();
-    app.import = Some(ImportTask::new(queue, params, undo0, false));
+    app.import = Some(ImportTask::new(queue, params, undo0, false).about(subject_of(&d.sources)));
     Ok(json!({"importing": total}))
 }
 
@@ -818,11 +859,12 @@ pub fn start_paths(app: &mut LightcraftApp, paths: Vec<String>) -> Result<Value,
     }
     let params = json!({"mode": "add"});
     if library_busy(app) {
-        return wait_in_line(app, &paths, &params, false);
+        return wait_in_line(app, import_request(&paths, &params, false, &paths, false));
     }
     let undo0 = app.session.undo.len();
     let total = paths.len();
-    app.import = Some(ImportTask::new(paths, params, undo0, false));
+    let subject = subject_of(&paths);
+    app.import = Some(ImportTask::new(paths, params, undo0, false).about(subject));
     Ok(json!({"importing": total}))
 }
 
@@ -839,7 +881,7 @@ pub fn start_request(app: &mut LightcraftApp, ctx: &egui::Context, request: &Req
     }
     let undo0 = app.session.undo.len();
     let auto = request.params["auto"].as_bool().unwrap_or(false);
-    let mut task = ImportTask::new(paths, request.params["params"].clone(), undo0, false);
+    let mut task = ImportTask::new(paths, request.params["params"].clone(), undo0, false).about(request.subject.clone());
     if auto {
         task = task.auto();
     }
@@ -860,7 +902,9 @@ fn begin(app: &mut LightcraftApp, ctx: &egui::Context, task: &mut ImportTask) ->
         task.keep_selection = Some(app.session.selection.clone());
     }
     let label = if task.browse { "Reading folder" } else { "Importing" };
-    task.guard = Some(app.session.activity.start("import", label, lightcraft_engine::activity::Cancel::Flag(run.cancel.clone())));
+    let guard = app.session.activity.start("import", label, lightcraft_engine::activity::Cancel::Flag(run.cancel.clone()));
+    guard.detail(&task.subject);
+    task.guard = Some(guard);
     task.run = Some(run);
     Ok(())
 }

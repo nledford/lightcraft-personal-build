@@ -176,6 +176,8 @@ mod tests_profiles_layout;
 #[cfg(test)]
 mod tests_progress;
 #[cfg(test)]
+mod tests_queue_ux;
+#[cfg(test)]
 mod tests_quit_unsaved;
 #[cfg(test)]
 mod tests_rating;
