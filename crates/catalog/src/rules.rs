@@ -78,6 +78,7 @@ pub const FIELDS: &[(&str, &str, Kind)] = &[
     ("kind", "File Type", Kind::Choice(&[("image", "Image"), ("raw", "Raw"), ("video", "Video")])),
     ("format", "File Format", Kind::Text),
     ("duration", "Video Duration", Kind::Number),
+    ("truncated", "Damaged File", Kind::Bool),
     // Date
     ("captureDate", "Capture Date", Kind::Date),
     ("importDate", "Import Date", Kind::Date),
@@ -132,7 +133,7 @@ pub const TOP_LEVEL_FIELDS: &[&str] = &["rating", "flag", "label", "text"];
 /// once or in [`TOP_LEVEL_FIELDS`].
 pub const FIELD_GROUPS: &[(&str, &[&str])] = &[
     ("Source", &["album", "virtualCopy", "copyName", "stacked"]),
-    ("File", &["fileName", "extension", "filePath", "kind", "format", "duration"]),
+    ("File", &["fileName", "extension", "filePath", "kind", "format", "duration", "truncated"]),
     ("Date", &["captureDate", "importDate", "editDate"]),
     ("Keywords & People", &["keywords", "keywordCount", "person", "personCount"]),
     ("Description", &["title", "caption", "altText", "creator", "copyright", "copyrightStatus"]),
@@ -969,6 +970,7 @@ impl Rule {
             "kind" => (kind_name(p.kind) == want) == (op == "is"),
             "edited" => yes(p.is_edited()),
             "hasGps" => yes(m.gps.is_some()),
+            "truncated" => yes(p.truncated),
             "virtualCopy" => yes(p.copy_of.is_some()),
             "copyName" => text(p.copy_name.as_deref().unwrap_or("")),
             "stacked" => yes(cat.stack_of(p.id).is_some()),
@@ -1832,7 +1834,7 @@ mod tests {
                 assert_eq!(field_group(f), Some(group), "{f}");
             }
         };
-        same(&["fileName", "extension", "filePath", "kind", "format", "duration"], "File");
+        same(&["fileName", "extension", "filePath", "kind", "format", "duration", "truncated"], "File");
         same(&["album", "virtualCopy", "copyName", "stacked"], "Source");
         same(&["longEdge", "shortEdge", "aspect", "megapixels"], "Size");
         same(&["edited", "cropped", "treatment"], "Develop");
@@ -1847,6 +1849,21 @@ mod tests {
         assert_eq!(field_group("nope"), None);
         assert_eq!(field_label("filePath"), Some("File Path"));
         assert_eq!(field_label("nope"), None);
+    }
+
+    /// Damaged File finds the JPEGs that were cut short, and only those.
+    #[test]
+    fn damaged_file_rule_finds_truncated_photos() {
+        let cat = Catalog::new();
+        let mut cut = photo(1);
+        cut.truncated = true;
+        let whole = photo(2);
+        let m = |p: &Photo, op: &str| rs(json!({"rules": [{"field": "truncated", "op": op, "value": true}]})).matches(p, &cat);
+        assert!(m(&cut, "is") && !m(&whole, "is"));
+        let not = rs(json!({"rules": [{"field": "truncated", "op": "is", "value": false}]}));
+        assert!(!not.matches(&cut, &cat) && not.matches(&whole, &cat));
+        assert_eq!(field_label("truncated"), Some("Damaged File"));
+        assert!(rs(json!({"rules": [{"field": "truncated", "op": "is", "value": true}]})).check(&cat).is_empty());
     }
 
     /// The `filePath` rule exactly as it was before the in-place ASCII path: new strings per photo.
