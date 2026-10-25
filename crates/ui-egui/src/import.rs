@@ -786,11 +786,18 @@ pub(crate) fn stall_scan_of(app: &mut LightcraftApp, browse: bool) -> Box<dyn st
     Box::new(tx)
 }
 
-/// Whether any scan (the review's, or a Local folder browse) is running, or a finished scan's review waits for a
-/// dialog to close, which a drop of photos must not replace: `open` refuses while a scan runs, and a browse that
-/// finishes replaces `app.import`. A drop while an import runs is not refused: it waits in line ([`library_busy`]).
-pub fn drop_blocked(app: &LightcraftApp) -> bool {
-    app.scan.is_some() || app.review_pending.is_some()
+/// Why a drop of photos is refused now, in the person's language, if it is: a scan (the review's, or a Local folder
+/// browse) is running, or a finished scan's review waits for a dialog to close. A drop must not replace them: `open`
+/// refuses while a scan runs, and a browse that finishes replaces `app.import`. A drop while an import runs is not
+/// refused: it waits in line ([`library_busy`]).
+pub fn drop_refusal(app: &LightcraftApp) -> Option<String> {
+    let why = match app.scan.as_ref() {
+        Some(scan) if scan.browse => "A folder is still being read for the Local view: drop photos when it has finished",
+        Some(_) => "A folder is still being scanned for the import review: drop photos when it has finished",
+        None if app.review_pending.is_some() => "An import review is waiting to open: drop photos when it is closed",
+        None => return None,
+    };
+    Some(crate::i18n::tr(why).to_string())
 }
 
 impl ScanTask {
@@ -868,8 +875,8 @@ pub fn start(app: &mut LightcraftApp, d: &ImportDialog) -> Result<Value, String>
 /// Start importing `paths` (files or folders) in the background, e.g. dropped on the window; in line, like
 /// [`start`], while the library lane is taken.
 pub fn start_paths(app: &mut LightcraftApp, paths: Vec<String>) -> Result<Value, String> {
-    if drop_blocked(app) {
-        return Err(crate::i18n::tr("An import is running").to_string());
+    if let Some(why) = drop_refusal(app) {
+        return Err(why);
     }
     let params = json!({"mode": "add"});
     if library_busy(app) {

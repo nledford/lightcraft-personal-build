@@ -2239,8 +2239,8 @@ impl LightcraftApp {
             self.toast(ctx, crate::i18n::tr("Finish Lightroom catalog import before adding photos"));
             return;
         }
-        if import::drop_blocked(self) {
-            self.toast(ctx, crate::i18n::tr("An import is running"));
+        if let Some(why) = import::drop_refusal(self) {
+            self.toast(ctx, why);
             return;
         }
         let started = if self.ui.settings.import_dropped_directly {

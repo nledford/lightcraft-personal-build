@@ -376,8 +376,9 @@ fn a_drop_while_a_scan_runs_is_refused() {
     write_png(&dir.path("more/c.png"), 3);
     let _scan = crate::import::stall_scan(&mut h.app);
     drop_files(&mut h, &[dir.path("more/c.png")], true);
-    assert!(said(&h, "An import is running"), "{:?}", h.painted_text());
-    assert!(!said(&h, "review"), "{:?}", h.painted_text());
+    assert!(said(&h, "A folder is still being scanned for the import review: drop photos when it has finished"), "{:?}", h.painted_text());
+    assert!(!said(&h, "An import is running"), "the scan is the reason, not an import");
+    assert!(!said(&h, "Drop to review"), "{:?}", h.painted_text());
     drop_files(&mut h, &[dir.path("more")], false);
     for _ in 0..30 {
         h.step();
@@ -412,7 +413,7 @@ fn a_drop_while_a_browse_scan_runs_is_refused_in_both_modes() {
         write_png(&dir.path("more/c.png"), 3);
         let _scan = crate::import::stall_scan_of(&mut h.app, true);
         drop_files(&mut h, &[dir.path("more/c.png")], true);
-        assert!(said(&h, "An import is running"), "{:?}", h.painted_text());
+        assert!(said(&h, "A folder is still being read for the Local view: drop photos when it has finished"), "{:?}", h.painted_text());
         drop_files(&mut h, &[dir.path("more")], false);
         for _ in 0..30 {
             h.step();
