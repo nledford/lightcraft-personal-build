@@ -130,6 +130,51 @@ fn a_running_move_holds_back_other_file_moves_and_another_library() {
     s.open_library(&other, false).unwrap();
 }
 
+/// Undoing the import of a photo whose file is on its way to another folder is a catalog-only step
+/// (no file to move), but it would leave the move's finish with no photo to point at the new place.
+#[test]
+fn undoing_the_import_of_a_moving_photo_waits_for_the_move() {
+    let dir = Scratch::new("busy-remove");
+    let mut s = open(&dir);
+    let a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    let e = s.execute("edit.undo", &json!({})).unwrap_err().to_string();
+    assert!(e.contains("being moved"), "{e}");
+    assert!(s.catalog.photo(a).is_some(), "the photo stays while its file moves");
+    let out = work.run();
+    s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
+    assert_eq!(file_of(&s, a), dir.path("share/a.jpg"));
+    // once the move is over, the steps undo in turn: the move, then the import
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(file_of(&s, a), dir.path("local/a.jpg"));
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert!(s.catalog.photo(a).is_none());
+}
+
+/// The same for undoing a relink (Convert to DNG, Find Missing Photos): it would point the photo
+/// back at the old file while its current one is on its way to another folder.
+#[test]
+fn undoing_a_relink_of_a_moving_photo_waits_for_the_move() {
+    let dir = Scratch::new("busy-relink");
+    let mut s = open(&dir);
+    let a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    std::fs::write(dir.path("local/a2.jpg"), "A2").unwrap();
+    let to = dir.path("local/a2.jpg");
+    s.execute_fn("test.relink", |s| {
+        s.commit("Relink", crate::cmd::missing::relink_op(a, &to))?;
+        Ok(Value::Null)
+    })
+    .unwrap();
+    assert_eq!(file_of(&s, a), to);
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    let e = s.execute("edit.undo", &json!({})).unwrap_err().to_string();
+    assert!(e.contains("being moved"), "{e}");
+    assert_eq!(file_of(&s, a), to, "the photo keeps pointing at the file that moves");
+    let out = work.run();
+    s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
+    assert_eq!(file_of(&s, a), dir.path("share/a2.jpg"));
+}
+
 #[test]
 fn a_running_move_refuses_opening_before_touching_the_target() {
     let dir = Scratch::new("busy-open");
