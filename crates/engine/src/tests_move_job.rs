@@ -139,7 +139,7 @@ fn undoing_the_import_of_a_moving_photo_waits_for_the_move() {
     let a = add(&mut s, &dir.path("local/a.jpg"), "A");
     let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
     let e = s.execute("edit.undo", &json!({})).unwrap_err().to_string();
-    assert!(e.contains("being moved"), "{e}");
+    assert_eq!(e, "1 photo is being moved to another folder: wait for the move to finish");
     assert!(s.catalog.photo(a).is_some(), "the photo stays while its file moves");
     let out = work.run();
     s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
@@ -173,6 +173,128 @@ fn undoing_a_relink_of_a_moving_photo_waits_for_the_move() {
     let out = work.run();
     s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
     assert_eq!(file_of(&s, a), dir.path("share/a2.jpg"));
+}
+
+/// A photo whose file is on its way to another folder is refused everything that would take it out
+/// of the library or point it at another file; the library keeps it where the move's finish looks.
+/// Run with the move in flight, then let it finish and check it still followed the file.
+fn moving_one(tag: &str) -> (Scratch, Session, PhotoId, crate::move_job::MoveWork, crate::move_job::MoveFinish) {
+    let dir = Scratch::new(tag);
+    let mut s = open(&dir);
+    let a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    (dir, s, a, work, finish)
+}
+
+fn finish_and_check(s: &mut Session, dir: &Scratch, a: PhotoId, work: crate::move_job::MoveWork, finish: crate::move_job::MoveFinish) {
+    let out = work.run();
+    s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
+    assert_eq!(file_of(s, a), dir.path("share/a.jpg"), "the library followed the file");
+}
+
+#[test]
+fn delete_permanently_waits_for_the_move_of_the_photos_it_would_remove() {
+    let dir = Scratch::new("busy-delete");
+    let mut s = open(&dir);
+    let a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    let b = add(&mut s, &dir.path("local/b.jpg"), "B");
+    let c = add(&mut s, &dir.path("local/c.jpg"), "C");
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0, b.0], "folder": dir.path("share")})).unwrap().unwrap();
+    s.selection = crate::Selection::single(a);
+    let steps = s.undo.len();
+    let err = s.execute("photo.deletePermanently", &json!({"ids": [a.0]})).unwrap_err();
+    assert_eq!(err.kind(), crate::ErrorKind::MoveInProgress, "{err}");
+    let e = err.to_string();
+    assert_eq!(e, "1 photo is being moved to another folder: wait for the move to finish");
+    // a batch is refused as a whole when any of its photos moves, and says how many
+    let e = s.execute("photo.deletePermanently", &json!({"ids": [a.0, b.0, c.0]})).unwrap_err().to_string();
+    assert_eq!(e, "2 photos are being moved to another folder: wait for the move to finish");
+    assert!([a, b, c].iter().all(|id| s.catalog.photo(*id).is_some()), "nothing was removed");
+    assert_eq!(s.undo.len(), steps);
+    // a photo that stays is not held back
+    s.execute("photo.deletePermanently", &json!({"ids": [c.0]})).unwrap();
+    let out = work.run();
+    s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
+    assert_eq!(file_of(&s, a), dir.path("share/a.jpg"));
+    s.execute("photo.deletePermanently", &json!({"ids": [a.0]})).unwrap();
+    assert!(s.catalog.photo(a).is_none(), "once the move is over it goes");
+}
+
+#[test]
+fn empty_recently_deleted_waits_for_the_move_of_a_trashed_photo() {
+    let (dir, mut s, a, work, finish) = moving_one("busy-empty");
+    // the photo is put in Recently Deleted while its file moves: that detaches nothing
+    s.selection = crate::Selection::single(a);
+    s.execute("photo.delete", &json!({"ids": [a.0]})).unwrap();
+    let e = s.execute("library.emptyRecentlyDeleted", &json!({})).unwrap_err().to_string();
+    assert_eq!(e, "1 photo is being moved to another folder: wait for the move to finish");
+    assert!(s.catalog.photo(a).is_some());
+    finish_and_check(&mut s, &dir, a, work, finish);
+    s.execute("library.emptyRecentlyDeleted", &json!({})).unwrap();
+    assert!(s.catalog.photo(a).is_none());
+}
+
+#[test]
+fn the_imports_purge_of_a_trashed_photo_waits_for_its_move() {
+    let dir = Scratch::new("busy-purge");
+    let mut s = open(&dir);
+    let path = dir.path("local/a.png");
+    let img =
+        lightcraft_raster::Rgba8 { width: 24, height: 16, data: (0..24 * 16).map(|i| [(i % 24 * 9) as u8, (i / 24 * 11) as u8, 7, 255]).collect() };
+    let bytes = lightcraft_codecs::encode_png(&lightcraft_codecs::EncodeImage::rgba8(&img), &lightcraft_codecs::EncodeMeta::default()).unwrap();
+    std::fs::write(&path, bytes).unwrap();
+    let imported = s.execute("library.import", &json!({"paths": [path]})).unwrap();
+    let a = PhotoId(imported["imported"][0].as_u64().unwrap());
+    s.execute("photo.delete", &json!({"ids": [a.0]})).unwrap();
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    // importing the same file as new would delete the trashed record its file belongs to
+    let e = s.execute("library.import", &json!({"paths": [path], "onDeleted": "fresh"})).unwrap_err().to_string();
+    assert_eq!(e, "1 photo is being moved to another folder: wait for the move to finish");
+    assert!(s.catalog.photo(a).is_some_and(|p| p.deleted), "the trashed record stays");
+    assert_eq!(s.catalog.len(), 1, "and nothing was added");
+    let out = work.run();
+    s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
+    assert_eq!(file_of(&s, a), dir.path("share/a.png"));
+}
+
+#[test]
+fn convert_to_dng_waits_for_the_move_of_the_raw() {
+    let dir = Scratch::new("busy-convert");
+    let mut s = open(&dir);
+    let path = dir.path("local/a.arw");
+    std::fs::write(&path, "RAW").unwrap();
+    let a = s.catalog.alloc_photo_id();
+    let mut p = Photo::new(a, Source::File { path: path.clone() }, "a.arw", "ARW", 60, 40, "2026-01-01T10:00:00");
+    p.kind = lightcraft_catalog::MediaKind::Raw;
+    s.execute_fn("test.add", |s| {
+        s.commit("Add", Op::AddPhoto { photo: Box::new(p) })?;
+        Ok(Value::Null)
+    })
+    .unwrap();
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    s.selection = crate::Selection::single(a);
+    let e = s.execute("photo.convertToDng", &json!({"ids": [a.0]})).unwrap_err().to_string();
+    assert!(e.contains("1 photo is being moved to another folder"), "{e}");
+    assert!(!Path::new(&dir.path("local/a.dng")).exists(), "no DNG was written beside the moving file");
+    assert_eq!(file_of(&s, a), dir.path("local/a.arw"));
+    let out = work.run();
+    s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
+    assert_eq!(file_of(&s, a), dir.path("share/a.arw"));
+}
+
+#[test]
+fn find_missing_and_locate_wait_for_the_move_of_the_photos_they_would_relink() {
+    let (dir, mut s, a, work, finish) = moving_one("busy-find");
+    std::fs::write(dir.path("local/a2.jpg"), "A2").unwrap();
+    let from = dir.path("local/a.jpg");
+    let to = dir.path("local/a2.jpg");
+    let found = json!({"found": [{"id": a.0, "from": from, "to": to, "by": "name"}], "missing": 0, "ambiguous": []});
+    let e = s.execute("library.findMissing", &found).unwrap_err().to_string();
+    assert_eq!(e, "1 photo is being moved to another folder: wait for the move to finish");
+    let e = s.execute("photo.relink", &json!({"id": a.0, "path": to})).unwrap_err().to_string();
+    assert_eq!(e, "1 photo is being moved to another folder: wait for the move to finish");
+    assert_eq!(file_of(&s, a), from, "the photo keeps pointing at the file that moves");
+    finish_and_check(&mut s, &dir, a, work, finish);
 }
 
 #[test]

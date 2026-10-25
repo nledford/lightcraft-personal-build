@@ -255,6 +255,8 @@ pub struct ImportTask {
     /// The library photos the skipped duplicates match (shown when nothing new was added).
     existing: Vec<u64>,
     pub failed: usize,
+    /// Why a batch was left alone while photos were being moved to another folder (not counted as failed).
+    refused: Option<String>,
     /// Move: originals moved, and sources left in place (reported by the engine with a reason).
     pub moved: usize,
     pub kept: usize,
@@ -861,6 +863,11 @@ fn commit_batch(app: &mut LightcraftApp, task: &mut ImportTask, prepared: lightc
                 task.first = ["imported", "restored"].iter().find_map(|k| v[*k].as_array().and_then(|a| a.first()).and_then(Value::as_u64));
             }
         }
+        Err(e) if e.kind() == lightcraft_engine::ErrorKind::MoveInProgress => {
+            // a photo the import would replace or restore is being moved: this batch was left alone
+            log::warn!("import: {e}");
+            task.refused = Some(e.to_string());
+        }
         Err(e) => {
             log::warn!("import: {e}");
             task.failed += n;
@@ -939,6 +946,8 @@ fn finish(app: &mut LightcraftApp, ctx: &egui::Context, task: ImportTask) {
     if task.auto {
         if !task.warnings.is_empty() {
             app.toast_for(ctx, xmp_warnings_text(&task.warnings), 8.0);
+        } else if let Some(why) = &task.refused {
+            app.toast_for(ctx, why.clone(), 8.0);
         } else if task.imported > 0 {
             app.toast(ctx, crate::i18n::tr_format!("Auto Import: added {} photo{}", task.imported, if task.imported == 1 { "" } else { "s" }));
         }
@@ -966,6 +975,7 @@ fn finish(app: &mut LightcraftApp, ctx: &egui::Context, task: ImportTask) {
     if task.imported == 0
         && task.restored == 0
         && task.failed == 0
+        && task.refused.is_none()
         && task.warnings.is_empty()
         && !task.cancelled
         && show_existing(app, ctx, &task.existing)
@@ -998,8 +1008,17 @@ fn finish(app: &mut LightcraftApp, ctx: &egui::Context, task: ImportTask) {
     if task.failed > 0 {
         msg.push_str(&crate::i18n::tr_format!(" · {} not readable", task.failed));
     }
+    if let Some(why) = &task.refused {
+        // (the batches it left alone were not imported: the reason, not "not readable")
+        msg.push_str("\n\n");
+        msg.push_str(why);
+    }
     if task.warnings.is_empty() {
-        app.toast(ctx, msg);
+        if task.refused.is_some() {
+            app.toast_for(ctx, msg, 8.0);
+        } else {
+            app.toast(ctx, msg);
+        }
     } else {
         msg.push_str("\n\n");
         msg.push_str(&xmp_warnings_text(&task.warnings));
