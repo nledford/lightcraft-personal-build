@@ -282,6 +282,8 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     ("app.export", "Export Now", None, ""),
     ("app.showInFinder", "Show in Finder", Some("Cmd+R"), "Photo"),
     ("app.showInFolders", "Show in Folders", None, "Photo"),
+    // the selected photos' file paths, one per line, on the clipboard
+    ("photo.copyPath", "Copy File Path", None, ""),
     ("app.openSamModelFolder", "Show in File Manager", None, ""),
     ("dialog.rename", "Rename Photos…", Some("F2"), "Photo"),
     ("dialog.labelNames", "Edit Color Label Names…", None, ""),
@@ -2265,6 +2267,7 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
         "app.export" => crate::control::export_active(app, p),
         "app.showInFinder" => show_in_finder(app),
         "app.showInFolders" => show_in_folders(app, p.get("id").and_then(Value::as_u64).map(lightcraft_catalog::PhotoId)),
+        "photo.copyPath" => copy_file_paths(app, &ctx),
         "app.openLogFolder" => open_log_folder(app),
         "app.discord" | "app.website" | "app.github" | "app.artcraft" | "app.help" | "app.feedback" => {
             let url = crate::links::url_of(id).unwrap_or(crate::links::WEBSITE);
@@ -2320,6 +2323,14 @@ pub fn ui_enabled(app: &LightcraftApp, id: &str) -> bool {
                     .is_some_and(|p| matches!(p.source, lightcraft_engine::catalog::Source::File { .. }))
         }
         "app.showInFolders" => show_in_folders_enabled(app, None),
+        // (asked every frame a menu is open: reads the selection in place, copies no path)
+        "photo.copyPath" => {
+            let on_disk = |id: &lightcraft_catalog::PhotoId| {
+                matches!(app.session.catalog.photo(*id).map(|p| &p.source), Some(lightcraft_engine::catalog::Source::File { .. }))
+            };
+            let sel = &app.session.selection;
+            if sel.ids.is_empty() { sel.active.as_ref().is_some_and(on_disk) } else { sel.ids.iter().any(on_disk) }
+        }
         "app.openSamModelFolder" => app.session.segmenter.dir.is_some() && app.services.open_with.is_some(),
         "file.exportPresets" => app.session.presets.iter().any(|p| !p.builtin),
         "file.exportMaskEffects" => !app.session.mask_effects.is_empty(),
@@ -2435,6 +2446,34 @@ fn open_log_folder(app: &mut LightcraftApp) -> Result<Value, String> {
     let reveal = app.services.reveal.as_mut().ok_or("not available here")?;
     reveal(&path)?;
     Ok(json!({"path": path}))
+}
+
+/// The selected photos' originals, each once (a virtual copy shares its original's file);
+/// generated demo photos and other sources have none.
+fn selected_file_paths(app: &LightcraftApp) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    app.session
+        .selected()
+        .into_iter()
+        .filter_map(|id| match app.session.catalog.photo(id).map(|p| &p.source) {
+            Some(lightcraft_engine::catalog::Source::File { path }) => Some(path.clone()),
+            _ => None,
+        })
+        .filter(|path| seen.insert(path.clone()))
+        .collect()
+}
+
+/// `photo.copyPath`: the selected photos' file paths, one per line, on the clipboard.
+fn copy_file_paths(app: &mut LightcraftApp, ctx: &egui::Context) -> Result<Value, String> {
+    let paths = selected_file_paths(app);
+    if paths.is_empty() {
+        return Err(crate::i18n::tr("The selected photos have no file on disk").to_string());
+    }
+    ctx.copy_text(paths.join("\n"));
+    let n = paths.len();
+    let text = if n == 1 { crate::i18n::tr("Copied the file path").to_string() } else { crate::i18n::tr_format!("Copied {n} file paths", n = n) };
+    app.toast(ctx, text);
+    Ok(json!({"paths": paths}))
 }
 
 /// Reveal the active photo's original in the system file manager.
