@@ -1328,9 +1328,9 @@ pub fn context_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
         });
         if let crate::pick::Picked::Now(v) = picked
             && let Some(into) = v.into_iter().next()
-            && let Err(e) = crate::move_task::start(app, ui.ctx(), &json!({"folder": into}))
         {
-            app.toast(ui.ctx(), e);
+            // (a refusal is told in a toast by `start`)
+            let _ = crate::move_task::start(app, ui.ctx(), &json!({"folder": into}));
         }
     }
     if ui.button(crate::i18n::tr("Reload from Disk")).clicked() {
