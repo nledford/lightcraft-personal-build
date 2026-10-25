@@ -283,6 +283,16 @@ fn exclusive_choices_are_radio_buttons_and_independent_toggles_are_checkboxes() 
     assert_eq!(role("Group"), Some(("Button".to_string(), None)));
 }
 
+/// The "Other…" row of a profile list opens a file picker: a screen reader must hear a button, not
+/// an unselected radio button.
+#[test]
+fn the_other_row_that_opens_a_picker_is_a_button_not_a_radio() {
+    let r = run(None, Vec::new(), |ui| vec![MenuItem::new("sRGB").selected(true).show(ui), MenuItem::picker("Other…").show(ui)]);
+    let role = |name: &str| r.nodes.iter().find(|(_, n, _)| n == name).map(|(role, _, t)| (role.clone(), *t));
+    assert_eq!(role("Other…"), Some(("Button".to_string(), None)), "{:?}", r.nodes);
+    assert_eq!(role("sRGB"), Some(("RadioButton".to_string(), Some(true))));
+}
+
 #[test]
 fn an_inert_current_choice_ignores_clicks_without_the_disabled_look() {
     let rows = |ui: &mut egui::Ui| vec![MenuItem::new("Display P3").selected(true).inert().show(ui)];
