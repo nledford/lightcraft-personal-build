@@ -303,6 +303,12 @@ pub fn dropped_photos_outcome(report: &serde_json::Value) -> Option<String> {
     (!parts.is_empty()).then(|| parts.join(" · "))
 }
 
+/// Whether a drop of photos had files that could not be read (`library.import`'s `failed` list): its notice then
+/// reports an error, which stays at least as long as any error toast, not just its reading time.
+pub fn dropped_photos_failed(report: &serde_json::Value) -> bool {
+    report["failed"].as_array().is_some_and(|f| !f.is_empty())
+}
+
 /// The web build's notice for `n` dropped photos that could not be read.
 pub fn dropped_photos_unreadable(n: usize) -> String {
     tr_format!("{} photo{} not readable", n, if n == 1 { "" } else { "s" })
@@ -1709,8 +1715,12 @@ mod ",
             Some("Added 1 photo · Restored 1 photo from Recently Deleted · 1 photo not readable"),
             "{report}"
         );
+        assert!(dropped_photos_failed(&report), "an unreadable file is a failure: {report}");
         let again = s.execute("library.import", &serde_json::json!({"paths": [added]})).unwrap();
         assert_eq!(dropped_photos_outcome(&again), None, "a duplicate only: {again}");
+        assert!(!dropped_photos_failed(&again), "{again}");
+        let clean = s.execute("library.import", &serde_json::json!({"paths": [png("clean.png", 3)]})).unwrap();
+        assert!(!dropped_photos_failed(&clean), "an import with nothing unreadable is not: {clean}");
         let _ = std::fs::remove_dir_all(dir);
     }
 

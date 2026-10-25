@@ -1204,6 +1204,18 @@ impl LightcraftApp {
         self.ui.show_toast(t, text.into(), secs.max(ERROR_TOAST_SECONDS), None);
     }
 
+    /// The toast for what a drop of photos came to (`library.import`'s report, via
+    /// [`i18n::dropped_photos_outcome`]): an error toast when a file could not be read, so it stays at
+    /// least 6 s like every other failure, otherwise the regular one. Nothing for duplicates only.
+    pub fn toast_dropped_photos(&mut self, ctx: &egui::Context, report: &serde_json::Value) {
+        let Some(notice) = i18n::dropped_photos_outcome(report) else { return };
+        if i18n::dropped_photos_failed(report) {
+            self.toast_error(ctx, notice);
+        } else {
+            self.toast(ctx, notice);
+        }
+    }
+
     /// Take the control receiver for this frame, run every queued request whose sender still
     /// wants it, and reply directly or admit its screenshot/gesture to a later completed pass.
     /// Requests abandoned by their sender are skipped rather than executed late.
