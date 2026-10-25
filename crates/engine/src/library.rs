@@ -100,8 +100,8 @@ pub struct Library {
     warnings_reported: usize,
     /// What following moves an earlier run cut short came to when the library opened
     /// (`library.info` → `recoveredMoves`; handed out once, see
-    /// [`Session::take_recovered_moves`], for the window that shows it: a later part). Not a
-    /// settings problem: kept apart from those.
+    /// [`Session::take_recovered_moves`]: the app shows it in its own window). Not a settings
+    /// problem: kept apart from those.
     pub recovered_moves: Option<crate::move_intent::Recovered>,
     moves_reported: bool,
     /// Settings files that couldn't be read or set aside: never overwritten this session.
