@@ -32,6 +32,7 @@ pub mod menus;
 pub mod merge;
 mod model_setup;
 pub mod panels;
+pub mod photo_menu;
 pub mod pick;
 pub mod print_view;
 pub mod progress;
