@@ -355,9 +355,17 @@ pub(crate) trait MoveFs {
             Err(_) => true,
         }
     }
-    /// The names in folder `dir`, or `None` when it can't be listed.
-    fn list_dir(&self, dir: &Path) -> Option<Vec<std::ffi::OsString>> {
-        std::fs::read_dir(dir).ok()?.map(|e| e.map(|e| e.file_name())).collect::<std::io::Result<_>>().ok()
+    /// The names in folder `dir`, or `None` when it can't be listed or holds more than `budget`
+    /// entries (it stops reading at that many, so a huge folder is never collected).
+    fn list_dir(&self, dir: &Path, budget: usize) -> Option<Vec<std::ffi::OsString>> {
+        let mut names = Vec::new();
+        for entry in std::fs::read_dir(dir).ok()? {
+            if names.len() == budget {
+                return None;
+            }
+            names.push(entry.ok()?.file_name());
+        }
+        Some(names)
     }
     /// Content observed in a packet, independent of its pathname or inode. Model volumes
     /// override this; disk implementations stream a bounded buffer without retaining the XML.
@@ -486,6 +494,11 @@ impl MoveFs for RealFs {
 /// network share, found or not. Fewer photos are probed one by one.
 const LIST_FOLDER_AT: usize = 8;
 
+/// Directory entries the folder listings of one move may collect in all: the walk's own bound
+/// ([`crate::walk::MAX_ENTRIES`]). A folder past what is left of it isn't listed, and its photos
+/// are probed one by one as before.
+const LIST_ENTRIES_AT_MOST: usize = crate::walk::MAX_ENTRIES;
+
 /// `inner`, with the question "is this sidecar a file?" answered from one listing of each folder
 /// that many photos leave ([`LIST_FOLDER_AT`]) where the listing can vouch for a "no": the folder was
 /// listed whole, and its names are all ASCII (a file system may treat other names alike in other
@@ -500,6 +513,11 @@ struct ListedSources<'a> {
 
 impl<'a> ListedSources<'a> {
     fn new(inner: &'a dyn MoveFs, moves: &[(String, String)]) -> Self {
+        Self::with_budget(inner, moves, LIST_ENTRIES_AT_MOST)
+    }
+
+    /// As [`Self::new`], with at most `budget` directory entries listed over all folders.
+    fn with_budget(inner: &'a dyn MoveFs, moves: &[(String, String)], mut budget: usize) -> Self {
         let mut leaving: HashMap<&Path, usize> = HashMap::new();
         for (from, _) in moves {
             if let Some(dir) = Path::new(from).parent().filter(|d| !d.as_os_str().is_empty()) {
@@ -511,7 +529,8 @@ impl<'a> ListedSources<'a> {
             if n < LIST_FOLDER_AT {
                 continue;
             }
-            let Some(names) = inner.list_dir(dir) else { continue };
+            let Some(names) = inner.list_dir(dir, budget) else { continue };
+            budget -= names.len();
             // (any name that is no ASCII text: the listing can't say what another name's other case is)
             let xmp: Option<HashSet<String>> = names
                 .iter()
@@ -588,8 +607,8 @@ impl MoveFs for ListedSources<'_> {
     fn listed(&self, p: &Path) -> bool {
         self.inner.listed(p)
     }
-    fn list_dir(&self, dir: &Path) -> Option<Vec<std::ffi::OsString>> {
-        self.inner.list_dir(dir)
+    fn list_dir(&self, dir: &Path, budget: usize) -> Option<Vec<std::ffi::OsString>> {
+        self.inner.list_dir(dir, budget)
     }
     fn packet_version(&self, path: &Path) -> std::io::Result<PacketVersion> {
         self.inner.packet_version(path)
