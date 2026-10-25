@@ -1017,6 +1017,13 @@ fn an_op_that_fails_leaves_no_touched_photos_behind() {
     assert_eq!(c.revision, start);
     assert_eq!(c.touched_since(start), Some(vec![]));
     assert_eq!(c.aspects_since(start), Some(Aspects::NONE));
+    // a keyword op that fails, alone or inside a batch that is rolled back, does not say the keyword list changed
+    assert!(c.apply(Op::SetKeyword { path: " | ".into(), info: Some(Default::default()) }).is_err());
+    assert_eq!(c.aspects_since(start), Some(Aspects::NONE));
+    let ok = Op::SetKeyword { path: "travel|Rome".into(), info: Some(Default::default()) };
+    assert!(c.apply(Op::Batch { ops: vec![ok, Op::SetRating { id: missing, rating: 1 }] }).is_err());
+    assert_eq!(c.revision, start);
+    assert_eq!(c.aspects_since(start), Some(Aspects::NONE));
     assert_eq!(c.photo(a).map(|p| p.rating), Some(0));
     // a batch that ends in a failed removal of a photo that exists
     assert!(c.apply(Op::Batch { ops: vec![Op::RemovePhoto { id: b }, Op::RemovePhoto { id: b }] }).is_err());

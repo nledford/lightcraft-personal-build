@@ -628,6 +628,7 @@ impl Catalog {
             self.changes = Changes { floor: self.revision, seen: self.revision, ..Default::default() };
         }
         let broad = self.changes.broad;
+        let keyword_list = self.changes.keyword_list;
         self.changes.torn = false;
         let inv = match self.apply_inner(op) {
             Ok(inv) => inv,
@@ -649,6 +650,7 @@ impl Catalog {
                         self.changes.touched.pop_back();
                     }
                     self.changes.broad = broad;
+                    self.changes.keyword_list = keyword_list;
                 }
                 return Err(e);
             }
