@@ -2351,5 +2351,8 @@
   "Finish Lightroom catalog import before adding photos": "Завершите импорт каталога Lightroom, прежде чем добавлять фото",
   "Queued: it starts when the task ahead of it ends": "В очереди: начнётся, когда закончится задача перед ней",
   "Another library was opened: nothing was done": "Открыта другая библиотека: ничего не сделано",
-  "Starts next": "Начнётся следующей"
+  "Starts next": "Начнётся следующей",
+  "Queue": "В очередь",
+  "Queue Move": "В очередь: переместить",
+  "Queue Synchronize": "В очередь: синхронизировать"
 }

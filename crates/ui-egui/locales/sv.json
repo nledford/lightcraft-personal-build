@@ -2431,5 +2431,8 @@
   "Import dropped files without review": "Importera släppta filer utan granskning",
   "Queued: it starts when the task ahead of it ends": "I kö: startar när uppgiften före är klar",
   "Another library was opened: nothing was done": "Ett annat bibliotek öppnades: ingenting gjordes",
-  "Starts next": "Startar härnäst"
+  "Starts next": "Startar härnäst",
+  "Queue": "Köa",
+  "Queue Move": "Köa flytt",
+  "Queue Synchronize": "Köa synkronisering"
 }

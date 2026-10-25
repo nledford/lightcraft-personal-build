@@ -2329,5 +2329,8 @@
   "Import dropped files without review": "Tuo pudotetut tiedostot ilman tarkistusta",
   "Queued: it starts when the task ahead of it ends": "Jonossa: alkaa, kun sen edellä oleva tehtävä päättyy",
   "Another library was opened: nothing was done": "Toinen kirjasto avattiin: mitään ei tehty",
-  "Starts next": "Alkaa seuraavaksi"
+  "Starts next": "Alkaa seuraavaksi",
+  "Queue": "Lisää jonoon",
+  "Queue Move": "Lisää siirto jonoon",
+  "Queue Synchronize": "Lisää synkronointi jonoon"
 }

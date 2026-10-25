@@ -2392,5 +2392,8 @@
   "This library couldn't be checked:": "Impossible de vérifier cette bibliothèque :",
   "Queued: it starts when the task ahead of it ends": "En file : démarre à la fin de la tâche précédente",
   "Another library was opened: nothing was done": "Une autre bibliothèque a été ouverte : rien n’a été fait",
-  "Starts next": "Démarre ensuite"
+  "Starts next": "Démarre ensuite",
+  "Queue": "Mettre en file",
+  "Queue Move": "Mettre le déplacement en file",
+  "Queue Synchronize": "Mettre la synchronisation en file"
 }

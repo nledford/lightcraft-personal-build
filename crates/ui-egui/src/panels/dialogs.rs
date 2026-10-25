@@ -1413,11 +1413,24 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                     Dialog::LightroomResult { .. } => "Close",
                     _ => "Cancel",
                 };
+                // an import or a synchronize asked for while the library lane is busy waits in line: say so on its
+                // button, and after what
+                let waits = match &dlg {
+                    Dialog::Import { .. } => true,
+                    Dialog::SynchronizeFolder { counts: Some(c), .. } => !c.up_to_date(),
+                    _ => false,
+                };
+                let ahead = if waits { crate::import::lane_ahead_text(app) } else { None };
                 let add_label;
                 let ok = match &dlg {
                     Dialog::Import { opts } => {
                         let n = opts.selected_paths().len();
-                        let verb = if opts.copy && opts.move_files { "Move" } else { "Import" };
+                        let verb = match (ahead.is_some(), opts.copy && opts.move_files) {
+                            (true, true) => "Queue Move",
+                            (true, false) => "Queue",
+                            (false, true) => "Move",
+                            (false, false) => "Import",
+                        };
                         add_label = crate::i18n::tr_format!("{verb} {n} Photo{}", if n == 1 { "" } else { "s" }, verb = crate::i18n::tr(verb), n = n);
                         add_label.as_str()
                     }
@@ -1442,6 +1455,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                     Dialog::LightroomCatalog { .. } => "Import Lightroom Catalog…",
                     d @ Dialog::LightroomDestination { .. } => crate::lightroom_destination::ok_label(d),
                     Dialog::SynchronizeFolder { .. } if informational => "Close",
+                    Dialog::SynchronizeFolder { .. } if ahead.is_some() => "Queue Synchronize",
                     Dialog::SynchronizeFolder { .. } => "Synchronize",
                     Dialog::SamModel { then: Some(_), .. } if sam_installed => "Continue",
                     Dialog::SamModel { .. } if sam_installed || sam_running || sam_nowhere => "",
@@ -1489,7 +1503,18 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                 if !ok.is_empty() {
                     buttons_w += ok_button.desired_size(ui).x;
                 }
-                ui.add_space((ui.available_width() - buttons_w).max(0.0));
+                if let Some(what) = &ahead {
+                    // what the line waits for, in the room the buttons leave
+                    let room = (ui.available_width() - buttons_w - gap).max(0.0);
+                    let line = crate::i18n::tr_format!("Starts after: {what}", what = what);
+                    ui.allocate_ui_with_layout(egui::vec2(room, row_h), egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                        ui.set_width(room);
+                        let r = ui.add(egui::Label::new(egui::RichText::new(line).size(11.0).color(t.text_dim)).truncate());
+                        crate::widgets::register(ui, "dialog:startsAfter", r.rect);
+                    });
+                } else {
+                    ui.add_space((ui.available_width() - buttons_w).max(0.0));
+                }
                 if !informational && cancel_button.show(ui).clicked() {
                     close = true;
                 }

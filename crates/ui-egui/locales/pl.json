@@ -2285,5 +2285,8 @@
   "Finish Lightroom catalog import before adding photos": "Zakończ import katalogu Lightrooma, zanim dodasz zdjęcia",
   "Queued: it starts when the task ahead of it ends": "W kolejce: rozpocznie się po zakończeniu poprzedniego zadania",
   "Another library was opened: nothing was done": "Otwarto inną bibliotekę: nic nie zrobiono",
-  "Starts next": "Rozpocznie się jako następne"
+  "Starts next": "Rozpocznie się jako następne",
+  "Queue": "Dodaj do kolejki",
+  "Queue Move": "Dodaj przeniesienie do kolejki",
+  "Queue Synchronize": "Dodaj synchronizację do kolejki"
 }

@@ -2736,5 +2736,8 @@
   "Finish Lightroom catalog import before adding photos": "ფოტოების დამატებამდე დაასრულეთ Lightroom-ის კატალოგის იმპორტი",
   "Queued: it starts when the task ahead of it ends": "რიგშია: დაიწყება, როცა წინა ამოცანა დასრულდება",
   "Another library was opened: nothing was done": "სხვა ბიბლიოთეკა გაიხსნა: არაფერი გაკეთებულა",
-  "Starts next": "დაიწყება შემდეგი"
+  "Starts next": "დაიწყება შემდეგი",
+  "Queue": "რიგში დამატება",
+  "Queue Move": "გადაადგილების რიგში დამატება",
+  "Queue Synchronize": "სინქრონიზაციის რიგში დამატება"
 }
