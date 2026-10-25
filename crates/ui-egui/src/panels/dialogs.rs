@@ -178,6 +178,12 @@ pub const ABOUT_TABS: &[(&str, &str)] = &[("about", "About"), ("contributors", "
 /// Help ▸ What's New (docs/whats-new.md).
 pub const WHATS_NEW: &str = include_str!("../../../../docs/whats-new.md");
 
+/// The import review's button: its verb (Import, Move, Queue, Queue Move) and how many photos it takes. Where a verb
+/// phrase can end in a noun (French "Mettre le déplacement en file"), the catalogs word it as a label with its count.
+pub(crate) fn photo_count_label(verb: &str, n: usize) -> String {
+    crate::i18n::tr_format!("{verb} {n} Photo{}", if n == 1 { "" } else { "s" }, verb = crate::i18n::tr(verb), n = n)
+}
+
 /// The import review and Settings keep window ids of their own, so the size each is given
 /// doesn't carry over to the other dialogs.
 fn window_id(dialog: &Dialog) -> egui::Id {
@@ -1431,7 +1437,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                             (false, true) => "Move",
                             (false, false) => "Import",
                         };
-                        add_label = crate::i18n::tr_format!("{verb} {n} Photo{}", if n == 1 { "" } else { "s" }, verb = crate::i18n::tr(verb), n = n);
+                        add_label = photo_count_label(verb, n);
                         add_label.as_str()
                     }
                     Dialog::LightroomResult { first: Some(_), .. } => "Show in Library",
