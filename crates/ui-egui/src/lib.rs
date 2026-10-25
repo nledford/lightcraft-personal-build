@@ -384,6 +384,15 @@ impl QuitPrompt {
     }
 }
 
+/// A library switch that stopped to ask first, because tasks wait in line that the other library would drop
+/// (`panels::notices`). `create`: the folder is made when it is confirmed (a New Library).
+#[derive(Clone, Debug, PartialEq)]
+pub struct SwitchPrompt {
+    pub path: String,
+    pub create: bool,
+    pub text: String,
+}
+
 pub struct LightcraftApp {
     pub(crate) model_setup: model_setup::Pending,
     /// Per-catalog-revision caches of library-wide results the panels show every frame
@@ -418,6 +427,8 @@ pub struct LightcraftApp {
     pub quit_prompt: Option<QuitPrompt>,
     /// Keyboard/focus/input state for the prompt above, including its one-frame creation barrier.
     pub(crate) notice_input: panels::notices::PromptInput,
+    /// Switching libraries was stopped to ask first: tasks waiting in line would not run in the other one.
+    pub switch_prompt: Option<SwitchPrompt>,
     /// Quit Anyway was chosen: the window may close with unsaved changes.
     pub quit_confirmed: bool,
     control_rx: Option<Receiver<ControlRequest>>,
@@ -626,6 +637,7 @@ impl LightcraftApp {
             updates_rt: Default::default(),
             quit_prompt: None,
             notice_input: Default::default(),
+            switch_prompt: None,
             quit_confirmed: false,
             control_rx: None,
             pending_screenshots: vec![],
@@ -964,6 +976,11 @@ impl LightcraftApp {
         } else {
             i18n::tr_format!("Queued: it starts after {n} more", n = place - 1)
         };
+        self.say(text);
+    }
+
+    /// A toast from code that has no frame context at hand.
+    pub(crate) fn say(&mut self, text: String) {
         let now = self.tick_now();
         self.ui.toast = Some((text, now + TOAST_SECONDS, None));
     }
