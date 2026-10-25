@@ -732,6 +732,103 @@ fn a_library_that_cannot_be_locked_leaves_the_move_for_an_open_that_can() {
     assert!(dir.records().is_empty());
 }
 
+/// Make the library unlockable (a directory stands in for a lock file) before it is opened.
+fn make_unlockable(dir: &Scratch) {
+    let lock = dir.library().join("catalog.lock");
+    let _ = std::fs::remove_file(&lock);
+    std::fs::create_dir_all(&lock).unwrap();
+}
+
+#[test]
+fn without_the_lock_only_the_writes_this_session_listed_leave_the_held_list() {
+    let dir = Scratch::new("unlocked-held");
+    let (a, b);
+    {
+        let mut s = open(&dir);
+        a = add(&mut s, &dir.path("local/a.jpg"), "A");
+        b = add(&mut s, &dir.path("local/b.jpg"), "B");
+    }
+    make_unlockable(&dir);
+    let held = dir.library().join("moves/held-sidecars");
+    // an earlier run (or another program) left b's write on the list
+    std::fs::create_dir_all(dir.library().join("moves")).unwrap();
+    std::fs::write(&held, serde_json::to_vec(&[b]).unwrap()).unwrap();
+    let mut s = open(&dir);
+    s.held_sidecars.insert(a);
+    s.save_held_sidecars();
+    let listed = |p: &Path| -> Vec<PhotoId> { serde_json::from_slice(&std::fs::read(p).unwrap()).unwrap() };
+    assert_eq!(listed(&held), vec![a, b]);
+    // the move ends and a's write is made: it leaves the list, b's entry isn't this session's to take back
+    s.held_sidecars.clear();
+    s.save_held_sidecars();
+    assert_eq!(listed(&held), vec![b], "the entry another run left stays for an open with the lock");
+}
+
+#[test]
+fn without_the_lock_a_worker_that_dies_still_has_its_own_move_followed() {
+    let dir = Scratch::new("unlocked-abandon");
+    let a;
+    {
+        let mut s = open(&dir);
+        a = add(&mut s, &dir.path("local/a.jpg"), "A");
+        add(&mut s, &dir.path("local/b.jpg"), "B");
+    }
+    make_unlockable(&dir);
+    // another program's record, which stays untouched
+    let other = crate::move_intent::write(&dir.library(), &[(dir.path("local/b.jpg"), dir.path("share/b.jpg"))]).unwrap();
+    let mut s = open(&dir);
+    let taken = s.take_recovered_moves().expect("the open leaves the other record alone");
+    assert!(matches!(taken.problems.as_slice(), [crate::move_intent::MoveProblem::Unprotected]), "{taken:?}");
+    let before = std::fs::read(other.path()).unwrap();
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    // the files moved, then the worker died before saying so
+    drop(work.run());
+    let r = s.execute_fn("photo.moveToFolder", |s| Ok(json!(finish.abandon(s)))).unwrap();
+    assert_eq!(r["relinked"], 1, "{r}");
+    assert_eq!(file_of(&s, a), dir.path("share/a.jpg"), "the library follows the file this process moved");
+    assert_eq!(dir.records().len(), 1, "only the other program's record is left");
+    assert_eq!(std::fs::read(other.path()).unwrap(), before);
+}
+
+#[test]
+fn a_list_that_could_not_be_written_is_not_counted_as_listed() {
+    let dir = Scratch::new("unlocked-held-fail");
+    let a;
+    {
+        let mut s = open(&dir);
+        a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    }
+    make_unlockable(&dir);
+    let mut s = open(&dir);
+    // the list can't be written (a folder stands in its place)
+    std::fs::create_dir_all(dir.library().join("moves/held-sidecars")).unwrap();
+    s.held_sidecars.insert(a);
+    s.save_held_sidecars();
+    assert!(!s.held_listed.contains(&a), "the disk doesn't name it, so a later save mustn't treat a stray entry as this session's");
+}
+
+#[test]
+fn without_the_lock_a_dead_workers_cleanup_leaves_the_copies_and_partials_another_program_may_own() {
+    let dir = Scratch::new("unlocked-abandon-both");
+    let a;
+    {
+        let mut s = open(&dir);
+        a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    }
+    make_unlockable(&dir);
+    let mut s = open(&dir);
+    let _ = s.take_recovered_moves();
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    drop(work.run());
+    // another program is moving the same photo to the same folder: its copy is at both places, its partial is being written
+    std::fs::copy(dir.path("share/a.jpg"), dir.path("local/a.jpg")).unwrap();
+    std::fs::write(dir.path("share/.a.jpg.lc-partial-1-0"), "being written").unwrap();
+    let r = s.execute_fn("photo.moveToFolder", |s| Ok(json!(finish.abandon(s)))).unwrap();
+    assert_eq!(r["copiesRemoved"], 0, "{r}");
+    assert!(Path::new(&dir.path("share/a.jpg")).is_file() && Path::new(&dir.path("local/a.jpg")).is_file(), "{r}");
+    assert!(Path::new(&dir.path("share/.a.jpg.lc-partial-1-0")).exists(), "another process's partial copy stays");
+}
+
 #[test]
 fn the_records_of_one_session_are_followed_when_the_library_is_opened_again() {
     let dir = Scratch::new("reopen");

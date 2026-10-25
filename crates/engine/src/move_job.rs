@@ -16,7 +16,7 @@
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, OnceLock, Weak};
 
 use lightcraft_catalog::{Op, PhotoId, Source};
 use serde_json::{Value, json};
@@ -51,6 +51,8 @@ pub struct MoveWork {
     /// Where the record of the move goes; `None` for a library without a folder of its own.
     library: Option<PathBuf>,
     task: TaskHandle,
+    /// Where the worker put the record of the move, for [`MoveFinish::abandon`].
+    record: Arc<OnceLock<PathBuf>>,
 }
 
 /// What [`MoveWork::run`] did, for [`MoveFinish::finish`].
@@ -73,6 +75,7 @@ pub struct MoveFinish {
     identity: Arc<()>,
     ticket: Arc<MoveTicket>,
     guard: TaskGuard,
+    record: Arc<OnceLock<PathBuf>>,
 }
 
 impl std::fmt::Debug for MoveFinish {
@@ -140,8 +143,9 @@ pub fn start(s: &mut Session, p: &Value) -> Result<Option<(MoveWork, MoveFinish)
     let guard = s.activity.start("move", "Moving photos", Cancel::No);
     guard.progress(0, moves.len() as u64);
     let library = s.library.as_ref().filter(|l| l.on_disk).map(|l| l.dir.clone());
-    let work = MoveWork { folder: folder.to_string(), moves, library, task: guard.handle() };
-    let finish = MoveFinish { folder: folder.to_string(), plans, identity: Arc::clone(&s.library_identity), ticket, guard };
+    let record = Arc::new(OnceLock::new());
+    let work = MoveWork { folder: folder.to_string(), moves, library, task: guard.handle(), record: Arc::clone(&record) };
+    let finish = MoveFinish { folder: folder.to_string(), plans, identity: Arc::clone(&s.library_identity), ticket, guard, record };
     Ok(Some((work, finish)))
 }
 
@@ -157,7 +161,7 @@ impl MoveWork {
     }
 
     pub(crate) fn run_with(self, fs: &dyn MoveFs) -> MoveOutcome {
-        let MoveWork { folder, moves, library, task } = self;
+        let MoveWork { folder, moves, library, task, record: slot } = self;
         if !Path::new(&folder).is_dir() {
             return MoveOutcome(Ran::Refused(format!("{folder} is not a folder (create it first with folder.create)")));
         }
@@ -178,6 +182,9 @@ impl MoveWork {
             Ok(r) => r,
             Err(e) => return MoveOutcome(Ran::Refused(format!("can't note the move in the library ({e}): nothing was moved"))),
         };
+        if let Some(r) = &record {
+            let _ = slot.set(r.path().to_path_buf());
+        }
         let total = moves.len() as u64;
         let ran = crate::rename::move_all_with(fs, &moves, &mut |k, (from, _)| {
             task.progress(k as u64, total);
@@ -212,8 +219,9 @@ impl MoveFinish {
     /// session, the library follows whatever had moved from the move's record, and the sidecars
     /// held back meanwhile are written where their photos now are.
     pub fn abandon(self, s: &mut Session) -> crate::move_intent::Recovered {
+        let own = self.record.get().cloned();
         drop(self);
-        let recovered = s.recover_moves();
+        let recovered = s.recover_own_move(own.as_deref());
         let held: Vec<PhotoId> = std::mem::take(&mut s.held_sidecars).into_iter().collect();
         if s.xmp.auto_write {
             s.auto_write_sidecar_ids(held);
@@ -227,7 +235,7 @@ impl MoveFinish {
     /// an error when nothing moved (`Refused`, `Failed`: the files went back, or the library
     /// follows those that couldn't). The sidecars held back meanwhile are written after.
     pub fn finish(self, s: &mut Session, out: MoveOutcome) -> Result<Value> {
-        let MoveFinish { folder, plans, identity, ticket, guard } = self;
+        let MoveFinish { folder, plans, identity, ticket, guard, record: _ } = self;
         // the move is over for the session: other file work, and these photos' sidecars, may go on
         drop(ticket);
         drop(guard);

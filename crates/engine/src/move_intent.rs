@@ -183,6 +183,12 @@ enum Found {
     SidecarsLeft,
 }
 
+impl MoveRecord {
+    pub(crate) fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
 impl Session {
     /// Write the record of `moves` (made by this session, on this thread) before making them;
     /// `None` when the library has no folder of its own (nothing survives a restart there) or
@@ -222,24 +228,34 @@ impl Session {
     /// the records, so a run that ends before the move does still makes them at the next open.
     /// A listed write stays listed until it is made: while it is held, or after it failed (the
     /// file not reachable yet); the list goes once none is left.
-    pub(crate) fn save_held_sidecars(&self) {
+    pub(crate) fn save_held_sidecars(&mut self) {
         let Some(dir) = self.library.as_ref().filter(|l| l.on_disk).map(|l| l.dir.join(DIR)) else { return };
         let mut ids: std::collections::BTreeSet<PhotoId> = read_held(&dir).into_iter().collect();
-        // (without the lock, the entries an earlier run left wait for an open that has it)
-        if !self.library.as_ref().is_some_and(|l| l.is_unprotected()) {
-            ids.retain(|id| self.held_sidecars.contains(id) || self.unsaved_sidecars.contains(id));
+        let waiting = |id: &PhotoId| self.held_sidecars.contains(id) || self.unsaved_sidecars.contains(id);
+        if self.library.as_ref().is_some_and(|l| l.is_unprotected()) {
+            // without the lock, the entries an earlier run (or another program) left wait for an
+            // open that has it: only what this session listed itself is taken back
+            ids.retain(|id| !self.held_listed.contains(id) || waiting(id));
+        } else {
+            ids.retain(waiting);
         }
         ids.extend(self.held_sidecars.iter().copied());
+        let listed: std::collections::BTreeSet<PhotoId> =
+            self.held_listed.iter().chain(self.held_sidecars.iter()).copied().filter(|id| ids.contains(id)).collect();
         if ids.is_empty() {
-            remove_held(&dir);
+            if remove_held(&dir) {
+                self.held_listed = listed;
+            }
             return;
         }
         let ids: Vec<PhotoId> = ids.into_iter().collect();
         let written = serde_json::to_vec(&ids)
             .map_err(std::io::Error::other)
             .and_then(|bytes| std::fs::create_dir_all(&dir).and_then(|()| FsStore::open(&dir)?.write_atomic(HELD, &bytes)));
-        if let Err(e) = written {
-            log::warn!("held sidecar writes {}: {e}", dir.join(HELD).display());
+        match written {
+            // (only a list that is written says what this session has listed)
+            Ok(()) => self.held_listed = listed,
+            Err(e) => log::warn!("held sidecar writes {}: {e}", dir.join(HELD).display()),
         }
     }
 
@@ -247,23 +263,40 @@ impl Session {
     /// earlier run when the library opens, or of a move whose worker died. The relinks are one undo
     /// step; what was done is returned for a notice.
     pub fn recover_moves(&mut self) -> Recovered {
+        self.recover_own_move(None)
+    }
+
+    /// [`Session::recover_moves`], and when the library is open without its lock, the record at
+    /// `own` too (the one this process's own worker wrote, whose worker died): no other program
+    /// is making that move.
+    pub(crate) fn recover_own_move(&mut self, own: Option<&Path>) -> Recovered {
         let locked = !self.library.as_ref().is_some_and(|l| l.is_unprotected());
-        self.recover_moves_with(&crate::rename::RealFs, locked)
+        self.recover_records(&crate::rename::RealFs, locked, own)
     }
 
     /// `locked`: this program holds the library's lock. Without it another program may be making
     /// a move right now, and the records are its, so they are left exactly as they are.
+    #[cfg(test)]
     pub(crate) fn recover_moves_with(&mut self, fs: &dyn MoveFs, locked: bool) -> Recovered {
+        self.recover_records(fs, locked, None)
+    }
+
+    fn recover_records(&mut self, fs: &dyn MoveFs, locked: bool, own: Option<&Path>) -> Recovered {
         let mut out = Recovered::default();
         let Some(dir) = self.library.as_ref().filter(|l| l.on_disk).map(|l| l.dir.join(DIR)) else { return out };
         let Ok(entries) = std::fs::read_dir(&dir) else { return out };
         let mut files: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
         files.sort();
         if !locked {
-            if files.iter().any(|p| p.extension().is_some_and(|x| x == "json") && !self.settled_moves.contains(p)) {
+            let ours = |p: &PathBuf| own == Some(p.as_path());
+            if files.iter().any(|p| p.extension().is_some_and(|x| x == "json") && !self.settled_moves.contains(p) && !ours(p)) {
                 out.problems.push(MoveProblem::Unprotected);
             }
-            return out;
+            // only the record of this process's own dead worker is followed
+            files.retain(ours);
+            if files.is_empty() {
+                return out;
+            }
         }
         // the photos pointing at each file (a master and its virtual copies), looked up once a
         // record is there to read
@@ -301,7 +334,7 @@ impl Session {
                 at
             });
             for (from, to) in record.moves {
-                match recover_one(fs, at, &mut partials, (&from, &to), &mut ops, &mut out) {
+                match recover_one(fs, locked, at, &mut partials, (&from, &to), &mut ops, &mut out) {
                     Found::Moved | Found::Stayed => {}
                     // the photos follow; the record keeps the move until its sidecars do too
                     Found::SidecarsLeft => keep.push((from, to)),
@@ -325,7 +358,7 @@ impl Session {
         // edits made while the files moved had their sidecar writes held back, and those were
         // lost with the run: write them now, where the photos are (those that fail, a file not
         // reachable yet, stay listed for the next time)
-        let held = read_held(&dir);
+        let held = if locked { read_held(&dir) } else { Vec::new() };
         if !held.is_empty() {
             if self.xmp.auto_write {
                 self.auto_write_sidecar_ids(held);
@@ -363,6 +396,7 @@ impl Session {
 /// [`remove_partials`].
 fn recover_one(
     fs: &dyn MoveFs,
+    locked: bool,
     at: &mut HashMap<PathBuf, Vec<(PhotoId, String)>>,
     partials: &mut HashMap<PathBuf, Vec<PathBuf>>,
     (from, to): (&str, &str),
@@ -395,7 +429,8 @@ fn recover_one(
                 // from `to` only when both names are really there (a move cut between link and
                 // unlink), never when they are one name spelled two ways
                 let same = if fs.same_file(f, t) { fs.listed(f) && fs.listed(t) } else { crate::rename::same_contents(f, t).unwrap_or(false) };
-                if same && fs.remove_file(t).is_ok() {
+                // (without the lock, the copy may be another program's move in progress: left alone)
+                if locked && same && fs.remove_file(t).is_ok() {
                     out.copies_removed += 1;
                 } else {
                     out.problems.push(MoveProblem::BothPlaces { from: from.to_string(), to: to.to_string() });
@@ -405,7 +440,7 @@ fn recover_one(
             (false, false) => return Found::Unknown,
         }
     };
-    remove_partials(t, partials);
+    remove_partials(t, partials, locked);
     if !moved {
         return Found::Stayed;
     }
@@ -454,12 +489,16 @@ fn read_held(dir: &Path) -> Vec<PhotoId> {
     }
 }
 
-fn remove_held(dir: &Path) {
+/// Whether the list is gone now.
+fn remove_held(dir: &Path) -> bool {
     let path = dir.join(HELD);
-    if let Err(e) = std::fs::remove_file(&path)
-        && e.kind() != std::io::ErrorKind::NotFound
-    {
-        log::warn!("held sidecar writes {}: {e}", path.display());
+    match std::fs::remove_file(&path) {
+        Ok(()) => true,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => true,
+        Err(e) => {
+            log::warn!("held sidecar writes {}: {e}", path.display());
+            false
+        }
     }
 }
 
@@ -477,12 +516,17 @@ fn read_record(path: &Path) -> std::result::Result<Record, String> {
 }
 
 /// Hidden partial copies a cut-off copy left beside `to` (`.<name>.lc-partial-<pid>-<k>`, see
-/// `RealFs::copy_no_replace`): never a photo, safe to remove. `partials`: each folder's partial
+/// `RealFs::copy_no_replace`): never a photo, safe to remove (without the lock, only this process's own). `partials`: each folder's partial
 /// copies, listed once however many files of a move went there (a folder of thousands is read
 /// once, not once per file).
-fn remove_partials(to: &Path, partials: &mut HashMap<PathBuf, Vec<PathBuf>>) {
+fn remove_partials(to: &Path, partials: &mut HashMap<PathBuf, Vec<PathBuf>>, locked: bool) {
     let (Some(dir), Some(name)) = (to.parent(), to.file_name()) else { return };
-    let prefix = format!(".{}.lc-partial-", name.to_string_lossy());
+    // (without the lock, only this process's own: another program's may be being written)
+    let prefix = if locked {
+        format!(".{}.lc-partial-", name.to_string_lossy())
+    } else {
+        format!(".{}.lc-partial-{}-", name.to_string_lossy(), std::process::id())
+    };
     let listed = partials.entry(dir.to_path_buf()).or_insert_with(|| {
         std::fs::read_dir(dir)
             .map(|entries| entries.flatten().filter(|e| e.file_name().to_string_lossy().contains(".lc-partial-")).map(|e| e.path()).collect())

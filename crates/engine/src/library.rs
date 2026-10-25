@@ -504,6 +504,7 @@ impl Session {
         self.redo.clear();
         // photo ids are per library: none held back for a move carries over
         self.held_sidecars.clear();
+        self.held_listed.clear();
         // the records of moves this session had settled belong to the library it leaves: they stay
         // on disk for the open that follows them (forgetting them here deletes none)
         self.settled_moves.clear();

@@ -346,6 +346,10 @@ pub struct Session {
     /// Photos whose automatic sidecar write waits for their file to arrive at the folder it is
     /// being moved to ([`move_job`]); written when the move ends. Not a failure: no notice.
     pub(crate) held_sidecars: std::collections::BTreeSet<PhotoId>,
+    /// The photos this session put on the list of held writes kept beside the move records
+    /// ([`move_intent`]): without the library's lock, it takes back only these, and leaves the
+    /// entries another run (or program) put there.
+    pub(crate) held_listed: std::collections::BTreeSet<PhotoId>,
     /// XMP sidecar preferences (persisted with the library).
     pub xmp: sidecar::XmpPrefs,
     /// Parameters of the last export (`app.export` params, minus targets), persisted in prefs.json.
@@ -519,6 +523,7 @@ impl Session {
             moving: std::sync::Weak::new(),
             settled_moves: Vec::new(),
             held_sidecars: Default::default(),
+            held_listed: Default::default(),
             xmp: sidecar::XmpPrefs::default(),
             last_export: None,
             last_merge: Default::default(),
