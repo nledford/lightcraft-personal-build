@@ -85,6 +85,9 @@ pub struct ImportDialog {
     pub dng: bool,
     /// Per candidate: the library already has it in Recently Deleted ([`ImportDialog::set_trashed`]).
     pub trashed: Vec<bool>,
+    /// Per candidate: the library has it as a browsed (Local) photo, which adding in place brings
+    /// into the library ([`ImportDialog::set_browsed`]); copying or moving it is not offered.
+    pub browsed: Vec<bool>,
     /// What to do with those: `restore` (the default: the photo comes back with its edits), `fresh`
     /// (imported as a new photo, the old record deleted) or "" (leave them) — the `onDeleted` param.
     pub on_deleted: String,
@@ -138,10 +141,29 @@ impl ImportDialog {
             }
         }
     }
+    /// Mark the candidates whose photo is only browsed (Local). Adding in place brings them into
+    /// the library, so they are checked then; the engine would not copy or move them.
+    pub fn set_browsed(&mut self, browsed: Vec<bool>) {
+        self.browsed = browsed;
+        for i in 0..self.candidates.len() {
+            if self.is_browsed(i)
+                && let Some(c) = self.checked.get_mut(i)
+            {
+                *c = true;
+            }
+        }
+    }
+    /// Candidate `i` is a file whose photo is browsed (Local), not yet in the library.
+    pub fn is_browsed(&self, i: usize) -> bool {
+        self.browsed.get(i).copied().unwrap_or(false)
+    }
     /// Candidate `i` can be checked: a readable file the library doesn't have, or one whose photo
-    /// is in Recently Deleted — even with "Leave them", a click picks it (issue #1285).
+    /// is in Recently Deleted — even with "Leave them", a click picks it (issue #1285) — or, when
+    /// adding in place, one whose photo is only browsed (Local).
     pub fn importable(&self, i: usize) -> bool {
-        self.candidates.get(i).is_some_and(|c| c.error.is_none() && (c.duplicate.is_none() || self.is_trashed(i)))
+        self.candidates
+            .get(i)
+            .is_some_and(|c| c.error.is_none() && (c.duplicate.is_none() || self.is_trashed(i) || (!self.copy && self.is_browsed(i))))
     }
     /// Candidate `i` is checked by Check All and the file type toggles: with "Leave them", a file in
     /// Recently Deleted is only checked by hand.
@@ -158,7 +180,7 @@ impl ImportDialog {
     }
     /// Any file of type `ty` is checked.
     pub fn type_checked(&self, ty: &str) -> bool {
-        self.candidates.iter().zip(&self.checked).any(|(c, on)| *on && file_type(c) == ty)
+        self.candidates.iter().zip(&self.checked).enumerate().any(|(i, (c, on))| *on && self.importable(i) && file_type(c) == ty)
     }
     /// Check (the importable ones) or uncheck every file of type `ty`: the raws only, say, and not
     /// the JPEGs kept beside them (issue #344).
@@ -231,6 +253,12 @@ impl ImportDialog {
             }
             o => Ok(Some(o.to_string())),
         }
+    }
+    /// Keywords or a preset are set while a checked browsed photo would join the library as it is:
+    /// the engine applies them to new files only, so the review says so.
+    fn options_skip_browsed(&self) -> bool {
+        let has_options = !self.keywords().is_empty() || !self.preset.is_empty() || !self.metadata_preset.is_empty();
+        has_options && !self.copy && self.browsed.iter().zip(&self.checked).any(|(b, on)| *b && *on)
     }
     fn keywords(&self) -> Vec<String> {
         self.keywords.split(',').map(str::trim).filter(|k| !k.is_empty()).map(str::to_string).collect()
@@ -431,6 +459,9 @@ pub struct ScanTask {
     rx: std::sync::mpsc::Receiver<ScanOutput>,
     /// Open the review with "copy into the library" checked (a camera / card).
     pub copy: bool,
+    /// Open the review copying into this folder, all into it with no subfolders (a folder's menu
+    /// ▸ Import to This Folder…); implies `copy`.
+    pub destination: Option<String>,
     /// Open the review with this album chosen (an album's context menu ▸ Import…).
     pub album: Option<u64>,
     /// Browsing a folder (Local): the photos are read in place instead of opening the review.
@@ -496,7 +527,7 @@ pub fn open(app: &mut LightcraftApp, paths: Vec<String>) -> Result<Value, String
     #[cfg(target_arch = "wasm32")]
     job();
     let guard = scan_guard(app, &progress, false);
-    app.scan = Some(ScanTask { progress, rx, copy: false, album: None, browse: false, sources, guard });
+    app.scan = Some(ScanTask { progress, rx, copy: false, destination: None, album: None, browse: false, sources, guard });
     Ok(json!({"scanning": true}))
 }
 
@@ -561,7 +592,7 @@ pub fn browse(app: &mut LightcraftApp, path: &str, subfolders: Option<bool>) -> 
     #[cfg(target_arch = "wasm32")]
     job();
     let guard = scan_guard(app, &progress, true);
-    app.scan = Some(ScanTask { progress, rx, copy: false, album: None, browse: true, sources: Vec::new(), guard });
+    app.scan = Some(ScanTask { progress, rx, copy: false, destination: None, album: None, browse: true, sources: Vec::new(), guard });
     app.renderer.forget_imports();
     Ok(json!({"path": dir_s, "subfolders": subfolders, "scanning": true}))
 }
@@ -635,7 +666,21 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
         })
         .collect();
     d.set_trashed(trashed);
-    d.copy = task.copy;
+    let browsed = d
+        .candidates
+        .iter()
+        .map(|c| {
+            c.duplicate.as_deref() == Some("path")
+                && c.existing.is_some_and(|id| app.session.catalog.photo(lightcraft_catalog::PhotoId(id)).is_some_and(|p| p.local && !p.deleted))
+        })
+        .collect();
+    d.set_browsed(browsed);
+    d.copy = task.copy || task.destination.is_some();
+    if let Some(dest) = task.destination {
+        d.destination = dest;
+        // the files go into that folder itself, not into dated subfolders of it
+        d.organize = "flat".into();
+    }
     // only an album the review offers (it may have been deleted while the scan ran)
     d.album = task.album.filter(|id| app.session.catalog.album(lightcraft_catalog::AlbumId(*id)).is_some_and(|a| !a.folder && !a.is_smart()));
     d.sources = task.sources;
@@ -676,7 +721,7 @@ pub(crate) fn stall_scan_of(app: &mut LightcraftApp, browse: bool) -> Box<dyn st
     let progress = std::sync::Arc::new(ScanProgress::default());
     let (tx, rx) = std::sync::mpsc::channel::<ScanOutput>();
     let guard = scan_guard(app, &progress, false);
-    app.scan = Some(ScanTask { progress, rx, copy: false, album: None, browse, sources: Vec::new(), guard });
+    app.scan = Some(ScanTask { progress, rx, copy: false, destination: None, album: None, browse, sources: Vec::new(), guard });
     Box::new(tx)
 }
 
@@ -685,6 +730,13 @@ pub(crate) fn stall_scan_of(app: &mut LightcraftApp, browse: bool) -> Box<dyn st
 /// runs, and a browse that finishes replaces `app.import`.
 pub fn running(app: &LightcraftApp) -> bool {
     app.import.is_some() || app.scan.is_some() || app.review_pending.is_some()
+}
+
+/// Whether a folder's menu can start an import review now: not while a scan or an import runs (a
+/// Local folder being read counts), a finished scan's review waits for a dialog to close, or a
+/// Lightroom catalog import runs (as for File ▸ Import from Folder…).
+pub fn can_open(app: &LightcraftApp) -> bool {
+    app.scan.is_none() && app.import.is_none() && app.review_pending.is_none() && !crate::lightroom_import::is_running(app)
 }
 
 impl ScanTask {
@@ -1050,7 +1102,10 @@ fn show_existing(app: &mut LightcraftApp, ctx: &egui::Context, existing: &[u64])
 fn dup_counts(d: &ImportDialog) -> (usize, usize, usize) {
     let trashed = d.trashed.iter().filter(|t| **t).count();
     let in_source = d.candidates.iter().filter(|c| c.duplicate.as_deref() == Some("content") && c.existing.is_none()).count();
-    let dups = d.candidates.iter().filter(|c| c.duplicate.is_some()).count().saturating_sub(trashed).saturating_sub(in_source);
+    // (a browsed photo that adding in place brings in isn't skipped)
+    let browsed = if d.copy { 0 } else { d.browsed.iter().filter(|b| **b).count() };
+    let dups =
+        d.candidates.iter().filter(|c| c.duplicate.is_some()).count().saturating_sub(trashed).saturating_sub(in_source).saturating_sub(browsed);
     (dups, in_source, trashed)
 }
 
@@ -1285,6 +1340,14 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
             );
         }
     }
+    if d.options_skip_browsed() {
+        let t = Tokens::get(ui.ctx());
+        ui.label(
+            egui::RichText::new(crate::i18n::tr("Keywords and presets apply to new files only, not to photos already in Local"))
+                .color(t.text_dim)
+                .small(),
+        );
+    }
     if d.trashed.iter().any(|t| *t) {
         field(ui, "In Recently Deleted", |ui| {
             let cur = match d.on_deleted.as_str() {
@@ -1441,6 +1504,7 @@ fn candidate_cell(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDial
         // checked with "Leave them", the file goes without `onDeleted`: the engine restores it
         (Some(_), _) if in_trash && on => Some(if d.on_deleted == "fresh" { "Will be replaced" } else { "Will be restored" }),
         (Some(_), _) if in_trash => Some("In Recently Deleted"),
+        (Some(_), _) if d.is_browsed(i) && !d.copy => None,
         (Some(r), _) if r == "path" => Some("In library"),
         (Some(_), _) => Some("Duplicate"),
         (None, Some(_)) => Some("Unreadable"),
@@ -1701,6 +1765,54 @@ mod tests {
         d.candidates[5].duplicate = Some("path".into());
         d.candidates[5].existing = Some(8);
         assert_eq!(dup_counts(&d), (2, 1, 0));
+    }
+
+    /// A file whose photo is only browsed (Local) is offered when adding in place, which brings it
+    /// into the library, and not counted as skipped; copying or moving would not do that, so there
+    /// it stays "in the library" and out of reach.
+    #[test]
+    fn a_browsed_photo_is_importable_only_when_adding_in_place() {
+        let mut d = dialog();
+        d.candidates[5].duplicate = Some("path".into());
+        d.candidates[5].existing = Some(8);
+        d.checked[5] = false;
+        d.set_browsed(vec![false, false, false, false, false, true]);
+        assert!(d.importable(5) && d.checked[5], "adding in place offers it, checked");
+        assert_eq!(dup_counts(&d), (0, 1, 0), "it isn't skipped");
+        d.copy = true;
+        assert!(!d.importable(5), "copying leaves it where it is");
+        assert!(!d.selected_paths().contains(&"img5.jpg".to_string()));
+        assert_eq!(dup_counts(&d), (1, 1, 0));
+    }
+
+    /// The review warns that keywords and presets skip a browsed photo only when it matters.
+    #[test]
+    fn keywords_and_presets_are_flagged_only_when_a_browsed_photo_would_skip_them() {
+        let c = ImportCandidate { path: "a.png".into(), duplicate: Some("path".into()), existing: Some(3), ..Default::default() };
+        let mut d = ImportDialog::new(vec![c]);
+        d.set_browsed(vec![true]);
+        assert!(!d.options_skip_browsed(), "nothing set, nothing to skip");
+        d.keywords = "beach".into();
+        assert!(d.options_skip_browsed());
+        d.checked[0] = false;
+        assert!(!d.options_skip_browsed(), "unchecked: not imported anyway");
+        d.checked[0] = true;
+        d.copy = true;
+        assert!(!d.options_skip_browsed(), "copying doesn't offer it");
+    }
+
+    /// A file type's toggle is on only for files that can be imported now: a browsed photo checked
+    /// while copying is chosen doesn't count.
+    #[test]
+    fn a_file_type_toggle_ignores_browsed_photos_that_copying_cannot_import() {
+        let mut c = ImportCandidate { path: "a.png".into(), duplicate: Some("path".into()), existing: Some(3), ..Default::default() };
+        c.format = "PNG".into();
+        let mut d = ImportDialog::new(vec![c]);
+        d.copy = true;
+        d.set_browsed(vec![true]);
+        assert!(!d.type_checked("PNG"));
+        d.copy = false;
+        assert!(d.type_checked("PNG"));
     }
 
     /// A toggle per file type: the raws only, without the JPEGs beside them (issue #344).
