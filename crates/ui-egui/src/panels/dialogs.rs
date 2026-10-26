@@ -1301,7 +1301,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                 }
                 Dialog::MovePhotos { files, name, dont_ask, .. } => {
                     let n = *files;
-                    ui.label(crate::i18n::tr_format!("Move {n} photo{} to “{}”?", if n == 1 { "" } else { "s" }, name, n = n));
+                    ui.label(crate::i18n::tr_format!("Move {n} file{} to “{}”?", if n == 1 { "" } else { "s" }, name, n = n));
                     ui.label(egui::RichText::new(crate::i18n::tr("Their files and XMP sidecars move on disk. Edit → Undo moves them back.")).color(t.text_dim));
                     ui.add_space(4.0);
                     let c = ui.checkbox(dont_ask, crate::i18n::tr("Don't ask again"));
