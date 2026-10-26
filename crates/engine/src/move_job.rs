@@ -301,6 +301,15 @@ impl Session {
             Err(err) => {
                 let back: Vec<(String, String)> = done.iter().rev().filter_map(|pl| Some((pl.to_path.clone()?, pl.from_path.clone()?))).collect();
                 let r = crate::rename::move_all(&RealFs, &back);
+                if matches!(err, EngineError::Catalog(lightcraft_catalog::CatalogError::PartlyApplied { .. }))
+                    && let Some(rest) = self.undo.last().map(|step| step.op.clone())
+                {
+                    // (#2797: what is left of the rollback must follow the files as far as they went back, not move them again)
+                    let rest = crate::rename::rest_after_move_back(rest, &r);
+                    if let Some(step) = self.undo.last_mut() {
+                        step.op = rest;
+                    }
+                }
                 match r {
                     Ok(()) => {
                         self.settle_moves(record);

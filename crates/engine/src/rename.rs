@@ -26,7 +26,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use lightcraft_catalog::dates::MONTHS;
-use lightcraft_catalog::{Op, Photo, PhotoId, Source};
+use lightcraft_catalog::{CatalogError, Op, Photo, PhotoId, Source};
 use serde::Serialize;
 
 use crate::sidecar::SidecarNaming;
@@ -1060,6 +1060,41 @@ pub(crate) fn move_all_with(
     Ok(done.len())
 }
 
+/// `rest`, what is left of a rollback that failed part-way, once the files were moved back (`moved_back`, the result of
+/// `move_all` on the moves back): the `SetFile`s of a photo whose file did go back become `Relink`s, the same change to the
+/// catalog that moves no file; those of a photo whose file stayed where it went keep moving it. A photo is judged by the
+/// path its last `SetFile` points to, as `Session::file_moves` plans its move.
+pub(crate) fn rest_after_move_back(rest: Op, moved_back: &std::result::Result<(), BatchMoveError>) -> Op {
+    fn targets<'a>(op: &'a Op, out: &mut HashMap<PhotoId, &'a str>) {
+        match op {
+            Op::Batch { ops } => ops.iter().for_each(|op| targets(op, out)),
+            Op::SetFile { id, source: Source::File { path }, .. } => {
+                out.insert(*id, path);
+            }
+            _ => {}
+        }
+    }
+    fn rewrite(op: Op, back: &HashSet<PhotoId>) -> Op {
+        match op {
+            Op::Batch { ops } => Op::Batch { ops: ops.into_iter().map(|op| rewrite(op, back)).collect() },
+            Op::SetFile { id, file_name, source } if back.contains(&id) => Op::Relink { id, file_name, source, format: None },
+            op => op,
+        }
+    }
+    let mut to = HashMap::new();
+    targets(&rest, &mut to);
+    // (on a failed move back, `stuck` holds the moves back that stayed done: those files are at their old path)
+    let back: HashSet<PhotoId> = to
+        .into_iter()
+        .filter(|(_, path)| match moved_back {
+            Ok(()) => true,
+            Err(e) => e.stuck.iter().any(|m| Path::new(&m.1) == Path::new(path)),
+        })
+        .map(|(id, _)| id)
+        .collect();
+    rewrite(rest, &back)
+}
+
 /// Final `SetFile` per photo (nested batches included), filtered by destination only afterward.
 fn set_file_ops_to(op: &Op, to: &HashSet<&str>, out: &mut Vec<Op>) {
     set_file_ops_where(op, &|path| to.contains(path), out);
@@ -1281,7 +1316,17 @@ impl Session {
             && let Err(err) = self.commit(&label(n), op)
         {
             let back: Vec<(String, String)> = moves.iter().rev().map(|(a, b)| (b.clone(), a.clone())).collect();
-            if let Err(e) = move_all(fs, &back) {
+            let moved_back = move_all(fs, &back);
+            if matches!(err, EngineError::Catalog(CatalogError::PartlyApplied { .. }))
+                && let Some(rest) = self.undo.last().map(|step| step.op.clone())
+            {
+                // (what is left of the rollback must follow the files as far as they went back, not move them again)
+                let rest = rest_after_move_back(rest, &moved_back);
+                if let Some(step) = self.undo.last_mut() {
+                    step.op = rest;
+                }
+            }
+            if let Err(e) = moved_back {
                 // the files stay at the new place and the library doesn't point there: the record stays for the next open
                 return Err(EngineError::Other(format!("{err}; the renamed files could not all be moved back: {}", e.message)));
             }
@@ -1454,6 +1499,10 @@ pub(crate) mod tests {
         pub ci: bool,
         pub files: RefCell<Vec<(String, Vec<u8>)>>,
         pub fail: RefCell<Vec<String>>,
+        /// Renames made so far, and the numbers (from 0) of the ones that fail: a failure at a given moment, which a
+        /// source path alone cannot name (a file moved back is renamed from the path it was first moved from).
+        pub renames: std::cell::Cell<usize>,
+        pub fail_renames: RefCell<Vec<usize>>,
     }
 
     impl FakeFs {
@@ -1462,6 +1511,8 @@ pub(crate) mod tests {
                 ci,
                 files: RefCell::new(files.iter().map(|(p, c)| (p.to_string(), c.as_bytes().to_vec())).collect()),
                 fail: RefCell::new(Vec::new()),
+                renames: std::cell::Cell::new(0),
+                fail_renames: RefCell::new(Vec::new()),
             }
         }
         /// The model volume spells paths with `/`; the code under test joins them with the host's separator.
@@ -1498,7 +1549,9 @@ pub(crate) mod tests {
             self.idx(a).is_some() && self.idx(a) == self.idx(b)
         }
         fn rename_no_replace(&self, a: &Path, b: &Path) -> std::io::Result<()> {
-            if self.fail.borrow().iter().any(|f| Self::norm(a).contains(&f.replace('\\', "/"))) {
+            let nth = self.renames.get();
+            self.renames.set(nth + 1);
+            if self.fail_renames.borrow().contains(&nth) || self.fail.borrow().iter().any(|f| Self::norm(a).contains(&f.replace('\\', "/"))) {
                 return Err(std::io::Error::other("injected failure"));
             }
             if self.exists(b) {
