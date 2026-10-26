@@ -21,6 +21,7 @@ mod face_models;
 mod face_recognize;
 pub mod filters;
 mod focus;
+pub mod folder_metadata;
 pub mod geocode;
 pub mod keywords;
 pub mod library;
@@ -187,6 +188,7 @@ pub fn command_specs() -> &'static [CommandSpec] {
         v.extend(face_detect::specs());
         v.extend(face_recognize::specs());
         v.extend(focus::specs());
+        v.extend(folder_metadata::specs());
         v.extend(activity::specs());
         v
     })
