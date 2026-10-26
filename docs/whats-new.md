@@ -253,6 +253,21 @@
   the app you have open does either; snapshots, agents and the command line back up when told to. Settings shows when the library was last backed up. Agents:
   `library.backupPreferences` takes `every` (never, day, week, month) and `onClose` (never, ask, always), and
   answers them with `lastBackup`.
+- Settings ▸ General ▸ Backups says where the library stands, first: one line, usually with a sign before it, and **Back Up
+  Now** beside it (not on offer while a backup or a restore is under way). It reads "No backup of this library is in this folder, and nothing is set to make one" with a
+  caution sign, "Last backup: <when>" with a tick while a backup of this library is in the folder, "Last backup: Not yet" with no sign
+  where a schedule is set and none was made, "Backing up…" with no sign
+  while one is made, or that a chosen folder is not there (a drive not connected). The tick and the time are read
+  from the folder, not remembered: a backup moved away or deleted since is no longer ticked ("No backup of this
+  library is in this folder"), and a folder that holds one says when it was made after the folder was changed and
+  changed back. The folder is looked at when Settings is opened, when the folder or the library changes and when a
+  backup starts or ends, not all the while: after connecting a drive, open Settings again. The words are the size and colour of any row's, so they read
+  in every theme and are not told by a colour alone. Back Up Now is not on offer while a backup or a restore is
+  under way. A folder for backups on the same mounted volume, drive letter or share as the library is pointed out under the
+  folder, since a backup there is lost with the library if that drive fails: for the usual folder as a note, for one
+  you chose as a caution. Separate volumes on one physical disk are not told apart: for protection against a disk
+  failing, use another physical disk.
+  Agents: nothing new, `library.backup` as before.
 - Settings ▸ General ▸ Backups shows the folder the library's backups go to, and sets it: Choose Folder… for one of
   your own (on another drive, say), Use Library Folder for Backups in the library folder again. Agents:
   `library.backupPreferences` also answers `folder` (where backups go, chosen or not) and takes `choose` (ask with a
