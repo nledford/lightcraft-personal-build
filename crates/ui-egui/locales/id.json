@@ -2425,5 +2425,11 @@
   "Appearance": "Penampilan",
   "Filter settings": "Filter pengaturan",
   "No setting matches what is typed.": "Tidak ada pengaturan yang cocok dengan yang diketik.",
-  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Coba satu kata atau sebagiannya: yang dicari adalah nama tab dan bagian, label, serta penjelasan."
+  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Coba satu kata atau sebagiannya: yang dicari adalah nama tab dan bagian, label, serta penjelasan.",
+  "Continue in Background": "Lanjutkan di Latar Belakang",
+  "Folder not found": "Folder tidak ditemukan",
+  "Dismiss": "Tutup",
+  "Review…": "Tinjau…",
+  "Open Synchronize Folder with what the scan found": "Buka Sinkronkan Folder dengan hasil pemindaian",
+  "You can go on working: a notice at the top left says when the scan is done.": "Anda dapat terus bekerja: pemberitahuan di kiri atas memberi tahu saat pemindaian selesai."
 }

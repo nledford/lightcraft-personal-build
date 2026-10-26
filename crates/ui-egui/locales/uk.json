@@ -2439,5 +2439,11 @@
   "Reduce motion": "Зменшити рух",
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Вимикає анімацію масштабування та індикаторів роботи. Плавні згасання залишаються. Доки ви не зміните це тут, діє системне налаштування «Зменшити рух».",
   "Use the system setting": "Використовувати налаштування системи",
-  "Turns off zoom and spinner animations. Fades stay.": "Вимикає анімацію масштабування та індикаторів роботи. Плавні згасання залишаються."
+  "Turns off zoom and spinner animations. Fades stay.": "Вимикає анімацію масштабування та індикаторів роботи. Плавні згасання залишаються.",
+  "Continue in Background": "Продовжити у фоні",
+  "Folder not found": "Теку не знайдено",
+  "Dismiss": "Сховати",
+  "Review…": "Переглянути…",
+  "Open Synchronize Folder with what the scan found": "Відкрити «Синхронізувати теку» з результатами пошуку",
+  "You can go on working: a notice at the top left says when the scan is done.": "Можна працювати далі: сповіщення вгорі ліворуч повідомить, коли пошук завершиться."
 }

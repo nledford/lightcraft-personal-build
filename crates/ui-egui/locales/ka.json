@@ -2819,5 +2819,11 @@
   "Monitor": "მონიტორი",
   "Filter settings": "პარამეტრების გაფილტვრა",
   "No setting matches what is typed.": "აკრეფილს არც ერთი პარამეტრი არ ემთხვევა.",
-  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "სცადეთ ერთი სიტყვა ან მისი ნაწილი: იძებნება ჩანართებისა და სექციების სახელებში, წარწერებსა და განმარტებებში."
+  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "სცადეთ ერთი სიტყვა ან მისი ნაწილი: იძებნება ჩანართებისა და სექციების სახელებში, წარწერებსა და განმარტებებში.",
+  "Continue in Background": "ფონურ რეჟიმში გაგრძელება",
+  "Folder not found": "საქაღალდე ვერ მოიძებნა",
+  "Dismiss": "დახურვა",
+  "Review…": "ნახვა…",
+  "Open Synchronize Folder with what the scan found": "საქაღალდის სინქრონიზაციის გახსნა შემოწმების შედეგით",
+  "You can go on working: a notice at the top left says when the scan is done.": "შეგიძლიათ მუშაობა გააგრძელოთ: შემოწმების დასრულებისას ზედა მარცხენა კუთხეში შეტყობინება გამოჩნდება."
 }

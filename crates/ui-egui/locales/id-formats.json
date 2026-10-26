@@ -318,5 +318,8 @@
   ", rating {} of 5": ", rating: {} dari 5",
   "Add {n} photo{} to “{}”": "Tambahkan {n} foto{0:.0} ke “{1}”",
   "Add “{keyword}” to {n} photo{}": "Tambahkan “{keyword}” ke {n} foto{:.0}",
-  "{n} already there": "{n} sudah ada"
+  "{n} already there": "{n} sudah ada",
+  "Changes found: {n}": "Perubahan ditemukan: {n}",
+  "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "“{name}” masih dipindai: tunggu, atau hentikan dengan × di barisnya",
+  "Look at the changes found in “{name}” first, or dismiss them": "Lihat dulu perubahan yang ditemukan di “{name}”, atau tutup"
 }

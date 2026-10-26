@@ -2491,5 +2491,11 @@
   "Reduce motion": "Omezit pohyb",
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Vypne animace přiblížení a načítacích indikátorů. Prolínání zůstává. Dokud to zde nezměníte, řídí se nastavením Omezit pohyb v systému.",
   "Use the system setting": "Použít nastavení systému",
-  "Turns off zoom and spinner animations. Fades stay.": "Vypne animace přiblížení a načítacích indikátorů. Prolínání zůstává."
+  "Turns off zoom and spinner animations. Fades stay.": "Vypne animace přiblížení a načítacích indikátorů. Prolínání zůstává.",
+  "Continue in Background": "Pokračovat na pozadí",
+  "Folder not found": "Složka nenalezena",
+  "Dismiss": "Zavřít",
+  "Review…": "Prohlédnout…",
+  "Open Synchronize Folder with what the scan found": "Otevřít Synchronizovat složku s tím, co hledání našlo",
+  "You can go on working: a notice at the top left says when the scan is done.": "Můžete pracovat dál: až hledání skončí, oznámí to upozornění vlevo nahoře."
 }

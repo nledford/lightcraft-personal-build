@@ -318,5 +318,8 @@
   ", rating {} of 5": ", შეფასება: {} 5-დან",
   "Add {n} photo{} to “{}”": "დაამატეთ ფოტო „{1}“-ში: {n}{0:.0}",
   "{n} already there": "{n} უკვე არის",
-  "Add “{keyword}” to {n} photo{}": "დაამატეთ „{keyword}“ ფოტოებს: {n}{:.0}"
+  "Add “{keyword}” to {n} photo{}": "დაამატეთ „{keyword}“ ფოტოებს: {n}{:.0}",
+  "Changes found: {n}": "ნაპოვნი ცვლილებები: {n}",
+  "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "„{name}“ ჯერ კიდევ მოწმდება: დაელოდეთ, ან შეაჩერეთ ×-ით მის მწკრივზე",
+  "Look at the changes found in “{name}” first, or dismiss them": "ჯერ ნახეთ „{name}“-ში ნაპოვნი ცვლილებები, ან უარყავით ისინი"
 }

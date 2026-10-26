@@ -318,5 +318,8 @@
   ", rating {} of 5": "、評価: 5段階中{}",
   "Add {n} photo{} to “{}”": "{n}枚を「{1}」に追加{0:.0}",
   "{n} already there": "{n}枚は追加済み",
-  "Add “{keyword}” to {n} photo{}": "写真{n}枚に「{keyword}」を追加{:.0}"
+  "Add “{keyword}” to {n} photo{}": "写真{n}枚に「{keyword}」を追加{:.0}",
+  "Changes found: {n}": "見つかった変更: {n}",
+  "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "「{name}」はまだスキャン中です。終わるまで待つか、その行の × で停止してください",
+  "Look at the changes found in “{name}” first, or dismiss them": "先に「{name}」で見つかった変更を確認するか、閉じてください"
 }
