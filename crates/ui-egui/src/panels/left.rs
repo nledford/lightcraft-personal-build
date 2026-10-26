@@ -615,7 +615,11 @@ fn new_album_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             parent: None,
         });
     }
-    if MenuItem::new(crate::i18n::tr("Create Smart Album from Filter…")).show(ui).clicked() {
+    let why_not = app.session.view_save_refusal();
+    let from_filter = MenuItem::new(crate::i18n::tr("Create Smart Album from Filter…")).enabled(why_not.is_none()).show(ui);
+    if let Some(why) = why_not {
+        from_filter.on_disabled_hover_text(why);
+    } else if from_filter.clicked() {
         app.ui.dialog = Some(crate::state::Dialog::NewSmartAlbum { name: String::new(), parent: None });
     }
     if MenuItem::new(crate::i18n::tr("Create Folder…")).show(ui).clicked() {
@@ -1703,7 +1707,12 @@ fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Album) {
                     ("Create Smart Album from Filter…", "dialog.newSmartAlbum"),
                     ("Create Folder…", "dialog.newFolder"),
                 ] {
-                    if MenuItem::new(crate::i18n::tr(label)).show(ui).clicked() {
+                    // (a view that can't be saved as rules greys out the one that saves it, and says why)
+                    let why_not = if command == "dialog.newSmartAlbum" { app.session.view_save_refusal() } else { None };
+                    let item = MenuItem::new(crate::i18n::tr(label)).enabled(why_not.is_none()).show(ui);
+                    if let Some(why) = why_not {
+                        item.on_disabled_hover_text(why);
+                    } else if item.clicked() {
                         app.act(command, json!({"parent": a.id.0}));
                         ui.close();
                     }

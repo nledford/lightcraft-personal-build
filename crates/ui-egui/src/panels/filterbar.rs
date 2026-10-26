@@ -248,7 +248,12 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     // save / clear
     ui.add_space(14.0);
     let filtering = app.session.filter != Default::default();
-    let save = crate::button::Button::new("Save as Smart Album…").small().enabled(filtering).widget("button:filterSave").show(ui);
+    let why_not = app.session.view_save_refusal();
+    let mut save = crate::button::Button::new("Save as Smart Album…").small().enabled(filtering && why_not.is_none()).widget("button:filterSave");
+    if let Some(why) = why_not.as_deref() {
+        save = save.tooltip(why);
+    }
+    let save = save.show(ui);
     if save.clicked() {
         app.act("dialog.newSmartAlbum", json!({}));
     }
