@@ -258,6 +258,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "{path, name} — rename a folder on disk (its files and sidecars go along) and relink the photos in it; one undo step (undo renames it back, refused if the old name is taken) → {path, relinked}",
             always,
             |s, p| {
+                s.refuse_while_trashing("folder.rename")?;
                 let from = str_param(p, "path").ok_or_else(|| bad("folder.rename", "missing path"))?.trim_end_matches(['/', '\\']).to_string();
                 let name = str_param(p, "name")
                     .map(str::trim)
@@ -276,6 +277,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "{path, into: destination folder} — move a folder on disk into another and relink the photos in it; one undo step (undo moves it back, refused if the old place is taken) → {path, relinked}",
             always,
             |s, p| {
+                s.refuse_while_trashing("folder.move")?;
                 let from = str_param(p, "path").ok_or_else(|| bad("folder.move", "missing path"))?.trim_end_matches(['/', '\\']).to_string();
                 let into = str_param(p, "into").ok_or_else(|| bad("folder.move", "missing into"))?;
                 let name = Path::new(&from).file_name().ok_or_else(|| bad("folder.move", "bad path"))?;

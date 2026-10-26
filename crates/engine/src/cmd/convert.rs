@@ -72,6 +72,7 @@ fn not_convertible(ph: &lightcraft_catalog::Photo) -> Option<&'static str> {
 
 fn convert(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "photo.convertToDng";
+    s.refuse_while_trashing(C)?;
     let ids = s.targets(p)?;
     // before the first DNG is written: a raw on its way to another folder is read half-moved, and the
     // DNG would be left next to a file that is no longer there
@@ -139,6 +140,7 @@ pub fn specs() -> Vec<CommandSpec> {
 /// the library and stack it on top of the original. The host opens the file in the editor.
 fn edit_external(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "photo.editExternal";
+    s.refuse_while_trashing(C)?;
     let mut ids = s.targets(p)?;
     ids.dedup();
     if ids.is_empty() {
@@ -342,6 +344,7 @@ fn reload(s: &mut Session, p: &Value) -> Result<Value> {
 /// same settings, metadata, rating, flag, label and albums. → {ids}
 fn duplicate(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "photo.duplicate";
+    s.refuse_while_trashing(C)?;
     let mut made = Vec::new();
     for id in s.targets(p)? {
         let Some(ph) = s.catalog.photo(id).map(|p| (**p).clone()) else { continue };
