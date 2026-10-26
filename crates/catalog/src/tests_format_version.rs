@@ -476,7 +476,7 @@ fn a_library_that_cannot_be_kept_is_not_opened() {
 }
 
 /// Given an older library on disk whose files can't be kept (the name of one is taken by a directory), when it is
-/// opened, then it is refused (as in `a_library_that_cannot_be_kept_is_not_opened`), and no copy or half-written staging file of the files it tried to keep is left
+/// opened, then it is refused, and no copy or half-written staging file of the files it tried to keep is left
 /// lying about in the library's folder.
 #[test]
 fn a_library_on_disk_that_cannot_be_kept_leaves_nothing_lying_about() {
@@ -484,17 +484,16 @@ fn a_library_on_disk_that_cannot_be_kept_leaves_nothing_lying_about() {
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("catalog.log.v6-8")).unwrap();
     let files = fixture(6).unwrap();
-    let snap = files.iter().find(|(n, _)| *n == SNAPSHOT).unwrap().1;
     for (name, content) in &files {
         std::fs::write(dir.join(name), content).unwrap();
     }
 
     let e = Journal::open(Box::new(FsStore::open(&dir).unwrap())).err().expect("refused");
-    assert!(matches!(&e, CatalogError::Io(why) if why.contains("can't be kept")), "{e}");
+    assert!(matches!(&e, CatalogError::Io(why) if why.contains("older format (v6)") && why.contains("can't be kept")), "{e}");
     let mut names: Vec<_> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
     names.sort();
     assert_eq!(names, [LOG, "catalog.log.v6-8", SNAPSHOT], "nothing but the library and the name that was taken");
-    assert_eq!(std::fs::read(dir.join(SNAPSHOT)).unwrap(), snap.as_bytes());
+    assert_eq!(std::fs::read(dir.join(SNAPSHOT)).unwrap(), files.iter().find(|(n, _)| *n == SNAPSHOT).unwrap().1.as_bytes());
     let _ = std::fs::remove_dir_all(&dir);
 }
 

@@ -1,8 +1,8 @@
 //! The files a put-off upgrade keeps ([`Journal::keep_before_upgrade`]): one pair, the library as
 //! it was at open, kept once however many attempts fail, and told once the one that works is
 //! written. A child of `journal` because it sets the private `behind` (a library whose upgrade
-//! was put off at open: no format this build reads and upgrades from does that yet, since a
-//! format before 10 is refused when it can't be upgraded, so the state is made here).
+//! was put off at open) by hand, so each failure of the attempts can be made at will. The store
+//! here is a one-file store (it doesn't take the segments of format 11).
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
