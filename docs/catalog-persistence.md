@@ -215,7 +215,9 @@ Changes in one place write about what the segments there hold, and the time foll
 write all of them, as before, and the 11 % more time in the one run above is within what these runs vary by here; the
 extra cost is looking through the catalog for what changed. Only this one mix and size were measured for this change.
 
-**What this does not change.** The whole catalog is still held in memory.
+**What this does not change.** The whole catalog is still held in memory (see below). Not measured: how long
+replaying a long log takes at 3.5 million photos (the benchmark's figure there is dominated by memory pressure from
+the copies of the catalog it holds).
 
 ### Segment size
 
@@ -272,3 +274,35 @@ and what a backup after them copies small, and makes a save that touches every s
 background) about 1.4 times as slow where records are small. The size is not
 adjusted to how a library is used: it already follows the size of the records, the measurements are flat around it,
 and every change of size would rewrite segments that backups share.
+
+## In memory: equal develop settings are held once
+
+The whole catalog is held in memory. A photo holds its develop settings behind a shared pointer, and so do its
+history steps, versions and import look; `crates/catalog/src/shared.rs` gives every settings value that enters a
+catalog (read from a saved library, or set by a change) the value already held when an equal one is. Photos nobody
+edited share the defaults, raws of one camera their import defaults, and a photo's last history step its settings.
+
+- Settings saved with nothing stated (`{}`: every unedited photo) are not read at all when a library is opened: they
+  are the one value held for them.
+- Equal means the same down to the saved JSON: settings holding a negative zero (which `==` takes for zero, and the
+  JSON, a photo's fingerprint and the preview-cache key don't) are never shared.
+- Sharing can't carry one photo's edit to another: settings behind a shared pointer are replaced, never changed in
+  place.
+
+Bytes requested from the allocator per photo, the library opened from disk (300,000 photos; 20,000 edited ones),
+before = format 8 without sharing (`394a4ea8`):
+
+| Library | Before | After | At 3.5 million photos |
+|---|---|---|---|
+| JPEG library, unedited | 2,877 B | 1,373 B | 10.1 GB → 4.8 GB |
+| Raws on their import defaults | 2,876 B | 1,372 B | 10.1 GB → 4.8 GB |
+| Edited raws, 20 history steps each | 34,060 B | 32,556 B | (each step holds its own settings) |
+
+Opening got faster where settings are not read (JPEG library: 518 → 387 ms at 1 million photos, 1,714 → 1,301 ms at
+3.5 million), and the 3.5 million photo benchmark run peaked at 18.1 GB where it was 30.7 GB (it holds two to three
+copies of the catalog). Where each photo's settings are read and found equal to another's (raws on their import
+defaults), opening takes about a tenth longer (348 → 394 ms for 300,000); edited photos open as fast as before.
+
+**What this does not change.** A photo's record still takes about 1.1 kB whatever it holds (room for every metadata
+field, lens data, culling scores), and every history step of an edited photo holds a full settings value (1.5 kB):
+both are where the rest of the memory is.

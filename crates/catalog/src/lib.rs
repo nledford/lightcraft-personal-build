@@ -25,6 +25,7 @@ pub mod query;
 pub mod rules;
 pub mod safe_file;
 pub mod segments;
+pub mod shared;
 pub mod stacks;
 pub mod store;
 mod stored;
@@ -715,7 +716,9 @@ impl Catalog {
                 }
                 let id = photo.id;
                 self.next_photo = self.next_photo.max(id.0.saturating_add(1));
-                self.photos.insert(id, Arc::new(*photo));
+                let mut photo = *photo;
+                shared::photo(&mut photo);
+                self.photos.insert(id, Arc::new(photo));
                 Op::RemovePhoto { id }
             }
             Op::RemovePhoto { id } => {
@@ -741,7 +744,7 @@ impl Catalog {
             }
             Op::SetDevelop { id, settings, label, edited } => {
                 let p = self.photo_mut(id)?;
-                let old = std::mem::replace(&mut p.develop, settings);
+                let old = std::mem::replace(&mut p.develop, shared::settings(settings));
                 let old_edit = std::mem::replace(&mut p.edited, edited);
                 Op::SetDevelop { id, settings: old, label, edited: old_edit }
             }
@@ -757,15 +760,18 @@ impl Catalog {
                 let p = self.photo_mut(id)?;
                 Op::SetLocal { id, local: std::mem::replace(&mut p.local, local) }
             }
-            Op::SetVersions { id, versions } => {
+            Op::SetVersions { id, mut versions } => {
+                shared::versions(&mut versions);
                 let p = self.photo_mut(id)?;
                 Op::SetVersions { id, versions: std::mem::replace(&mut p.versions, versions) }
             }
-            Op::SetHistory { id, history } => {
+            Op::SetHistory { id, mut history } => {
+                history.iter_mut().for_each(shared::step);
                 let p = self.photo_mut(id)?;
                 Op::SetHistory { id, history: std::mem::replace(&mut p.history, history) }
             }
-            Op::PushHistory { id, step } => {
+            Op::PushHistory { id, mut step } => {
+                shared::step(&mut step);
                 let p = self.photo_mut(id)?;
                 let old = p.history.clone();
                 let old_cursor = p.history_cursor.take();
@@ -1277,6 +1283,8 @@ mod tests_repair;
 mod tests_scale;
 #[cfg(test)]
 mod tests_segments;
+#[cfg(test)]
+mod tests_shared;
 #[cfg(test)]
 mod tests_stored;
 #[cfg(test)]

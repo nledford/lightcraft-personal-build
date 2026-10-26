@@ -154,16 +154,19 @@
 - A long folder (General ▸ Library ▸ Location, the folder Auto Import watches, the smart previews folder, a monitor
   profile's file) is shortened to its last folders ("…/Pictures/Library") on one line; rest the pointer on it for
   the whole path.
+
 ### One star rating control
 - The stars in the bottom bar, the Info panel and the filter bar are now one shared control, and the badges on grid
   cells, filmstrip thumbnails and the Compare caption use the same drawing. Hovering a star in the filter bar now
   previews the rating like the others do, and with a star focused (Tab), ← and → lower and raise the rating.
+
 ### Progress looks the same everywhere
 - Download, scan, denoise and activity progress now use one bar that fills the width it is given, with its text on
   it, and a gentle sweep while the amount of work isn't known yet. Waits that only said "Selecting…", "Waiting to
   start…" or "Installing…" now show a small turning arc beside the text, and a thumbnail still being made shows a
   quiet placeholder that fits the theme in the grid, the filmstrip and Compare. Screen readers hear a progress
   indicator with its percentage.
+
 ### Menu names that say what they are
 - Switches in the menus are named for what they show, with the check mark saying whether it is on: Filmstrip ✓,
   Focus Point ✓, Clipping ✓, Photo Counts ✓, Mask Overlay ✓ instead of Show Focus Point ✓. No two commands share a
@@ -171,6 +174,7 @@
   Panel, and Compare Before and After is Before/After Side by Side, next to Split and Top/Bottom.
 - The preview cache command has one name, Discard Preview Cache, in File ▸ Previews and in the toast that confirms
   it. Keyboard shortcuts are unchanged.
+
 ### Dropping files shows what will happen
 - While files are dragged over the window, it dims and a card says what dropping will do: review the photos and
   folders for import, import the presets, or open the face model. If a dialog is open, the card asks you to close it
@@ -184,12 +188,40 @@
 - In the web version, a dropped file the browser can't read, or that can't be imported, now shows a message instead of
   failing silently.
 - For scripts: `ui.dropFiles` hovers files over the window or drops them, as the operating system does.
+
 ### Counting many smart albums is faster
 - Counting every smart album at once (the numbers in the Albums list, and the `albums.list` command) now works out an
   album that other smart albums test (“album is …”) once for the whole library, instead of again for every album
   that tests it. On a synthetic library of 312,000 photos with 77 smart albums, 51 of them testing one shared album,
   the full count took about 14 s instead of about 23 s on a heavily loaded machine; the rest is the text rules of
   the albums themselves. The counts are the same as before, including for albums that loop through each other.
+
+### Large libraries (#823)
+- The catalog on disk is several times smaller: a photo's record states only what was set (no empty fields, no default
+  develop settings), about 0.4 to 0.6 kB for an unedited photo where it was 3.4 to 3.7 kB. Edits, history steps and
+  versions are stored as what differs from the defaults.
+- Saving follows what changed, not the size of the library: the catalog is compacted while you work when the log of
+  changes is long (2000 records or 16 MB) and has grown to a quarter of what a compaction would rewrite (`catalog.snap`,
+  the segments holding changed photos, and a sixteenth of the catalog for looking through it), or when it reaches
+  256 MB; on quit, a log is compacted when the rewrite is up to 64 MB or, above that, when the log is long (2000 records or 16 MB). It used to be
+  rewritten every 2000 changes. Importing 100,000
+  photos rewrote it 50 times (9.4 GB written); it is now 15 times (0.25 GB). Quitting no longer rewrites a large
+  catalog for a handful of changes.
+- The catalog's photos are saved in segment files (JSON files in `segments/` beside `catalog.snap`), and saving rewrites only the
+  segments whose photos changed: after edits in one place, 2 MB where it was the whole catalog (about 60 ms where it was 2 s,
+  for 3.5 million photos). Opening reads the segments on several threads: 0.15 s where it was 0.5 s for 300,000 photos,
+  1.7 s where it was 6.1 s for 3.5 million. A damaged segment is named when the library is opened, and nothing is
+  modified.
+- Less memory: photos whose develop settings are equal (above all, every photo nobody edited) hold them once.
+  A library of unedited photos takes about half the memory it did (1.4 kB per photo where it was 2.9 kB: 4.8 GB where
+  it was 10 GB for 3.5 million photos) and opens faster.
+- Libraries are upgraded when first opened (catalog format 11) and can't be opened by earlier versions afterwards. The
+  photos of a library in a folder on disk are split into segments only once the segments written read back the same.
+  Copy or back up the whole library folder: `catalog.snap` alone no longer holds the photos. (The browser build keeps
+  its photos in `catalog.snap`.)
+  The library as it was is kept beside it (`catalog.snap.v<format>-<seq>`, `catalog.log.v<format>-<seq>`): to go back, see
+  `docs/catalog-persistence.md`.
+  Numbers and the measurements behind them: `docs/catalog-persistence.md`.
 
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a
@@ -250,6 +282,7 @@
   or "doesn't contain" rule took about 17 ms per pass instead of about 62 ms, around 3.5 times faster, with the same
   photos matched; about 6 ms of that is only reading the paths. Paths and rule text with letters beyond A–Z are
   compared as before.
+
 ## 2026-10-19
 
 ### AI Denoise on DirectX 12 with NVIDIA GTX 10-series cards
@@ -350,6 +383,7 @@
   one (issue #1507). LightCraft used to open the library without it, showing an incomplete catalog that the next save
   would write over the stored copy. It now leaves the library unopened, saves nothing and says which file couldn't be
   read; reload the page to try again.
+
 ## 2026-10-14
 
 ### Model downloads time out on a name that doesn't resolve
@@ -487,6 +521,7 @@
   #1236). The D7000, D5100, D800, D800E, Df, D4, D3, D3S, D700, D300, D300S, D600, D610, D810, D4S, D5600,
   Coolpix A, D3000, D40X, D60, D80, D2Xs, D200, D3200, D3100, D5000, D40, D50, D70, D70s and Nikon 1 V1 now show
   the area the camera itself frames, a few pixels smaller than before.
+
 ### An empty library leads to Import
 - A library with no photos now opens on the Photo Grid with the sidebar (Square Grid stays as it is), instead of a
   Detail view that pointed at an empty grid. The grid and Detail view offer Import Photos… and, in the desktop app,
@@ -506,6 +541,7 @@
 - In dialogs, the confirm button is on the right with Cancel to its left, and filled with the accent when it makes or
   brings in something (Import N Photos, Merge, Save, Create, Download…). Delete and Remove stay plain, so a destructive
   choice is never the eye-catching default.
+
 ### Straight brush strokes with ⇧-click
 - With the brush, click once, then ⇧-click somewhere else: the brush paints a straight line between the two, and
   further ⇧-clicks carry on from the last point, as in Lightroom. Change the brush size, feather or flow before the
@@ -704,11 +740,13 @@
   contains it: `Canon EOS R6` stays `Canon EOS R6`, rather than `Canon Canon EOS R6` (the camera
   identity subissue in #840). The separate Make and Model tags keep their original values.
   This does not change colour matrices, camera calibration or RAW noise rendering.
+
 ### Building from source
 - The English and Simplified Chinese build guides now describe command-local job and release
   profile overrides for memory-constrained builders (issue #1196), including why packaging
   recipes can override inherited settings. Default release profiles and application behavior
   are unchanged; the guidance does not guarantee a build will fit every 16 GB machine.
+
 ### Lightroom catalog import
 - A Lightroom Classic catalog whose changes are all still in its `.lrcat-wal` file (a new catalog Lightroom has
   open and hasn't written back yet) imports instead of failing with "unsupported SQLite schema format".
@@ -717,6 +755,7 @@
 - An export enlarged far past the photo's size (20000 typed for 2000 with Don't Enlarge off) no longer ends
   LightCraft: an enlargement stops at 512 megapixels, as in Lightroom, and one that needs more memory than the
   computer has is refused with the size it would take, before it starts.
+
 ### Confirm matching faces together
 - On a person's page, the ↑ control on a suggested face confirms it and all shown suggestions with equal or higher
   similarity as one undo step. Hover or focus that face and press A for the same action; hidden suggestions stay hidden.
@@ -744,21 +783,25 @@
   previews for up to a second.
 - A thumbnail of the photo open in Detail is made from its already decoded preview instead of decoding the file
   again.
+
 ### Dehaze while zoomed in
 - With Dehaze on, panning a photo zoomed to 1:1 or moving a slider while zoomed no longer samples the whole
   original again to find the haze colour. On a 64 MP raw (Sony A7R VI) that took ~0.2 s of CPU per pan and per
   slider step; a slider step now takes ~5 ms on the GPU.
+
 ### Thumbnails of raw files appear sooner
 - Grid thumbnails and the first picture in the loupe of an unedited raw now come from the smallest JPEG the camera
   stored that is big enough, not always from the largest one. On a Sony A7R VI file a 512 px thumbnail decodes
   0.3 MB of JPEG instead of 5.6 MB and is ready several times sooner; Nikon and Panasonic raws with a mid-sized
   JPEG get faster too.
+
 ## 2026-10-12
 
 ### Canon CR2 highlights
 - Blown highlights in CR2 files from the Canon EOS 50D, 60D, 450D (Rebel XSi), 500D (Rebel T1i), 550D (Rebel T2i),
   1200D (Rebel T5) and 100D (Rebel SL1) now count as clipped (issue #1272). They used to stop at 81–98% of white, so
   highlight recovery missed them and, darkened, they took a colour cast instead of going neutral grey.
+
 ## 2026-10-12
 
 ### Pentax raws without black borders
@@ -766,6 +809,7 @@
   show a black (or, on the 645Z, white) band along one or more edges (issue #1271). The sensor's masked border is
   left out, so these photos come out a little smaller, closer to the camera's own JPEG. Crops and masks on photos
   edited earlier may shift by a few pixels.
+
 ## 2026-10-12
 
 ### Camera-look deep shadows
@@ -773,10 +817,12 @@
 - The starting look fitted from a raw's camera JPEG now uses its darkest tones too (issue #1307).
   Photos with deep shadows no longer have to extend the first measured tone in a straight line to black.
   Existing smart previews are refreshed when their originals are online, and cached renders are redrawn.
+
 ### Slider drags follow the pointer more closely
 - With a GPU, a slider drag's preview is drawn in the same frame as the slider moves instead of one frame later,
   when the preview renders in a few milliseconds (it waits at most 40 % of a frame for it; slower renders, such as
   on the CPU, are not waited for).
+
 ## 2026-10-12
 
 ### Kelvin white balance for more Sony cameras
@@ -784,25 +830,30 @@
   read from the white-balance presets the camera stores in every ARW: a photo shot at 3400 K on the camera reads
   3396 K, one on the Shade preset 7493 K. As for #730, only the numbers change: edits made on the old relative
   scale keep their look, and As Shot shows the real temperature once the file is opened.
+
 ## 2026-10-12
 
 ### Bold text in other scripts
 - Arabic names and other Arabic text in headings, chosen tabs and other bold places are now drawn bold, as Latin text
   beside them is; they used to stay at regular weight.
+
 ## 2026-10-12
 
 ### Older raw cameras
 - Canon PowerShot G9 raws open with the camera's white balance (White Balance ▸ As Shot); it used to start from a
   neutral default.
+
 ## 2026-10-12
 
 ### Older raw cameras
 - Olympus E-10 raws open with the camera's white balance (White Balance ▸ As Shot) and without the grey haze in
   the shadows: the black level recorded in the file is now subtracted.
+
 ### Told when there is no GPU
 - When GPU rendering is on but no graphics processor can be found, LightCraft now says so once at start-up instead
   of quietly rendering everything on the CPU, much more slowly. Help ▸ System Info says why. On NixOS this happens
   when a `cargo` build runs outside `nix develop` (no Vulkan loader); start it from there.
+
 ## 2026-10-12
 
 ### Leaf and Hasselblad raws
@@ -810,6 +861,7 @@
   instead of opening as their embedded preview. Photos imported earlier switch over with Photo ▸ Reload from Disk.
 - An uncompressed Leaf Aptus 22 MOS no longer opens as a dark, colourless picture of its sensor mosaic: it imports
   as a raw and shows its embedded preview (preview only, with the reason), as the compressed MOS files do.
+
 ## 2026-10-12
 
 ### Zoomed 64 MP raws stay decoded
@@ -850,6 +902,7 @@
 - Photo Merge of Canon CR2 (and other raws whose colour LightCraft fits from the camera's own JPEG, such as NEF and
   ARW) gives the merged DNG the colour each photo has when opened alone (issue #965). An HDR merge of CR2s used to come
   out green and dark.
+
 ### "Rendering…" on the photo
 - The loupe says "Rendering…" at the bottom of the photo when what it shows isn't the finished photo yet: the
   camera's embedded JPEG while a raw decodes, the previous render while an edit renders, or the magnified frame
@@ -858,6 +911,7 @@
   its embedded JPEG or a thumbnail to show, the loupe now says so at the bottom of the photo ("Original offline · no
   smart preview" or "This photo can't be opened", the reason on hover) instead of showing that preview as if it were
   the photo.
+
 ### `--import <folder>` takes HEIC
 - `lightcraft-cli run --import <folder>` (and the MCP tools that take folders) now picks up HEIC, HEIF and Nikon NRW
   files, the same files as `library.import` (issue #1080). They used to be skipped without a word.
