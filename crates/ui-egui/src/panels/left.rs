@@ -1430,10 +1430,7 @@ fn folder_tree(
         if app.services.pick_folder.is_some() && MenuItem::new(crate::i18n::tr("Move Folder To…")).show(ui).clicked() {
             let into = app.services.pick_folder.as_mut().and_then(|f| f());
             if let Some(into) = into {
-                match app.run("folder.move", json!({"path": path, "into": into})) {
-                    Ok(r) => app.toast(ui.ctx(), crate::i18n::tr_format!("Moved; {} photo(s) relinked", r["relinked"])),
-                    Err(e) => app.toast_error(ui.ctx(), e),
-                }
+                move_folder_to(app, ui.ctx(), path, &into);
             }
         }
         if app.services.reveal.is_some()
@@ -2553,6 +2550,30 @@ fn move_photos_here(app: &mut LightcraftApp, ctx: &egui::Context, ids: Option<&[
     let _ = crate::move_task::start(app, ctx, &params);
 }
 
+/// What moving the folder `name` into the folder `into` says: where it went, how many library
+/// photos went with it (only when some did), and that Undo puts it back.
+pub(crate) fn folder_moved_text(name: &str, into: &str, photos: u64) -> String {
+    if photos == 0 {
+        crate::i18n::tr_format!("Moved “{name}” into “{into}”. Edit → Undo moves it back.", name = name, into = into)
+    } else {
+        crate::i18n::tr_format!("Moved “{name}” into “{into}”. Photos: {n}. Edit → Undo moves it back.", name = name, into = into, n = photos)
+    }
+}
+
+/// The last name of a path, or the whole path when it has none (a disk's root).
+fn last_name(path: &str) -> String {
+    std::path::Path::new(path.trim_end_matches(['/', '\\'])).file_name().map_or_else(|| path.to_string(), |n| n.to_string_lossy().to_string())
+}
+
+/// Move Folder To…, from the Folders tree and from Local: move the folder `path` into `into`
+/// on disk (photos follow, one undo step) and say in a toast where it went.
+pub(crate) fn move_folder_to(app: &mut LightcraftApp, ctx: &egui::Context, path: &str, into: &str) {
+    match app.run("folder.move", json!({"path": path, "into": into})) {
+        Ok(r) => app.toast(ctx, folder_moved_text(&last_name(path), &last_name(into), r["relinked"].as_u64().unwrap_or(0))),
+        Err(e) => app.toast_error(ctx, e),
+    }
+}
+
 /// The context menu of a Folders row: a folder's own, a disk's (remove it), none for the
 /// startup disk.
 fn row_menu(app: &mut LightcraftApp, resp: &egui::Response, n: &FolderNode, parents: FolderParents) {
@@ -2671,10 +2692,7 @@ fn folder_menu_for_library(app: &mut LightcraftApp, resp: &egui::Response, n: &F
         if app.services.pick_folder.is_some() && MenuItem::new(crate::i18n::tr("Move Folder To…")).show(ui).clicked() {
             let into = app.services.pick_folder.as_mut().and_then(|f| f());
             if let Some(into) = into {
-                match app.run("folder.move", json!({"path": path, "into": into})) {
-                    Ok(r) => app.toast(ui.ctx(), format!("Moved; {} photo(s) relinked", r["relinked"])),
-                    Err(e) => app.toast_error(ui.ctx(), e),
-                }
+                move_folder_to(app, ui.ctx(), path, &into);
             }
             ui.close();
         }
