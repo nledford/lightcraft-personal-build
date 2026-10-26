@@ -2167,10 +2167,12 @@ fn folder_item(
     let (name, label) = names;
     match item {
         FolderItem::ImportHere => {
+            // a folder picker already up would swallow this row's request (and its destination)
+            let picking = crate::import::add_folder_picker_pending(app);
             let r = ui
-                .add_enabled(crate::import::can_open(app), egui::Button::new(crate::i18n::tr("Import to This Folder…")))
-                .on_hover_text(crate::i18n::tr("Copies the photos of a folder you choose into this folder; the review lets you change that"))
-                .on_disabled_hover_text(crate::i18n::tr("An import is running"));
+                .add_enabled(crate::import::can_open(app) && !picking, egui::Button::new(crate::i18n::tr("Import to This Folder…")))
+                .on_hover_text(crate::i18n::tr("Copies the photos of a folder you choose into this folder; the review lets you change that"));
+            let r = if picking && crate::import::can_open(app) { r } else { r.on_disabled_hover_text(crate::i18n::tr("An import is running")) };
             register(ui, "folderImportHere", r.rect);
             if r.clicked() {
                 // the folder picker, then the Import review copying into this folder
