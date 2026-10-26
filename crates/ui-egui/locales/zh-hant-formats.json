@@ -241,13 +241,13 @@
   "{done} of {total}": "{done}／{total}",
   "{done} of {total} MB": "{done}／{total} MB",
   "{pct} %": "{pct}%",
-  "+{n} more": "還有 {n} 項",
   "Create the keyword “{name}”": "建立關鍵字「{name}」",
   "new, inside {parent}": "新關鍵字，位於 {parent} 內",
   "Keywords of {n} selected photos": "選取的 {n} 張照片的關鍵字",
   "Removed “{name}” from {n} photos. Edit ▸ Undo puts it back.": "已從 {n} 張照片移除「{name}」。編輯 → 復原可恢復。",
   "1 task is still running: {names}. Quitting stops it.": "仍有 1 個工作在執行：{names}。結束將停止它。",
   "{n} tasks are still running: {names}. Quitting stops them.": "仍有 {n} 個工作在執行：{names}。結束將停止它們。",
+  "{n} tasks": "{n} 個工作",
   "{what} merge cancelled": "已取消{what}合併",
   "{n} Local photo{} skipped: albums hold library photos (Add to My Photos first)": "已略過 {n} 張本機照片{0:.0}：相簿只能收錄照片庫中的照片（請先加入我的照片）",
   "New Folder in “{name}”": "在「{name}」中新增資料夾",
@@ -324,5 +324,6 @@
   "Look at the changes found in “{name}” first, or dismiss them": "請先檢視在「{name}」中找到的變更，或將其忽略",
   "Lists “{name}”, the folder this one is in": "列出此資料夾所在的「{name}」",
   "Showing {what}": "正在顯示 {what}",
-  "{title}, showing {what}": "{title}，正在顯示 {what}"
+  "{title}, showing {what}": "{title}，正在顯示 {what}",
+  "+{n} more": "還有 {n} 項"
 }
