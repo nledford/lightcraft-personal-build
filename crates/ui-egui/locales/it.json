@@ -2424,5 +2424,6 @@
   "another library": "un'altra libreria",
   "Choose a backup first": "Scegli prima un backup",
   "The library becomes what it was when the backup was made. What it holds now is kept in Replaced in the library folder.": "La libreria torna com'era quando è stato fatto il backup. Ciò che contiene ora viene conservato in Replaced, nella cartella della libreria.",
-  "Same Content as Another Photo": "Stesso contenuto di un'altra foto"
+  "Same Content as Another Photo": "Stesso contenuto di un'altra foto",
+  "Counting library": "Conteggio della libreria"
 }
