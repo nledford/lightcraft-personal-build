@@ -165,8 +165,17 @@ fn back_up(s: &mut Session, p: &Value) -> Result<Value> {
     }
     let background = flag(C, p, "background")?;
     let dest = match p.get("dir") {
-        None | Some(Value::Null) => s.backup_dir.clone().unwrap_or_else(|| library.join(BACKUPS)),
-        Some(dir) => folder(C, "dir", dir)?,
+        None | Some(Value::Null) => match s.backup_dir.clone() {
+            // (set before this rule, or in the preferences file by hand)
+            Some(chosen) => match not_for_backups(s, &chosen) {
+                Some(why) => {
+                    return Err(bad(C, format!("the folder set for this library's backups can't be used: {why} (`library.backupPreferences`)")));
+                }
+                None => chosen,
+            },
+            None => library.join(BACKUPS),
+        },
+        Some(dir) => destination(s, C, "dir", dir)?,
     };
     // everything changed so far is in the log before it is read
     s.persist()?;
@@ -634,15 +643,88 @@ fn backups(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(json!({"dir": dir.to_string_lossy(), "backups": backup::list(&dir)}))
 }
 
+/// Where the open library's backups go, and whether that folder was chosen for it (else it is
+/// `Backups` in the library folder). `None`: the library is not a folder on disk, and is not
+/// backed up to one. Reads only: what Settings shows on every frame.
+pub fn backup_folder(s: &Session) -> Option<(PathBuf, bool)> {
+    let library = s.library.as_ref().filter(|l| l.on_disk)?;
+    Some(match &s.backup_dir {
+        Some(chosen) => (chosen.clone(), true),
+        None => (library.dir.join(BACKUPS), false),
+    })
+}
+
+/// Why `dir` is no folder for the open library's backups to go to, if it is none: one of the
+/// library's own (inside the library folder only `Backups` is for backups: its other folders
+/// are the catalog's, and a restore moves them as such), or a backup or a folder inside one (it
+/// would no longer be what its list of files says).
+fn not_for_backups(s: &Session, dir: &Path) -> Option<String> {
+    // (`..` names another folder than the path reads as, and which one can change as the folders
+    // before it are made: a place for backups is given by its own path)
+    if dir.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+        return Some(format!("{} must be the folder's own path, without `..`", dir.display()));
+    }
+    // (As the file system names them, as far as they exist: a link is not a way round, and a
+    // folder that is yet to be made is where its nearest folder that exists puts it.)
+    let real = |p: &Path| {
+        p.ancestors()
+            .find_map(|known| {
+                let rest = p.strip_prefix(known).ok()?;
+                Some(std::fs::canonicalize(known).ok()?.join(rest))
+            })
+            .unwrap_or_else(|| p.to_path_buf())
+    };
+    let at = real(dir);
+    if let Some(library) = s.library.as_ref().filter(|l| l.on_disk).map(|l| real(&l.dir))
+        && at.starts_with(&library)
+        && at != library.join(BACKUPS)
+    {
+        return Some(format!(
+            "{} is inside the library folder, where only {BACKUPS} itself is for backups (the rest is the catalog's own); give a folder outside it, or none for {BACKUPS} in it",
+            dir.display()
+        ));
+    }
+    let backup = at.ancestors().find(|a| backup::is_made_backup(a))?;
+    Some(format!("{} is a backup, or inside one ({}); a backup is not added to", dir.display(), backup.display()))
+}
+
+/// A folder given for the open library's backups to go to ([`folder`], [`not_for_backups`]).
+fn destination(s: &Session, cmd: &str, key: &str, value: &Value) -> Result<PathBuf> {
+    let dir = folder(cmd, key, value)?;
+    match not_for_backups(s, &dir) {
+        Some(why) => Err(bad(cmd, format!("`{key}`: {why}"))),
+        None => Ok(dir),
+    }
+}
+
 fn preferences(s: &mut Session, p: &Value) -> Result<Value> {
+    const C: &str = "library.backupPreferences";
+    let choose = flag(C, p, "choose")?;
     if let Some(dir) = p.get("dir") {
+        let before = s.backup_dir.clone();
         s.backup_dir = match dir {
             Value::Null => None,
-            dir => Some(folder("library.backupPreferences", "dir", dir)?),
+            dir => {
+                let dir = destination(s, C, "dir", dir)?;
+                // (`Backups` in the library folder is the usual place, not a choice: it goes
+                // with the library when the library is moved)
+                let usual = s.library.as_ref().is_some_and(|l| same_folder(&l.dir.join(BACKUPS), &dir));
+                (!usual).then_some(dir)
+            }
         };
-        s.save_prefs()?;
+        // (a choice that was not saved is not made: Settings and the next backup would use a folder the
+        // next session does not know)
+        if let Err(e) = s.save_prefs() {
+            s.backup_dir = before;
+            return Err(e);
+        }
+    } else if choose {
+        // (the app asks with a folder dialog before the command gets here)
+        return Err(bad(C, "there is no folder dialog here to `choose` with: give the folder as `dir`"));
     }
-    Ok(json!({"dir": s.backup_dir.as_ref().map(|d| d.to_string_lossy())}))
+    // `dir`: what was chosen (null: nothing was). `folder`: where backups go, chosen or not.
+    let folder = backup_folder(s).map(|(folder, _)| folder);
+    Ok(json!({"dir": s.backup_dir.as_ref().map(|d| d.to_string_lossy()), "folder": folder.as_ref().map(|d| d.to_string_lossy())}))
 }
 
 fn on_disk(s: &Session) -> std::result::Result<(), String> {
@@ -662,7 +744,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Back Up Library",
             ["File"],
             None,
-            "{dir?: absolute folder path, background?: bool} — back up the library's catalog (not the photos) to a folder named after the time (UTC) in `dir`, else in the library's backup folder (`library.backupPreferences`), else in Backups in the library folder. The backup holds a whole library (`library.restore` puts it back; it is not opened where it is); files that didn't change since the backup before are shared with it (hard links, each read and checked first), so it copies what changed. Has a row in the activity stack (kind `backup`) that can stop it. Returns when the backup is made, or with `background` at once (then see `library.backupStatus`) → {running, cancelled, library, dest, report: {dir, seq, photos, segments, files, copied, linked, bytes, copiedBytes, contents: {file: {bytes, crc}}} | null, error}",
+            "{dir?: absolute folder path (not inside the library folder other than Backups, nor inside a backup), background?: bool} — back up the library's catalog (not the photos) to a folder named after the time (UTC) in `dir`, else in the library's backup folder (`library.backupPreferences`), else in Backups in the library folder. The backup holds a whole library (`library.restore` puts it back; it is not opened where it is); files that didn't change since the backup before are shared with it (hard links, each read and checked first), so it copies what changed. Has a row in the activity stack (kind `backup`) that can stop it. Returns when the backup is made, or with `background` at once (then see `library.backupStatus`) → {running, cancelled, library, dest, report: {dir, seq, photos, segments, files, copied, linked, bytes, copiedBytes, contents: {file: {bytes, crc}}} | null, error}",
             can_back_up,
             back_up
         ),
@@ -725,7 +807,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Backup Preferences",
             [],
             None,
-            "{dir?: absolute folder path | null} — the folder the library's backups go to (saved with the library); null: Backups in the library folder → {dir}",
+            "{dir?: absolute folder path | null, choose?: bool} — the folder the library's backups go to (saved with the library); null: Backups in the library folder; not a folder inside the library folder (other than Backups) or inside a backup; `choose: true` (in the app only, without `dir`): ask for it with a folder dialog, and the answer is null while the dialog is open → {dir: what was chosen | null, folder: where backups go}",
             on_disk,
             preferences
         ),
