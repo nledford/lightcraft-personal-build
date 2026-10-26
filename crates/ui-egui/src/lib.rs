@@ -142,6 +142,8 @@ mod tests_error_kinds;
 #[cfg(test)]
 mod tests_filmstrip;
 #[cfg(test)]
+mod tests_filmstrip_drag;
+#[cfg(test)]
 mod tests_focus_point;
 #[cfg(test)]
 mod tests_folder_drop;
