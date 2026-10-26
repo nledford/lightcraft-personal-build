@@ -155,6 +155,7 @@
   "Before": "Vorher",
   "Before/After Settings": "Vorher/Nachher-Einstellungen",
   "Before/After Split": "Vorher/Nachher geteilt",
+  "Before/After": "Vorher/Nachher",
   "Before/After Split Top/Bottom": "Vorher/Nachher geteilt – oben/unten",
   "Before/After Top/Bottom": "Vorher/Nachher – oben/unten",
   "Begin Interaction": "Interaktion beginnen",
@@ -368,6 +369,7 @@
   "Cut": "Ausschneiden",
   "Cut pages": "Seiten ausschneiden",
   "Cycle Crop Overlay": "Zuschnittüberlagerung wechseln",
+  "Crop Overlay": "Zuschnittüberlagerung",
   "Cycle Crop Overlay Orientation": "Ausrichtung der Zuschnittüberlagerung wechseln",
   "Cycle Info Overlay": "Infoüberlagerung wechseln",
   "Cycle Mask Overlay Color": "Farbe der Maskenüberlagerung wechseln",
@@ -1665,6 +1667,7 @@
   "XMP sidecars": "XMP-Begleitdateien",
   "Year": "Jahr",
   "Yellow": "Gelb",
+  "White": "Weiß",
   "Yellow Hue": "Gelb – Farbton",
   "Yellow Luminance": "Gelb – Luminanz",
   "Yellow Saturation": "Gelb – Sättigung",
@@ -3528,7 +3531,6 @@
   "Finish Lightroom catalog import before adding photos": "Schließe den Import des Lightroom-Katalogs ab, bevor du Fotos hinzufügst",
   "Same Content as Another Photo": "Gleicher Inhalt wie ein anderes Foto",
   "Counting library": "Bibliothek wird gezählt",
-  "Before/After": "Vorher/Nachher",
   "History & Activity": "Verlauf und Aktivität",
   "Show overlay": "Überlagerung anzeigen",
   "Stack — click to expand (S)": "Stapel — Klicken zum Aufklappen (S)",
@@ -3564,5 +3566,6 @@
   "This row has no name to change": "Diese Zeile hat keinen Namen, der sich ändern ließe",
   "Stopped: no photo was moved": "Angehalten: kein Foto wurde verschoben",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Diese Bibliothek ist ohne ihre Sperre geöffnet; abgebrochene Verschiebungen bleiben daher unverändert, bis sie mit der Sperre geöffnet wird. Fehlende Fotos suchen verknüpft verschobene Dateien neu.",
-  "Unfinished moves": "Unvollständige Verschiebungen"
+  "Unfinished moves": "Unvollständige Verschiebungen",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Ansicht → Lupenüberlagerung → Ansichtsoptionen legt fest, welche Zeilen Info 1 und Info 2 zeigen."
 }

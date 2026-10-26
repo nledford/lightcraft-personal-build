@@ -133,6 +133,7 @@
   "Before": "Przed",
   "Before/After Settings": "Ustawienia porównania przed/po",
   "Before/After Split": "Podział przed/po",
+  "Before/After": "Przed/Po",
   "Before/After Split Top/Bottom": "Podział przed/po góra/dół",
   "Before/After Top/Bottom": "Przed/Po góra/dół",
   "Begin Interaction": "Rozpocznij interakcję",
@@ -329,6 +330,7 @@
   "Cut": "Wytnij",
   "Cut pages": "Wytnij strony",
   "Cycle Crop Overlay": "Przełącz nakładkę kadrowania",
+  "Crop Overlay": "Nakładka kadrowania",
   "Cycle Crop Overlay Orientation": "Przełącz orientację nakładki kadrowania",
   "Cycle Info Overlay": "Przełącz nakładkę informacji",
   "Cycle Mask Overlay Color": "Przełącz kolor nakładki maski",
@@ -1556,6 +1558,7 @@
   "XMP sidecars": "Pliki pomocnicze XMP",
   "Year": "Rok",
   "Yellow": "Żółty",
+  "White": "Biały",
   "Yellow Hue": "Odcień żółci",
   "Yellow Luminance": "Luminancja żółci",
   "Yellow Saturation": "Nasycenie żółci",
@@ -2369,7 +2372,6 @@
   "Counting library": "Liczenie biblioteki",
   "Previous page": "Poprzednia strona",
   "Next page": "Następna strona",
-  "Before/After": "Przed/Po",
   "History & Activity": "Historia i aktywność",
   "Show overlay": "Pokaż nakładkę",
   "Stack — click to expand (S)": "Stos — kliknij, aby rozwinąć (S)",
@@ -2409,5 +2411,6 @@
   "Moving was stopped by an error (see the log). The library follows the files that had moved.": "Przenoszenie zatrzymał błąd (zobacz dziennik). Biblioteka podąża za plikami, które już przeniesiono.",
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Przenoszenie zatrzymał błąd (zobacz dziennik). Biblioteka może nie podążać za wszystkimi plikami, które już przeniesiono: Znajdź brakujące zdjęcia łączy ponownie te, które utraciła.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Ta biblioteka jest otwarta bez blokady, więc przerwane przenoszenia pozostają bez zmian, dopóki biblioteka nie zostanie otwarta z blokadą; Znajdź brakujące zdjęcia ponownie łączy przeniesione pliki.",
-  "Unfinished moves": "Nieukończone przenoszenia"
+  "Unfinished moves": "Nieukończone przenoszenia",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Widok → Nakładka lupy → Opcje widoku wybiera wiersze, które pokazują Info 1 i Info 2."
 }

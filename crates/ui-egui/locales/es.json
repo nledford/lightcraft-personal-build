@@ -359,6 +359,7 @@
   "Cut": "Cortar",
   "Cut pages": "Cortar páginas",
   "Cycle Crop Overlay": "Alternar superposición de recorte",
+  "Crop Overlay": "Superposición de recorte",
   "Cycle Crop Overlay Orientation": "Alternar orientación de la superposición de recorte",
   "Cycle Info Overlay": "Alternar superposición de información",
   "Cycle Mask Overlay Color": "Alternar color de superposición de máscara",
@@ -1776,6 +1777,7 @@
   "XMP sidecars": "Archivos XMP complementarios",
   "Year": "Año",
   "Yellow": "Amarillo",
+  "White": "Blanco",
   "Yellow Hue": "Tono amarillo",
   "Yellow Luminance": "Luminancia amarilla",
   "Yellow Saturation": "Saturación amarilla",
@@ -2484,5 +2486,6 @@
   "Moving was stopped by an error (see the log). The library follows the files that had moved.": "Un error detuvo el movimiento (consulta el registro). La biblioteca sigue los archivos que ya se habían movido.",
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Un error detuvo el movimiento (consulta el registro). Puede que la biblioteca no siga todos los archivos que ya se habían movido: Buscar fotos que faltan vuelve a enlazar los que perdió.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Esta biblioteca está abierta sin su bloqueo, así que los movimientos interrumpidos se dejan tal cual hasta que se abra con el bloqueo; Buscar fotos que faltan vuelve a enlazar los archivos que se movieron.",
-  "Unfinished moves": "Movimientos sin terminar"
+  "Unfinished moves": "Movimientos sin terminar",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Vista → Superposición de la lupa → Opciones de vista elige las líneas que muestran Info 1 e Info 2."
 }

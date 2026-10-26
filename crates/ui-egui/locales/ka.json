@@ -517,6 +517,7 @@
   "Cut pages": "გვერდების ამოჭრა",
   "Cut, Copy, Paste and Select All. Esc in them gives back the text from before you started typing (in the Info panel it": "ხელმისაწვდომია ამოჭრა, კოპირება, ჩასმა და ყველაფრის მონიშვნა. Esc მათში აკრეფის დაწყებამდე არსებულ ტექსტს აბრუნებს (ინფორმაციის პანელში",
   "Cycle Crop Overlay": "ჩამოჭრის ზედდების მონაცვლეობა",
+  "Crop Overlay": "ჩამოჭრის ზედდება",
   "Cycle Crop Overlay Orientation": "ჩამოჭრის ზედდების ორიენტაციის მონაცვლეობა",
   "Cycle Info Overlay": "ინფორმაციის ზედდების მონაცვლეობა",
   "Cycle Mask Overlay Color": "ნიღბის ზედდების ფერის მონაცვლეობა",
@@ -2354,6 +2355,7 @@
   "XMP sidecars": "XMP თანმხლები ფაილები",
   "Year": "წელი",
   "Yellow": "ყვითელი",
+  "White": "თეთრი",
   "Yellow Hue": "ყვითლის ფერის ტონი",
   "Yellow Luminance": "ყვითლის სიკაშკაშე",
   "Yellow Saturation": "ყვითლის გაჯერება",
@@ -2860,5 +2862,6 @@
   "Moving was stopped by an error (see the log). The library follows the files that had moved.": "გადატანა შეცდომის გამო შეჩერდა (იხილეთ ჟურნალი). ბიბლიოთეკა მიჰყვება უკვე გადატანილ ფაილებს.",
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "გადატანა შეცდომის გამო შეჩერდა (იხილეთ ჟურნალი). ბიბლიოთეკამ შეიძლება ყველა უკვე გადატანილ ფაილს ვერ მიჰყვეს: დაკარგულებს „დაკარგული ფოტოების მოძებნა“ თავიდან დააკავშირებს.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "ეს ბიბლიოთეკა ჩაკეტვის გარეშეა გახსნილი, ამიტომ შეწყვეტილი გადატანები უცვლელად რჩება, სანამ ბიბლიოთეკა ჩაკეტვით არ გაიხსნება; გადატანილ ფაილებს „დაკარგული ფოტოების მოძებნა“ თავიდან დააკავშირებს.",
-  "Unfinished moves": "დაუსრულებელი გადატანები"
+  "Unfinished moves": "დაუსრულებელი გადატანები",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "ხედი → ლუპის ზედდება → ხედის პარამეტრები ირჩევს სტრიქონებს, რომლებსაც Info 1 და Info 2 აჩვენებს."
 }

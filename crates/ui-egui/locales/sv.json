@@ -2553,5 +2553,8 @@
   "Cull": "Gallra",
   "Add Locations": "Lägg till platser",
   "Create Stacks": "Skapa staplar",
-  "The Tags button lists placeholders for the template, such as {date} or {seq}. Each file is renamed on disk along with its XMP sidecar; a name that is taken gets -1, -2…": "Knappen Taggar visar platshållare för mallen, till exempel {date} eller {seq}. Varje fil byter namn på disken tillsammans med sin XMP-sidofil; ett namn som redan finns får -1, -2…"
+  "The Tags button lists placeholders for the template, such as {date} or {seq}. Each file is renamed on disk along with its XMP sidecar; a name that is taken gets -1, -2…": "Knappen Taggar visar platshållare för mallen, till exempel {date} eller {seq}. Varje fil byter namn på disken tillsammans med sin XMP-sidofil; ett namn som redan finns får -1, -2…",
+  "White": "Vit",
+  "Crop Overlay": "Beskärningsöverlägg",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Visa → Lupp-överlägg → Visningsalternativ väljer vilka rader Info 1 och Info 2 visar."
 }

@@ -338,6 +338,7 @@
   "Before": "Před",
   "Before/After Settings": "Nastavení Před/Po",
   "Before/After Split": "Rozdělené Před/Po",
+  "Before/After": "Před/Po",
   "Before/After Split Top/Bottom": "Rozdělené Před/Po nahoře/dole",
   "Before/After Top/Bottom": "Před/Po nahoře/dole",
   "Begin Interaction": "Zahájit interakci",
@@ -569,6 +570,7 @@
   "Cut": "Vyjmout",
   "Cut pages": "Vyjmout stránky",
   "Cycle Crop Overlay": "Přepnout překrytí ořezu",
+  "Crop Overlay": "Překrytí ořezu",
   "Cycle Crop Overlay Orientation": "Přepnout orientaci překrytí ořezu",
   "Cycle Info Overlay": "Přepnout překrytí informací",
   "Cycle Mask Overlay Color": "Přepnout barvu překrytí masky",
@@ -2131,6 +2133,7 @@
   "XMP sidecars": "Přidružené soubory XMP",
   "Year": "Rok",
   "Yellow": "Žlutá",
+  "White": "Bílá",
   "Yellow Hue": "Odstín žluté",
   "Yellow Luminance": "Jas žluté",
   "Yellow Saturation": "Sytost žluté",
@@ -2493,7 +2496,6 @@
   "Finish Lightroom catalog import before adding photos": "Dokončete import katalogu Lightroom, než přidáte fotky",
   "Same Content as Another Photo": "Stejný obsah jako jiná fotografie",
   "Counting library": "Počítání knihovny",
-  "Before/After": "Před/Po",
   "History & Activity": "Historie a aktivita",
   "Show overlay": "Zobrazit překrytí",
   "Stack — click to expand (S)": "Sada — kliknutím rozbalíte (S)",
@@ -2532,5 +2534,6 @@
   "Moving was stopped by an error (see the log). The library follows the files that had moved.": "Přesun zastavila chyba (viz protokol). Knihovna následuje soubory, které už byly přesunuty.",
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Přesun zastavila chyba (viz protokol). Knihovna nemusí následovat všechny soubory, které už byly přesunuty: ztracené znovu propojí Najít chybějící fotografie.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Tato knihovna je otevřená bez zámku, proto se přerušené přesuny nechají beze změny, dokud se knihovna neotevře se zámkem; přesunuté soubory znovu propojí Najít chybějící fotografie.",
-  "Unfinished moves": "Nedokončené přesuny"
+  "Unfinished moves": "Nedokončené přesuny",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Zobrazení → Překrytí lupy → Možnosti zobrazení určuje, které řádky zobrazují Info 1 a Info 2."
 }

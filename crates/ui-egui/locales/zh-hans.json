@@ -141,6 +141,7 @@
   "Before": "修改前",
   "Before/After Settings": "修改前/修改后设置",
   "Before/After Split": "修改前/修改后分屏",
+  "Before/After": "修改前/修改后",
   "Before/After Split Top/Bottom": "修改前/修改后上下分屏",
   "Before/After Top/Bottom": "修改前/修改后上下排列",
   "Begin Interaction": "开始交互",
@@ -346,6 +347,7 @@
   "Cut": "剪切",
   "Cut pages": "剪切页面",
   "Cycle Crop Overlay": "切换裁切叠加",
+  "Crop Overlay": "裁切叠加",
   "Cycle Crop Overlay Orientation": "切换裁切叠加方向",
   "Cycle Info Overlay": "切换信息叠加",
   "Cycle Mask Overlay Color": "切换蒙版叠加颜色",
@@ -1591,6 +1593,7 @@
   "XMP sidecars": "XMP 附属文件",
   "Year": "年",
   "Yellow": "黄色",
+  "White": "白色",
   "Yellow Hue": "黄色色相",
   "Yellow Luminance": "黄色明度",
   "Yellow Saturation": "黄色饱和度",
@@ -2287,7 +2290,6 @@
   "Counting library": "正在统计图库",
   "Previous page": "上一页",
   "Next page": "下一页",
-  "Before/After": "修改前/修改后",
   "History & Activity": "历史记录与活动",
   "Show overlay": "显示叠加",
   "Stack — click to expand (S)": "堆叠 — 单击展开 (S)",
@@ -2326,5 +2328,6 @@
   "Moving was stopped by an error (see the log). The library follows the files that had moved.": "移动因出错而停止（见日志）。图库会跟随已移动的文件。",
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "移动因出错而停止（见日志）。图库可能没有跟随所有已移动的文件：用“查找缺失的照片”可重新关联丢失的文件。",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "此图库未取得锁就被打开，因此被中断的移动会保持原样，直到图库带锁打开；用“查找缺失的照片”可重新关联已移动的文件。",
-  "Unfinished moves": "未完成的移动"
+  "Unfinished moves": "未完成的移动",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "视图 → 放大镜叠加 → 视图选项 用于选择“信息 1”和“信息 2”显示的行。"
 }

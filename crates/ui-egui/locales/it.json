@@ -138,6 +138,7 @@
   "Before": "Prima",
   "Before/After Settings": "Impostazioni Prima/Dopo",
   "Before/After Split": "Prima/Dopo diviso",
+  "Before/After": "Prima/Dopo",
   "Before/After Split Top/Bottom": "Prima/Dopo diviso sopra/sotto",
   "Before/After Top/Bottom": "Prima/Dopo sopra/sotto",
   "Begin Interaction": "Inizia interazione",
@@ -342,6 +343,7 @@
   "Cut": "Taglia",
   "Cut pages": "Taglia pagine",
   "Cycle Crop Overlay": "Cambia sovrapposizione del ritaglio",
+  "Crop Overlay": "Sovrapposizione del ritaglio",
   "Cycle Crop Overlay Orientation": "Cambia orientamento della sovrapposizione del ritaglio",
   "Cycle Info Overlay": "Cambia sovrapposizione delle informazioni",
   "Cycle Mask Overlay Color": "Cambia colore della sovrapposizione maschera",
@@ -1624,6 +1626,7 @@
   "XMP sidecars": "File XMP collaterali",
   "Year": "Anno",
   "Yellow": "Giallo",
+  "White": "Bianco",
   "Yellow Hue": "Tonalità giallo",
   "Yellow Luminance": "Luminanza giallo",
   "Yellow Saturation": "Saturazione giallo",
@@ -2371,7 +2374,6 @@
   "Use Defaults": "Usa predefiniti",
   "Show briefly when photo changes": "Mostra brevemente al cambio di foto",
   "Camera & Lens": "Fotocamera e obiettivo",
-  "View → View Options chooses the lines Info 1 and Info 2 show.": "Visualizza → Opzioni di visualizzazione sceglie le righe di Info 1 e Info 2.",
   "Before/After Side by Side": "Prima/Dopo affiancati",
   "Clipping": "Tagli tonali",
   "Mask Overlay": "Sovrapposizione maschera",
@@ -2451,7 +2453,6 @@
   "Counting library": "Conteggio della libreria",
   "Previous page": "Pagina precedente",
   "Next page": "Pagina successiva",
-  "Before/After": "Prima/Dopo",
   "History & Activity": "Cronologia e attività",
   "Show overlay": "Mostra sovrapposizione",
   "Stack — click to expand (S)": "Pila — clic per espandere (S)",
@@ -2487,5 +2488,6 @@
   "This row has no name to change": "Questa riga non ha un nome da cambiare",
   "Stopped: no photo was moved": "Interrotto: nessuna foto è stata spostata",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Questa libreria è aperta senza il suo blocco, quindi gli spostamenti interrotti restano come sono finché non viene aperta con il blocco; Trova foto mancanti ricollega i file spostati.",
-  "Unfinished moves": "Spostamenti incompleti"
+  "Unfinished moves": "Spostamenti incompleti",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Visualizza → Sovrapposizione lente → Opzioni di visualizzazione sceglie le righe di Info 1 e Info 2."
 }

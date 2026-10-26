@@ -564,7 +564,7 @@ pub(crate) fn shown_in(app: &LightcraftApp, section: SidebarSection) -> Option<S
 /// A section's header in `r`: a disclosure chevron in the gutter (where tree rows have their
 /// chevron), then the bold title; a click folds or unfolds the section (kept in the UI state, so
 /// it survives restarts), and what the section adds to its header (its button, see `header_button`) sits at
-/// the visible edge. A folded section says how many rows it holds (`rows`, with View ▸ Show Photo
+/// the visible edge. A folded section says how many rows it holds (`rows`, with Window ▸ Show Photo
 /// Counts). `pinned`: this is the copy kept at the top of the sidebar (see `pinned_header`).
 fn section_header(app: &mut LightcraftApp, ui: &mut egui::Ui, section: SidebarSection, r: Rect, rows: usize, pinned: bool) -> HeaderOutcome {
     let t = Tokens::get(ui.ctx());

@@ -342,6 +342,7 @@
   "Cut": "Couper",
   "Cut pages": "Couper les pages",
   "Cycle Crop Overlay": "Parcourir les incrustations de recadrage",
+  "Crop Overlay": "Incrustation de recadrage",
   "Cycle Crop Overlay Orientation": "Parcourir les orientations de l'incrustation de recadrage",
   "Cycle Info Overlay": "Parcourir les incrustations d'informations",
   "Cycle Mask Overlay Color": "Parcourir les couleurs de l'incrustation du masque",
@@ -1596,6 +1597,7 @@
   "XMP sidecars": "Fichiers annexes XMP",
   "Year": "Année",
   "Yellow": "Jaune",
+  "White": "Blanc",
   "Yellow Hue": "Teinte jaune",
   "Yellow Luminance": "Luminance jaune",
   "Yellow Saturation": "Saturation jaune",
@@ -2516,5 +2518,6 @@
   "Moving was stopped by an error (see the log). The library follows the files that had moved.": "Une erreur a arrêté le déplacement (voir le journal). La bibliothèque suit les fichiers déjà déplacés.",
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Une erreur a arrêté le déplacement (voir le journal). La bibliothèque peut ne pas suivre tous les fichiers déjà déplacés : Rechercher les photos manquantes rétablit le lien de ceux qu’elle a perdus.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Cette bibliothèque est ouverte sans son verrou : les déplacements interrompus sont laissés tels quels jusqu’à une ouverture avec le verrou ; Rechercher les photos manquantes relie à nouveau les fichiers déplacés.",
-  "Unfinished moves": "Déplacements inachevés"
+  "Unfinished moves": "Déplacements inachevés",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Affichage → Incrustation de la loupe → Options d'affichage choisit les lignes que montrent Info 1 et Info 2."
 }

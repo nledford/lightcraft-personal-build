@@ -441,6 +441,7 @@
   "Crop": "Rajaus",
   "Crop & Rotate": "Rajaa ja kierrä",
   "Crop Aspect": "Rajauksen kuvasuhde",
+  "Crop Overlay": "Rajauksen peittokuva",
   "Crop, Rotate, Geometry": "Rajaus, kierto, geometria",
   "Cropped": "Rajattu",
   "Cross Process": "Ristiinkäsittely",
@@ -1102,6 +1103,7 @@
   "Marquee zoom": "Aluezoom",
   "Mask": "Maski",
   "Mask Adjustment": "Maskin säätö",
+  "Mask Overlay": "Maskin peittokuva",
   "Masking": "Maskaus",
   "Masks": "Maskit",
   "Masks keep their sliders. Export presets first to keep a copy.": "Maskit säilyttävät liukusäätimensä. Vie esiasetukset ensin säilyttääksesi kopion.",
@@ -2314,7 +2316,6 @@
   "Edit Panel": "Muokkauspaneeli",
   "Focus Point": "Tarkennuspiste",
   "Layout Image": "Asettelukuva",
-  "Mask Overlay": "Maskin peittokuva",
   "Mask Pins": "Maskin nastat",
   "Photo Counts": "Kuvamäärät",
   "An import is running": "Tuonti on käynnissä",
@@ -2451,5 +2452,7 @@
   "The original beside your edit: the file itself never changes.": "Alkuperäinen muokkauksesi vieressä: itse tiedosto ei muutu koskaan.",
   "Stopped: no photo was moved": "Pysäytetty: yhtään kuvaa ei siirretty",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Tämä kirjasto on avattu ilman lukitusta, joten keskeytyneet siirrot jätetään ennalleen, kunnes kirjasto avataan lukituksen kanssa; Etsi puuttuvat kuvat yhdistää siirretyt tiedostot uudelleen.",
-  "Unfinished moves": "Keskeneräiset siirrot"
+  "Unfinished moves": "Keskeneräiset siirrot",
+  "White": "Valkoinen",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Näytä → Luupin peittokuva → Näyttöasetukset valitsee rivit, jotka Info 1 ja Info 2 näyttävät."
 }

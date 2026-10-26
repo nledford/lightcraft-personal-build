@@ -327,6 +327,7 @@
   "Window": "Вікно",
   "Wrote the XMP sidecars that were waiting": "XMP-файли, що очікували, записано",
   "Yellow": "Жовтий",
+  "White": "Білий",
   "Yes": "Так",
   "Zoom": "Масштаб",
   "Zoom In": "Збільшити",
@@ -622,6 +623,7 @@
   "Change Time": "Змінити час",
   "Custom template…": "Власний шаблон…",
   "Cycle Crop Overlay": "Перемкнути накладання кадрування",
+  "Crop Overlay": "Накладання кадрування",
   "Cycle Crop Overlay Orientation": "Перемкнути орієнтацію накладання кадрування",
   "Cycle Info Overlay": "Перемкнути накладання інформації",
   "Cycle Mask Overlay Color": "Перемкнути колір накладання маски",
@@ -2480,5 +2482,6 @@
   "Moving was stopped by an error (see the log). The library follows the files that had moved.": "Переміщення зупинено через помилку (див. журнал). Бібліотека слідує за вже переміщеними файлами.",
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Переміщення зупинено через помилку (див. журнал). Бібліотека може не слідувати за всіма вже переміщеними файлами: «Знайти відсутні фото» заново пов’яже втрачені.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Цю бібліотеку відкрито без блокування, тому перервані переміщення залишаються як є, доки її не відкриють із блокуванням; «Знайти відсутні фото» заново пов’яже переміщені файли.",
-  "Unfinished moves": "Незавершені переміщення"
+  "Unfinished moves": "Незавершені переміщення",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Вигляд → Накладання лупи → Параметри перегляду вибирає рядки, які показують Info 1 та Info 2."
 }

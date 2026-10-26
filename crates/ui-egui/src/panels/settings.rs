@@ -1716,7 +1716,7 @@ fn interface_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         use crate::state::InfoOverlay as I;
         choices(ui, "settingsInfo", &[(I::Off, "Off"), (I::Basic, "Info 1"), (I::Exposure, "Info 2")], &mut app.ui.info_overlay);
     });
-    hint(ui, t, crate::i18n::tr("View → View Options chooses the lines Info 1 and Info 2 show."));
+    hint(ui, t, crate::i18n::tr("View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show."));
 }
 
 /// The rows of one Info line's list, one `MenuItem` per field; choosing one sets `line`. Each row
@@ -1730,7 +1730,7 @@ pub(crate) fn info_line_rows(ui: &mut egui::Ui, id: &str, line: &mut crate::stat
     }
 }
 
-/// View ▸ View Options (⌘J), Lightroom Classic's Loupe View tab: whether the info overlay shows and
+/// View ▸ Loupe Overlay ▸ View Options… (⌘J), Lightroom Classic's Loupe View tab: whether the info overlay shows and
 /// which, the three lines each of Info 1 and Info 2 shows, which of them shows briefly when the
 /// photo changes, and whether the loupe shows its loading and rendering message
 /// (`view.viewOptions`). Changes apply as they are made.
@@ -1815,7 +1815,7 @@ fn slideshow_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, with_pr
     export_section(app, ui, t);
 }
 
-/// Export: PDF, JPEG sequence or video of the slideshow (View ▸ Export Slideshow…).
+/// Export: PDF, JPEG sequence or video of the slideshow (View ▸ Slideshow ▸ Export Slideshow…).
 fn export_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     heading(ui, t, "Export");
     let running = app.session.slideshow_export.as_ref().is_some_and(|r| r.running());

@@ -440,6 +440,7 @@
   "Crop": "Pangkas",
   "Crop & Rotate": "Pangkas & putar",
   "Crop Aspect": "Aspek pangkas",
+  "Crop Overlay": "Overlay pangkas",
   "Crop, Rotate, Geometry": "Pangkas, putar, geometri",
   "Cropped": "Dipangkas",
   "Cross Process": "Cross Process",
@@ -1100,6 +1101,7 @@
   "Marquee zoom": "Zoom area pilihan",
   "Mask Adjustment": "Penyesuaian masker",
   "Mask Effect Presets": "Preset efek masker",
+  "Mask Overlay": "Overlay masker",
   "Masking": "Masker",
   "Masks": "Masker",
   "Match": "Cocokkan",
@@ -2326,7 +2328,6 @@
   "Edit Panel": "Panel Edit",
   "Focus Point": "Titik fokus",
   "Layout Image": "Gambar tata letak",
-  "Mask Overlay": "Overlay masker",
   "Mask Pins": "Pin masker",
   "Photo Counts": "Jumlah foto",
   "An import is running": "Impor sedang berjalan",
@@ -2466,5 +2467,7 @@
   "The original beside your edit: the file itself never changes.": "Aslinya berdampingan dengan suntingan Anda: file itu sendiri tidak pernah berubah.",
   "Stopped: no photo was moved": "Dihentikan: tidak ada foto yang dipindahkan",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Pustaka ini terbuka tanpa kuncinya, sehingga pemindahan yang terputus dibiarkan apa adanya sampai pustaka dibuka dengan kunci; Cari foto hilang menautkan kembali file yang sudah dipindahkan.",
-  "Unfinished moves": "Pemindahan yang belum selesai"
+  "Unfinished moves": "Pemindahan yang belum selesai",
+  "White": "Putih",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Tampilan → Overlay loupe → Opsi Tampilan memilih baris yang ditampilkan Info 1 dan Info 2."
 }

@@ -410,6 +410,7 @@
   "Crop": "Cắt",
   "Crop & Rotate": "Cắt và xoay",
   "Crop Aspect": "Tỷ lệ cắt",
+  "Crop Overlay": "Lớp phủ cắt",
   "Crop, Rotate, Geometry": "Cắt, xoay, hình học",
   "Cropped": "Đã cắt",
   "Cross Process": "Cross Process",
@@ -1010,6 +1011,7 @@
   "Manual": "Thủ công",
   "Marquee zoom": "Thu phóng vùng chọn",
   "Mask Adjustment": "Điều chỉnh mặt nạ",
+  "Mask Overlay": "Lớp phủ mặt nạ",
   "Masking": "Mặt nạ",
   "Masks": "Mặt nạ",
   "Match": "Khớp",
@@ -2222,7 +2224,6 @@
   "Edit Panel": "Bảng Chỉnh sửa",
   "Focus Point": "Điểm lấy nét",
   "Layout Image": "Ảnh bố cục",
-  "Mask Overlay": "Lớp phủ mặt nạ",
   "Mask Pins": "Ghim mặt nạ",
   "Photo Counts": "Số lượng ảnh",
   "An import is running": "Đang có một lần nhập chạy",
@@ -2361,5 +2362,7 @@
   "The original beside your edit: the file itself never changes.": "Bản gốc cạnh bản chỉnh sửa của bạn: bản thân tệp không bao giờ thay đổi.",
   "Stopped: no photo was moved": "Đã dừng: không có ảnh nào được di chuyển",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Thư viện này được mở mà không có khóa, nên các lần di chuyển bị gián đoạn được giữ nguyên cho đến khi thư viện được mở với khóa; Tìm ảnh bị thiếu sẽ liên kết lại các tệp đã được di chuyển.",
-  "Unfinished moves": "Lần di chuyển chưa hoàn tất"
+  "Unfinished moves": "Lần di chuyển chưa hoàn tất",
+  "White": "Trắng",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Xem → Lớp phủ kính lúp → Tùy chọn xem chọn các dòng mà Info 1 và Info 2 hiển thị."
 }
