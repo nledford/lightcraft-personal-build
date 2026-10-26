@@ -318,7 +318,8 @@ fn progress(app: &LightcraftApp) -> Option<ScanStage> {
 
 /// The dialog's body.
 pub fn body(app: &LightcraftApp, ui: &mut egui::Ui, dlg: &mut Dialog) {
-    let Dialog::SynchronizeFolder { path, name, counts, import_new, import_duplicates, relink_moved, remove_missing, read_metadata, read, .. } = dlg else {
+    let Dialog::SynchronizeFolder { path, name, counts, import_new, import_duplicates, relink_moved, remove_missing, read_metadata, read, .. } = dlg
+    else {
         return;
     };
     let t = Tokens::get(ui.ctx());

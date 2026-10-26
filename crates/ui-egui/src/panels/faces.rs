@@ -157,7 +157,7 @@ pub fn setup_banner(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     egui::Frame::NONE.inner_margin(egui::Margin::symmetric(12, 6)).show(ui, |ui| {
         ui.horizontal_wrapped(|ui| {
             ui.label(RichText::new(crate::i18n::tr(message)).font(t.label()).color(t.text_dim));
-            let r =  Button::new(crate::i18n::tr(button)).small().widget("faces:setup").show(ui);
+            let r = Button::new(crate::i18n::tr(button)).small().widget("faces:setup").show(ui);
             if r.clicked() {
                 take_step(app, ui.ctx(), step);
             }

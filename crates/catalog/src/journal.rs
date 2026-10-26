@@ -199,7 +199,10 @@ impl Default for SnapshotPolicy {
     fn default() -> Self {
         SnapshotPolicy {
             max_records: 2000,
-            max_bytes: 16 << 20, snapshot_share: 4, log_cap_bytes: 256 << 20, close_bytes: 64 << 20,
+            max_bytes: 16 << 20,
+            snapshot_share: 4,
+            log_cap_bytes: 256 << 20,
+            close_bytes: 64 << 20,
             // (measured: docs/catalog-persistence.md, "Segment size")
             segment_photos: 4096,
             segment_bytes: 2 << 20,

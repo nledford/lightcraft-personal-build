@@ -1336,7 +1336,17 @@ pub(crate) struct BadgeMarks {
 /// [`star_pitch`] lets them; when they and the flag still do not fit beside the marks at the right, those marks go, the
 /// label's dot first (a labeled cell is tinted by its label as well, and the "edited" mark has no other sign), so that no
 /// mark lies on another. With nothing at the left there is nothing to keep apart.
-pub(crate) fn badge_marks_in(bar_w: f32, stars: usize, flag_w: f32, edited: bool, label: bool, lead: f32, edited_w: f32, label_w: f32, max_pitch: f32) -> BadgeMarks {
+pub(crate) fn badge_marks_in(
+    bar_w: f32,
+    stars: usize,
+    flag_w: f32,
+    edited: bool,
+    label: bool,
+    lead: f32,
+    edited_w: f32,
+    label_w: f32,
+    max_pitch: f32,
+) -> BadgeMarks {
     let right = |edited: bool, label: bool| {
         let w = if edited { edited_w } else { 0.0 } + if label { label_w } else { 0.0 };
         (w, if w > 0.0 { 6.0 } else { 0.0 })

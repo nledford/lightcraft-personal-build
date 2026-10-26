@@ -108,7 +108,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
     egui::Frame::NONE.inner_margin(egui::Margin { left: 24, right: 22, top: 8, bottom: 14 }).show(ui, |ui| {
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = vec2(8.0, 6.0);
-            if  Button::new("Auto").small().widget("button:auto").show(ui).clicked() && app.act("develop.auto", json!({})).is_some() {
+            if Button::new("Auto").small().widget("button:auto").show(ui).clicked() && app.act("develop.auto", json!({})).is_some() {
                 // only when it went through: refused (the original is missing…), `act` said why
                 app.toast(ui.ctx(), crate::i18n::tr("Auto settings applied"));
             }

@@ -975,7 +975,7 @@ impl Session {
         let Some(entries) = self.undo.get(self.undo.len() - n..) else { return };
         // Folder moves and partially applied file steps stay on their own.
         // (and so do steps that moved files to the Trash: their undo is file work too)
-        if entries.iter().any(|e|  !e.folders.is_empty() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty() || e.trash.is_some()) {
+        if entries.iter().any(|e| !e.folders.is_empty() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty() || e.trash.is_some()) {
             return;
         }
         let tail = self.undo.split_off(self.undo.len() - n);
@@ -1485,12 +1485,12 @@ impl Session {
         self.reconcile_view();
         self.reconcile_sources();
         let mut key = (
-        self.catalog.revision,
-        format!(
-            "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
-            self.source, self.filter, self.sort, self.browse, self.library_folder, self.also_albums, self.also_library_folders
-        ),
-    );
+            self.catalog.revision,
+            format!(
+                "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
+                self.source, self.filter, self.sort, self.browse, self.library_folder, self.also_albums, self.also_library_folders
+            ),
+        );
         // What a held view is told apart by: what is shown and how, and for a smart album its rules (rules that were
         // changed ask something else). Not the checks of Missing Photos below: they fill the view in, they are
         // no other view.
@@ -1929,10 +1929,10 @@ mod tests_face_tiles;
 mod tests_filesystem_history;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests_focus_scan;
-#[cfg(all(test, not(target_arch = "wasm32")))]
-mod tests_folder_metadata;
 #[cfg(test)]
 mod tests_folder_batch;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests_folder_metadata;
 #[cfg(test)]
 mod tests_folders;
 #[cfg(test)]
@@ -1982,11 +1982,11 @@ mod tests_process;
 #[cfg(test)]
 mod tests_recheck;
 #[cfg(test)]
+mod tests_relocate;
+#[cfg(test)]
 mod tests_restore;
 #[cfg(test)]
 mod tests_samples;
-#[cfg(test)]
-mod tests_relocate;
 #[cfg(test)]
 mod tests_segment;
 #[cfg(test)]
@@ -2002,9 +2002,9 @@ mod tests_spots;
 #[cfg(test)]
 mod tests_sync;
 #[cfg(test)]
-mod tests_trash;
-#[cfg(test)]
 mod tests_task_queue;
+#[cfg(test)]
+mod tests_trash;
 #[cfg(test)]
 mod tests_view_follow;
 #[cfg(test)]

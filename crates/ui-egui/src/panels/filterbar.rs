@@ -286,7 +286,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     if save.clicked() {
         app.act("dialog.newSmartAlbum", json!({}));
     }
-    let clear =  crate::button::Button::new("Clear").small().enabled(filtering).widget("button:filterClear").show(ui);
+    let clear = crate::button::Button::new("Clear").small().enabled(filtering).widget("button:filterClear").show(ui);
     if clear.clicked() {
         app.ui.search.clear();
         app.act("library.clearFilter", json!({}));

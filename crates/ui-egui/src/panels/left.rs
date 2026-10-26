@@ -2319,9 +2319,7 @@ fn folder_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[FolderNode],
         let name = if n.selectable { n.name.clone() } else { crate::i18n::tr("This Computer").to_string() };
         let id = format!("libfolder:{}", n.path);
         // (worked out for a row that is drawn, or listed for the keys: not for every row out of sight)
-        let sel_of = |app: &LightcraftApp| {
-            n.selectable && shown_folder(app, &n.path)
-        };
+        let sel_of = |app: &LightcraftApp| n.selectable && shown_folder(app, &n.path);
         if !out_of_sight(app, ui, &id, &name, Some(n.count), indent, n.label.is_some(), || sel_of(app)) {
             let sel = sel_of(app);
             folder_row(app, ui, n, &id, &name, indent, &branch, &mut open, sel, FolderParents { above, asked_for });

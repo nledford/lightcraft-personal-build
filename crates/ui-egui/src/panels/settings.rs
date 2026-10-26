@@ -167,15 +167,15 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
     // (with something typed the page is what was found, of any tab: no tab is the open one)
     let filtering = !filter.text.trim().is_empty();
     ui.horizontal_wrapped(|ui| {
-    ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
-    for (id, label) in TABS {
-        if crate::widgets::text_button(ui, &format!("settingsTab-{id}"), tab_label(id, label), tab == id && !filtering).clicked() {
-            *tab = id.to_string();
-            // (a tab opened is its page asked for: the filter gives way)
-            filter.text.clear();
+        ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
+        for (id, label) in TABS {
+            if crate::widgets::text_button(ui, &format!("settingsTab-{id}"), tab_label(id, label), tab == id && !filtering).clicked() {
+                *tab = id.to_string();
+                // (a tab opened is its page asked for: the filter gives way)
+                filter.text.clear();
+            }
         }
-    }
-});
+    });
     ui.separator();
     // With something typed, the page gives way to the sections found, of whatever tab.
     let words = filter.text.trim().to_lowercase();

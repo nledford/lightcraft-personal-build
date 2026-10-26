@@ -1598,8 +1598,7 @@ impl ImportJob {
             .map(|(f, _)| f.as_str())
             .collect();
         let mut found =
-            sidecars_of(&asked, cancel, |f| if known.contains(f) { None } else { self.listed.find_for_import(&stems, self.naming, f) })
-                .into_iter();
+            sidecars_of(&asked, cancel, |f| if known.contains(f) { None } else { self.listed.find_for_import(&stems, self.naming, f) }).into_iter();
         // Files are planned one by one, in order (duplicates, sidecars, names, folders); their
         // copies or moves — the slow part, reading and writing every byte and verifying it — are
         // collected and run on several threads (issue #367), then their outcomes take their places.
@@ -1641,8 +1640,7 @@ impl ImportJob {
             // and names the copy when the file itself has none
             let raw = info.kind == MediaKind::Raw;
             let sidecar_file = found_sidecar;
-            let file_packet = sidecar_file.as_ref()
-                .and_then(|f| std::fs::read_to_string(f).ok());
+            let file_packet = sidecar_file.as_ref().and_then(|f| std::fs::read_to_string(f).ok());
             let from_file = file_packet.is_some();
             let packet = file_packet.or_else(|| info.xmp.clone().filter(|_| raw));
             let target = crate::crs::Target::for_file(info.kind, &info.format, info.preview_only.is_some(), &info.meta.camera);
@@ -2011,7 +2009,11 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                     report.truncated.push(path.clone());
                 }
                 // "Import as new": a trashed photo with the same content is replaced, as for a new file
-                if let Some(old) = s.catalog.photo(id).and_then(|p| p.content_hash.as_ref()).and_then(|h| trash_content.get(crate::sync::base_hash(h)))
+                if let Some(old) = s
+                    .catalog
+                    .photo(id)
+                    .and_then(|p| p.content_hash.as_ref())
+                    .and_then(|h| trash_content.get(crate::sync::base_hash(h)))
                     .map(|(_, id)| id)
                     && purged.insert(*old)
                 {
@@ -2088,7 +2090,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 );
                 // (only the kinds this import reads: the others stay in the file and its sidecar)
                 let sidecar =
-                sidecar.map(|sc| read.of_the_sidecar(sc).resolve_label(&s.catalog)).filter(|sc| *sc != crate::sidecar::SidecarData::default());
+                    sidecar.map(|sc| read.of_the_sidecar(sc).resolve_label(&s.catalog)).filter(|sc| *sc != crate::sidecar::SidecarData::default());
                 // a copy is catalogued under its new name
                 let name = Path::new(&stored).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.clone());
                 let mut p = Photo::new(id, Source::File { path: stored }, &name, &info.format, info.width, info.height, &now);

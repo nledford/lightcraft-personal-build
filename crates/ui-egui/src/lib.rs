@@ -25,8 +25,8 @@ pub mod headless;
 pub mod i18n;
 pub mod icons;
 pub mod import;
-pub mod library_work;
 pub mod kbd;
+pub mod library_work;
 pub mod lightroom_destination;
 pub mod lightroom_import;
 pub mod links;
@@ -60,14 +60,6 @@ pub mod softpaint;
 pub mod state;
 pub mod sync;
 pub mod tasks;
-pub mod text_field;
-pub mod theme;
-mod thumb;
-pub mod toast;
-pub mod tree_state;
-pub mod updates_ui;
-pub mod widgets;
-pub mod window_place;
 #[cfg(test)]
 mod tests_activity;
 #[cfg(test)]
@@ -97,11 +89,11 @@ mod tests_canvas_pan;
 #[cfg(test)]
 mod tests_capture_time;
 #[cfg(test)]
-mod tests_check;
-#[cfg(test)]
 mod tests_carried_right_click;
 #[cfg(test)]
 mod tests_carried_text_field_menu;
+#[cfg(test)]
+mod tests_check;
 #[cfg(test)]
 mod tests_compare;
 #[cfg(test)]
@@ -123,15 +115,15 @@ mod tests_dialog_primary;
 #[cfg(test)]
 mod tests_dialog_settings;
 #[cfg(test)]
-mod tests_dialog_settings_groups;
+mod tests_dialog_settings_contrast;
 #[cfg(test)]
 mod tests_dialog_settings_filter;
 #[cfg(test)]
 mod tests_dialog_settings_filter_words;
 #[cfg(test)]
-mod tests_dialog_settings_trust;
+mod tests_dialog_settings_groups;
 #[cfg(test)]
-mod tests_dialog_settings_contrast;
+mod tests_dialog_settings_trust;
 #[cfg(test)]
 mod tests_dialog_tab;
 #[cfg(test)]
@@ -219,11 +211,11 @@ mod tests_menubar;
 #[cfg(test)]
 mod tests_merge_preview;
 #[cfg(test)]
-mod tests_move_notice;
-#[cfg(test)]
 mod tests_missing_count;
 #[cfg(test)]
 mod tests_missing_sweep;
+#[cfg(test)]
+mod tests_move_notice;
 #[cfg(test)]
 mod tests_offline;
 #[cfg(test)]
@@ -303,6 +295,10 @@ mod tests_toasts;
 #[cfg(test)]
 mod tests_tool_overlay;
 #[cfg(test)]
+mod tests_trash_files;
+#[cfg(test)]
+mod tests_tree_state;
+#[cfg(test)]
 mod tests_type_contrast;
 #[cfg(test)]
 mod tests_type_fit;
@@ -317,11 +313,6 @@ mod tests_type_roles;
 #[cfg(test)]
 mod tests_type_scale;
 #[cfg(test)]
-mod tests_tree_state;
-pub mod trash_run;
-#[cfg(test)]
-mod tests_trash_files;
-#[cfg(test)]
 mod tests_unsaved;
 #[cfg(test)]
 mod tests_view_cost;
@@ -335,6 +326,15 @@ mod tests_welcome_access;
 mod tests_zoom;
 #[cfg(test)]
 mod tests_zoom_keys;
+pub mod text_field;
+pub mod theme;
+mod thumb;
+pub mod toast;
+pub mod trash_run;
+pub mod tree_state;
+pub mod updates_ui;
+pub mod widgets;
+pub mod window_place;
 
 use std::sync::mpsc::{Receiver, Sender};
 
@@ -1599,7 +1599,7 @@ impl LightcraftApp {
         match (unsaved, self.ui.unsaved_seen) {
             (Some((n, e)), false) => {
                 self.ui.unsaved_seen = true;
-                 self.ui.show_toast_on(
+                self.ui.show_toast_on(
                     self.tick_now(),
                     "save",
                     crate::i18n::tr_format!(
@@ -3163,15 +3163,15 @@ impl LightcraftApp {
         // a new library's welcome puts the keyboard on Import Photos… once for each library
         self.welcome_focused = false;
         if let Some(l) = self.session.library.as_ref().filter(|l| l.on_disk) {
-        let path = l.dir.to_string_lossy().into_owned();
-        panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);
-        // it is open: whatever an earlier check said about it is over
-        self.recent_checks.opened(&path);
-        // when, for the launch window (issue #1290); only the listed libraries keep a time
-        let settings = &mut self.ui.settings;
-        settings.recent_opened.insert(path, (self.session.clock)());
-        settings.recent_opened.retain(|p, _| settings.recent_libraries.contains(p));
-    }
+            let path = l.dir.to_string_lossy().into_owned();
+            panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);
+            // it is open: whatever an earlier check said about it is over
+            self.recent_checks.opened(&path);
+            // when, for the launch window (issue #1290); only the listed libraries keep a time
+            let settings = &mut self.ui.settings;
+            settings.recent_opened.insert(path, (self.session.clock)());
+            settings.recent_opened.retain(|p, _| settings.recent_libraries.contains(p));
+        }
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
     }
 

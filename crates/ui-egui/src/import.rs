@@ -1184,18 +1184,18 @@ fn finish(app: &mut LightcraftApp, ctx: &egui::Context, mut task: ImportTask) {
         return;
     }
     if task.warnings.is_empty() {
-    if task.refused.is_some() {
-        app.toast_for(ctx, msg, 8.0);
-    } else if task.failed > 0 {
-        app.toast_error(ctx, msg);
+        if task.refused.is_some() {
+            app.toast_for(ctx, msg, 8.0);
+        } else if task.failed > 0 {
+            app.toast_error(ctx, msg);
+        } else {
+            app.toast(ctx, msg);
+        }
     } else {
-        app.toast(ctx, msg);
+        msg.push_str("\n\n");
+        msg.push_str(&xmp_warnings_text(&task.warnings));
+        app.toast_error_for(ctx, msg, 8.0);
     }
-} else {
-    msg.push_str("\n\n");
-    msg.push_str(&xmp_warnings_text(&task.warnings));
-    app.toast_error_for(ctx, msg, 8.0);
-}
 }
 
 /// How an import ended: stopped, failed to read every file, with problems, or well.

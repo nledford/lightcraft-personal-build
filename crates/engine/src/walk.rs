@@ -418,7 +418,8 @@ pub fn files_in_parallel(
         return true;
     }
     let skipper = Skip { path: None, canonical: None };
-    let cfg = ReadCfg { skip: skipper, want_all: false, timed: false, completion: true, max_depth: limits.max_depth, max_entries: limits.max_entries };
+    let cfg =
+        ReadCfg { skip: skipper, want_all: false, timed: false, completion: true, max_depth: limits.max_depth, max_entries: limits.max_entries };
     let shared = Shared { pool: Mutex::new(Pool::default()), changed: Condvar::new() };
     // canonical folders reached through a link, so a link loop is walked at most once
     let mut linked: HashSet<PathBuf> = HashSet::new();
@@ -1107,10 +1108,13 @@ mod tests {
             Some(&lib),
             Limits::default(),
             |p| p.extension().is_some_and(|e| e == "jpg"),
-            Some((&mut |_, _, _, _| {
-                noted += 1;
-                noted < 4
-            }, false)),
+            Some((
+                &mut |_, _, _, _| {
+                    noted += 1;
+                    noted < 4
+                },
+                false,
+            )),
             8,
         );
         assert_eq!(noted, 4, "no folder is noted after the one that said stop");

@@ -357,7 +357,13 @@ fn it_refuses_where_there_is_no_sidebar_and_follows_clicks() {
     toggle(&mut h);
     toggle(&mut h);
     assert!(h.app.ui.toast().is_none(), "the second time the ring says it");
-    let keyword = h.app.caches.keyword_tree(&h.app.session.catalog, h.app.session.library_generation()).first().map(|k| (k.path.clone(), k.name.clone())).expect("a demo keyword");
+    let keyword = h
+        .app
+        .caches
+        .keyword_tree(&h.app.session.catalog, h.app.session.library_generation())
+        .first()
+        .map(|k| (k.path.clone(), k.name.clone()))
+        .expect("a demo keyword");
     h.app.ui.sidebar_cursor = Some(format!("keyword:{}", keyword.0));
     h.step();
     key(&mut h, "F2");
@@ -404,7 +410,13 @@ fn asking_for_the_mode_while_a_field_is_focused_lets_the_field_go() {
 #[test]
 fn asking_for_the_mode_with_a_dialog_open_keeps_the_dialogs_focus() {
     let mut h = app();
-    let keyword = h.app.caches.keyword_tree(&h.app.session.catalog, h.app.session.library_generation()).first().map(|k| k.path.clone()).expect("a demo keyword");
+    let keyword = h
+        .app
+        .caches
+        .keyword_tree(&h.app.session.catalog, h.app.session.library_generation())
+        .first()
+        .map(|k| k.path.clone())
+        .expect("a demo keyword");
     h.app.ui.dialog = Some(Dialog::RenameKeyword { from: keyword.clone(), to: keyword });
     h.step();
     h.step();
@@ -461,7 +473,8 @@ fn f2_renames_the_folder_it_is_on_whatever_it_is_called() {
 #[test]
 fn the_keys_reach_rows_that_are_out_of_sight() {
     let mut h = app();
-    let last = h.app.caches.keyword_tree(&h.app.session.catalog, h.app.session.library_generation()).last().map(|k| k.path.clone()).expect("a demo keyword");
+    let last =
+        h.app.caches.keyword_tree(&h.app.session.catalog, h.app.session.library_generation()).last().map(|k| k.path.clone()).expect("a demo keyword");
     let (row, label) = (format!("source:keyword:{last}"), format!("label:keyword:{last}"));
     assert!(rect(&h, &row).is_some() && rect(&h, &label).is_none(), "the last keyword has its room, and is not drawn");
     toggle(&mut h);

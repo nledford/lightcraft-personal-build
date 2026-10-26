@@ -404,7 +404,15 @@ fn an_undo_step_that_cannot_be_rolled_back_whole_is_journaled_and_can_be_taken_b
     let before = s.catalog.to_snapshot();
     let torn =
         Op::Batch { ops: vec![Op::RemovePhoto { id: ids[0] }, Op::RemoveStack { id: stack }, Op::SetRating { id: PhotoId(9_999), rating: 1 }] };
-    s.undo.push(crate::UndoEntry { label: "Broken".into(), op: torn, folders: Vec::new(), retry_inverse: Vec::new(), retry_sidecars: Vec::new(), trash: None, folders_done: Vec::new() });
+    s.undo.push(crate::UndoEntry {
+        label: "Broken".into(),
+        op: torn,
+        folders: Vec::new(),
+        retry_inverse: Vec::new(),
+        retry_sidecars: Vec::new(),
+        trash: None,
+        folders_done: Vec::new(),
+    });
     let (undo_len, redo_len) = (s.undo.len(), s.redo.len());
 
     let e = s.execute("edit.undo", &json!({})).unwrap_err();
@@ -463,7 +471,15 @@ fn a_partly_applied_undo_step_keeps_its_retry_inverses() {
     s.commit("Stack", Op::AddStack { stack: Stack { id: stack, photos: ids.clone(), collapsed: false } }).unwrap();
     let step =
         Op::Batch { ops: vec![Op::RemovePhoto { id: ids[0] }, Op::RemoveStack { id: stack }, Op::SetRating { id: PhotoId(9_999), rating: 1 }] };
-    s.undo.push(crate::UndoEntry { label: "Broken".into(), op: step, folders: Vec::new(), retry_inverse: vec![fix.clone()], retry_sidecars: Vec::new(), trash: None, folders_done: Vec::new() });
+    s.undo.push(crate::UndoEntry {
+        label: "Broken".into(),
+        op: step,
+        folders: Vec::new(),
+        retry_inverse: vec![fix.clone()],
+        retry_sidecars: Vec::new(),
+        trash: None,
+        folders_done: Vec::new(),
+    });
     assert!(s.execute("edit.undo", &json!({})).is_err());
     let Some(Op::Batch { ops }) = s.redo.last().map(|r| r.op.clone()) else { panic!("the step that takes it back is a batch") };
     assert_eq!(ops.last(), Some(&fix));

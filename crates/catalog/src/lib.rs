@@ -1659,9 +1659,9 @@ mod tests_background;
 #[cfg(test)]
 mod tests_backup;
 #[cfg(test)]
-mod tests_folder_patch;
-#[cfg(test)]
 mod tests_folder_index;
+#[cfg(test)]
+mod tests_folder_patch;
 #[cfg(test)]
 mod tests_folder_records;
 #[cfg(test)]
@@ -1685,11 +1685,13 @@ mod tests_policy;
 #[cfg(test)]
 mod tests_repair;
 #[cfg(test)]
-mod tests_rule_order;
-#[cfg(test)]
 mod tests_restore;
 #[cfg(test)]
+mod tests_rule_order;
+#[cfg(test)]
 mod tests_scale;
+#[cfg(test)]
+mod tests_search_text;
 #[cfg(test)]
 mod tests_segments;
 #[cfg(test)]
@@ -1698,8 +1700,6 @@ mod tests_shared;
 mod tests_stored;
 #[cfg(test)]
 mod tests_stored_settings;
-#[cfg(test)]
-mod tests_search_text;
 #[cfg(test)]
 mod tests_tally;
 #[cfg(test)]
