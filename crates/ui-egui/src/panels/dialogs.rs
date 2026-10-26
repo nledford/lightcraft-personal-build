@@ -230,6 +230,8 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
     let mut confirm = false;
     // (Restore Library from Backup: its Choose Folder… was pressed)
     let mut choose_folder = false;
+    // (the Delete question's "Move Files to Trash…": the other question takes this one's place)
+    let mut trash_instead = false;
     // Return presses OK in a dialog without a text field of its own (Lightroom's default button);
     // a widget that has the keyboard focus (a text field, a button or checkbox reached with Tab)
     // takes Return itself. Consumed before the dialog is drawn, so nothing else sees it too.
@@ -282,6 +284,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
         Dialog::Settings { .. } => "Settings",
         Dialog::ConfirmDelete { .. } => "Delete Photos",
         Dialog::MovePhotos { .. } => "Move Photos",
+        Dialog::TrashFiles(ask) => super::trash_files::title(ask),
         Dialog::LightroomCatalog { .. } => "Lightroom Classic Catalog",
         Dialog::LightroomDestination { .. } => "Import Lightroom Catalog",
         Dialog::SaveEffect { .. } => "New Effect Preset",
@@ -1311,6 +1314,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                     ui.label(what);
                     ui.label(egui::RichText::new(crate::i18n::tr("Masks keep their sliders. Export presets first to keep a copy.")).color(t.text_dim));
                 }
+                Dialog::TrashFiles(ask) => super::trash_files::body(app, ui, ask),
                 Dialog::ConfirmDelete { count } => {
                     let what = if *count == 1 { crate::i18n::tr("this photo").to_string() } else { crate::i18n::tr_format!("these {count} photos", count = count) };
                     ui.label(crate::i18n::tr_format!("Move {what} to Recently Deleted?", what = what));
@@ -1471,6 +1475,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                     Dialog::KeywordTag { .. } => "Save",
                     Dialog::RemoveFolder { .. } => "Remove",
                     Dialog::RestoreBackup { .. } => "Restore",
+                    Dialog::TrashFiles(ask) => super::trash_files::button(ask),
                     Dialog::LightroomCatalog { .. } => "Import Lightroom Catalog…",
                     d @ Dialog::LightroomDestination { .. } => crate::lightroom_destination::ok_label(d),
                     Dialog::SynchronizeFolder { .. } if informational => "Close",
@@ -1516,6 +1521,8 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                         )
                             // (Synchronize, just after its button stopped being Continue in Background)
                             && !(matches!(&dlg, Dialog::SynchronizeFolder { counts: Some(_), .. }) && !crate::sync::settled(app, ui.ctx()))
+                            // erasing files waits a moment after its question came up
+                            && !matches!(&dlg, Dialog::TrashFiles(ask) if !super::trash_files::armed(app, ui.ctx(), ask))
                             // smart-album rules that can't mean anything wait to be fixed
                             && !matches!(&dlg, Dialog::SmartRules { id, rules, .. } if !rules.check_for(&app.session.catalog, id.map(lightcraft_catalog::AlbumId)).is_empty()));
                 let primary = !informational && can_confirm && confirm_style(&dlg) == ConfirmStyle::Primary;
@@ -1536,12 +1543,22 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                 if !informational {
                     buttons_w += cancel_button.desired_size(ui).x + gap;
                 }
+                // Delete's question has a second answer: the files too (which asks its own question)
+                // (not while a run is at work, as the menu items are not: the Delete question would be lost)
+                let trash = matches!(dlg, Dialog::ConfirmDelete { .. }) && crate::menus::ui_enabled(app, "dialog.trashFiles");
+                let trash_button = Button::new("Move Files to Trash…").widget("button:dialogTrashFiles").id_salt(kind);
+                if trash {
+                    buttons_w += trash_button.desired_size(ui).x + gap;
+                }
                 if !ok.is_empty() {
                     buttons_w += ok_button.desired_size(ui).x;
                 }
                 ui.add_space((ui.available_width() - buttons_w).max(0.0));
                 if !informational && cancel_button.show(ui).clicked() {
                     close = true;
+                }
+                if trash && trash_button.show(ui).clicked() {
+                    trash_instead = true;
                 }
                 let r = (!ok.is_empty()).then(|| ok_button.show(ui));
                 if r.is_some_and(|r| r.clicked()) {
@@ -1596,6 +1613,14 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
             Err(e) => app.toast(ctx, e),
         }
     }
+    if trash_instead {
+        app.ui.dialog = None;
+        match super::trash_files::open(app, &json!({"settle": true})) {
+            Ok(_) => return,
+            Err(e) => app.toast(ctx, e),
+        }
+        close = true;
+    }
     if !raw_blocked && confirm {
         match confirm_dialog(app, &dlg) {
             // the import review stays open on an error (e.g. an unusable folder template), and so
@@ -1631,6 +1656,11 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                     *selected = chosen.and_then(|dir| backups.iter().position(|b| b["dir"] == dir));
                 }
                 app.toast(ctx, e)
+            }
+            // nothing could go to the Trash: say why (the photos and their files are as they were)
+            Err(e) if matches!(dlg, Dialog::TrashFiles(_)) => {
+                app.toast_for(ctx, e, 12.0);
+                close = true;
             }
             // the SAM 3 dialog stays open to show the download (or why it can't start)
             Err(e) if matches!(dlg, Dialog::SamModel { .. }) => {
@@ -2190,6 +2220,7 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
             let ctx = app.tasks.repaint.clone().unwrap_or_default();
             crate::move_task::start(app, &ctx, &json!({"ids": ids, "folder": folder}))
         }
+        Dialog::TrashFiles(ask) => super::trash_files::run(app, ask),
         // the catalog found: no file dialog; none: File ▸ Import Lightroom Catalog… asks for it
         Dialog::LightroomCatalog { catalog, .. } => {
             app.run("file.importLightroom", catalog.as_ref().map_or_else(|| json!({}), |c| json!({"path": c})))
@@ -2655,9 +2686,11 @@ pub enum ConfirmStyle {
 
 pub fn confirm_style(dlg: &Dialog) -> ConfirmStyle {
     match dlg {
-        Dialog::ConfirmDelete { .. } | Dialog::DeleteKeyword { .. } | Dialog::DeleteEffects { .. } | Dialog::RemoveFolder { .. } => {
-            ConfirmStyle::Plain
-        }
+        Dialog::ConfirmDelete { .. }
+        | Dialog::DeleteKeyword { .. }
+        | Dialog::DeleteEffects { .. }
+        | Dialog::RemoveFolder { .. }
+        | Dialog::TrashFiles(_) => ConfirmStyle::Plain,
         _ if only_shows(dlg) => ConfirmStyle::Plain,
         _ => ConfirmStyle::Primary,
     }

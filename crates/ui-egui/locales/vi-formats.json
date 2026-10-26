@@ -342,5 +342,16 @@
   "A sidecar of {} couldn't follow it ({}).": "Sidecar của {} không thể đi theo tệp ({}).",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Thư viện không thể theo các tệp đang được di chuyển ({}); Tìm ảnh bị thiếu sẽ liên kết lại chúng.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Thư viện đi theo các tệp đang được di chuyển, nhưng không lưu được ({}).",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "Các bản sao đã bị xóa khỏi vị trí mới vì bản gốc vẫn ở nơi thư viện ghi nhận: {}."
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Các bản sao đã bị xóa khỏi vị trí mới vì bản gốc vẫn ở nơi thư viện ghi nhận: {}.",
+  "Move the files of {n} photos to the Trash?": "Chuyển tệp của {n} ảnh vào Thùng rác?",
+  "{n} photos are on a disk that has no Trash. Erase their files for good?": "Các ảnh ({n}) nằm trên ổ đĩa không có Thùng rác. Xóa vĩnh viễn tệp của chúng?",
+  "…and {n} more": "…và {n} nữa",
+  "Files erased: {files} (photos out of the library: {photos})": "Tệp đã xóa: {files} (ảnh rời khỏi thư viện: {photos})",
+  "Files moved to the Trash: {files} (photos out of the library: {photos})": "Tệp đã chuyển vào Thùng rác: {files} (ảnh rời khỏi thư viện: {photos})",
+  "Stopped: photos not reached stay in the library: {n}": "Đã dừng: số ảnh chưa xử lý tới: {n}, vẫn ở trong thư viện",
+  "Files moved to the Trash: {trashed}, files erased: {erased} (photos out of the library: {photos})": "Tệp đã chuyển vào Thùng rác: {trashed}, tệp đã xóa: {erased} (ảnh rời khỏi thư viện: {photos})",
+  "Photos that could not be moved stay in the library ({n}): {why}": "Không thể chuyển và vẫn ở trong thư viện ({n}): {why}",
+  "Photos whose file was already gone: {n}": "Ảnh có tệp đã mất từ trước: {n}",
+  "Sidecars left in place: {n}": "Sidecar để lại tại chỗ: {n}",
+  "Files other photos still use, kept: {n}": "Tệp ảnh khác vẫn đang dùng, được giữ lại: {n}"
 }

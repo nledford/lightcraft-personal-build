@@ -342,5 +342,16 @@
   "A sidecar of {} couldn't follow it ({}).": "Um arquivo XMP auxiliar de {} não conseguiu acompanhá-lo ({}).",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "A biblioteca não conseguiu acompanhar os arquivos que estavam sendo movidos ({}); Localizar fotos ausentes os vincula de novo.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "A biblioteca acompanha os arquivos que estavam sendo movidos, mas isso não pôde ser salvo ({}).",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "Cópias removidas do novo local, porque o original ainda estava onde a biblioteca o registra: {}."
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Cópias removidas do novo local, porque o original ainda estava onde a biblioteca o registra: {}.",
+  "Move the files of {n} photos to the Trash?": "Mover os arquivos de {n} fotos para o Lixo?",
+  "{n} photos are on a disk that has no Trash. Erase their files for good?": "{n} fotos estão em um disco sem Lixo. Apagar os arquivos delas definitivamente?",
+  "…and {n} more": "…e mais {n}",
+  "Files erased: {files} (photos out of the library: {photos})": "Arquivos apagados: {files} (fotos fora da biblioteca: {photos})",
+  "Files moved to the Trash: {files} (photos out of the library: {photos})": "Arquivos movidos para o Lixo: {files} (fotos fora da biblioteca: {photos})",
+  "Stopped: photos not reached stay in the library: {n}": "Interrompido: fotos não alcançadas, continuam na biblioteca: {n}",
+  "Files moved to the Trash: {trashed}, files erased: {erased} (photos out of the library: {photos})": "Arquivos movidos para o Lixo: {trashed}, arquivos apagados: {erased} (fotos fora da biblioteca: {photos})",
+  "Photos that could not be moved stay in the library ({n}): {why}": "Fotos que não puderam ser movidas e continuam na biblioteca ({n}): {why}",
+  "Photos whose file was already gone: {n}": "Fotos cujo arquivo já não existia: {n}",
+  "Sidecars left in place: {n}": "Arquivos sidecar deixados no lugar: {n}",
+  "Files other photos still use, kept: {n}": "Arquivos que outras fotos ainda usam (mantidos): {n}"
 }

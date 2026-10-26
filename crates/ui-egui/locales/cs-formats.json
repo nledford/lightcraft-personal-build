@@ -342,5 +342,16 @@
   "A sidecar of {} couldn't follow it ({}).": "Přidružený soubor XMP k {} se s ním nepřesunul ({}).",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Knihovna nemohla následovat soubory, které se přesouvaly ({}); Najít chybějící fotografie je znovu propojí.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Knihovna následuje soubory, které se přesouvaly, ale nepodařilo se to uložit ({}).",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopie odstraněné z nového místa, protože originál byl stále tam, kde ho knihovna má: {}."
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopie odstraněné z nového místa, protože originál byl stále tam, kde ho knihovna má: {}.",
+  "Move the files of {n} photos to the Trash?": "Přesunout soubory {n} fotografií do koše?",
+  "{n} photos are on a disk that has no Trash. Erase their files for good?": "Fotografie ({n}) jsou na disku bez koše. Smazat jejich soubory natrvalo?",
+  "…and {n} more": "…a dalších {n}",
+  "Files erased: {files} (photos out of the library: {photos})": "Smazané soubory: {files} (fotografie odebrané z knihovny: {photos})",
+  "Files moved to the Trash: {files} (photos out of the library: {photos})": "Soubory přesunuté do koše: {files} (fotografie odebrané z knihovny: {photos})",
+  "Stopped: photos not reached stay in the library: {n}": "Zastaveno: na fotografie ({n}) nedošlo, zůstávají v knihovně",
+  "Files moved to the Trash: {trashed}, files erased: {erased} (photos out of the library: {photos})": "Soubory přesunuté do koše: {trashed}, smazané soubory: {erased} (fotografie odebrané z knihovny: {photos})",
+  "Photos that could not be moved stay in the library ({n}): {why}": "Nepodařilo se přesunout ({n}), zůstávají v knihovně: {why}",
+  "Photos whose file was already gone: {n}": "Fotografie, jejichž soubor už chyběl: {n}",
+  "Sidecars left in place: {n}": "Doprovodné soubory ponechané na místě: {n}",
+  "Files other photos still use, kept: {n}": "Soubory, které stále používají jiné fotografie (ponechány): {n}"
 }

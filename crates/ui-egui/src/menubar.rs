@@ -284,6 +284,7 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "photo.restore",
             "photo.deletePermanently",
             "library.emptyRecentlyDeleted",
+            "dialog.trashFiles",
         ],
     ),
     (
@@ -441,6 +442,8 @@ fn host_supports(app: &LightcraftApp, id: &str) -> bool {
         "album.removePhotos" => in_normal_album(app) && !selection_deleted(app),
         // only where the trash is on screen
         "library.emptyRecentlyDeleted" => app.session.source == lightcraft_engine::LibrarySource::RecentlyDeleted,
+        // (not where there is no Trash to move files to: Windows and the browser)
+        "dialog.trashFiles" => crate::panels::trash_files::available(),
         _ => true,
     }
 }

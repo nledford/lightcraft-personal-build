@@ -763,10 +763,13 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
             }
             // a stopped move still finishing its file isn't waited for: choosing to quit is what cuts it short
             app.quit_cuts_move = true;
-            // the backup and unsaved changes still get their own questions
+            // the backup and unsaved changes still get their own questions. (If that one is cancelled, the app
+            // goes on: a Move Files to Trash stopped by the line above then ends and says so.)
             if may_close(app) {
-                app.ui.quit = true;
-            }
+            // files moving to the Trash stop after the one in hand, and what moved is kept
+            app.finish_background_file_work();
+            app.ui.quit = true;
+        }
         } else {
             quit_called_off(app);
         }
