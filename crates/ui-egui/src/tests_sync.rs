@@ -523,3 +523,47 @@ fn counts_too_large_to_add_are_still_changes_to_make() {
     assert!(!huge_sum.nothing_to_do(false, false));
     assert!(SyncCounts::default().up_to_date() && SyncCounts::default().nothing_to_do(true, true));
 }
+
+/// The text of every `Shape::Text` in `shapes`.
+fn texts(shapes: &[egui::epaint::ClippedShape]) -> Vec<String> {
+    fn walk(shape: &egui::epaint::Shape, out: &mut Vec<String>) {
+        match shape {
+            egui::epaint::Shape::Text(t) => out.push(t.galley.job.text.clone()),
+            egui::epaint::Shape::Vec(v) => v.iter().for_each(|s| walk(s, out)),
+            _ => {}
+        }
+    }
+    let mut out = Vec::new();
+    shapes.iter().for_each(|s| walk(&s.shape, &mut out));
+    out
+}
+
+#[test]
+fn the_dialogs_choices_read_in_the_chosen_language_with_their_counts() {
+    let app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services::default());
+    let mut dlg = Dialog::SynchronizeFolder {
+        path: "/photos/trip".into(),
+        name: "trip".into(),
+        disk: false,
+        counts: Some(crate::state::SyncCounts { new: 7, ..Default::default() }),
+        import_new: true,
+        relink_moved: true,
+        remove_missing: false,
+        read_metadata: false,
+    };
+    let ctx = egui::Context::default();
+    crate::theme::install_fonts(&ctx);
+    crate::theme::apply(&ctx);
+    crate::i18n::set_language(crate::i18n::Locale::De);
+    let raw = egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(800.0, 600.0))), ..Default::default() };
+    let mut out = ctx.run_ui(raw, |ui| crate::sync::body(&app, ui, &mut dlg));
+    out.textures_delta.clear();
+    crate::i18n::set_language(crate::i18n::Locale::En);
+    let shown = texts(&out.shapes);
+    let german = crate::i18n::Locale::De.tr("Import new photos");
+    assert!(shown.iter().any(|s| s == german), "the German label, translated once: {shown:?}");
+    assert!(shown.iter().any(|s| s == "(7)"), "its count beside it: {shown:?}");
+    if german != "Import new photos" {
+        assert!(!shown.iter().any(|s| s.contains("Import new photos")), "no English fallback: {shown:?}");
+    }
+}
