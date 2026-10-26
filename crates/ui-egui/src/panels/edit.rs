@@ -106,8 +106,8 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
     let (hr, _) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::hover());
     ui.painter().text(pos2(hr.left() + 24.0, hr.bottom() - 10.0), Align2::LEFT_CENTER, crate::i18n::tr("Edit"), t.semibold(15.0), t.text);
     egui::Frame::NONE.inner_margin(egui::Margin { left: 24, right: 22, top: 8, bottom: 14 }).show(ui, |ui| {
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+        ui.horizontal_wrapped(|ui| {
+            ui.spacing_mut().item_spacing = vec2(8.0, 6.0);
             if  Button::new("Auto").small().widget("button:auto").show(ui).clicked() && app.act("develop.auto", json!({})).is_some() {
                 // only when it went through: refused (the original is missing…), `act` said why
                 app.toast(ui.ctx(), crate::i18n::tr("Auto settings applied"));
@@ -123,7 +123,14 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
             {
                 app.act("develop.hdr", json!({"enabled": !d.hdr.enabled}));
             }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            // (Reset at the right of the row when it has room there, else on a row of its own: in
+            // German it is "Zurücksetzen" and lay over HDR)
+            let reset = Button::new("Reset");
+            if ui.available_size_before_wrap().x < crate::widgets::text_button_width(ui, reset) {
+                ui.end_row();
+            }
+            // (a layout of the width left on this row, 24 pt tall: after `end_row`, the new row)
+            ui.allocate_ui_with_layout(vec2(ui.available_size_before_wrap().x, 24.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if Button::new("Reset")
                     .small()
                     .widget("button:reset")
