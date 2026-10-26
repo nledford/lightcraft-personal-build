@@ -224,7 +224,7 @@ fn row_sensed(
         (false, 0) => t.text_dim.gamma_multiply(0.55),
         (false, _) => t.text_dim,
     };
-    let count_galley = count.filter(|_| app.ui.show_counts).map(|n| ui.painter().layout_no_wrap(n.to_string(), t.label(), count_color(n)));
+    let count_galley = count.filter(|_| app.ui.show_counts).map(|n| crate::readout::figures(ui.painter(), &n.to_string(), t.label(), count_color(n)));
     let label_left = r.left() + 42.0 + indent;
     let count_left = count_galley.as_ref().map_or(edge - 18.0, |g| edge - 18.0 - g.size().x);
     // a label's dot sits just before the count
@@ -286,7 +286,7 @@ fn out_of_sight(
     let t = Tokens::get(ui.ctx());
     let painter = ui.painter();
     let name_w = painter.layout_no_wrap(label.to_string(), t.body(), t.text_label).size().x;
-    let count_w = count.filter(|_| app.ui.show_counts).map(|n| painter.layout_no_wrap(n.to_string(), t.label(), t.text_dim).size().x);
+    let count_w = count.filter(|_| app.ui.show_counts).map(|n| crate::readout::figures(painter, &n.to_string(), t.label(), t.text_dim).size().x);
     note_width(ui, row_need(indent, name_w, if mark { MARK_W } else { 0.0 }, count_w));
     true
 }
