@@ -1553,7 +1553,7 @@ fn albums_tree(app: &mut LightcraftApp, ui: &mut egui::Ui, all: &AlbumKids, pare
             }
             // the row itself is the source: the photos of the albums inside the folder
             if super::side_keys::chosen(ui, &resp) {
-                let _ = app.run("library.source", json!({"kind": "album", "id": a.id.0}));
+                app.act("library.source", json!({"kind": "album", "id": a.id.0}));
             }
             folder_menu(app, &resp, a);
             if draw_open {
@@ -2417,7 +2417,7 @@ fn folder_parent_items(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNod
         }
     }
     if let Some(params) = run {
-        let _ = app.run("view.folderParent", params);
+        app.act("view.folderParent", params);
         ui.close();
     }
     parents.above.is_some() || parents.asked_for
@@ -2557,10 +2557,8 @@ fn folder_drag_target(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::R
         return;
     }
     // not under the folder's own drag: rows opening there would shift away from the pointer
-    if !lightcraft_catalog::query::folder_within(&n.path, &from) {
-        if spring_open(ui, n, open) {
-            app.ui.sidebar_trees.show(branch);
-        }
+    if !lightcraft_catalog::query::folder_within(&n.path, &from) && spring_open(ui, n, open) {
+        app.ui.sidebar_trees.show(branch);
     }
     let released = ui.input(|i| i.pointer.primary_released());
     let name = folder_name(&from, &from);

@@ -161,7 +161,8 @@ fn choosing_a_result_opens_its_tab_at_that_section() {
 
 #[test]
 fn choosing_what_starts_a_tab_shows_the_top_of_its_page() {
-    let mut h = demo([900.0, 560.0]);
+    // (a window short enough that General, which the regrouped Settings (#2524) made shorter, still scrolls)
+    let mut h = demo([900.0, 400.0]);
     // Given General scrolled down, so that its first heading is out of view
     show(&mut h, "general");
     let room = rect(&h, "settings:pageRoom").unwrap();

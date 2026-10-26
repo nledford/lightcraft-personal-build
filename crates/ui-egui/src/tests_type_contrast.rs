@@ -141,7 +141,9 @@ fn unreadable(h: &Headless, t: &Tokens, within: Option<Rect>) -> Vec<String> {
             let own = Some(section.format.color).filter(|c| *c != Color32::PLACEHOLDER);
             let colour = text.override_text_color.or(own).unwrap_or(text.fallback_color);
             // (a count of nothing is fainter on purpose: the rows that hold photos stand out)
-            if colour == t.text_disabled || colour.a() == 0 || colour == t.text_dim.gamma_multiply(0.55) {
+            // (a disabled `Button` is drawn at a fraction of its colors' alpha: not text to read, like `text_disabled`)
+            let faded_button = colour.a() == Color32::WHITE.gamma_multiply(crate::button::DISABLED_FADE).a();
+            if colour == t.text_disabled || colour.a() == 0 || faded_button || colour == t.text_dim.gamma_multiply(0.55) {
                 continue;
             }
             let shown = blend(colour, on);

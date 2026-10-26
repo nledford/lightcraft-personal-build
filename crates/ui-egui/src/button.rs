@@ -173,12 +173,15 @@ pub fn look(t: &Tokens, kind: Kind, state: State) -> Look {
         },
     };
     if state == State::Disabled {
-        let fade = |c: Color32| c.gamma_multiply(0.45);
+        let fade = |c: Color32| c.gamma_multiply(DISABLED_FADE);
         Look { fill: look.fill.map(fade), border: look.border.map(fade), content: fade(look.content) }
     } else {
         look
     }
 }
+
+/// How much of its colors a disabled button keeps (it is drawn faded, as a whole).
+pub(crate) const DISABLED_FADE: f32 = 0.45;
 
 /// A button, built and then shown with [`Button::show`] (in the layout) or [`Button::show_at`]
 /// (in a given rectangle).

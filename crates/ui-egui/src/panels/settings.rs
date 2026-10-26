@@ -1418,7 +1418,7 @@ fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     let mut read = app.session.import_defaults.read;
     for (kind, label, on) in crate::import::read_choices(&mut read) {
         if check(ui, &format!("settings.read.{kind}"), on, label).changed() {
-            let _ = app.run("library.preferences", json!({"import": {"read": {kind: *on}}}));
+            app.act("library.preferences", json!({"import": {"read": {kind: *on}}}));
         }
     }
     auto_import(app, ui, t);

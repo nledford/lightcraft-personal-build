@@ -138,7 +138,10 @@ fn a_rating_or_an_album_asks_about_no_file_and_a_photo_moved_to_a_missing_file_i
         missing(&mut h);
     }
     assert!(h.step_until(T, |h| h.file_checks_done()));
-    assert_eq!(checked(&log), before, "no file was checked for a rating or an album: {quiet:?}");
+    // (the grid's cells may ask about the files they show, as their thumbnails fail one by one (#2164's failure mark):
+    // that is not the edit's doing. The photo the grid never asked about is the one the edit would be asked about)
+    let asked_since: Vec<String> = log.lock().unwrap_or_else(PoisonError::into_inner).iter().skip(before).cloned().collect();
+    assert!(!asked_since.contains(&quiet.1), "no file was checked for a rating or an album: {quiet:?}");
     assert_eq!(h.app.session.media.availability.sweeping(), 0, "and no check of every file began");
     // a photo that moves to a file that is not there is counted once the check finds it so
     let op = Op::Relink {

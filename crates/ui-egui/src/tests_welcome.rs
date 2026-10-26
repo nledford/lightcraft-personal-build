@@ -205,10 +205,11 @@ fn the_welcome_shows_sample_photos_that_open_the_one_clicked() {
 #[test]
 fn a_column_too_narrow_for_the_row_offers_the_button() {
     // a small window with the sidebar out, as an empty library opens: under three thumbnails wide
+    // (380 px: the column, capped at 360, is cut by the window under the 356 px that three tiles need)
     let mut a = LightcraftApp::new(library("narrow"), Services::default());
     a.ui.view = ViewMode::PhotoGrid;
     a.ui.left_panel = true;
-    let mut h = Headless::new(a, [560.0, 600.0], 1.0);
+    let mut h = Headless::new(a, [380.0, 600.0], 1.0);
     h.step();
     h.step();
     h.step();

@@ -127,7 +127,7 @@ fn measure(kind: ThemeKind) -> Vec<Pair> {
     };
     let (text, graphic) = (Need::Text, Need::Graphic);
     // Constants the widgets paint in every theme: the grid's selection rings and its chips.
-    let (white_ring, grey_ring, chip, slab) = (Color32::WHITE, Color32::from_gray(170), Color32::from_gray(26), Color32::from_gray(38));
+    let (white_ring, grey_ring, chip) = (Color32::WHITE, Color32::from_gray(170), Color32::from_gray(26));
     // A row the pointer is over in the sidebar: the hover fill at 60 % over the panel.
     let hovered_row = over(t.chrome, t.hover, 0.6);
 
@@ -252,7 +252,13 @@ fn measure(kind: ThemeKind) -> Vec<Pair> {
     add("mark: reject flag on bottom pill", graphic, t.reject, t.canvas, "the Reject flag of the bottom bar's pill (bottombar.rs)");
     add("mark: caution icon on canvas", graphic, t.caution, t.canvas, "the Preview only card (widgets.rs)");
     add("mark: dim star on inset", graphic, t.text_dim, t.inset, "a theme card's star that is not a favourite (settings.rs)");
-    add("mark: failure on thumbnail slab", graphic, t.text_dim, slab, "the \"!\" of a thumbnail that could not be read (grid.rs)");
+    add(
+        "mark: failure on thumbnail slab",
+        graphic,
+        t.text,
+        t.skeleton,
+        "the \"!\" of a thumbnail that could not be read, in the text color on the placeholder (thumb.rs failure_mark, #2164)",
+    );
     add("state: hidden eye on panel", graphic, t.text_disabled, t.chrome, "an effect's eye when it is off (widgets.rs, edit.rs)");
     // Sliders and progress.
     add("slider: track on panel", graphic, t.track, t.chrome, "the track of a Develop slider (widgets.rs)");

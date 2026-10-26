@@ -200,6 +200,20 @@ fn wait_for_erase(h: &mut Headless) {
     h.step();
 }
 
+/// Frames until a toast with `needle` is up, and what it said. A toast is timed on the simulated clock, which
+/// moves a frame at a time while `settle` waits for a busy worker: under load that is long enough for a
+/// 4 s toast to be gone by the time the test looks, so the test looks while the frames go by.
+fn said(h: &mut Headless, needle: &str) -> String {
+    let t0 = std::time::Instant::now();
+    loop {
+        if let Some(t) = h.app.ui.toasts.iter().find(|t| t.text.to_lowercase().contains(&needle.to_lowercase())) {
+            return t.text.clone();
+        }
+        assert!(t0.elapsed() < T, "no toast with {needle:?}: {:?}", h.app.ui.toasts);
+        h.step();
+    }
+}
+
 fn toast(h: &Headless) -> String {
     h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default()
 }
@@ -241,14 +255,19 @@ fn a_question_left_open_while_another_library_opens_trashes_and_erases_nothing()
         // another library opens meanwhile (the menu bar and agents reach past a dialog): the
         // numbers in the question are other photos there
         h.app.session.open_library(dir.0.join("other/lib"), false).unwrap();
-        h.settle(SETTLE);
+        let said_so;
         if erase {
+            said_so = said(&mut h, "Another library was opened");
+            h.settle(SETTLE);
             // the run that asked closes its question itself
             assert!(!has(&h, "button:dialogOk"), "the Erase question closed");
         } else {
-            click(&mut h, "button:dialogOk");
+            h.settle(SETTLE);
+            assert_eq!(h.request("ui.clickWidget", json!({"id": "button:dialogOk"}), T)["ok"], true);
+            said_so = said(&mut h, "Another library was opened");
+            h.settle(SETTLE);
         }
-        assert!(toast(&h).contains("Another library was opened"), "{:?}", toast(&h));
+        assert!(said_so.contains("Another library was opened"), "{said_so:?}");
         assert!(paths.iter().all(|p| exists(p)), "no file went anywhere");
         assert_eq!(h.app.ui.dialog, None);
         assert!(h.app.trash_run.is_none());
@@ -339,10 +358,12 @@ fn photos_on_a_disk_without_a_trash_get_a_second_question_before_anything_is_era
     assert!(matches!(h.app.ui.dialog, Some(Dialog::TrashFiles(TrashAsk::Erase { .. }))), "its button waits a moment");
     assert!(in_library(&h, ids[1]) && exists(&paths[1]) && exists(&paths[2]), "nothing of them is touched yet");
     wait_for_erase(&mut h);
-    click(&mut h, "button:dialogOk");
+    assert_eq!(h.request("ui.clickWidget", json!({"id": "button:dialogOk"}), T)["ok"], true);
+    let said = said(&mut h, "erased");
+    h.settle(SETTLE);
     assert!(ids.iter().all(|id| !in_library(&h, *id)) && paths.iter().all(|p| !exists(p)));
     assert_eq!(h.app.ui.dialog, None);
-    assert!(toast(&h).to_lowercase().contains("erased"), "{:?}", toast(&h));
+    assert!(said.to_lowercase().contains("erased"), "{said:?}");
     // one step: the file in the Trash comes back, the erased ones are shown as missing
     run(&mut h, "edit.undo", json!({}));
     assert!(ids.iter().all(|id| in_library(&h, *id)) && exists(&paths[0]) && !exists(&paths[1]));

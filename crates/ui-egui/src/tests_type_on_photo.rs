@@ -163,6 +163,8 @@ fn the_marks_on_a_thumbnail_stand_out_from_the_photo_in_every_theme() {
         run(&mut h, "library.select", json!({"ids": [2]}));
         let r = h.request("ui.set", json!({"leftPanel": true, "right": "info", "thumbSize": 200}), T);
         assert_eq!(r["ok"], true, "{r}");
+        // (the grid shows stars on every cell only when asked: by default, on the pointer and the choice (#2164))
+        h.app.ui.settings.grid_badges = crate::state::GridBadges::Always;
         rest(&mut h);
         // When it is drawn
         let (thumb, rating) = rated_cell(&h, "thumb", 2);
@@ -193,8 +195,9 @@ fn a_toast_can_be_read_in_every_theme() {
         run(&mut h, "library.select", json!({"ids": [1]}));
         run(&mut h, "view.detail", json!({}));
         // When something is said in a toast
+        // (shown a second ago: a toast fades in, and its ink is read once it is all there (#1936))
         let now = h.app.tick_now();
-        h.app.ui.show_toast(now, "Rated 3 stars".into(), 60.0, None);
+        h.app.ui.show_toast(now - 1.0, "Rated 3 stars".into(), 61.0, None);
         h.step();
         h.step();
         // Then it is written in the ink for pictures and stands 4.5:1 against its shade

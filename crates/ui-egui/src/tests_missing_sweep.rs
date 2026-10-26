@@ -35,7 +35,11 @@ fn app_on_a_slow_share(guard: Duration) -> (Headless, Share) {
     let (ui, open, on_ui, calls) = (std::thread::current().id(), share.open.clone(), share.on_ui.clone(), share.calls.clone());
     let deadline = Instant::now() + guard;
     app.session.media.availability.set_probe(Arc::new(move |f| {
-        calls.fetch_add(1, Ordering::SeqCst);
+        // (the cells of the grid ask the availability cache about the files they show, and its worker looks at those
+        // too: that is not the check being counted)
+        if std::thread::current().name() != Some("lc-availability") {
+            calls.fetch_add(1, Ordering::SeqCst);
+        }
         if std::thread::current().id() == ui {
             on_ui.fetch_add(1, Ordering::SeqCst);
         }
