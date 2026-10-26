@@ -341,6 +341,10 @@ pub(crate) trait MoveFs {
     /// Copy `a` to a new file `b` (an independent copy, never a link), failing when `b` exists.
     fn copy_no_replace(&self, a: &Path, b: &Path) -> std::io::Result<()>;
     fn remove_file(&self, p: &Path) -> std::io::Result<()>;
+    /// Move, create or remove a folder on disk for a history step (see `FolderMove`).
+    fn move_folder(&self, from: &str, to: &str) -> std::result::Result<(), String> {
+        crate::cmd::browse::folder_on_disk(from, to)
+    }
     /// Another photo file beside the stem-named sidecar `sidecar` that shares its stem (e.g.
     /// `IMG_1.JPG` for `IMG_1.xmp`), which still uses that sidecar.
     fn stem_sibling(&self, sidecar: &Path) -> Option<String>;
@@ -1058,19 +1062,25 @@ pub(crate) fn move_all_with(
 
 /// Final `SetFile` per photo (nested batches included), filtered by destination only afterward.
 fn set_file_ops_to(op: &Op, to: &HashSet<&str>, out: &mut Vec<Op>) {
+    set_file_ops_where(op, &|path| to.contains(path), out);
+}
+
+/// The last `SetFile` or `Relink` of each photo in `op` whose new path satisfies `wanted`.
+pub(crate) fn set_file_ops_where(op: &Op, wanted: &dyn Fn(&str) -> bool, out: &mut Vec<Op>) {
     let mut pending = vec![op];
     let mut order = Vec::new();
     let mut final_ops = HashMap::new();
     while let Some(op) = pending.pop() {
         match op {
             Op::Batch { ops } => pending.extend(ops.iter().rev()),
-            Op::SetFile { id, .. } if final_ops.insert(*id, op).is_none() => order.push(*id),
+            Op::SetFile { id, .. } | Op::Relink { id, .. } if final_ops.insert(*id, op).is_none() => order.push(*id),
             _ => {}
         }
     }
     out.extend(order.into_iter().filter_map(|id| {
         let op = final_ops.get(&id).copied()?;
-        matches!(op, Op::SetFile { source: Source::File { path }, .. } if to.contains(path.as_str())).then(|| op.clone())
+        matches!(op, Op::SetFile { source: Source::File { path }, .. } | Op::Relink { source: Source::File { path }, .. } if wanted(path.as_str()))
+            .then(|| op.clone())
     }));
 }
 

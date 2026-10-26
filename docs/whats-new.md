@@ -409,6 +409,15 @@
   tree and Local say the same, in every language; before, the Folders tree showed an English “Moved; 12 photo(s)
   relinked” in every language, and Local a translated version of it.
 
+### Move several folders into one in a single step
+- For agents: `folder.move {paths, into}` moves several folders on disk into one folder, with the photos in them
+  following, as one undo step: Undo moves them all back and Redo moves them all again. If any one can't move (a folder
+  into itself or into one inside it, a name already taken in the destination, one folder inside another of the list,
+  two folders with the same name, a folder that isn't there; or more than 200 folders) the whole move is refused with a plain sentence and
+  nothing moves. `folder.move {path, into}` is unchanged.
+- Move Folder To… in the folder menus now has a tooltip, and a widget id for agents and tests (`folderMove:<path>`
+  in Folders, `localFolderMove:<path>` in Local).
+
 ## 2026-10-21
 
 ### Text sizes
