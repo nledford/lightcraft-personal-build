@@ -722,7 +722,7 @@ pub(super) fn heading(ui: &mut egui::Ui, t: &Tokens, text: &str) {
     // registered as `heading:{text}` whatever the language, where a section starts: for the
     // filter, scripts and tests that look for one.
     let behind = ui.painter().add(egui::Shape::Noop);
-    let r = ui.label(RichText::new(crate::i18n::tr(text)).font(t.semibold(12.5)).color(t.text));
+    let r = ui.label(RichText::new(crate::i18n::tr(text)).font(t.body_strong()).color(t.text));
     let name = text;
     register(ui, format!("heading:{name}"), r.rect);
     // (chosen from what the filter found: the section is brought to the top of the page, and its

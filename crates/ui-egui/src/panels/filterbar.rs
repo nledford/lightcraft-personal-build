@@ -63,7 +63,7 @@ fn picker(app: &mut LightcraftApp, ui: &mut egui::Ui, id: &str, current: &str, a
         ui,
         &format!("filter-{id}"),
         if active && matches!(id, "camera" | "lens" | "keyword") { current } else { crate::i18n::tr(current) },
-        t.font(12.5),
+        t.label(),
         if active { t.text } else { t.text_label },
     );
     if active {
@@ -257,13 +257,13 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     if save.clicked() {
         app.act("dialog.newSmartAlbum", json!({}));
     }
-    let clear = crate::button::Button::new("Clear").small().enabled(filtering).widget("button:filterClear").show(ui);
+    let clear =  crate::button::Button::new("Clear").small().enabled(filtering).widget("button:filterClear").show(ui);
     if clear.clicked() {
         app.ui.search.clear();
         app.act("library.clearFilter", json!({}));
     }
     // filter presets: apply one, save the current filter, delete
-    let presets = crate::widgets::dropdown(ui, "filterPresets", crate::i18n::tr("Presets"), t.font(12.5), t.text);
+    let presets = crate::widgets::dropdown(ui, "filterPresets", crate::i18n::tr("Presets"), t.label(), t.text);
     register(ui, "button:filterPresets", presets.rect);
     egui::Popup::menu(&presets).show(|ui| {
         let names: Vec<String> = app.session.filter_presets.iter().map(|f| f.name.clone()).collect();
