@@ -55,7 +55,6 @@
   "Create Keyword Tag Inside “{name}”…": "Skapa nyckelordstagg i ”{name}”…",
   "Create the keyword “{name}”": "Skapa nyckelordet ”{name}”",
   "Create {n} Virtual Copies": "Skapa {n} virtuella kopior",
-  "Creates {} stacks from {} of {scope}": "Skapar {} staplar av {} i {scope}",
   "Decoder: {reason}": "Avkodare: {reason}",
   "Delete \"{label}\"": "Radera ”{label}”",
   "Delete \"{label}\" (and the mask)": "Radera ”{label}” (och masken)",
@@ -231,7 +230,6 @@
   "{n} originals opened in the other editor": "{n} original har öppnats i den andra redigeraren",
   "{n} pages": "{n} sidor",
   "{n} photos": "{n} foton",
-  "{n} photos in view · {slides} slides · {time}": "{n} foton i vyn · {slides} bilder · {time}",
   "{n} photos in {} are hidden by the filters above": "{n} foton i {} döljs av filtren ovan",
   "{n} photos opened for editing; each is stacked with its original": "{n} foton har öppnats för redigering; vart och ett staplas med sitt original",
   "{n} photo{}": "{n} foto{}",
@@ -293,7 +291,6 @@
   "Move {n} photo{} to “{}”": "Move {n} photo{} to “{}”",
   "Move {n} photo{} to “{}”?": "Move {n} photo{} to “{}”?",
   "Moved {n} photo{} to “{}”. Edit → Undo moves them back.": "Moved {n} photo{} to “{}”. Edit → Undo moves them back.",
-  "{n} selected photos · {pages} pages": "{n} selected photos · {pages} pages",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "{skipped} catalog images were not imported because their records in the catalog are incomplete.",
   "Listing folders — folders: {folders}, files: {files}": "Listing folders — folders: {folders}, files: {files}",
   "Added {n} photo{}": "{n} foto tillagda{:.0}",
@@ -342,5 +339,8 @@
   "A sidecar of {} couldn't follow it ({}).": "En sidofil till {} kunde inte följa med ({}).",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Biblioteket kunde inte följa de filer som flyttades ({}); Sök efter saknade foton länkar om dem.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Biblioteket följer de filer som flyttades, men det kunde inte sparas ({}).",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopior som togs bort från den nya platsen, eftersom originalet fortfarande låg där biblioteket har det: {}."
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopior som togs bort från den nya platsen, eftersom originalet fortfarande låg där biblioteket har det: {}.",
+  "Creates {stacks} stack{} from {photos} of {scope}": "Skapar staplar: {stacks} · foton: {photos} av {scope}{:.0}",
+  "{n} selected photo{} · {pages} page{}": "Markerade foton: {n} · sidor: {pages}{:.0}{:.0}",
+  "{n} photo{} in view · {slides} slide{} · {time}": "Foton i vyn: {n} · bilder: {slides} · {time}{:.0}{:.0}"
 }
