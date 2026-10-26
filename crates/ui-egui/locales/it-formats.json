@@ -322,5 +322,7 @@
   "Changes found: {n}": "Modifiche trovate: {n}",
   "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "“{name}” è ancora in analisi: attendi, oppure fermala con × sulla sua riga",
   "Look at the changes found in “{name}” first, or dismiss them": "Guarda prima le modifiche trovate in “{name}”, oppure scartale",
-  "Lists “{name}”, the folder this one is in": "Elenca “{name}”, la cartella in cui si trova questa"
+  "Lists “{name}”, the folder this one is in": "Elenca “{name}”, la cartella in cui si trova questa",
+  "Showing {what}": "Mostra {what}",
+  "{title}, showing {what}": "{title}, mostra {what}"
 }

@@ -322,5 +322,7 @@
   "Changes found: {n}": "Perubahan ditemukan: {n}",
   "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "“{name}” masih dipindai: tunggu, atau hentikan dengan × di barisnya",
   "Look at the changes found in “{name}” first, or dismiss them": "Lihat dulu perubahan yang ditemukan di “{name}”, atau tutup",
-  "Lists “{name}”, the folder this one is in": "Menampilkan “{name}”, folder tempat folder ini berada"
+  "Lists “{name}”, the folder this one is in": "Menampilkan “{name}”, folder tempat folder ini berada",
+  "Showing {what}": "Menampilkan {what}",
+  "{title}, showing {what}": "{title}, menampilkan {what}"
 }
