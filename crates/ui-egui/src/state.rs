@@ -790,6 +790,10 @@ pub struct UiState {
     /// The Build Previews run last announced (its identity, finished?).
     #[serde(skip)]
     pub preview_build_seen: Option<(usize, bool)>,
+    /// The library backup whose end was announced (see `backup_status`): an address, only good
+    /// for this run.
+    #[serde(skip)]
+    pub backup_seen: Option<usize>,
     /// Saving the library is failing (announced with a toast; the top bar shows a warning until
     /// a later save succeeds).
     #[serde(skip)]
@@ -1490,6 +1494,7 @@ impl Default for UiState {
             docking_version: crate::docking::DOCKING_VERSION,
             language: crate::i18n::default_language(),
             preview_build_seen: None,
+            backup_seen: None,
             unsaved_seen: false,
             frame_rate: std::env::var("LIGHTCRAFT_FPS").is_ok_and(|v| matches!(v.trim(), "1" | "on" | "true" | "yes")),
             luminance_map_restore: None,
@@ -1781,5 +1786,21 @@ mod loupe_info_tests {
         assert_eq!(saved["loupeMessages"], false);
         let read: AppSettings = serde_json::from_value(saved).unwrap();
         assert!(!read.loupe_messages);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The backup whose end was announced is an address in this run: a settings file never keeps
+    /// it (it could silence the next run's first backup announcement).
+    #[test]
+    fn the_announced_backup_is_not_saved() {
+        let ui = UiState { backup_seen: Some(0x1234), ..UiState::default() };
+        let saved = serde_json::to_string(&ui).unwrap();
+        assert!(!saved.contains("backupSeen") && !saved.contains("backup_seen"), "{saved}");
+        let read: UiState = serde_json::from_str(&saved).unwrap();
+        assert_eq!(read.backup_seen, None);
     }
 }
