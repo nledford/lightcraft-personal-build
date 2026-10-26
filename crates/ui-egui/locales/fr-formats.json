@@ -333,5 +333,6 @@
   "Lists “{name}”, the folder this one is in": "Affiche « {name} », le dossier qui contient celui-ci",
   "Showing {what}": "Affiche {what}",
   "{title}, showing {what}": "{title}, affiche {what}",
-  "+{n} more": "+{n} autres"
+  "+{n} more": "+{n} autres",
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Arrêté : {0} photo(s) sur {1} déplacée(s) vers « {2} ». Modifier → Annuler les remet en place."
 }

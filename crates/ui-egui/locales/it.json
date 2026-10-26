@@ -2479,5 +2479,6 @@
   "This folder stays listed while the grid shows its photos": "Questa cartella resta nell'elenco finché la griglia ne mostra le foto",
   "Keyboard in Sidebar": "Tastiera nella barra laterale",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "I tasti agiscono sulla barra laterale: le frecce spostano, Invio apre, digita per cercare, Esc torna alle foto",
-  "This row has no name to change": "Questa riga non ha un nome da cambiare"
+  "This row has no name to change": "Questa riga non ha un nome da cambiare",
+  "Stopped: no photo was moved": "Interrotto: nessuna foto è stata spostata"
 }

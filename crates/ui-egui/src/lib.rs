@@ -610,7 +610,7 @@ pub struct LightcraftApp {
     /// How far the backup the library has when LightCraft quits has got in this quit (see
     /// `panels::notices`).
     pub quit_backup: QuitBackup,
-    /// Quit Anyway was chosen while photos were moving: the move (which has no ✕) is cut short.
+    /// Quit Anyway was chosen while a move was still finishing the file in hand: quitting doesn't wait for it.
     pub quit_cuts_move: bool,
     control_rx: Option<Receiver<ControlRequest>>,
     pending_screenshots: Vec<PendingShot>,

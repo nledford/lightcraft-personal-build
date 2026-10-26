@@ -2508,5 +2508,6 @@
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Les touches sont dans la barre latérale : les flèches déplacent, Entrée ouvre, tapez pour chercher, Échap revient aux photos",
   "This row has no name to change": "Cette ligne n’a pas de nom à modifier",
   "Moving photos": "Déplacement des photos",
-  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "Une erreur a arrêté le déplacement (voir le journal). La bibliothèque suit les fichiers déjà déplacés ; un fichier annexe XMP peut être resté à l’ancien emplacement."
+  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "Une erreur a arrêté le déplacement (voir le journal). La bibliothèque suit les fichiers déjà déplacés ; un fichier annexe XMP peut être resté à l’ancien emplacement.",
+  "Stopped: no photo was moved": "Arrêté : aucune photo n’a été déplacée"
 }

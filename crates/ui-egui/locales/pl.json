@@ -2401,5 +2401,6 @@
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Klawisze działają na pasku bocznym: strzałki przesuwają, Enter otwiera, pisz, aby szukać, Esc wraca do zdjęć",
   "This row has no name to change": "Ten wiersz nie ma nazwy do zmiany",
   "Moving photos": "Przenoszenie zdjęć",
-  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "Przenoszenie zatrzymał błąd (zobacz dziennik). Biblioteka podąża za plikami, które już przeniesiono; plik sidecar XMP mógł zostać w starym miejscu."
+  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "Przenoszenie zatrzymał błąd (zobacz dziennik). Biblioteka podąża za plikami, które już przeniesiono; plik sidecar XMP mógł zostać w starym miejscu.",
+  "Stopped: no photo was moved": "Zatrzymano: nie przeniesiono żadnego zdjęcia"
 }

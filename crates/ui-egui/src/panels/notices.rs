@@ -51,10 +51,12 @@ pub fn may_close(app: &mut LightcraftApp) -> bool {
     }
     // before the library is touched: a Cancel here keeps working with it
     let mut running = tasks_quitting_would_stop(app);
-    // photos on their way to another folder can't be stopped, but quitting cuts the move short
+    // a move that was stopped is still finishing the file in hand, and the library follows the files that
+    // moved only when it ends: quitting before then leaves them where the library doesn't look
     if app.move_run.is_some()
         && !app.quit_cuts_move
         && let Some(task) = app.session.activity.list().into_iter().find(|t| t.kind == "move")
+        && !running.iter().any(|t| t.id == task.id)
     {
         running.push(task);
     }
@@ -707,7 +709,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
                 // (one that ended meanwhile has nothing left to stop)
                 let _ = app.session.activity.cancel(task.id);
             }
-            // a move can't be stopped, so choosing to quit is what lets it be cut short
+            // a stopped move still finishing its file isn't waited for: choosing to quit is what cuts it short
             app.quit_cuts_move = true;
             // the backup and unsaved changes still get their own questions
             if may_close(app) {

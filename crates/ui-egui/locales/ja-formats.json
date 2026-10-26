@@ -333,5 +333,6 @@
   "Lists “{name}”, the folder this one is in": "このフォルダが入っている「{name}」を表示します",
   "Showing {what}": "{what} を表示中",
   "{title}, showing {what}": "{title}、{what} を表示中",
-  "+{n} more": "ほか{n}件"
+  "+{n} more": "ほか{n}件",
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "停止しました: {1}枚中{0}枚を「{2}」に移動しました。編集 → 取り消す で元に戻せます。"
 }

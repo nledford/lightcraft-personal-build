@@ -333,5 +333,6 @@
   "Look at the changes found in “{name}” first, or dismiss them": "Nejprve si prohlédněte změny nalezené v „{name}“, nebo je zahoďte",
   "Lists “{name}”, the folder this one is in": "Zobrazuje „{name}“, složku, ve které je tato",
   "Showing {what}": "Zobrazeno: {what}",
-  "{title}, showing {what}": "{title}, zobrazeno: {what}"
+  "{title}, showing {what}": "{title}, zobrazeno: {what}",
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Zastaveno: do „{2}“ přesunuto {0} z {1} fotografií. Úpravy → Zpět je vrátí."
 }

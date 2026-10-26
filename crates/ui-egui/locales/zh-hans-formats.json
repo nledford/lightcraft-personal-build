@@ -333,5 +333,6 @@
   "Lists “{name}”, the folder this one is in": "列出此文件夹所在的“{name}”",
   "Showing {what}": "正在显示 {what}",
   "{title}, showing {what}": "{title}，正在显示 {what}",
-  "+{n} more": "还有 {n} 项"
+  "+{n} more": "还有 {n} 项",
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "已停止：已将 {1} 张中的 {0} 张照片移到“{2}”。编辑 → 撤销 可移回。"
 }

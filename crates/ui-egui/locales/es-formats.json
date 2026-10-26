@@ -333,5 +333,6 @@
   "Lists “{name}”, the folder this one is in": "Muestra “{name}”, la carpeta que contiene a esta",
   "Showing {what}": "Mostrando {what}",
   "{title}, showing {what}": "{title}, mostrando {what}",
-  "+{n} more": "+{n} más"
+  "+{n} more": "+{n} más",
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Detenido: {0} de {1} fotos movidas a “{2}”. Editar → Deshacer las devuelve."
 }

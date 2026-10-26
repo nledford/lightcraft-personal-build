@@ -333,5 +333,6 @@
   "Open the sample photo “{title}”": "Mở ảnh mẫu “{title}”",
   "Or explore LightCraft with {n} sample photos": "Hoặc khám phá LightCraft với {n} ảnh mẫu",
   "Press {key} to compare before and after.": "Nhấn {key} để so sánh trước và sau.",
-  "Press {key} to see it beside the original.": "Nhấn {key} để xem nó cạnh bản gốc."
+  "Press {key} to see it beside the original.": "Nhấn {key} để xem nó cạnh bản gốc.",
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Đã dừng: đã di chuyển {0} trên {1} ảnh đến «{2}». Chỉnh sửa → Hoàn tác sẽ đưa chúng trở lại."
 }

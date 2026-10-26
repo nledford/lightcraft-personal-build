@@ -2474,5 +2474,6 @@
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "キーはサイドバーにあります。矢印で移動、Enter で開く、入力で検索、Esc で写真に戻ります",
   "This row has no name to change": "この行には変更できる名前がありません",
   "Moving photos": "写真を移動中",
-  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "エラーのため移動が停止しました（ログを参照）。ライブラリは移動済みのファイルに追従します。XMPサイドカーが元の場所に残っている場合があります。"
+  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "エラーのため移動が停止しました（ログを参照）。ライブラリは移動済みのファイルに追従します。XMPサイドカーが元の場所に残っている場合があります。",
+  "Stopped: no photo was moved": "停止しました: 移動した写真はありません"
 }

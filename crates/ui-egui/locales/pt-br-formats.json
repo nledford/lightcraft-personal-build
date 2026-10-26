@@ -333,5 +333,6 @@
   "Lists “{name}”, the folder this one is in": "Lista “{name}”, a pasta em que esta está",
   "Showing {what}": "Mostrando {what}",
   "{title}, showing {what}": "{title}, mostrando {what}",
-  "+{n} more": "+{n} mais"
+  "+{n} more": "+{n} mais",
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Interrompido: {0} de {1} fotos movidas para “{2}”. Editar → Desfazer as traz de volta."
 }

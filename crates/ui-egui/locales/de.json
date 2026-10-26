@@ -3556,5 +3556,6 @@
   "This folder stays listed while the grid shows its photos": "Dieser Ordner bleibt aufgelistet, solange das Raster seine Fotos zeigt",
   "Keyboard in Sidebar": "Tastatur in der Seitenleiste",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Die Tasten gelten der Seitenleiste: Pfeile bewegen, Eingabe öffnet, Tippen sucht, Esc führt zurück zu den Fotos",
-  "This row has no name to change": "Diese Zeile hat keinen Namen, der sich ändern ließe"
+  "This row has no name to change": "Diese Zeile hat keinen Namen, der sich ändern ließe",
+  "Stopped: no photo was moved": "Angehalten: kein Foto wurde verschoben"
 }
