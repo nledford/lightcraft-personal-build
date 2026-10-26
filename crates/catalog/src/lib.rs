@@ -23,6 +23,7 @@ pub mod library_tally;
 pub mod local;
 pub mod lock;
 pub mod model;
+mod order;
 pub mod query;
 pub mod restore;
 pub mod rules;
@@ -843,6 +844,7 @@ impl Catalog {
         ids.dedup();
         ids
     }
+
     fn album_mut(&mut self, id: AlbumId) -> Result<&mut Album> {
         self.albums.get_mut(&id).ok_or(CatalogError::NoAlbum(id))
     }
@@ -1421,6 +1423,7 @@ impl Catalog {
         let demo = || self.photos.values().filter(|p| matches!(p.source, Source::Demo { .. }));
         (self.demo_photos, self.demo_in_library) = (demo().count(), demo().filter(|p| p.in_library()).count());
         let mut changed = Vec::new();
+        self.index.orders.forget();
         for (id, p) in self.photos.iter_mut() {
             if p.id != *id {
                 changed.push(format!("photo {} was filed as {}", p.id.0, id.0));
@@ -1636,6 +1639,8 @@ mod tests_library_tally;
 mod tests_local;
 #[cfg(test)]
 mod tests_lock;
+#[cfg(test)]
+mod tests_order;
 #[cfg(test)]
 mod tests_policy;
 #[cfg(test)]

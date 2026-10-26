@@ -32,6 +32,8 @@ pub(crate) struct Indexes {
     contents: OnceLock<HashMap<String, Vec<PhotoId>>>,
     /// Whether a smart album asks whether a photo has the same content as another ([`Catalog::follows_contents`]).
     contents_asked: OnceLock<bool>,
+    /// Every photo in each sort order, see [`crate::order`].
+    pub(crate) orders: crate::order::Orders,
 }
 
 /// A copy builds its own when asked (copies are made to be saved, not queried).

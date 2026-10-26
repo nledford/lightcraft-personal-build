@@ -2469,5 +2469,6 @@
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Pustaka ini terbuka tanpa kuncinya, sehingga pemindahan yang terputus dibiarkan apa adanya sampai pustaka dibuka dengan kunci; Cari foto hilang menautkan kembali file yang sudah dipindahkan.",
   "Unfinished moves": "Pemindahan yang belum selesai",
   "White": "Putih",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Tampilan → Overlay loupe → Opsi Tampilan memilih baris yang ditampilkan Info 1 dan Info 2."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Tampilan → Overlay loupe → Opsi Tampilan memilih baris yang ditampilkan Info 1 dan Info 2.",
+  "Sorting the library": "Mengurutkan pustaka"
 }

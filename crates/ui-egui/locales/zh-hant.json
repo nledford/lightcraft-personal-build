@@ -2286,5 +2286,6 @@
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "移動因發生錯誤而停止（見記錄）。照片庫可能沒有跟隨所有已移動的檔案：用「尋找遺失的照片」可重新連結遺失的檔案。",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "此照片庫未取得鎖定就被開啟，因此被中斷的移動會保持原樣，直到照片庫以鎖定開啟；用「尋找遺失的照片」可重新連結已移動的檔案。",
   "Unfinished moves": "未完成的移動",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "檢視 → 放大鏡疊加 → 檢視選項 可選擇「資訊 1」和「資訊 2」顯示的行。"
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "檢視 → 放大鏡疊加 → 檢視選項 可選擇「資訊 1」和「資訊 2」顯示的行。",
+  "Sorting the library": "正在排序照片庫"
 }

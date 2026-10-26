@@ -2485,5 +2485,6 @@
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "エラーのため移動が停止しました（ログを参照）。ライブラリが移動済みのすべてのファイルに追従していない場合があります。見つからなくなったものは「見つからない写真を探す」で再リンクできます。",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "このライブラリはロックなしで開かれているため、中断された移動は、ロック付きで開かれるまでそのままにされます。移動済みのファイルは「見つからない写真を探す」で再リンクできます。",
   "Unfinished moves": "未完了の移動",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "表示 → ルーペのオーバーレイ → 表示オプション で、情報1と情報2に表示する行を選びます。"
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "表示 → ルーペのオーバーレイ → 表示オプション で、情報1と情報2に表示する行を選びます。",
+  "Sorting the library": "ライブラリを並べ替え中"
 }

@@ -2331,5 +2331,6 @@
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Um erro interrompeu a movimentação (veja o registro). A biblioteca pode não acompanhar todos os arquivos que já tinham sido movidos: Localizar fotos ausentes vincula de novo os que ela perdeu.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Esta biblioteca está aberta sem o bloqueio, então as movimentações interrompidas ficam como estão até que ela seja aberta com o bloqueio; Localizar fotos ausentes vincula de novo os arquivos que foram movidos.",
   "Unfinished moves": "Movimentações inacabadas",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Exibir → Sobreposição da lupa → Opções de exibição escolhe as linhas que Info 1 e Info 2 mostram."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Exibir → Sobreposição da lupa → Opções de exibição escolhe as linhas que Info 1 e Info 2 mostram.",
+  "Sorting the library": "Ordenando a biblioteca"
 }

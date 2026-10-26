@@ -2489,5 +2489,6 @@
   "Stopped: no photo was moved": "Interrotto: nessuna foto è stata spostata",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Questa libreria è aperta senza il suo blocco, quindi gli spostamenti interrotti restano come sono finché non viene aperta con il blocco; Trova foto mancanti ricollega i file spostati.",
   "Unfinished moves": "Spostamenti incompleti",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Visualizza → Sovrapposizione lente → Opzioni di visualizzazione sceglie le righe di Info 1 e Info 2."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Visualizza → Sovrapposizione lente → Opzioni di visualizzazione sceglie le righe di Info 1 e Info 2.",
+  "Sorting the library": "Ordinamento della libreria"
 }

@@ -3567,5 +3567,6 @@
   "Stopped: no photo was moved": "Angehalten: kein Foto wurde verschoben",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Diese Bibliothek ist ohne ihre Sperre geöffnet; abgebrochene Verschiebungen bleiben daher unverändert, bis sie mit der Sperre geöffnet wird. Fehlende Fotos suchen verknüpft verschobene Dateien neu.",
   "Unfinished moves": "Unvollständige Verschiebungen",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Ansicht → Lupenüberlagerung → Ansichtsoptionen legt fest, welche Zeilen Info 1 und Info 2 zeigen."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Ansicht → Lupenüberlagerung → Ansichtsoptionen legt fest, welche Zeilen Info 1 und Info 2 zeigen.",
+  "Sorting the library": "Bibliothek wird sortiert"
 }

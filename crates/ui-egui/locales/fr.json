@@ -2519,5 +2519,6 @@
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Une erreur a arrêté le déplacement (voir le journal). La bibliothèque peut ne pas suivre tous les fichiers déjà déplacés : Rechercher les photos manquantes rétablit le lien de ceux qu’elle a perdus.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Cette bibliothèque est ouverte sans son verrou : les déplacements interrompus sont laissés tels quels jusqu’à une ouverture avec le verrou ; Rechercher les photos manquantes relie à nouveau les fichiers déplacés.",
   "Unfinished moves": "Déplacements inachevés",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Affichage → Incrustation de la loupe → Options d'affichage choisit les lignes que montrent Info 1 et Info 2."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Affichage → Incrustation de la loupe → Options d'affichage choisit les lignes que montrent Info 1 et Info 2.",
+  "Sorting the library": "Tri de la bibliothèque"
 }

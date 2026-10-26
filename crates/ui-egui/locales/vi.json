@@ -2364,5 +2364,6 @@
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Thư viện này được mở mà không có khóa, nên các lần di chuyển bị gián đoạn được giữ nguyên cho đến khi thư viện được mở với khóa; Tìm ảnh bị thiếu sẽ liên kết lại các tệp đã được di chuyển.",
   "Unfinished moves": "Lần di chuyển chưa hoàn tất",
   "White": "Trắng",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Xem → Lớp phủ kính lúp → Tùy chọn xem chọn các dòng mà Info 1 và Info 2 hiển thị."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Xem → Lớp phủ kính lúp → Tùy chọn xem chọn các dòng mà Info 1 và Info 2 hiển thị.",
+  "Sorting the library": "Đang sắp xếp thư viện"
 }

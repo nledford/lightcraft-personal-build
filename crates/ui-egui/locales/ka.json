@@ -2863,5 +2863,6 @@
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "გადატანა შეცდომის გამო შეჩერდა (იხილეთ ჟურნალი). ბიბლიოთეკამ შეიძლება ყველა უკვე გადატანილ ფაილს ვერ მიჰყვეს: დაკარგულებს „დაკარგული ფოტოების მოძებნა“ თავიდან დააკავშირებს.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "ეს ბიბლიოთეკა ჩაკეტვის გარეშეა გახსნილი, ამიტომ შეწყვეტილი გადატანები უცვლელად რჩება, სანამ ბიბლიოთეკა ჩაკეტვით არ გაიხსნება; გადატანილ ფაილებს „დაკარგული ფოტოების მოძებნა“ თავიდან დააკავშირებს.",
   "Unfinished moves": "დაუსრულებელი გადატანები",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "ხედი → ლუპის ზედდება → ხედის პარამეტრები ირჩევს სტრიქონებს, რომლებსაც Info 1 და Info 2 აჩვენებს."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "ხედი → ლუპის ზედდება → ხედის პარამეტრები ირჩევს სტრიქონებს, რომლებსაც Info 1 და Info 2 აჩვენებს.",
+  "Sorting the library": "ბიბლიოთეკის დახარისხება"
 }
