@@ -314,5 +314,6 @@
   "Older backups that could not be removed: {}": "Vanhoja varmuuskopioita, joita ei voitu poistaa: {}",
   "Backups in {}": "Varmuuskopiot kansiossa {}",
   "Folders of what restores replaced, removed: {}": "Palautusten korvaaman sisällön kansioita poistettu: {}",
-  "Folders of what restores replaced that could not be removed: {}": "Palautusten korvaaman sisällön kansioita, joita ei voitu poistaa: {}"
+  "Folders of what restores replaced that could not be removed: {}": "Palautusten korvaaman sisällön kansioita, joita ei voitu poistaa: {}",
+  "Not available right now: {}": "Ei käytettävissä juuri nyt: {}"
 }

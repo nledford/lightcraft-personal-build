@@ -226,6 +226,12 @@
 - File ▸ Restore Library from Backup… now lists the library's backups to choose from, newest first, with when each
   was made, how many photos it holds and its size; a backup of another library in the same folder is marked. Choose
   Folder… is still there for a backup kept elsewhere, and also takes the folder the backups are in.
+- `lightcraft-cli run` waits for a restore or backup it started with `background=true`, and says how it ended, one
+  line for each. It exits non-zero if any of them failed, even when a later one worked.
+- Why a backup or a restore can't be made right now, or was not made (one is running already, the library is being
+  restored, it was stopped or given up), is said in your language. Errors that name a folder or a file are still in English.
+- A backup restored into another folder (`library.restore` with `to`) is now checked to open as a library there;
+  one that doesn't is taken back, as a restore of the open library already was.
 - What restores replaced (the Replaced folder in the library) no longer piles up for a library that keeps its
   backups for a time: those folders go with the old backups, by the same rule, and the newest three stay (a folder
   named `… (not opened)`, which holds a backup that did not open and not what the library was, goes by its age and

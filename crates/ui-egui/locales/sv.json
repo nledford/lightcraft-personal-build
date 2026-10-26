@@ -2471,5 +2471,13 @@
   "another library": "ett annat bibliotek",
   "Choose a backup first": "Välj först en säkerhetskopia",
   "The library becomes what it was when the backup was made. What it holds now is kept in Replaced in the library folder.": "Biblioteket blir som det var när säkerhetskopian gjordes. Det som finns i det nu sparas i Replaced i biblioteksmappen.",
-  "What restores replaced (Replaced in the library folder) goes by the same rule.": "Det som återställningar har ersatt (Replaced i biblioteksmappen) följer samma regel."
+  "What restores replaced (Replaced in the library folder) goes by the same rule.": "Det som återställningar har ersatt (Replaced i biblioteksmappen) följer samma regel.",
+  "Choose a Folder": "Välj en mapp",
+  "a restore of this library is under way": "en återställning av det här biblioteket pågår",
+  "a backup of this library is running": "en säkerhetskopiering av det här biblioteket pågår",
+  "a restore of this library stopped part-way; open the library again": "en återställning av det här biblioteket avbröts halvvägs; öppna biblioteket igen",
+  "the library is not a folder on disk": "biblioteket är inte en mapp på disken",
+  "the library was closed or opened again before the backup was moved into place; it is as it was": "biblioteket stängdes eller öppnades igen innan säkerhetskopian flyttades på plats; det är som det var",
+  "the backup was cancelled": "säkerhetskopieringen avbröts",
+  "the restore was stopped; the library is as it was": "återställningen stoppades; biblioteket är som det var"
 }
