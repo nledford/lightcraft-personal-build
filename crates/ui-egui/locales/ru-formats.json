@@ -365,5 +365,9 @@
   "Panel layout could not be restored: {error}": "Не удалось восстановить расположение панелей: {error}",
   "Panel move was not applied: {error}": "Перемещение панели не применено: {error}",
   "{name} is installed": "Модель {name} установлена",
-  "{name} is installed and in use: face recognition is on": "Модель {name} установлена и используется: распознавание лиц включено"
+  "{name} is installed and in use: face recognition is on": "Модель {name} установлена и используется: распознавание лиц включено",
+  "Move “{name}” into “{into}”": "Переместить «{name}» в «{into}»",
+  "Move “{name}” into “{into}”?": "Переместить «{name}» в «{into}»?",
+  "Photos in it and in the folders inside it: {count}": "Фото в ней и в папках внутри неё: {count}",
+  "“{name}” is no longer there: nothing was moved": "«{name}» больше нет: ничего не перемещено"
 }

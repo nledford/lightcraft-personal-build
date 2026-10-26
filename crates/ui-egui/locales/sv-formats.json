@@ -365,5 +365,9 @@
   "Only {found} of this folder's {total} photos are in:": "Bara {found} av mappens {total} foton finns i:",
   "Only {found} of this folder's {total} photos are in “{name}”: the folder was not located": "Bara {found} av mappens {total} foton finns i ”{name}”: mappen hittades inte",
   "Files there that are not the size the library recorded: {n}": "Filer där som inte har den storlek biblioteket registrerade: {n}",
-  "Folder located. Photos relinked: {n}": "Mappen har hittats. Omlänkade foton: {n}"
+  "Folder located. Photos relinked: {n}": "Mappen har hittats. Omlänkade foton: {n}",
+  "Move “{name}” into “{into}”": "Flytta ”{name}” till ”{into}”",
+  "Move “{name}” into “{into}”?": "Flytta ”{name}” till ”{into}”?",
+  "Photos in it and in the folders inside it: {count}": "Foton i den och i mapparna i den: {count}",
+  "“{name}” is no longer there: nothing was moved": "”{name}” finns inte längre: inget flyttades"
 }

@@ -365,5 +365,9 @@
   "Only {found} of this folder's {total} photos are in:": "Hanya {found} dari {total} foto folder ini ada di:",
   "Only {found} of this folder's {total} photos are in “{name}”: the folder was not located": "Hanya {found} dari {total} foto folder ini ada di “{name}”: folder tidak ditemukan",
   "Files there that are not the size the library recorded: {n}": "File di sana yang ukurannya tidak sama dengan yang dicatat pustaka: {n}",
-  "Folder located. Photos relinked: {n}": "Folder ditemukan. Foto yang ditautkan ulang: {n}"
+  "Folder located. Photos relinked: {n}": "Folder ditemukan. Foto yang ditautkan ulang: {n}",
+  "Move “{name}” into “{into}”": "Pindahkan “{name}” ke “{into}”",
+  "Move “{name}” into “{into}”?": "Pindahkan “{name}” ke “{into}”?",
+  "Photos in it and in the folders inside it: {count}": "Foto di dalamnya dan di folder di dalamnya: {count}",
+  "“{name}” is no longer there: nothing was moved": "“{name}” tidak ditemukan lagi: tidak ada yang dipindahkan"
 }

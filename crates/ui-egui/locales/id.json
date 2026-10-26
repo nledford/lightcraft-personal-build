@@ -2537,5 +2537,9 @@
   "Choose the folder in the dialog that is already open": "Pilih folder di dialog yang sudah terbuka",
   "Locate Anyway": "Tetap temukan",
   "Locate the folder there anyway?": "Tetap temukan folder di sana?",
-  "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "Foto lainnya tetap hilang di sana; Sinkronkan folder dapat menemukannya lagi atau menghapusnya dari pustaka. Tidak ada file yang diubah."
+  "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "Foto lainnya tetap hilang di sana; Sinkronkan folder dapat menemukannya lagi atau menghapusnya dari pustaka. Tidak ada file yang diubah.",
+  "The library's own folder can't be moved": "Folder pustaka itu sendiri tidak dapat dipindahkan",
+  "A folder can't move into itself or a folder inside it": "Folder tidak dapat dipindahkan ke dalam dirinya sendiri atau folder di dalamnya",
+  "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "Folder, file, dan sidecar XMP-nya ikut dipindahkan di disk. Edit → Urungkan akan memindahkannya kembali.",
+  "Another library was opened since the folder was dropped: nothing was moved": "Pustaka lain telah dibuka setelah folder diletakkan: tidak ada yang dipindahkan"
 }

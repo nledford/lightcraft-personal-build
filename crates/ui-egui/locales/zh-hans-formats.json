@@ -365,5 +365,9 @@
   "Panel layout could not be restored: {error}": "无法恢复面板布局：{error}",
   "Panel move was not applied: {error}": "面板移动未应用：{error}",
   "{name} is installed": "{name} 已安装",
-  "{name} is installed and in use: face recognition is on": "{name} 已安装并在使用：人脸识别已开启"
+  "{name} is installed and in use: face recognition is on": "{name} 已安装并在使用：人脸识别已开启",
+  "Move “{name}” into “{into}”": "将“{name}”移到“{into}”",
+  "Move “{name}” into “{into}”?": "将“{name}”移到“{into}”？",
+  "Photos in it and in the folders inside it: {count}": "其中及其子文件夹中的照片：{count}",
+  "“{name}” is no longer there: nothing was moved": "“{name}”已不存在：未移动任何内容"
 }

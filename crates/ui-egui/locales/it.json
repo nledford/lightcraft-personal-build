@@ -2556,5 +2556,9 @@
   "Choose the folder in the dialog that is already open": "Scegli la cartella nella finestra di dialogo già aperta",
   "Locate Anyway": "Localizza comunque",
   "Locate the folder there anyway?": "Localizzare comunque la cartella lì?",
-  "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "Le altre foto restano mancanti lì; Sincronizza cartella può ritrovarle o rimuoverle dalla libreria. Nessun file viene toccato."
+  "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "Le altre foto restano mancanti lì; Sincronizza cartella può ritrovarle o rimuoverle dalla libreria. Nessun file viene toccato.",
+  "The library's own folder can't be moved": "La cartella della libreria stessa non può essere spostata",
+  "A folder can't move into itself or a folder inside it": "Una cartella non può essere spostata in se stessa o in una cartella al suo interno",
+  "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "La cartella, i suoi file e i file XMP collegati vengono spostati sul disco. Modifica → Annulla la riporta indietro.",
+  "Another library was opened since the folder was dropped: nothing was moved": "Dopo il trascinamento della cartella è stata aperta un'altra libreria: non è stato spostato nulla"
 }

@@ -2930,5 +2930,9 @@
   "Set up face recognition": "სახეების ამოცნობის დაყენება",
   "Face recognition needs a model to suggest names: a one-time download, in Settings.": "სახეების ამოცნობას სახელების შესათავაზებლად მოდელი სჭირდება: ერთჯერადი ჩამოტვირთვა, პარამეტრებში.",
   "Turn on name suggestions": "სახელების შეთავაზებების ჩართვა",
-  "Set up name suggestions…": "სახელების შეთავაზებების დაყენება…"
+  "Set up name suggestions…": "სახელების შეთავაზებების დაყენება…",
+  "The library's own folder can't be moved": "ბიბლიოთეკის საკუთარი საქაღალდის გადატანა შეუძლებელია",
+  "A folder can't move into itself or a folder inside it": "საქაღალდის საკუთარ თავში ან მის შიგნით არსებულ საქაღალდეში გადატანა შეუძლებელია",
+  "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "საქაღალდე, მისი ფაილები და XMP თანმხლები ფაილები დისკზე გადაადგილდება. რედაქტირება → დაბრუნება მას უკან დააბრუნებს.",
+  "Another library was opened since the folder was dropped: nothing was moved": "საქაღალდის ჩაგდების შემდეგ სხვა ბიბლიოთეკა გაიხსნა: არაფერი გადატანილა"
 }

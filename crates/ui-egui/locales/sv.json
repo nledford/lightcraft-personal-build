@@ -2624,5 +2624,9 @@
   "Choose the folder in the dialog that is already open": "Välj mappen i dialogrutan som redan är öppen",
   "Locate Anyway": "Leta upp ändå",
   "Locate the folder there anyway?": "Leta upp mappen där ändå?",
-  "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "De andra fotona förblir saknade där; Synkronisera mapp kan hitta dem igen eller ta bort dem från biblioteket. Ingen fil påverkas."
+  "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "De andra fotona förblir saknade där; Synkronisera mapp kan hitta dem igen eller ta bort dem från biblioteket. Ingen fil påverkas.",
+  "The library's own folder can't be moved": "Bibliotekets egen mapp kan inte flyttas",
+  "A folder can't move into itself or a folder inside it": "En mapp kan inte flyttas till sig själv eller till en mapp i den",
+  "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "Mappen, dess filer och XMP-sidofiler flyttas på disken. Redigera → Ångra flyttar tillbaka den.",
+  "Another library was opened since the folder was dropped: nothing was moved": "Ett annat bibliotek öppnades efter att mappen släpptes: inget flyttades"
 }

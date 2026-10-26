@@ -365,5 +365,9 @@
   "Panel layout could not be restored: {error}": "Die Bereichsanordnung konnte nicht wiederhergestellt werden: {error}",
   "Panel move was not applied: {error}": "Das Verschieben des Bereichs wurde nicht ausgeführt: {error}",
   "{name} is installed": "{name} ist installiert",
-  "{name} is installed and in use: face recognition is on": "{name} ist installiert und in Gebrauch: Gesichtserkennung ist eingeschaltet"
+  "{name} is installed and in use: face recognition is on": "{name} ist installiert und in Gebrauch: Gesichtserkennung ist eingeschaltet",
+  "Move “{name}” into “{into}”": "„{name}“ nach „{into}“ verschieben",
+  "Move “{name}” into “{into}”?": "„{name}“ nach „{into}“ verschieben?",
+  "Photos in it and in the folders inside it: {count}": "Fotos darin und in den Ordnern darin: {count}",
+  "“{name}” is no longer there: nothing was moved": "„{name}“ ist nicht mehr vorhanden: Es wurde nichts verschoben"
 }

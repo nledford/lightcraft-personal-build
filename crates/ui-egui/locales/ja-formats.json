@@ -365,5 +365,9 @@
   "Panel layout could not be restored: {error}": "パネル配置を復元できませんでした：{error}",
   "Panel move was not applied: {error}": "パネルの移動は適用されませんでした：{error}",
   "{name} is installed": "{name} をインストールしました",
-  "{name} is installed and in use: face recognition is on": "{name} をインストールして使用中です：顔認識はオンです"
+  "{name} is installed and in use: face recognition is on": "{name} をインストールして使用中です：顔認識はオンです",
+  "Move “{name}” into “{into}”": "「{name}」を「{into}」に移動",
+  "Move “{name}” into “{into}”?": "「{name}」を「{into}」に移動しますか？",
+  "Photos in it and in the folders inside it: {count}": "その中およびその中のフォルダ内の写真：{count}",
+  "“{name}” is no longer there: nothing was moved": "「{name}」が見つかりません。何も移動していません"
 }

@@ -365,5 +365,9 @@
   "Only {found} of this folder's {total} photos are in:": "Vain {found} tämän kansion {total} kuvasta on kansiossa:",
   "Only {found} of this folder's {total} photos are in “{name}”: the folder was not located": "Vain {found} tämän kansion {total} kuvasta on kansiossa ”{name}”: kansiota ei paikannettu",
   "Files there that are not the size the library recorded: {n}": "Siellä olevat tiedostot, joiden koko ei vastaa kirjaston tallentamaa: {n}",
-  "Folder located. Photos relinked: {n}": "Kansio paikannettu. Uudelleen yhdistettyjä kuvia: {n}"
+  "Folder located. Photos relinked: {n}": "Kansio paikannettu. Uudelleen yhdistettyjä kuvia: {n}",
+  "Move “{name}” into “{into}”": "Siirrä ”{name}” kohteeseen ”{into}”",
+  "Move “{name}” into “{into}”?": "Siirretäänkö ”{name}” kohteeseen ”{into}”?",
+  "Photos in it and in the folders inside it: {count}": "Kuvia siinä ja sen sisällä olevissa kansioissa: {count}",
+  "“{name}” is no longer there: nothing was moved": "”{name}” ei ole enää siellä: mitään ei siirretty"
 }

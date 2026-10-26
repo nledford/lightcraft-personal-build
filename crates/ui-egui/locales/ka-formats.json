@@ -365,5 +365,9 @@
   "Panel layout could not be restored: {error}": "პანელების განლაგების აღდგენა ვერ მოხერხდა: {error}",
   "Panel move was not applied: {error}": "პანელის გადატანა არ შესრულდა: {error}",
   "{name} is installed": "{name} დაინსტალირებულია",
-  "{name} is installed and in use: face recognition is on": "{name} დაინსტალირებულია და გამოიყენება: სახეების ამოცნობა ჩართულია"
+  "{name} is installed and in use: face recognition is on": "{name} დაინსტალირებულია და გამოიყენება: სახეების ამოცნობა ჩართულია",
+  "Move “{name}” into “{into}”": "„{name}“-ის გადატანა „{into}“-ში",
+  "Move “{name}” into “{into}”?": "გადავიტანოთ „{name}“ „{into}“-ში?",
+  "Photos in it and in the folders inside it: {count}": "ფოტო მასში და მის შიგნით არსებულ საქაღალდეებში: {count}",
+  "“{name}” is no longer there: nothing was moved": "„{name}“ აქ აღარ არის: არაფერი გადატანილა"
 }
