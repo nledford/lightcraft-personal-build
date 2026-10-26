@@ -753,3 +753,192 @@ fn a_leftover_copy_of_a_backup_is_cleared_away() {
     assert!(same(&opened(&dir), &then));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+// ---- what restores replaced, and removing it
+
+/// The folders of `Replaced` in `dir`, by name, with whether each is as a restore left it.
+fn replaced_in(dir: &Path) -> Vec<(String, bool)> {
+    restore::replaced(dir, ALSO).into_iter().map(|r| (r.name, r.untouched)).collect()
+}
+
+/// Given a library that was restored twice, then what each restore replaced is listed by its
+/// folder's name with its size, and each is as the restore left it. A folder of `Replaced` that
+/// something else was put into, or that was opened as a library since (it has a lock), is listed
+/// as touched; a file and a link there are not listed at all.
+#[test]
+fn what_restores_replaced_is_listed_and_what_was_touched_since_is_told_apart() {
+    let dir = temp("replaced-list");
+    let (made, _, _) = backed_up_and_changed(&dir);
+    assert_eq!(replaced_in(&dir), Vec::new(), "never restored: nothing");
+    restored(&made.dir, &dir, "first");
+    restored(&made.dir, &dir, "second");
+    restored(&made.dir, &dir, "third");
+    assert_eq!(replaced_in(&dir), [("first".to_string(), true), ("second".to_string(), true), ("third".to_string(), true)]);
+    assert!(restore::replaced(&dir, ALSO).iter().all(|r| r.bytes > 0 && r.dir == dir.join(REPLACED).join(&r.name)));
+
+    let replaced = dir.join(REPLACED);
+    std::fs::write(replaced.join("first").join("notes.txt"), b"mine").unwrap();
+    std::fs::write(replaced.join("second").join(crate::lock::LOCK), b"").unwrap();
+    std::fs::write(replaced.join("a file"), b"x").unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(replaced.join("third"), replaced.join("a link")).unwrap();
+    assert_eq!(replaced_in(&dir), [("first".to_string(), false), ("second".to_string(), false), ("third".to_string(), true)]);
+}
+
+/// Given what three restores replaced, when one is removed, then it is gone as a whole and the
+/// others and the library are as they were. Only what a restore left, untouched, is removed: a
+/// folder something else was put into, a name that is no plain folder name, and a folder that
+/// is not there are refused, and nothing changes.
+#[test]
+fn what_a_restore_replaced_is_removed_only_as_the_restore_left_it() {
+    let dir = temp("replaced-remove");
+    let (made, then, _) = backed_up_and_changed(&dir);
+    restored(&made.dir, &dir, "first");
+    restored(&made.dir, &dir, "second");
+    restored(&made.dir, &dir, "third");
+    let replaced = dir.join(REPLACED);
+    let before = files(&replaced.join("third"));
+
+    restore::remove_replaced(&dir, "first", ALSO).unwrap();
+    assert!(!replaced.join("first").exists() && !replaced.join("first.partial").exists());
+    assert_eq!(replaced_in(&dir), [("second".to_string(), true), ("third".to_string(), true)]);
+    assert_eq!(files(&replaced.join("third")), before);
+    assert!(same(&opened(&dir), &then), "the library is the backup still");
+
+    std::fs::write(replaced.join("second").join("notes.txt"), b"mine").unwrap();
+    for (name, why) in [("second", "notes.txt"), ("fourth", "not"), ("../third", "name"), ("", "name"), ("third/segments", "name")] {
+        let e = restore::remove_replaced(&dir, name, ALSO).unwrap_err().to_string();
+        assert!(e.contains(why), "{name}: {e}");
+    }
+    assert!(replaced.join("second").join("notes.txt").is_file());
+    assert_eq!(files(&replaced.join("third")), before);
+    // the last one gone, the folder for them goes too
+    std::fs::remove_file(replaced.join("second").join("notes.txt")).unwrap();
+    restore::remove_replaced(&dir, "second", ALSO).unwrap();
+    restore::remove_replaced(&dir, "third", ALSO).unwrap();
+    assert!(!replaced.exists());
+    assert!(same(&opened(&dir), &then));
+}
+
+/// Nothing of `Replaced` is listed or removed while a restore of the library is cut short: its
+/// note names a folder there, and finishing it comes first. A removal that was cut short leaves
+/// `<name>.partial`, which is listed as on its way out and can be removed.
+#[test]
+fn nothing_is_removed_from_replaced_while_a_restore_is_cut_short() {
+    let (dir, made, _, _) = stopped_where("replaced-pending", |dir| dir.join(PENDING).exists());
+    assert!(restore::replaced(&dir, ALSO).is_empty());
+    assert!(restore::remove_replaced(&dir, "before", ALSO).is_err());
+    restore::finish(&dir).unwrap();
+    restored(&made.dir, &dir, "again");
+    let replaced = dir.join(REPLACED);
+    std::fs::rename(replaced.join("again"), replaced.join("again.partial")).unwrap();
+    let going: Vec<(String, bool)> = restore::replaced(&dir, ALSO).into_iter().map(|r| (r.name, r.going)).collect();
+    assert!(going.contains(&("again.partial".to_string(), true)), "{going:?}");
+    restore::remove_replaced(&dir, "again.partial", ALSO).unwrap();
+    assert!(!replaced.join("again.partial").exists());
+}
+
+/// What else makes a folder of `Replaced` somebody's: a folder in it (a library opened there
+/// makes its own), a file in its segments that is no segment, and it says what. A `Replaced`
+/// that is a link to a folder elsewhere is not looked into at all, and a `<name>.partial` in
+/// the way of a removal stops it.
+#[test]
+fn a_folder_of_replaced_with_anything_else_in_it_is_told_and_left() {
+    let dir = temp("replaced-other");
+    let (made, _, _) = backed_up_and_changed(&dir);
+    for name in ["first", "second", "third"] {
+        restored(&made.dir, &dir, name);
+    }
+    let replaced = dir.join(REPLACED);
+    std::fs::create_dir_all(replaced.join("first").join("Backups")).unwrap();
+    std::fs::create_dir_all(replaced.join("second").join("segments")).unwrap();
+    std::fs::write(replaced.join("second").join("segments").join("holiday.jpg"), b"x").unwrap();
+    let told: Vec<(String, Option<String>)> = restore::replaced(&dir, ALSO).into_iter().map(|r| (r.name, r.other)).collect();
+    assert_eq!(told[0].0, "first");
+    assert!(told[0].1.as_deref().is_some_and(|o| o.contains("Backups")), "{told:?}");
+    assert!(told[1].1.as_deref().is_some_and(|o| o.contains("holiday.jpg")), "{told:?}");
+    assert_eq!(told[2], ("third".to_string(), None));
+    for name in ["first", "second"] {
+        assert!(restore::remove_replaced(&dir, name, ALSO).is_err(), "{name}");
+    }
+    assert!(replaced.join("second").join("segments").join("holiday.jpg").is_file());
+
+    std::fs::create_dir_all(replaced.join("third.partial")).unwrap();
+    let e = restore::remove_replaced(&dir, "third", ALSO).unwrap_err().to_string();
+    assert!(e.contains("in the way"), "{e}");
+    assert!(replaced.join("third").join(SNAPSHOT).is_file());
+
+    #[cfg(unix)]
+    {
+        let elsewhere = temp("replaced-elsewhere");
+        std::fs::remove_dir_all(replaced.join("third.partial")).unwrap();
+        std::fs::rename(&replaced, &elsewhere).unwrap();
+        std::os::unix::fs::symlink(&elsewhere, &replaced).unwrap();
+        assert!(restore::replaced(&dir, ALSO).is_empty());
+        assert!(restore::remove_replaced(&dir, "third", ALSO).is_err());
+        assert!(elsewhere.join("third").join(SNAPSHOT).is_file());
+    }
+}
+
+/// A removal of what a restore replaced that is stopped part-way (a segment that can't be
+/// removed) never leaves a folder that looks whole under its own name: either nothing of it went
+/// and it has its name back, or what is left stays `<name>.partial` and is said to be.
+#[cfg(unix)]
+#[test]
+fn a_removal_of_replaced_that_got_part_way_leaves_no_folder_that_looks_whole() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = temp("replaced-part-way");
+    // (a process that may remove from any folder, as root in a container, can't be refused: nothing to look at)
+    let probe = dir.join("probe");
+    std::fs::create_dir_all(&probe).unwrap();
+    std::fs::write(probe.join("x"), b"x").unwrap();
+    std::fs::set_permissions(&probe, std::fs::Permissions::from_mode(0o555)).unwrap();
+    let refused = std::fs::remove_file(probe.join("x")).is_err();
+    std::fs::set_permissions(&probe, std::fs::Permissions::from_mode(0o755)).unwrap();
+    if !refused {
+        let _ = std::fs::remove_dir_all(&dir);
+        return;
+    }
+    let _ = std::fs::remove_dir_all(&probe);
+    let (made, _, _) = backed_up_and_changed(&dir);
+    let replaced = dir.join(REPLACED);
+    let mode = |path: &Path, mode: u32| {
+        let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode));
+    };
+    // (which file a removal stops at is the file system's order, so each of several folders is
+    // looked at as it comes out: whichever it was, the folder is whole under its name or it is `.partial`)
+    for k in 0..8 {
+        let name = format!("again-{k}");
+        restored(&made.dir, &dir, &name);
+        let (folder, locked) = (replaced.join(&name), replaced.join(&name).join(crate::segments::SEGMENT_DIR));
+        let before = files(&folder);
+        mode(&locked, 0o555);
+        let result = restore::remove_replaced(&dir, &name, ALSO);
+        // (it may have been named `<name>.partial`)
+        mode(&locked, 0o755);
+        mode(&replaced.join(format!("{name}.partial")).join(crate::segments::SEGMENT_DIR), 0o755);
+        let e = result.expect_err("a segment can't be removed").to_string();
+        if folder.exists() {
+            assert_eq!(files(&folder), before, "{name} is under its own name, and is not whole: {e}");
+            assert!(e.contains("as it was"), "{e}");
+        } else {
+            assert!(replaced.join(format!("{name}.partial")).exists() && e.contains(".partial"), "{name}: {e}");
+        }
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A folder of `Replaced` that Finder or Explorer wrote into (`.DS_Store`) is still as the restore
+/// left it: listed as such, and removed.
+#[test]
+fn a_folder_of_replaced_that_was_browsed_is_still_the_restores() {
+    let dir = temp("replaced-browsed");
+    let (made, _, _) = backed_up_and_changed(&dir);
+    restored(&made.dir, &dir, "first");
+    let folder = dir.join(REPLACED).join("first");
+    std::fs::write(folder.join(".DS_Store"), b"os").unwrap();
+    let listed = restore::replaced(&dir, ALSO);
+    assert!(listed.len() == 1 && listed[0].untouched, "{:?}", listed.iter().map(|r| &r.other).collect::<Vec<_>>());
+    restore::remove_replaced(&dir, "first", ALSO).unwrap();
+    assert!(!folder.exists());
+}

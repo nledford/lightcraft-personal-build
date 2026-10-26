@@ -41,7 +41,7 @@ use crate::segments::{self, Segment};
 /// The file that marks a finished backup: what it is of, as JSON.
 pub const MARKER: &str = "backup.json";
 /// A backup being written is `<name>.partial`.
-const PARTIAL: &str = ".partial";
+pub const PARTIAL: &str = ".partial";
 /// How often a backup starts over because the library was compacted under it.
 const ATTEMPTS: usize = 8;
 /// How old a `<name>.partial` folder is before a later backup removes it.
@@ -285,7 +285,7 @@ fn previous(dest: &Path) -> Option<(PathBuf, BTreeMap<String, Segment>)> {
 
 /// A file an operating system writes into a folder that somebody looked at (Finder, Explorer): not
 /// the backup's, and no change to it, so it does not make a sound backup fail its check.
-fn os_metadata(name: &str) -> bool {
+pub(crate) fn os_metadata(name: &str) -> bool {
     let name = name.rsplit('/').next().unwrap_or(name);
     matches!(name, ".DS_Store" | "Thumbs.db" | "desktop.ini") || name.starts_with("._")
 }
