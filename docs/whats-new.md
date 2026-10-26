@@ -250,6 +250,9 @@
   a click from what is underneath it.
 - A toast fades in over a fraction of a second, as it already faded out.
 
+### Editing a smart album made from an album keeps the album
+- A smart album saved from the view of an album stays limited to that album when you edit its rules and press OK. It used to match the whole library afterwards, because the rules dialog has no album field and replaced the album along with the rules.
+
 ## 2026-10-22
 
 ### Reliability
