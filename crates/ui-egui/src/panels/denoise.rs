@@ -234,7 +234,7 @@ pub fn detail_status(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, am
         }
         PhotoState::Failed { why, unsupported } => {
             egui::Frame::NONE.inner_margin(pad).show(ui, |ui| {
-                let color = if unsupported { t.text_dim } else { t.caution };
+                let color = if unsupported { t.text_dim } else { t.text_caution() };
                 note(ui, &sentence(&why), color);
                 if !unsupported {
                     let r = Button::new("Try again").small().widget("denoise:retry").show(ui);
@@ -445,7 +445,7 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                         ui.label(RichText::new(size).color(t.text_dim));
                     }
                     if selected {
-                        ui.label(RichText::new(tr("in use")).color(t.accent));
+                        ui.label(RichText::new(tr("in use")).color(t.text_link()));
                     } else if installed {
                         ui.label(RichText::new(tr("installed")).color(t.text_dim));
                     }
@@ -453,14 +453,14 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                 ui.label(RichText::new(licence_line(m)).font(t.caption()).color(if m["licence"]["commercial"] == "yes" {
                     t.text_dim
                 } else {
-                    t.caution
+                    t.text_caution()
                 }));
                 match m["accepted"]["selfTest"].as_object() {
                     Some(test) if test.get("ok").and_then(Value::as_bool) == Some(true) => {
                         ui.label(RichText::new(tr("Tested and works on this computer")).font(t.caption()).color(t.text_dim));
                     }
                     Some(_) => {
-                        ui.label(RichText::new(tr("Failed its last test")).font(t.caption()).color(t.caution));
+                        ui.label(RichText::new(tr("Failed its last test")).font(t.caption()).color(t.text_caution()));
                     }
                     None => {}
                 }
@@ -486,7 +486,7 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                     }
                     (Some("failed"), Some(d)) => {
                         let why = sentence(d["error"].as_str().unwrap_or("The download failed"));
-                        ui.add(egui::Label::new(RichText::new(why).font(t.caption()).color(t.caution)).wrap());
+                        ui.add(egui::Label::new(RichText::new(why).font(t.caption()).color(t.text_caution())).wrap());
                     }
                     _ => {}
                 }
@@ -669,7 +669,7 @@ pub fn model_dialog(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, info
     let kind = info["kind"].as_str().unwrap_or("unsupported");
     let file = info["fileName"].as_str().unwrap_or("");
     if kind == "unsupported" {
-        ui.label(RichText::new(tr("This file cannot be used yet")).font(t.body_strong()).color(t.caution));
+        ui.label(RichText::new(tr("This file cannot be used yet")).font(t.body_strong()).color(t.text_caution()));
         ui.add(
             egui::Label::new(
                 RichText::new(sentence(tr(info["reason"].as_str().unwrap_or("It is not a denoise model LightCraft understands"))))
@@ -705,7 +705,7 @@ pub fn model_dialog(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, info
         );
     }
     let commercial = m["licence"]["commercial"].as_str().unwrap_or("unknown");
-    ui.label(RichText::new(licence_line(m)).font(t.body_strong()).color(if commercial == "yes" { t.text } else { t.caution }));
+    ui.label(RichText::new(licence_line(m)).font(t.body_strong()).color(if commercial == "yes" { t.text } else { t.text_caution() }));
     let notice = m["licence"]["notice"].as_str().unwrap_or("");
     if !notice.is_empty() {
         ui.add(egui::Label::new(RichText::new(notice).color(t.text_label)).wrap());

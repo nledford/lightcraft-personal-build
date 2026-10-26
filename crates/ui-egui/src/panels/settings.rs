@@ -1513,7 +1513,7 @@ fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             "settingsSmartFolder",
             &path,
             egui::TextStyle::Body.resolve(ui.style()),
-            if available { t.text } else { t.reject },
+            if available { t.text } else { t.text_error() },
             if custom { 0.0 } else { label_width(ui, "(library default)", egui::TextStyle::Body) },
         );
         if !custom {
@@ -1629,7 +1629,7 @@ fn display_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         }
     });
     if let Some(e) = &app.display_error {
-        ui.label(RichText::new(e).font(t.caption()).color(t.reject));
+        ui.label(RichText::new(e).font(t.caption()).color(t.text_error()));
     }
     if let Some(d) = &current {
         let info = d.describe();
@@ -1962,7 +1962,7 @@ fn theme_card<V: PartialEq + Copy>(
                 ui.horizontal(|ui| {
                     ui.label(RichText::new(crate::i18n::tr(title)).font(t.semibold(12.0)).color(t.text));
                     if active {
-                        ui.label(RichText::new(crate::i18n::tr("In Use")).font(t.caption()).color(t.accent));
+                        ui.label(RichText::new(crate::i18n::tr("In Use")).font(t.caption()).color(t.text_link()));
                     }
                 });
                 let shown = options.iter().find(|(v, _)| v == value).or(options.first()).map(|(_, k)| *k).unwrap_or_default();

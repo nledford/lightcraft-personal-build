@@ -253,6 +253,8 @@ mod tests_toast_timing;
 #[cfg(test)]
 mod tests_tool_overlay;
 #[cfg(test)]
+mod tests_type_contrast;
+#[cfg(test)]
 mod tests_type_roles;
 #[cfg(test)]
 mod tests_type_scale;
