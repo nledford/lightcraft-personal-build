@@ -149,6 +149,7 @@ pub fn review(app: &mut LightcraftApp) {
         relink_moved: d.relink_moved,
         remove_missing: d.remove_missing,
         read_metadata: d.read_metadata,
+        read: d.read.over(app.session.import_defaults.read),
     });
 }
 
