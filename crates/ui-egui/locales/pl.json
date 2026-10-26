@@ -2378,5 +2378,8 @@
   "Show Parent Folder": "Pokaż folder nadrzędny",
   "Hide This Parent": "Ukryj ten folder nadrzędny",
   "Hides this row. Nothing on disk or in the library changes": "Ukrywa ten wiersz. Nic nie zmienia się na dysku ani w bibliotece",
-  "This folder stays listed while the grid shows its photos": "Ten folder pozostaje na liście, dopóki siatka pokazuje jego zdjęcia"
+  "This folder stays listed while the grid shows its photos": "Ten folder pozostaje na liście, dopóki siatka pokazuje jego zdjęcia",
+  "Keyboard in Sidebar": "Klawiatura na pasku bocznym",
+  "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Klawisze działają na pasku bocznym: strzałki przesuwają, Enter otwiera, pisz, aby szukać, Esc wraca do zdjęć",
+  "This row has no name to change": "Ten wiersz nie ma nazwy do zmiany"
 }

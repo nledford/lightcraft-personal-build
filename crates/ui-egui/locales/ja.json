@@ -2451,5 +2451,8 @@
   "Show Parent Folder": "親フォルダを表示",
   "Hide This Parent": "この親フォルダを隠す",
   "Hides this row. Nothing on disk or in the library changes": "この行を隠します。ディスクとライブラリは何も変わりません",
-  "This folder stays listed while the grid shows its photos": "グリッドがこのフォルダの写真を表示している間は、一覧に残ります"
+  "This folder stays listed while the grid shows its photos": "グリッドがこのフォルダの写真を表示している間は、一覧に残ります",
+  "Keyboard in Sidebar": "サイドバーでキーボードを使う",
+  "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "キーはサイドバーにあります。矢印で移動、Enter で開く、入力で検索、Esc で写真に戻ります",
+  "This row has no name to change": "この行には変更できる名前がありません"
 }

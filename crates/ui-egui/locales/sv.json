@@ -2522,5 +2522,8 @@
   "Show Parent Folder": "Visa överordnad mapp",
   "Hide This Parent": "Dölj den här överordnade mappen",
   "Hides this row. Nothing on disk or in the library changes": "Döljer den här raden. Inget ändras på disken eller i biblioteket",
-  "This folder stays listed while the grid shows its photos": "Den här mappen står kvar i listan medan rutnätet visar dess foton"
+  "This folder stays listed while the grid shows its photos": "Den här mappen står kvar i listan medan rutnätet visar dess foton",
+  "Keyboard in Sidebar": "Tangentbord i sidofältet",
+  "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Tangenterna styr sidofältet: piltangenterna flyttar, Enter öppnar, skriv för att söka, Esc går tillbaka till fotona",
+  "This row has no name to change": "Raden har inget namn att ändra"
 }

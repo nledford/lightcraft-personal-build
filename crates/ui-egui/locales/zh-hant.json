@@ -2252,5 +2252,8 @@
   "Show Parent Folder": "顯示上層資料夾",
   "Hide This Parent": "隱藏此上層資料夾",
   "Hides this row. Nothing on disk or in the library changes": "隱藏此列。磁碟和圖庫中不會有任何變更",
-  "This folder stays listed while the grid shows its photos": "格狀檢視顯示此資料夾的照片時，它會保留在清單中"
+  "This folder stays listed while the grid shows its photos": "格狀檢視顯示此資料夾的照片時，它會保留在清單中",
+  "Keyboard in Sidebar": "在側邊欄中使用鍵盤",
+  "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "按鍵現在作用於側邊欄：方向鍵移動，Enter 開啟，輸入文字尋找，Esc 返回照片",
+  "This row has no name to change": "此列沒有可變更的名稱"
 }

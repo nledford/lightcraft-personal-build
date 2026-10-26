@@ -2420,5 +2420,8 @@
   "Show Parent Folder": "Näytä yläkansio",
   "Hide This Parent": "Piilota tämä yläkansio",
   "Hides this row. Nothing on disk or in the library changes": "Piilottaa tämän rivin. Levyllä tai kirjastossa ei muutu mitään",
-  "This folder stays listed while the grid shows its photos": "Tämä kansio pysyy luettelossa, kun ruudukko näyttää sen kuvat"
+  "This folder stays listed while the grid shows its photos": "Tämä kansio pysyy luettelossa, kun ruudukko näyttää sen kuvat",
+  "Keyboard in Sidebar": "Näppäimistö sivupalkissa",
+  "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Näppäimet toimivat sivupalkissa: nuolet liikuttavat, Enter avaa, kirjoita etsiäksesi, Esc palaa kuviin",
+  "This row has no name to change": "Tällä rivillä ei ole nimeä, jota voisi muuttaa"
 }
