@@ -2660,7 +2660,8 @@ pub fn ui_enabled(app: &LightcraftApp, id: &str) -> bool {
         "dialog.trashFiles" => {
             crate::panels::trash_files::available()
                 && app.trash_run.is_none()
-                && app.session.selected().iter().any(|id| app.session.catalog.photo(*id).is_some_and(|p| !p.local))
+                // (asked every frame: the selection's cached answer, not a walk of a 500,000-photo selection)
+                && app.session.selection_facts().any_in_library(&app.session)
         }
         "photo.editInPhotoCraft" | "photo.editInExternal" => app.session.active().is_some() && app.services.open_with.is_some(),
         "app.exportPrevious" => app.session.active().is_some() && app.session.last_export.is_some(),
