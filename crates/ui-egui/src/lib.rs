@@ -50,6 +50,7 @@ mod readout;
 pub mod recheck;
 pub mod region;
 pub mod reload;
+pub mod relocate;
 pub mod render;
 pub mod shortcuts;
 pub mod sidebar;
@@ -244,6 +245,8 @@ mod tests_recheck;
 mod tests_reduce_motion;
 #[cfg(test)]
 mod tests_refusals;
+#[cfg(test)]
+mod tests_relocate;
 #[cfg(test)]
 mod tests_rename_person;
 #[cfg(test)]
@@ -796,6 +799,17 @@ pub struct LightcraftApp {
     /// An Erase question a finished Move Files to Trash has to ask (photo ids, library generation),
     /// waiting for the dialog slot to be free.
     pub trash_erase_later: Option<(Vec<u64>, u64)>,
+    /// A folder's files being looked for where the person said the folder is now.
+    pub relocate: Option<relocate::RelocateTask>,
+    /// What was found when only some of them are there, for the dialog that asks about it (and
+    /// whether that dialog was shown yet: it waits for another dialog to be done with).
+    pub relocate_asked: Option<(relocate::Request, lightcraft_engine::relocate::Located, bool)>,
+    /// The library (`Session::library_generation`) `relocate` / `relocate_asked` were started in;
+    /// [`relocate::poll`] drops them once another library is open.
+    pub relocate_library: u64,
+    /// How the latest locating of a folder went (`ui.inspect` → `relocate.last`, see
+    /// [`relocate::status`]).
+    pub relocate_last: Option<Value>,
     /// A Lightroom catalog inspect/import in progress.
     pub lightroom: Option<lightroom_import::LightroomTask>,
     /// Last terminal Lightroom result, exposed by the command's status/wait response.
@@ -975,6 +989,10 @@ impl LightcraftApp {
             last_move: None,
             trash_run: None,
             trash_erase_later: None,
+            relocate: None,
+            relocate_asked: None,
+            relocate_library: 0,
+            relocate_last: None,
             lightroom: None,
             lightroom_last: None,
             lightroom_result: None,
@@ -2532,6 +2550,7 @@ impl LightcraftApp {
         sync::poll(self, ctx);
         sync::poll_run(self, ctx);
         move_task::poll(self, ctx);
+        relocate::poll(self, ctx);
         trash_run::poll(self, ctx);
         // Import commits batches and must not run twice in one host frame. The first layout pass
         // and a hidden logic tick both report pass index 0; a second pass reports 1. A wall-clock

@@ -36,7 +36,7 @@ fn app(trip: &std::path::Path, imported: bool) -> Headless {
 }
 
 fn toast(h: &Headless) -> String {
-    h.app.ui.toast().map(|(t, _, _)| t.clone()).unwrap_or_default()
+    h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default()
 }
 
 fn move_into(h: &mut Headless, trip: &std::path::Path, archive: &std::path::Path) -> String {

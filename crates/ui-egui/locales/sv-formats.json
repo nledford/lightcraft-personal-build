@@ -360,5 +360,10 @@
   "Panel layout could not be restored: {error}": "Panellayouten kunde inte återställas: {error}",
   "Panel move was not applied: {error}": "Panelflytten tillämpades inte: {error}",
   "{name} is installed": "{name} är installerad",
-  "{name} is installed and in use: face recognition is on": "{name} är installerad och används: ansiktsigenkänning är på"
+  "{name} is installed and in use: face recognition is on": "{name} är installerad och används: ansiktsigenkänning är på",
+  "None of this folder's photos are in “{name}”: choose the folder it is now": "Inga av mappens foton finns i ”{name}”: välj mappen där den finns nu",
+  "Only {found} of this folder's {total} photos are in:": "Bara {found} av mappens {total} foton finns i:",
+  "Only {found} of this folder's {total} photos are in “{name}”: the folder was not located": "Bara {found} av mappens {total} foton finns i ”{name}”: mappen hittades inte",
+  "Files there that are not the size the library recorded: {n}": "Filer där som inte har den storlek biblioteket registrerade: {n}",
+  "Folder located. Photos relinked: {n}": "Mappen har hittats. Omlänkade foton: {n}"
 }
