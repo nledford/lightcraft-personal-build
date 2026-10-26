@@ -371,5 +371,6 @@
   "Photos in it and in the folders inside it: {count}": "Фото в ній і в теках усередині неї: {count}",
   "“{name}” is no longer there: nothing was moved": "«{name}» більше немає: нічого не переміщено",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Правило {n} з {m}: {what}. Переміщення стрілками",
-  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Група {n} з {m}: збіг {mode}, усередині {count}. Переміщення стрілками"
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Група {n} з {m}: збіг {mode}, усередині {count}. Переміщення стрілками",
+  "Copied {n} file paths": "Скопійовано шляхів до файлів: {n}"
 }

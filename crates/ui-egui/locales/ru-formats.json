@@ -371,5 +371,6 @@
   "Photos in it and in the folders inside it: {count}": "Фото в ней и в папках внутри неё: {count}",
   "“{name}” is no longer there: nothing was moved": "«{name}» больше нет: ничего не перемещено",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Условие {n} из {m}: {what}. Перемещение стрелками",
-  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Группа {n} из {m}: совпадение {mode}, внутри {count}. Перемещение стрелками"
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Группа {n} из {m}: совпадение {mode}, внутри {count}. Перемещение стрелками",
+  "Copied {n} file paths": "Скопировано путей к файлам: {n}"
 }

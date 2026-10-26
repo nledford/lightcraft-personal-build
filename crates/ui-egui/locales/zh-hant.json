@@ -2382,5 +2382,20 @@
   "Drag to move, or use the arrow keys": "拖曳以移動，或使用方向鍵",
   "A group can't go inside itself": "群組不能放進它自己裡面",
   "Groups can't nest any deeper": "群組不能再巢狀得更深",
-  "Keywords and presets apply to new files only, not to photos already in Local": "關鍵字和預設集僅套用於新檔案，不適用於已在「本機」中的照片"
+  "Keywords and presets apply to new files only, not to photos already in Local": "關鍵字和預設集僅套用於新檔案，不適用於已在「本機」中的照片",
+  "Open in Compare": "在比較檢視中開啟",
+  "Open in Survey": "在總覽中開啟",
+  "Edit Settings": "編輯設定",
+  "Rotate & Flip": "旋轉與翻轉",
+  "Copy File Path": "複製檔案路徑",
+  "Copied the file path": "已複製檔案路徑",
+  "The selected photos have no file on disk": "所選照片在磁碟上沒有檔案",
+  "Select 2 or more photos": "請選取 2 張或更多照片",
+  "Copy edit settings first": "請先複製編輯設定",
+  "Copy metadata first": "請先複製中繼資料",
+  "This version of LightCraft can't open the file manager": "此版本的 LightCraft 無法開啟檔案管理員",
+  "This photo has no file on disk": "這張照片在磁碟上沒有檔案",
+  "This photo is not in a folder of the library": "這張照片不在照片庫的資料夾中",
+  "Opening other programs needs the desktop app": "開啟其他程式需要桌面版 App",
+  "Only a photo file LightCraft reads can be opened this way": "只有 LightCraft 能讀取的照片檔案才能這樣開啟"
 }

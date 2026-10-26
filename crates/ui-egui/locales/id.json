@@ -2545,5 +2545,20 @@
   "Drag to move, or use the arrow keys": "Seret untuk memindahkan, atau gunakan tombol panah",
   "A group can't go inside itself": "Grup tidak dapat dimasukkan ke dalam dirinya sendiri",
   "Groups can't nest any deeper": "Grup tidak dapat disarangkan lebih dalam",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Kata kunci dan prasetel hanya berlaku untuk berkas baru, bukan foto yang sudah ada di Lokal"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Kata kunci dan prasetel hanya berlaku untuk berkas baru, bukan foto yang sudah ada di Lokal",
+  "Open in Compare": "Buka di Bandingkan",
+  "Open in Survey": "Buka di Survei",
+  "Edit Settings": "Pengaturan edit",
+  "Rotate & Flip": "Putar dan balik",
+  "Copy File Path": "Salin jalur file",
+  "Copied the file path": "Jalur file disalin",
+  "The selected photos have no file on disk": "Foto yang dipilih tidak memiliki file di disk",
+  "Select 2 or more photos": "Pilih 2 foto atau lebih",
+  "Copy edit settings first": "Salin pengaturan edit terlebih dahulu",
+  "Copy metadata first": "Salin metadata terlebih dahulu",
+  "This version of LightCraft can't open the file manager": "Versi LightCraft ini tidak dapat membuka pengelola file",
+  "This photo has no file on disk": "Foto ini tidak memiliki file di disk",
+  "This photo is not in a folder of the library": "Foto ini tidak berada di folder pustaka",
+  "Opening other programs needs the desktop app": "Membuka program lain memerlukan aplikasi desktop",
+  "Only a photo file LightCraft reads can be opened this way": "Hanya file foto yang dibaca LightCraft yang dapat dibuka dengan cara ini"
 }

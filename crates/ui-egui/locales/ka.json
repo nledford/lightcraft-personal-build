@@ -2938,5 +2938,20 @@
   "Drag to move, or use the arrow keys": "გადასატანად გადაიტანეთ ან გამოიყენეთ ისრები",
   "A group can't go inside itself": "ჯგუფს საკუთარ თავში ვერ ჩადებთ",
   "Groups can't nest any deeper": "ჯგუფების უფრო ღრმად ჩადგმა შეუძლებელია",
-  "Keywords and presets apply to new files only, not to photos already in Local": "საკვანძო სიტყვები და პრესეტები მხოლოდ ახალ ფაილებზე მოქმედებს და არა იმ ფოტოებზე, რომლებიც უკვე ლოკალშია"
+  "Keywords and presets apply to new files only, not to photos already in Local": "საკვანძო სიტყვები და პრესეტები მხოლოდ ახალ ფაილებზე მოქმედებს და არა იმ ფოტოებზე, რომლებიც უკვე ლოკალშია",
+  "Open in Compare": "შედარებაში გახსნა",
+  "Open in Survey": "მიმოხილვაში გახსნა",
+  "Edit Settings": "რედაქტირების პარამეტრები",
+  "Rotate & Flip": "შემობრუნება და არეკვლა",
+  "Copy File Path": "ფაილის მისამართის კოპირება",
+  "Copied the file path": "ფაილის მისამართი დაკოპირდა",
+  "The selected photos have no file on disk": "არჩეულ ფოტოებს დისკზე ფაილი არ აქვთ",
+  "Select 2 or more photos": "აირჩიეთ 2 ან მეტი ფოტო",
+  "Copy edit settings first": "ჯერ დააკოპირეთ რედაქტირების პარამეტრები",
+  "Copy metadata first": "ჯერ დააკოპირეთ მეტამონაცემები",
+  "This version of LightCraft can't open the file manager": "LightCraft-ის ამ ვერსიას ფაილების მენეჯერის გახსნა არ შეუძლია",
+  "This photo has no file on disk": "ამ ფოტოს დისკზე ფაილი არ აქვს",
+  "This photo is not in a folder of the library": "ეს ფოტო ბიბლიოთეკის საქაღალდეში არ არის",
+  "Opening other programs needs the desktop app": "სხვა პროგრამების გასახსნელად საჭიროა სამუშაო მაგიდის აპი",
+  "Only a photo file LightCraft reads can be opened this way": "ასე მხოლოდ ისეთი ფოტოს ფაილი იხსნება, რომელსაც LightCraft კითხულობს"
 }

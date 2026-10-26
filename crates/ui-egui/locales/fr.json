@@ -2614,5 +2614,20 @@
   "Drag to move, or use the arrow keys": "Faites glisser pour déplacer, ou utilisez les flèches",
   "A group can't go inside itself": "Un groupe ne peut pas se placer dans lui-même",
   "Groups can't nest any deeper": "Les groupes ne peuvent pas être imbriqués plus profondément",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Les mots-clés et les préréglages ne s'appliquent qu'aux nouveaux fichiers, pas aux photos déjà dans Local"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Les mots-clés et les préréglages ne s'appliquent qu'aux nouveaux fichiers, pas aux photos déjà dans Local",
+  "Open in Compare": "Ouvrir dans Comparer",
+  "Open in Survey": "Ouvrir dans Vue multiple",
+  "Edit Settings": "Réglages de retouche",
+  "Rotate & Flip": "Pivoter et retourner",
+  "Copy File Path": "Copier le chemin du fichier",
+  "Copied the file path": "Chemin du fichier copié",
+  "The selected photos have no file on disk": "Les photos sélectionnées n’ont pas de fichier sur le disque",
+  "Select 2 or more photos": "Sélectionnez 2 photos ou plus",
+  "Copy edit settings first": "Copiez d’abord des réglages de retouche",
+  "Copy metadata first": "Copiez d’abord des métadonnées",
+  "This version of LightCraft can't open the file manager": "Cette version de LightCraft ne peut pas ouvrir le gestionnaire de fichiers",
+  "This photo has no file on disk": "Cette photo n’a pas de fichier sur le disque",
+  "This photo is not in a folder of the library": "Cette photo n’est dans aucun dossier de la bibliothèque",
+  "Opening other programs needs the desktop app": "Ouvrir d’autres programmes nécessite l’application de bureau",
+  "Only a photo file LightCraft reads can be opened this way": "Seul un fichier photo que LightCraft sait lire peut être ouvert ainsi"
 }

@@ -371,5 +371,6 @@
   "Photos in it and in the folders inside it: {count}": "Foton i den och i mapparna i den: {count}",
   "“{name}” is no longer there: nothing was moved": "”{name}” finns inte längre: inget flyttades",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Regel {n} av {m}: {what}. Flytta med piltangenterna",
-  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Grupp {n} av {m}: matcha {mode}, antal i gruppen: {count}. Flytta med piltangenterna"
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Grupp {n} av {m}: matcha {mode}, antal i gruppen: {count}. Flytta med piltangenterna",
+  "Copied {n} file paths": "Kopierade filsökvägar: {n}"
 }

@@ -2580,5 +2580,20 @@
   "Drag to move, or use the arrow keys": "ドラッグして移動、または矢印キーを使います",
   "A group can't go inside itself": "グループを自分自身の中に入れることはできません",
   "Groups can't nest any deeper": "グループはこれ以上深く入れ子にできません",
-  "Keywords and presets apply to new files only, not to photos already in Local": "キーワードとプリセットは新しいファイルにのみ適用され、すでにローカルにある写真には適用されません"
+  "Keywords and presets apply to new files only, not to photos already in Local": "キーワードとプリセットは新しいファイルにのみ適用され、すでにローカルにある写真には適用されません",
+  "Open in Compare": "比較表示で開く",
+  "Open in Survey": "一覧比較で開く",
+  "Edit Settings": "編集設定",
+  "Rotate & Flip": "回転と反転",
+  "Copy File Path": "ファイルパスをコピー",
+  "Copied the file path": "ファイルパスをコピーしました",
+  "The selected photos have no file on disk": "選択した写真にはディスク上のファイルがありません",
+  "Select 2 or more photos": "2 枚以上の写真を選択してください",
+  "Copy edit settings first": "先に編集設定をコピーしてください",
+  "Copy metadata first": "先にメタデータをコピーしてください",
+  "This version of LightCraft can't open the file manager": "このバージョンの LightCraft はファイルマネージャーを開けません",
+  "This photo has no file on disk": "この写真にはディスク上のファイルがありません",
+  "This photo is not in a folder of the library": "この写真はライブラリのフォルダにありません",
+  "Opening other programs needs the desktop app": "ほかのプログラムを開くにはデスクトップ版が必要です",
+  "Only a photo file LightCraft reads can be opened this way": "この方法で開けるのは LightCraft が読み込める写真ファイルだけです"
 }
