@@ -2543,5 +2543,9 @@
   "Sorting the library": "Ordenando la biblioteca",
   "Go Deeper": "Ir más adentro",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Las carpetas a esta profundidad no se muestran aquí. Haz clic para añadir esta carpeta a Local como un lugar propio y seguir abriéndola",
-  "Opens as its own place": "Se abre como lugar propio"
+  "Opens as its own place": "Se abre como lugar propio",
+  "Damaged file: cut short, shown from the data present": "Archivo dañado: cortado, se muestra con los datos disponibles",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "El archivo se cortó, por ejemplo por una descarga o copia interrumpida. LightCraft muestra los datos que hay y nunca modifica el archivo.",
+  "Damaged": "Dañado",
+  "Damaged File": "Archivo dañado"
 }

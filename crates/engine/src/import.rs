@@ -369,6 +369,9 @@ pub struct ImportCandidate {
     /// A raw variant that can't be decoded yet (why): it imports as preview only.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preview_only: Option<String>,
+    /// A JPEG cut short (an interrupted download or copy): it imports from the data present.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub truncated: bool,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -399,6 +402,9 @@ pub struct ImportReport {
     pub kept: Vec<Kept>,
     /// (path, error)
     pub failed: Vec<(String, String)>,
+    /// Imported JPEGs that were cut short (see [`ImportCandidate::truncated`]): their source paths.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub truncated: Vec<String>,
     /// Files found after expanding folders.
     pub scanned: usize,
     /// Photos whose metadata/develop settings were read from an XMP sidecar (or embedded XMP).
@@ -1196,6 +1202,7 @@ pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &Sc
                 // as the import will date it (a sidecar's date, when there is one, still wins there)
                 c.captured = c.captured.or_else(|| info.file_modified.clone());
                 c.preview_only = info.preview_only.clone();
+                c.truncated = info.truncated;
                 if let Some(h) = &info.content_hash {
                     match seen_hash.get(h) {
                         Some(existing) => {
@@ -1955,8 +1962,14 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
     for it in prepared.items {
         match it {
             PreparedItem::Promote(id) => {
-                if s.catalog.photo(id).is_some_and(|p| p.local) {
+                let promoted = s.catalog.photo(id);
+                if promoted.is_some_and(|p| p.local) {
                     ops.push(Op::SetLocal { id, local: false });
+                }
+                if let Some(p) = promoted.filter(|p| p.truncated)
+                    && let Source::File { path } = &p.source
+                {
+                    report.truncated.push(path.clone());
                 }
                 report.imported.push(id.0);
             }
@@ -2067,6 +2080,9 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                     p.history.push(lightcraft_catalog::HistoryStep { label, settings: d });
                 }
                 report.imported.push(id.0);
+                if p.truncated {
+                    report.truncated.push(path.clone());
+                }
                 p.local = opts.local;
                 if opts.local {
                     // the state as browsed: a later change keeps the record from being forgotten

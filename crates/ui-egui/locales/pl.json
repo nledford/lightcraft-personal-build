@@ -2466,5 +2466,9 @@
   "Cancel leaves these photos in the library and their files where they are.": "Anuluj pozostawi te zdjęcia w bibliotece, a ich pliki tam, gdzie są.",
   "Go Deeper": "Przejdź głębiej",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Tak głęboko położone foldery nie są tu wyświetlane. Kliknij, aby dodać ten folder do lokalnych jako osobne miejsce i otwierać go dalej",
-  "Opens as its own place": "Otwiera się jako osobne miejsce"
+  "Opens as its own place": "Otwiera się jako osobne miejsce",
+  "Damaged file: cut short, shown from the data present": "Uszkodzony plik: ucięty, pokazany z dostępnych danych",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Plik został ucięty, na przykład przez przerwane pobieranie lub kopiowanie. LightCraft pokazuje dostępne dane i nigdy nie zmienia pliku.",
+  "Damaged": "Uszkodzony",
+  "Damaged File": "Uszkodzony plik"
 }

@@ -2490,5 +2490,9 @@
   "Cancel leaves these photos in the library and their files where they are.": "Peruuttaminen jättää nämä kuvat kirjastoon ja niiden tiedostot paikoilleen.",
   "Go Deeper": "Siirry syvemmälle",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Näin syviä kansioita ei listata tässä. Napsauta lisätäksesi tämän kansion Paikalliseen omaksi paikakseen, jolloin voit avata sen pidemmälle",
-  "Opens as its own place": "Avautuu omana paikkanaan"
+  "Opens as its own place": "Avautuu omana paikkanaan",
+  "Damaged file: cut short, shown from the data present": "Vahingoittunut tiedosto: katkennut, näytetään saatavilla olevista tiedoista",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Tiedosto on katkennut, esimerkiksi keskeytyneen latauksen tai kopioinnin vuoksi. LightCraft näyttää olemassa olevat tiedot eikä muuta tiedostoa koskaan.",
+  "Damaged": "Vahingoittunut",
+  "Damaged File": "Vahingoittunut tiedosto"
 }

@@ -2534,5 +2534,9 @@
   "Sorting the library": "Сортировка библиотеки",
   "Go Deeper": "Глубже",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Папки на такой глубине здесь не показываются. Нажмите, чтобы добавить эту папку в «Локальное» как отдельное место и раскрывать её дальше",
-  "Opens as its own place": "Открывается как отдельное место"
+  "Opens as its own place": "Открывается как отдельное место",
+  "Damaged file: cut short, shown from the data present": "Повреждённый файл: обрезан, показан по имеющимся данным",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Файл обрезан, например из-за прерванной загрузки или копирования. LightCraft показывает имеющиеся данные и никогда не изменяет файл.",
+  "Damaged": "Повреждён",
+  "Damaged File": "Повреждённый файл"
 }

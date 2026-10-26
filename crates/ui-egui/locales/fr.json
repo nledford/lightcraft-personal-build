@@ -2575,5 +2575,9 @@
   "Sorting the library": "Tri de la bibliothèque",
   "Go Deeper": "Aller plus loin",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Les dossiers aussi profonds ne sont pas affichés ici. Cliquez pour ajouter ce dossier à Local comme un emplacement à part, et l’ouvrir plus loin",
-  "Opens as its own place": "S’ouvre comme emplacement à part"
+  "Opens as its own place": "S’ouvre comme emplacement à part",
+  "Damaged file: cut short, shown from the data present": "Fichier endommagé : tronqué, affiché à partir des données présentes",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Le fichier a été tronqué, par exemple par un téléchargement ou une copie interrompus. LightCraft affiche les données présentes et ne modifie jamais le fichier.",
+  "Damaged": "Endommagé",
+  "Damaged File": "Fichier endommagé"
 }

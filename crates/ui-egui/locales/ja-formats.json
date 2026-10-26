@@ -354,5 +354,6 @@
   "Photos whose file was already gone: {n}": "ファイルがすでになかった写真: {n}枚",
   "Sidecars left in place: {n}": "そのまま残したサイドカー: {n}個",
   "Files other photos still use, kept: {n}": "ほかの写真が使っているため残したファイル: {n}個",
-  "“{name}” is now a place in Local: open it there": "「{name}」をローカルの場所に追加しました。そこで開いてください"
+  "“{name}” is now a place in Local: open it there": "「{name}」をローカルの場所に追加しました。そこで開いてください",
+  " · {} damaged": "・{}件は破損"
 }

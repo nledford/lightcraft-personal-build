@@ -354,5 +354,6 @@
   "Photos whose file was already gone: {n}": "ფოტოები, რომელთა ფაილი უკვე აღარ იყო: {n}",
   "Sidecars left in place: {n}": "ადგილზე დატოვებული თანმხლები ფაილები: {n}",
   "Files other photos still use, kept: {n}": "ფაილები, რომლებსაც სხვა ფოტოები ჯერ კიდევ იყენებს (შენახულია): {n}",
-  "“{name}” is now a place in Local: open it there": "„{name}“ ახლა ადგილია „ლოკალურში“: გახსენით იქ"
+  "“{name}” is now a place in Local: open it there": "„{name}“ ახლა ადგილია „ლოკალურში“: გახსენით იქ",
+  " · {} damaged": " · დაზიანებულია: {}"
 }

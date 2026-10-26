@@ -354,5 +354,6 @@
   "Sidecars left in place: {n}": "Sidecar yang dibiarkan di tempatnya: {n}",
   "Files other photos still use, kept: {n}": "File yang masih dipakai foto lain, dipertahankan: {n}",
   "Listing folders — folders: {folders}, files: {files}": "Mendata folder — folder: {folders}, file: {files}",
-  "“{name}” is now a place in Local: open it there": "“{name}” kini menjadi lokasi di Lokal: buka di sana"
+  "“{name}” is now a place in Local: open it there": "“{name}” kini menjadi lokasi di Lokal: buka di sana",
+  " · {} damaged": " · {} rusak"
 }

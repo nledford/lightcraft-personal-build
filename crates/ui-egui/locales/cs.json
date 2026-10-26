@@ -2571,5 +2571,9 @@
   "Cancel leaves these photos in the library and their files where they are.": "Zrušit ponechá tyto fotografie v knihovně a jejich soubory na místě.",
   "Go Deeper": "Jít hlouběji",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Takto hluboko vnořené složky se zde nezobrazují. Kliknutím přidáte tuto složku do místních souborů jako samostatné místo, abyste ji mohli otevírat dál",
-  "Opens as its own place": "Otevře se jako samostatné místo"
+  "Opens as its own place": "Otevře se jako samostatné místo",
+  "Damaged file: cut short, shown from the data present": "Poškozený soubor: useknutý, zobrazuje se z dostupných dat",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Soubor byl useknut, například přerušeným stahováním nebo kopírováním. LightCraft zobrazuje dostupná data a soubor nikdy nemění.",
+  "Damaged": "Poškozený",
+  "Damaged File": "Poškozený soubor"
 }

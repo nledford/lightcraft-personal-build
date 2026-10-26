@@ -354,5 +354,6 @@
   "Photos whose file was already gone: {n}": "Fotos, deren Datei bereits fehlte: {n}",
   "Sidecars left in place: {n}": "An ihrem Ort belassene Begleitdateien: {n}",
   "Files other photos still use, kept: {n}": "Dateien, die andere Fotos noch verwenden (behalten): {n}",
-  "“{name}” is now a place in Local: open it there": "„{name}“ ist jetzt ein Ort unter „Lokal“: dort öffnen"
+  "“{name}” is now a place in Local: open it there": "„{name}“ ist jetzt ein Ort unter „Lokal“: dort öffnen",
+  " · {} damaged": " · {} beschädigt"
 }

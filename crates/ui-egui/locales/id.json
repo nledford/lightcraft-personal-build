@@ -2506,5 +2506,9 @@
   "Cancel leaves these photos in the library and their files where they are.": "Batal akan membiarkan foto-foto ini di pustaka dan file-nya di tempat semula.",
   "Go Deeper": "Masuk lebih dalam",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Folder sedalam ini tidak dicantumkan di sini. Klik untuk menambahkan folder ini ke Lokal sebagai lokasi tersendiri, sehingga bisa dibuka lebih jauh",
-  "Opens as its own place": "Terbuka sebagai lokasi tersendiri"
+  "Opens as its own place": "Terbuka sebagai lokasi tersendiri",
+  "Damaged file: cut short, shown from the data present": "File rusak: terpotong, ditampilkan dari data yang ada",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "File ini terpotong, misalnya karena unduhan atau penyalinan terhenti. LightCraft menampilkan data yang ada dan tidak pernah mengubah file.",
+  "Damaged": "Rusak",
+  "Damaged File": "File rusak"
 }

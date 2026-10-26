@@ -354,5 +354,6 @@
   "Photos whose file was already gone: {n}": "Kuvat, joiden tiedosto oli jo poissa: {n}",
   "Sidecars left in place: {n}": "Paikoilleen jätetyt sivutiedostot: {n}",
   "Files other photos still use, kept: {n}": "Säilytetyt tiedostot, joita muut kuvat vielä käyttävät: {n}",
-  "“{name}” is now a place in Local: open it there": "“{name}” on nyt paikka Paikallisessa: avaa se siellä"
+  "“{name}” is now a place in Local: open it there": "“{name}” on nyt paikka Paikallisessa: avaa se siellä",
+  " · {} damaged": " · vahingoittuneita: {}"
 }

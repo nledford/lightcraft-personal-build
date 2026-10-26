@@ -2593,5 +2593,9 @@
   "Cancel leaves these photos in the library and their files where they are.": "Om du avbryter finns de här fotona kvar i biblioteket och deras filer kvar där de är.",
   "Go Deeper": "Gå djupare",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Så här djupa mappar listas inte här. Klicka för att lägga till den här mappen i Lokalt som en egen plats, så att du kan öppna den längre",
-  "Opens as its own place": "Öppnas som en egen plats"
+  "Opens as its own place": "Öppnas som en egen plats",
+  "Damaged file: cut short, shown from the data present": "Skadad fil: avkapad, visas från de data som finns",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Filen har kapats, till exempel av en avbruten nedladdning eller kopiering. LightCraft visar de data som finns och ändrar aldrig filen.",
+  "Damaged": "Skadad",
+  "Damaged File": "Skadad fil"
 }

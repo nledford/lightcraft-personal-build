@@ -979,3 +979,26 @@ fn a_scan_that_met_unreadable_files_leaves_a_row_with_problems() {
         let _ = std::fs::remove_dir_all(dir);
     }
 }
+
+/// An import that brought in JPEGs cut short says how many in its message, and the photos carry
+/// the mark.
+#[test]
+fn import_message_counts_the_jpegs_cut_short() {
+    let (mut h, dir) = slow_import("damaged", 3);
+    h.app.session.media.file_probe = Some(std::sync::Arc::new(|p: &str| {
+        Ok(lightcraft_engine::media::ProbeInfo {
+            width: 60,
+            height: 40,
+            format: "JPEG".into(),
+            content_hash: Some(p.to_string()),
+            truncated: p.ends_with("IMG_001.jpg"),
+            ..Default::default()
+        })
+    }));
+    crate::import::start_paths(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.import.is_none()));
+    assert_eq!(h.app.session.catalog.len(), 3);
+    assert_eq!(h.app.session.catalog.photos().filter(|p| p.truncated).count(), 1);
+    assert_eq!(h.app.ui.toast().map(|t| t.0.as_str()), Some("Imported 3 photos · 1 damaged"));
+    let _ = std::fs::remove_dir_all(&dir);
+}

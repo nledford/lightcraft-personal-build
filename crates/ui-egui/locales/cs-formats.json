@@ -354,5 +354,6 @@
   "Photos whose file was already gone: {n}": "Fotografie, jejichž soubor už chyběl: {n}",
   "Sidecars left in place: {n}": "Doprovodné soubory ponechané na místě: {n}",
   "Files other photos still use, kept: {n}": "Soubory, které stále používají jiné fotografie (ponechány): {n}",
-  "“{name}” is now a place in Local: open it there": "„{name}“ je nyní místem v místních souborech: otevřete ji tam"
+  "“{name}” is now a place in Local: open it there": "„{name}“ je nyní místem v místních souborech: otevřete ji tam",
+  " · {} damaged": " · poškozené: {}"
 }

@@ -306,6 +306,8 @@ pub struct ImportTask {
     failures: Vec<(String, String)>,
     /// Why a batch was left alone while photos were being moved to another folder (not counted as failed).
     refused: Option<String>,
+    /// Photos imported from a JPEG that was cut short (damaged, shown from the data present).
+    pub truncated: usize,
     /// Move: originals moved, and sources left in place (reported by the engine with a reason).
     pub moved: usize,
     pub kept: usize,
@@ -991,6 +993,7 @@ fn commit_batch(app: &mut LightcraftApp, task: &mut ImportTask, prepared: lightc
                     .take(room)
                     .filter_map(|f| Some((f.get(0)?.as_str()?.to_string(), f.get(1)?.as_str()?.to_string()))),
             );
+            task.truncated += len("truncated");
             task.moved += len("moved");
             task.kept += len("kept");
             task.warnings.extend(v["warnings"].as_array().into_iter().flatten().filter_map(|warning| serde_json::from_value(warning.clone()).ok()));
@@ -1152,6 +1155,9 @@ fn finish(app: &mut LightcraftApp, ctx: &egui::Context, mut task: ImportTask) {
     if task.failed > 0 {
         msg.push_str(&crate::i18n::tr_format!(" · {} not readable", task.failed));
     }
+    if task.truncated > 0 {
+        msg.push_str(&crate::i18n::tr_format!(" · {} damaged", task.truncated));
+    }
     if let Some(why) = &task.refused {
         // (the batches it left alone were not imported: the reason, not "not readable")
         msg.push_str("\n\n");
@@ -1164,18 +1170,18 @@ fn finish(app: &mut LightcraftApp, ctx: &egui::Context, mut task: ImportTask) {
         return;
     }
     if task.warnings.is_empty() {
-        if task.refused.is_some() {
-            app.toast_for(ctx, msg, 8.0);
-        } else if task.failed > 0 {
-            app.toast_error(ctx, msg);
-        } else {
-            app.toast(ctx, msg);
-        }
+    if task.refused.is_some() {
+        app.toast_for(ctx, msg, 8.0);
+    } else if task.failed > 0 {
+        app.toast_error(ctx, msg);
     } else {
-        msg.push_str("\n\n");
-        msg.push_str(&xmp_warnings_text(&task.warnings));
-        app.toast_error_for(ctx, msg, 8.0);
+        app.toast(ctx, msg);
     }
+} else {
+    msg.push_str("\n\n");
+    msg.push_str(&xmp_warnings_text(&task.warnings));
+    app.toast_error_for(ctx, msg, 8.0);
+}
 }
 
 /// How an import ended: stopped, failed to read every file, with problems, or well.
@@ -1715,6 +1721,7 @@ fn candidate_cell(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDial
         (Some(r), _) if r == "path" => Some("In library"),
         (Some(_), _) => Some("Duplicate"),
         (None, Some(_)) => Some("Unreadable"),
+        (None, None) if c.truncated => Some("Damaged"),
         _ => None,
     };
     if let Some(b) = badge {

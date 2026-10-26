@@ -2400,5 +2400,9 @@
   "Cancel leaves these photos in the library and their files where they are.": "Chọn Hủy để giữ các ảnh này trong thư viện và tệp của chúng ở nguyên chỗ.",
   "Go Deeper": "Đi sâu hơn",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Các thư mục sâu thế này không được liệt kê ở đây. Nhấp để thêm thư mục này vào Cục bộ như một vị trí riêng, để có thể mở sâu hơn",
-  "Opens as its own place": "Mở thành một vị trí riêng"
+  "Opens as its own place": "Mở thành một vị trí riêng",
+  "Damaged file: cut short, shown from the data present": "Tệp bị hỏng: bị cắt cụt, hiển thị từ dữ liệu hiện có",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Tệp bị cắt cụt, ví dụ do tải xuống hoặc sao chép bị gián đoạn. LightCraft hiển thị dữ liệu hiện có và không bao giờ thay đổi tệp.",
+  "Damaged": "Bị hỏng",
+  "Damaged File": "Tệp bị hỏng"
 }
