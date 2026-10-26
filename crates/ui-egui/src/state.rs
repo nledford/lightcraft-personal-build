@@ -781,6 +781,9 @@ pub enum KeywordChips {
     Grouped,
 }
 
+/// The most toasts on screen at once: a newer one pushes the oldest out.
+pub const MAX_TOASTS: usize = 3;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct UiState {
@@ -1126,9 +1129,13 @@ pub struct UiState {
     /// Reference view: the reference photo.
     #[serde(skip)]
     pub reference: Option<u64>,
-    /// The HUD toast on screen (shown only through [`UiState::show_toast`]; the painter then extends `until` while hovered and clears it).
+    /// The toasts on screen, oldest first (shown only through [`UiState::show_toast`] and [`UiState::show_toast_on`];
+    /// [`UiState::toast`] is the newest; the painter extends `until` while one is hovered, and drops what has expired).
     #[serde(skip)]
-    pub toast: Option<crate::toast::Toast>,
+    pub toasts: Vec<crate::toast::Toast>,
+    /// How many times a toast was shown ([`UiState::show_toast`]), a repeat of one showing included: what
+    /// [`LightcraftApp::act`] reads to tell whether a command made a toast of its own.
+    pub toasts_shown: u64,
     /// The result of the last Find Missing Photos (it searches in the background).
     #[serde(skip)]
     pub last_find_missing: Option<serde_json::Value>,
@@ -1699,7 +1706,8 @@ impl Default for UiState {
             local_browse_root: None,
             compare: None,
             reference: None,
-            toast: None,
+            toasts: Vec::new(),
+            toasts_shown: 0,
             last_find_missing: None,
             last_find_missing_result: None,
             #[cfg(test)]
@@ -1713,24 +1721,59 @@ impl Default for UiState {
 }
 
 impl UiState {
-    /// Show `text` at app time `now`, for at least `floor` seconds (and its reading time). The one
-    /// way a toast gets on screen. The same text shown again while still visible extends it and
-    /// keeps its `shown_at`, so it does not fade in again; a different text replaces it.
+    /// Show `text` at app time `now`, for at least `floor` seconds (and its reading time), below the toasts already
+    /// showing: one no longer hides another. The same text and label shown again while still visible extends it and keeps
+    /// its `shown_at`, so it does not fade in again; it moves to the newest place. Past [`MAX_TOASTS`] the oldest goes.
     pub fn show_toast(&mut self, now: f64, text: String, floor: f64, label: Option<lightcraft_catalog::ColorLabel>) {
+        self.show(now, None, text, floor, label);
+    }
+
+    /// [`UiState::show_toast`] for a message that says the state of `topic` ("save", "label", "autoSync"…): it
+    /// replaces the toasts still showing about that topic, which no longer hold ("Library saved" takes the place of
+    /// the warning that it couldn't be; Auto Sync Off of Auto Sync On).
+    pub fn show_toast_on(&mut self, now: f64, topic: &'static str, text: String, floor: f64, label: Option<lightcraft_catalog::ColorLabel>) {
+        self.show(now, Some(topic), text, floor, label);
+    }
+
+    /// The one way a toast gets on screen. A message about a topic and one about none are the same message when
+    /// the text is: the merged one keeps the topic, so a later message on it still replaces it; two different topics
+    /// stay two messages.
+    fn show(&mut self, now: f64, topic: Option<&'static str>, text: String, floor: f64, label: Option<lightcraft_catalog::ColorLabel>) {
+        // toasts whose time is already over go first, so a gone one never costs a showing one its place (notices
+        // arrive before the frame that expires them)
+        self.expire_toasts(now);
+        self.toasts_shown += 1;
         let until = now + crate::toast::Toast::duration(&text, floor);
-        match &mut self.toast {
-            Some(t) if t.text == text && (now <= t.until || t.hovered) => {
-                t.until = t.until.max(until);
-                t.label = label;
-            }
-            slot => *slot = Some(crate::toast::Toast { text, shown_at: now, until, hovered: false, label }),
+        let same = |t: &crate::toast::Toast| t.text == text && t.label == label && (t.topic == topic || t.topic.is_none() || topic.is_none());
+        let kept = self.toasts.iter().position(same).map(|at| self.toasts.remove(at));
+        if let Some(topic) = topic {
+            self.toasts.retain(|t| t.topic != Some(topic));
+        }
+        let toast = match kept {
+            Some(old) => crate::toast::Toast { until: old.until.max(until), topic: topic.or(old.topic), ..old },
+            None => crate::toast::Toast { text, shown_at: now, until, hovered: false, label, topic },
+        };
+        self.toasts.push(toast);
+        if self.toasts.len() > MAX_TOASTS {
+            self.toasts.drain(..self.toasts.len() - MAX_TOASTS);
         }
     }
+
+    /// The newest toast on screen.
+    pub fn toast(&self) -> Option<&crate::toast::Toast> {
+        self.toasts.last()
+    }
+
+    /// Let go of the toasts whose time is over at `now` (one the pointer rests on is kept: the painter lets it go
+    /// once it has been left for its hold).
+    pub fn expire_toasts(&mut self, now: f64) {
+        self.toasts.retain(|t| t.until >= now || t.hovered);
+    }
+
     /// Whether photos, an album, a sidebar section or a keyword are being dragged.
     pub fn drag_active(&self) -> bool {
         self.dragging_photos.is_some() || self.dragging_album.is_some() || self.dragging_section.is_some() || self.dragging_keyword.is_some()
     }
-
     /// Which colour grading wheels (shadows, midtones, highlights) are hidden for viewing `photo`.
     pub fn grading_hidden_for(&self, photo: lightcraft_catalog::PhotoId) -> [bool; 3] {
         match self.grading_hidden {

@@ -31,7 +31,7 @@ fn run_for(h: &mut Headless, secs: f64) {
 }
 
 fn shown(h: &Headless) -> bool {
-    h.app.ui.toast.is_some()
+    h.app.ui.toast().is_some()
 }
 
 /// Where the toast sits: the middle of its box, 60 px above the canvas bottom.
@@ -90,7 +90,7 @@ fn a_pointer_resting_on_the_toast_holds_it_and_leaving_gives_a_second_and_a_half
     point_at(&mut h, p);
     run_for(&mut h, 5.0);
     assert!(shown(&h), "held while pointed at, long past its time");
-    let alpha_painted = h.app.ui.toast.as_ref().map(|t| crate::toast::toast_alpha(h.time(), t.shown_at, t.until));
+    let alpha_painted = h.app.ui.toast().map(|t| crate::toast::toast_alpha(h.time(), t.shown_at, t.until));
     assert_eq!(alpha_painted, Some(1.0), "and not fading");
     point_at(&mut h, egui::pos2(5.0, 5.0));
     run_for(&mut h, 1.4);
@@ -154,7 +154,7 @@ fn a_new_toast_is_drawn_translucent_first_and_opaque_later() {
     let bare = h.paint();
     let c = ctx(&h);
     h.app.toast(&c, "Hi");
-    h.app.ui.toast.as_mut().unwrap().label = ColorLabel::parse("red");
+    h.app.ui.toasts.last_mut().unwrap().label = ColorLabel::parse("red");
     h.step();
     let first = tint(&h, &bare);
     for _ in 0..30 {
@@ -170,10 +170,10 @@ fn the_same_text_shown_again_extends_without_restarting_the_fade() {
     let mut h = app();
     let c = ctx(&h);
     h.app.toast(&c, "Library saved");
-    let first = h.app.ui.toast.clone().unwrap();
+    let first = h.app.ui.toast().cloned().unwrap();
     run_for(&mut h, 1.0);
     h.app.toast(&c, "Library saved");
-    let again = h.app.ui.toast.clone().unwrap();
+    let again = h.app.ui.toast().cloned().unwrap();
     assert_eq!(again.shown_at, first.shown_at, "no fade-in flicker");
     assert!(again.until > first.until, "but it stays longer");
 }
@@ -183,10 +183,10 @@ fn a_different_text_replaces_it_and_fades_in_again() {
     let mut h = app();
     let c = ctx(&h);
     h.app.toast(&c, "Library saved");
-    let first = h.app.ui.toast.clone().unwrap();
+    let first = h.app.ui.toast().cloned().unwrap();
     run_for(&mut h, 0.5);
     h.app.toast(&c, "Undo");
-    let next = h.app.ui.toast.clone().unwrap();
+    let next = h.app.ui.toast().cloned().unwrap();
     assert_eq!(next.text, "Undo");
     assert!(next.shown_at > first.shown_at);
 }
@@ -199,11 +199,11 @@ fn a_hovered_toast_stays_without_a_repaint_timer_and_resumes_after() {
     let p = toast_centre(&h);
     point_at(&mut h, p);
     run_for(&mut h, 1.0);
-    let t = h.app.ui.toast.clone().unwrap();
+    let t = h.app.ui.toast().cloned().unwrap();
     assert!(t.hovered);
     assert!(!crate::toast::needs_repaint(t.hovered, h.time(), t.shown_at), "static once faded in: no 30 ms timer");
     point_at(&mut h, egui::pos2(5.0, 5.0));
-    let t = h.app.ui.toast.clone().unwrap();
+    let t = h.app.ui.toast().cloned().unwrap();
     assert!(!t.hovered);
     assert!(crate::toast::needs_repaint(t.hovered, h.time(), t.shown_at), "the fade-out is animated again");
 }
@@ -217,10 +217,10 @@ fn a_toast_held_through_an_idle_gap_still_gets_its_hold_after_the_pointer_leaves
     point_at(&mut h, p);
     run_for(&mut h, 0.2);
     // an idle app runs no frames while the pointer rests: `until` was not extended meanwhile
-    h.app.ui.toast.as_mut().unwrap().until = h.time() - 0.1;
-    assert!(h.app.ui.toast.as_ref().unwrap().hovered);
+    h.app.ui.toasts.last_mut().unwrap().until = h.time() - 0.1;
+    assert!(h.app.ui.toast().unwrap().hovered);
     point_at(&mut h, egui::pos2(5.0, 5.0));
-    let t = h.app.ui.toast.clone().expect("still shown after leaving");
+    let t = h.app.ui.toast().cloned().expect("still shown after leaving");
     assert!((t.until - (h.time() + crate::toast::HOVER_HOLD)).abs() < 0.1, "until {} time {}", t.until, h.time());
     run_for(&mut h, 1.9);
     assert!(!shown(&h));
@@ -233,12 +233,12 @@ fn a_hidden_canvas_cannot_pin_a_hovered_toast() {
     h.app.toast(&c, "Library saved");
     let p = toast_centre(&h);
     point_at(&mut h, p);
-    assert!(h.app.ui.toast.as_ref().unwrap().hovered);
+    assert!(h.app.ui.toast().unwrap().hovered);
     let canvas = h.app.canvas_rect.take();
     crate::panels::toast(&mut h.app, &c);
-    assert!(!h.app.ui.toast.as_ref().unwrap().hovered);
+    assert!(!h.app.ui.toast().unwrap().hovered);
     h.app.canvas_rect = canvas;
-    h.app.ui.toast.as_mut().unwrap().until = h.time() - 0.1;
+    h.app.ui.toasts.last_mut().unwrap().until = h.time() - 0.1;
     h.step();
     assert!(!shown(&h));
 }
@@ -252,35 +252,11 @@ fn the_same_text_shown_again_under_a_still_pointer_keeps_its_fade_and_hover() {
     point_at(&mut h, p);
     run_for(&mut h, 0.2);
     // an idle app runs no frames while the pointer rests: `until` is stale
-    h.app.ui.toast.as_mut().unwrap().until = h.time() - 0.1;
-    let first = h.app.ui.toast.clone().unwrap();
+    h.app.ui.toasts.last_mut().unwrap().until = h.time() - 0.1;
+    let first = h.app.ui.toast().cloned().unwrap();
     assert!(first.hovered);
     h.app.toast(&c, "Library saved");
-    let again = h.app.ui.toast.clone().unwrap();
+    let again = h.app.ui.toast().cloned().unwrap();
     assert_eq!(again.shown_at, first.shown_at, "no fade-in again");
     assert!(again.hovered);
-}
-
-/// What the web build shows for a drop of photos: a file that could not be read is a failure, so
-/// it stays 6 s like every error; a clean import keeps the regular reading time.
-#[test]
-fn a_drop_with_an_unreadable_file_is_an_error_toast_and_a_clean_one_is_not() {
-    let mut h = app();
-    let c = ctx(&h);
-    let failed = json!({"imported": [1, 2, 3], "restored": [], "failed": ["broken.jpg"]});
-    h.app.toast_dropped_photos(&c, &failed);
-    let t = h.app.ui.toast.clone().expect("the outcome is told");
-    assert!(t.until - t.shown_at >= 6.0, "an unreadable file stays like an error: {}", t.until - t.shown_at);
-
-    let mut h = app();
-    let c = ctx(&h);
-    let clean = json!({"imported": [1], "restored": [], "failed": []});
-    h.app.toast_dropped_photos(&c, &clean);
-    let t = h.app.ui.toast.clone().expect("the outcome is told");
-    assert!(t.until - t.shown_at < 6.0, "{}", t.until - t.shown_at);
-
-    let mut h = app();
-    let c = ctx(&h);
-    h.app.toast_dropped_photos(&c, &json!({"imported": [], "restored": [], "failed": [], "duplicates": [4]}));
-    assert!(!shown(&h), "duplicates only say nothing");
 }

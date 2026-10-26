@@ -111,7 +111,7 @@ fn closing_the_folder_dialog_changes_nothing() {
     h.app.services.pick_folder = Some(Box::new(|| None));
     click(&mut h, "button:settingsBackupChoose");
     assert_eq!(backup_dir(&mut h), Value::Null);
-    assert!(h.app.ui.toast.is_none(), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_none(), "{:?}", h.app.ui.toast());
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -127,7 +127,7 @@ fn a_folder_that_is_refused_says_why() {
     h.app.services.pick_folder = Some(Box::new(move || Some(picked.clone())));
     click(&mut h, "button:settingsBackupChoose");
     assert_eq!(backup_dir(&mut h), Value::Null);
-    let said = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let said = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(said.contains("inside the library folder"), "{said:?}");
     let _ = std::fs::remove_dir_all(&dir);
 }

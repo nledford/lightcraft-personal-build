@@ -398,7 +398,7 @@ fn a_stopped_synchronize_says_it_was_stopped_and_stays_at_most_one_step() {
     // Cancel (what the row's ✕ does), before any frame committed anything
     h.app.sync_run.as_mut().expect("running").cancel();
     assert!(h.step_until(T, |h| h.app.sync_run.is_none()), "it ends");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("Stopped"), "never 'up to date': {toast:?}");
     assert!(h.app.session.undo.len() <= steps + 1, "what was done by then is at most one step");
 }
@@ -449,7 +449,7 @@ fn a_synchronize_shows_a_row_and_its_cross_stops_it() {
     // the row's ✕ (as `activity.cancel`): what was done stays, and the end says it was stopped
     h.app.session.activity.cancel(rows[0].id).unwrap();
     assert!(h.step_until(T, |h| h.app.sync_run.is_none()), "it ends");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("Stopped"), "{toast:?}");
     assert!(h.app.session.activity.list().is_empty(), "the row goes with the run");
     let row = h.app.session.activity.finished().into_iter().next().expect("a stopped run leaves a row");
@@ -780,7 +780,7 @@ fn a_background_scan_that_found_nothing_only_says_so() {
     assert!(r.is_ok(), "{r:?}");
     assert!(h.step_until(T, |h| h.app.sync.is_none()), "the scan ends");
     assert!(h.app.sync_ready.is_none(), "no notice: there is nothing to look at");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("up to date"), "{toast:?}");
     assert!(h.app.session.folder_changes.is_none());
 }

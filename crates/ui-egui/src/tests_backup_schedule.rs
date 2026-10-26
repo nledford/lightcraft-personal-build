@@ -112,7 +112,7 @@ fn a_backup_that_is_due_is_made_while_the_library_is_open() {
     prefs(&mut h, json!({"every": "day"}));
     assert!(h.step_until(T, |h| h.app.session.last_backup.is_some()), "made, and noted");
     assert_eq!(backups(&dir), 1);
-    assert!(h.step_until(T, |h| h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("Backed up the library"))), "{:?}", h.app.ui.toast);
+    assert!(h.step_until(T, |h| h.app.ui.toast().is_some_and(|t| t.text.contains("Backed up the library"))), "{:?}", h.app.ui.toast());
     for _ in 0..20 {
         h.step();
     }
@@ -344,7 +344,7 @@ fn a_due_backup_that_cannot_start_is_said() {
     h.app.backs_up_by_itself = true;
     h.app.session.backup_dir = Some(dir.join("library/segments"));
     prefs(&mut h, json!({"every": "day"}));
-    assert!(h.step_until(T, |h| h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("not backed up"))), "{:?}", h.app.ui.toast);
+    assert!(h.step_until(T, |h| h.app.ui.toast().is_some_and(|t| t.text.contains("not backed up"))), "{:?}", h.app.ui.toast());
     assert_eq!(backups(&dir), 0);
 }
 
@@ -412,7 +412,7 @@ fn the_app_says_when_a_backup_removed_older_ones() {
         *now.lock().unwrap() = format!("2025-01-{day}T09:00:00");
         h.app.run("library.backup", json!({"background": false})).unwrap();
     }
-    assert!(h.step_until(T, |h| h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("Backed up the library") && !t.text.contains("Older backups"))));
+    assert!(h.step_until(T, |h| h.app.ui.toast().is_some_and(|t| t.text.contains("Backed up the library") && !t.text.contains("Older backups"))));
     prefs(&mut h, json!({"keepDays": 30}));
     *now.lock().unwrap() = "2026-01-10T09:00:00".into();
     h.app.run("library.backup", json!({"background": false})).unwrap();
@@ -420,11 +420,10 @@ fn the_app_says_when_a_backup_removed_older_ones() {
         h.step_until(T, |h| h
             .app
             .ui
-            .toast
-            .as_ref()
+            .toast()
             .is_some_and(|t| t.text.contains("Backed up the library") && t.text.contains("Older backups removed: 2"))),
         "{:?}",
-        h.app.ui.toast
+        h.app.ui.toast()
     );
     assert_eq!(backups(&dir), 3);
     let _ = std::fs::remove_dir_all(&dir);
@@ -449,9 +448,9 @@ fn the_app_says_when_a_backup_removed_what_restores_replaced() {
     *now.lock().unwrap() = "2026-01-10T09:00:00".into();
     h.app.run("library.backup", json!({"background": false})).unwrap();
     assert!(
-        h.step_until(T, |h| h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("Folders of what restores replaced, removed: 1"))),
+        h.step_until(T, |h| h.app.ui.toast().is_some_and(|t| t.text.contains("Folders of what restores replaced, removed: 1"))),
         "{:?}",
-        h.app.ui.toast
+        h.app.ui.toast()
     );
     let left = std::fs::read_dir(dir.join("library/Replaced")).unwrap().count();
     assert_eq!(left, 3);

@@ -1292,7 +1292,7 @@ fn a_smart_album_cant_be_dropped_on_the_folder_it_shows() {
     for folder in [t.trips, t.sub] {
         t.drag_row(view, folder);
         assert_eq!(t.parent(view), None);
-        assert!(t.h.app.ui.toast.is_none(), "not a drop at all: {:?}", t.h.app.ui.toast);
+        assert!(t.h.app.ui.toast().is_none(), "not a drop at all: {:?}", t.h.app.ui.toast());
         assert!(t.h.app.ui.dragging_album.is_none(), "the drag ended");
     }
     assert_eq!(t.h.app.session.undo.len(), steps);
@@ -2644,7 +2644,7 @@ fn a_menu_commands_toast_shows_after_a_while() {
     assert_eq!(r["ok"], true, "{r}");
     h.step();
     h.step();
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Auto Advance")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_some_and(|t| t.text.starts_with("Auto Advance")), "{:?}", h.app.ui.toasts);
 }
 
 /// Auto-Tag from Tracklog's toast shows too: it was stamped by a clock of its own, which starts at
@@ -2669,7 +2669,7 @@ fn the_tracklog_toast_shows_after_a_while() {
     assert_eq!(r["ok"], true, "{r}");
     h.step();
     h.step();
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Tagged")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_some_and(|t| t.text.starts_with("Tagged")), "{:?}", h.app.ui.toasts);
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -2788,7 +2788,7 @@ fn local_photos_cannot_be_added_to_albums_until_they_join_my_photos() {
     h.settle(SETTLE);
     assert!(h.app.session.catalog.album(album_id).unwrap().photos.is_empty(), "nothing invisible was added");
     assert!(h.app.ui.dragging_photos.is_none(), "the drag ended");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("Add to My Photos first"), "{toast:?}");
 
     // in My Photos: the menu entries come on, the submenu opens, and the album takes the photo
@@ -3137,7 +3137,7 @@ fn the_new_smart_album_shortcut_says_why_a_view_of_several_albums_cannot_be_save
     assert_eq!(r["ok"], true, "{r}");
     h.step();
     h.step();
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("\"Rated\" is a smart album"), "{toast:?}");
     assert!(h.app.ui.dialog.is_none());
 }

@@ -101,7 +101,7 @@ fn the_shortcut_puts_a_cursor_on_the_shown_row_and_enter_chooses_like_a_click() 
     toggle(&mut h);
     assert!(h.app.ui.sidebar_keys);
     assert_eq!(cursor_row(&h).as_deref(), Some("source:all"), "it starts where the grid is");
-    let said = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let said = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(said.contains("Esc"), "the mode says how it ends: {said:?}");
     key(&mut h, "down");
     assert_eq!(cursor_row(&h).as_deref(), Some("source:recentlyAdded"));
@@ -188,7 +188,7 @@ fn f2_renames_the_row_under_the_cursor() {
     key(&mut h, "Home");
     key(&mut h, "F2");
     assert_eq!(h.app.ui.dialog, None, "All Photos has no name to change");
-    let said = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let said = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(said.contains("no name"), "{said:?}");
 }
 
@@ -347,8 +347,8 @@ fn it_refuses_where_there_is_no_sidebar_and_follows_clicks() {
     assert!(!h.app.ui.sidebar_keys);
     h.app.ui.fullscreen = false;
     toggle(&mut h);
-    assert!(h.app.ui.toast.is_some(), "the first time says what the keys do");
-    h.app.ui.toast = None;
+    assert!(h.app.ui.toast().is_some(), "the first time says what the keys do");
+    h.app.ui.toasts.clear();
     let r = h.request("ui.clickWidget", json!({"id": "source:picks"}), T);
     assert_eq!(r["ok"], true, "{r}");
     h.settle(SETTLE);
@@ -356,7 +356,7 @@ fn it_refuses_where_there_is_no_sidebar_and_follows_clicks() {
     assert_eq!(cursor_row(&h).as_deref(), Some("source:picks"), "and the cursor goes where the click went");
     toggle(&mut h);
     toggle(&mut h);
-    assert!(h.app.ui.toast.is_none(), "the second time the ring says it");
+    assert!(h.app.ui.toast().is_none(), "the second time the ring says it");
     let keyword = h.app.caches.keyword_tree(&h.app.session.catalog, h.app.session.library_generation()).first().map(|k| (k.path.clone(), k.name.clone())).expect("a demo keyword");
     h.app.ui.sidebar_cursor = Some(format!("keyword:{}", keyword.0));
     h.step();
@@ -389,13 +389,13 @@ fn asking_for_the_mode_while_a_field_is_focused_lets_the_field_go() {
     h.step();
     h.step();
     assert!(h.view.ctx.egui_wants_keyboard_input(), "the search box has the focus");
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     exec(&mut h, "view.sidebarKeys", json!({"on": true}));
     h.step();
     h.step();
     assert!(h.app.ui.sidebar_keys, "the field did not end the mode at once");
     assert!(!h.view.ctx.egui_wants_keyboard_input(), "the field let the focus go");
-    let said = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let said = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(said.contains("Esc"), "the mode said how it ends: {said:?}");
 }
 

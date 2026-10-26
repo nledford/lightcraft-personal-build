@@ -83,52 +83,83 @@ pub fn resizable_side(
     Some(w.round().clamp(limits.min, max))
 }
 
-/// The HUD toast at the bottom centre of the canvas. It fades in, holds while the pointer rests
-/// on it, and fades out; it only reads the pointer position and never takes a click.
+/// The space between two toasts on screen.
+const TOAST_GAP: f32 = 8.0;
+
+/// The HUD toasts at the bottom centre of the canvas: the newest where a toast always was, the older ones above it,
+/// each fading in, holding while the pointer rests on it, and fading out at its own time (widgets `toast:0` for the
+/// newest, `toast:1` above it…); it only reads the pointer position and never takes a click.
 pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
-    use crate::toast::{HOVER_HOLD, toast_alpha};
+    use crate::toast::{HOVER_HOLD, needs_repaint, toast_alpha};
     let now = app.tick_now();
-    let Some(shown) = app.ui.toast.as_mut() else { return };
-    // no frames run in an idle app while the pointer rests on it: a hovered toast is not expired
-    // before the frame that sees the pointer leave has started its hold
-    if now > shown.until && !shown.hovered {
-        app.ui.toast = None;
+    // (no frames run in an idle app while the pointer rests on one: a hovered toast is not expired before the frame
+    // that sees the pointer leave has started its hold)
+    app.ui.expire_toasts(now);
+    if app.ui.toasts.is_empty() {
         return;
     }
     let Some(canvas) = app.canvas_rect else {
-        shown.hovered = false; // a hidden canvas cannot pin the toast
+        // a hidden canvas cannot pin a toast
+        for shown in &mut app.ui.toasts {
+            shown.hovered = false;
+        }
         return;
     };
     let t = Tokens::get(ctx);
     let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::unique("toast")));
     // long messages (a save warning, the web build's notices) wrap within the canvas
     let wrap = (canvas.width() - 80.0).clamp(200.0, 720.0);
-    let (background, foreground) = shown.label.map(crate::theme::label_toast_colors).unwrap_or((Tokens::photo_shade(), Tokens::on_photo()));
-    let galley = painter.layout(shown.text.clone(), t.font(14.0), foreground, wrap);
-    let size = vec2(galley.size().x + 40.0, (galley.size().y + 22.0).max(40.0));
-    // a slideshow's playback controls sit at the bottom: the toast goes to the top there, clear of them
-    let y = if app.ui.slideshow.is_some() { canvas.top() + 60.0 } else { canvas.bottom() - 60.0 };
-    let r = Rect::from_center_size(pos2(canvas.center().x, y), size);
-    // while the pointer rests on it, the clock stops; the first frame after it leaves starts the 1.5 s hold
-    let hovered = ctx.pointer_hover_pos().is_some_and(|p| r.contains(p));
-    if hovered {
-        shown.until = shown.until.max(now + HOVER_HOLD);
-    } else if shown.hovered {
-        shown.until = now + HOVER_HOLD;
+    // a slideshow's playback controls sit at the bottom: the toasts go to the top there, clear of them, the newest
+    // on top; elsewhere the newest is at the bottom and the older ones stack above it
+    let top = app.ui.slideshow.is_some();
+    // the edge the next one goes against; the newest has none: it is centred where the single toast always was
+    let mut edge: Option<f32> = None;
+    let mut repaint = false;
+    // the widget ids count the toasts drawn, so `toast:1` is always the one above `toast:0` even when one between is skipped
+    let mut drawn = 0;
+    let x = canvas.center().x;
+    for (i, shown) in app.ui.toasts.iter_mut().rev().enumerate() {
+        let (background, foreground) = shown.label.map(crate::theme::label_toast_colors).unwrap_or((Tokens::photo_shade(), Tokens::on_photo()));
+        let galley = painter.layout(shown.text.clone(), t.font(14.0), foreground, wrap);
+        let size = vec2(galley.size().x + 40.0, (galley.size().y + 22.0).max(40.0));
+        let r = match (edge, top) {
+            (None, true) => Rect::from_center_size(pos2(x, canvas.top() + 60.0), size),
+            (None, false) => Rect::from_center_size(pos2(x, canvas.bottom() - 60.0), size),
+            (Some(y), true) => Rect::from_min_size(pos2(x - size.x / 2.0, y), size),
+            (Some(y), false) => Rect::from_min_size(pos2(x - size.x / 2.0, y - size.y), size),
+        };
+        // the older ones never go past the canvas: a burst of long messages keeps those that fit (the newest is drawn
+        // as the single toast always was, whatever room there is); one too tall is skipped, and a shorter older one may
+        // still fit
+        if i > 0 && !canvas.contains_rect(r) {
+            shown.hovered = false;
+            continue;
+        }
+        edge = Some(if top { r.bottom() + TOAST_GAP } else { r.top() - TOAST_GAP });
+        // while the pointer rests on it, the clock stops; the first frame after it leaves starts the 1.5 s hold
+        let hovered = ctx.pointer_hover_pos().is_some_and(|p| r.contains(p));
+        if hovered {
+            shown.until = shown.until.max(now + HOVER_HOLD);
+        } else if shown.hovered {
+            shown.until = now + HOVER_HOLD;
+        }
+        shown.hovered = hovered;
+        let alpha = toast_alpha(now, shown.shown_at, shown.until);
+        painter.rect_filled(r, 6.0, background.gamma_multiply(alpha));
+        painter.galley_with_override_text_color(r.center() - galley.size() / 2.0, galley, foreground.gamma_multiply(alpha));
+        crate::widgets::register_geometry(ctx, format!("toast:{drawn}"), r);
+        drawn += 1;
+        // a screen reader reads it out when it comes, without leaving what it was reading
+        let words = shown.text.clone();
+        egui::Area::new(egui::Id::unique(("toast-words", i))).order(egui::Order::Foreground).fixed_pos(r.min).interactable(false).show(ctx, |ui| {
+            let resp = ui.interact(r, ui.scope_id().with("toast"), egui::Sense::hover());
+            resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &words));
+            ctx.accesskit_node_builder(resp.id, |node| node.set_live(egui::accesskit::Live::Polite));
+        });
+        // a toast held under the pointer is static once faded in: no timer, the pointer leaving wakes the app
+        repaint |= needs_repaint(hovered, now, shown.shown_at);
     }
-    shown.hovered = hovered;
-    let alpha = toast_alpha(now, shown.shown_at, shown.until);
-    painter.rect_filled(r, 6.0, background.gamma_multiply(alpha));
-    painter.galley_with_override_text_color(r.center() - galley.size() / 2.0, galley, foreground.gamma_multiply(alpha));
-    // a screen reader reads it out when it comes, without leaving what it was reading
-    let words = shown.text.clone();
-    egui::Area::new(egui::Id::unique("toast-words")).order(egui::Order::Foreground).fixed_pos(r.min).interactable(false).show(ctx, |ui| {
-        let resp = ui.interact(r, ui.scope_id().with("toast"), egui::Sense::hover());
-        resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &words));
-        ctx.accesskit_node_builder(resp.id, |node| node.set_live(egui::accesskit::Live::Polite));
-    });
-    // a toast held under the pointer is static once faded in: no timer, the pointer leaving wakes the app
-    if crate::toast::needs_repaint(hovered, now, shown.shown_at) {
+    if repaint {
         ctx.request_repaint_after(std::time::Duration::from_millis(30));
     }
 }

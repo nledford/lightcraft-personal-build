@@ -1524,11 +1524,11 @@ mod tests {
         let ctx = egui::Context::default();
         app.ui.compare = Some(Default::default());
         app.restore_status(&ctx);
-        let said = app.ui.toast.take().map(|t| t.text).unwrap_or_default();
+        let said = app.ui.toasts.pop().map(|t| t.text).unwrap_or_default();
         assert!(said.contains("Replaced") && said.contains(dir.to_string_lossy().as_ref()), "{said}");
         assert!(app.ui.compare.is_none());
         app.restore_status(&ctx);
-        assert!(app.ui.toast.is_none());
+        assert!(app.ui.toast().is_none());
         // nothing chosen: nothing done
         app.services.pick_folder = Some(Box::new(|| None));
         let seen = app.session.restore.clone().map(|r| std::sync::Arc::as_ptr(&r) as usize);
@@ -1840,7 +1840,7 @@ mod tests {
             h.step();
         }
         // (read at once: a toast keeps the UI repainting until it expires, so settling would outlive it)
-        let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+        let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
         assert!(toast.contains(refusal), "the refusal is shown: {toast:?}");
     }
 
@@ -1871,7 +1871,7 @@ mod tests {
         let bad_dir = dir.join("nonexistent_subdir");
         let err = run_item(&mut app, "file.findMissing", json!({"folder": bad_dir.to_string_lossy(), "wait": true})).unwrap_err();
         assert!(err.contains("not a folder"), "expected 'not a folder' error, got: {err}");
-        assert!(app.ui.toast.as_ref().map(|t| t.text.contains("not a folder")).unwrap_or(false), "toast should reflect failure");
+        assert!(app.ui.toast().map(|t| t.text.contains("not a folder")).unwrap_or(false), "toast should reflect failure");
         assert!(app.ui.last_find_missing.is_none(), "last_find_missing must remain None on failure");
 
         // 2. Invalid timeout parameters are rejected cleanly

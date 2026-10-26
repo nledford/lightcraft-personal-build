@@ -107,7 +107,7 @@ fn click(h: &mut Headless, id: &str) {
 }
 
 fn toast(h: &Headless) -> String {
-    h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default()
+    h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default()
 }
 
 /// Let the background move end, as the frames that follow it do.
@@ -486,7 +486,7 @@ fn a_background_move_has_a_cancellable_row_and_holds_back_other_moves_until_it_e
     assert!(e.contains("being moved"), "{e}");
     assert_eq!(toast(&h), e, "said where the person sees it: the status line isn't drawn");
     // so is a change that would take the moving photo out of the library, whichever menu or button asked
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     h.app.run("library.select", json!({"ids": [beach]})).unwrap();
     let e = h.app.run("photo.deletePermanently", json!({"ids": [beach]})).unwrap_err();
     assert_eq!(e, "1 photo is being moved to another folder: wait for the move to finish");
@@ -519,9 +519,9 @@ fn a_background_move_refused_for_another_running_move_says_so_in_a_toast() {
     assert!(e.contains("being moved"), "{e}");
     assert_eq!(toast(&h), e, "said where the person sees it");
     // and it stays up for 6 s of the app clock
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     let _ = h.app.run("photo.moveToFolder", json!({"ids": [garden], "folder": trip.to_string_lossy(), "background": true}));
-    let expires = h.app.ui.toast.as_ref().map(|t| t.until).expect("a toast");
+    let expires = h.app.ui.toast().map(|t| t.until).expect("a toast");
     assert!((expires - (h.app.tick_now() + 6.0)).abs() < 1.0, "{expires}");
     settle(&mut h);
     let _ = std::fs::remove_dir_all(&root);
@@ -534,11 +534,11 @@ fn a_move_started_from_the_grid_or_a_folder_row_that_is_refused_says_so_for_as_l
     let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
     let (beach, garden) = (id_of(&h, "beach.png"), id_of(&h, "garden.png"));
     h.app.run("photo.moveToFolder", json!({"ids": [beach], "folder": home.to_string_lossy(), "background": true})).unwrap();
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     let ctx = h.view.ctx.clone();
     let e = crate::move_task::start(&mut h.app, &ctx, &json!({"ids": [garden], "folder": trip.to_string_lossy()})).unwrap_err();
     assert!(e.contains("being moved"), "{e}");
-    let toast = h.app.ui.toast.clone().expect("the refusal is told");
+    let toast = h.app.ui.toast().cloned().expect("the refusal is told");
     let (text, until) = (toast.text, toast.until);
     assert_eq!(text, e);
     assert!(until - h.app.tick_now() > 5.0, "an error stays 6 s, not the 1.4 s of a plain toast: {}", until - h.app.tick_now());
@@ -560,9 +560,9 @@ fn a_move_refused_when_the_question_is_answered_stays_up_as_long_as_an_error() {
     // another move starts while the question is up: the answer is refused
     // (started on the engine and never run: it holds the library as a move on a worker would)
     let _held = lightcraft_engine::move_job::start(&mut h.app.session, &json!({"ids": [dunes], "folder": home.to_string_lossy()}), true).unwrap();
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     click(&mut h, "button:dialogOk");
-    let toast = h.app.ui.toast.clone().expect("the refusal is told");
+    let toast = h.app.ui.toast().cloned().expect("the refusal is told");
     let (text, until) = (toast.text, toast.until);
     assert!(text.contains("being moved"), "{text}");
     assert!(until - h.app.tick_now() > 5.0, "an error stays 6 s, not the 1.4 s of a plain toast: {}", until - h.app.tick_now());

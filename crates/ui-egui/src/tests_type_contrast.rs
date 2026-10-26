@@ -46,7 +46,7 @@ fn set(h: &mut Headless, what: Value) {
 /// run, and it is not what is being read.
 fn rest(h: &mut Headless) {
     h.settle(T);
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     h.request("ui.move", json!({"x": 2.0, "y": 2.0}), T);
     for _ in 0..3 {
         h.step();

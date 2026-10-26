@@ -240,11 +240,11 @@ fn looking_through_the_tabs_changes_nothing_and_leaves_no_double_names() {
         )
     };
     let before = state(&mut h);
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     filter(&mut h, "cache");
     // Then nothing changed by being looked through, and nothing was said
     assert_eq!(state(&mut h), before);
-    assert!(h.app.ui.toast.is_none(), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_none(), "{:?}", h.app.ui.toast());
     // And no control of a tab that is not shown is among the widgets scripts can click
     let mut ids: Vec<&String> = h.app.widgets.iter().map(|(id, _)| id).collect();
     assert!(!ids.iter().any(|id| id.as_str() == "button:settingsClearCache"), "a tab looked through off screen leaves no widgets behind");
