@@ -1601,6 +1601,27 @@ fn folders_app_with_services(paths: &[&str], size: [f32; 2], services: Services)
     h
 }
 
+/// A library whose folders nest as deep as `deep` (`/a/b/…/m`) with `x` and `y` at the end, every
+/// level opened, in a window of `size`. Each level holds a photo, so each is a row.
+fn deep_folders_app(deep: &str, size: [f32; 2]) -> Headless {
+    let mut paths = vec![format!("{deep}/x/1.jpg"), format!("{deep}/y/2.jpg")];
+    let mut levels = Vec::new();
+    let mut level = String::new();
+    for name in deep.split('/').filter(|n| !n.is_empty()) {
+        level.push('/');
+        level.push_str(name);
+        paths.push(format!("{level}/0.jpg"));
+        levels.push(level.clone());
+    }
+    let paths: Vec<&str> = paths.iter().map(String::as_str).collect();
+    let mut h = folders_app_sized(&paths, size);
+    for level in &levels[..levels.len() - 1] {
+        click(&mut h, &format!("libraryFolderToggle:{level}"));
+    }
+    h.settle(SETTLE);
+    h
+}
+
 fn has(h: &Headless, id: &str) -> bool {
     h.app.widgets.iter().any(|(w, _)| w == id)
 }

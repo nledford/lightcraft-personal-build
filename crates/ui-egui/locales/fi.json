@@ -2487,5 +2487,8 @@
   "This photo is on a disk that has no Trash. Erase its file for good?": "Tämä kuva on levyllä, jolla ei ole roskakoria. Poistetaanko sen tiedosto pysyvästi?",
   "This cannot be undone: the files are not kept anywhere.": "Tätä ei voi kumota: tiedostoja ei säilytetä mihinkään.",
   "Only these files are erased; XMP sidecars beside them stay.": "Vain nämä tiedostot poistetaan; niiden vieressä olevat XMP-sivutiedostot jäävät.",
-  "Cancel leaves these photos in the library and their files where they are.": "Peruuttaminen jättää nämä kuvat kirjastoon ja niiden tiedostot paikoilleen."
+  "Cancel leaves these photos in the library and their files where they are.": "Peruuttaminen jättää nämä kuvat kirjastoon ja niiden tiedostot paikoilleen.",
+  "Go Deeper": "Siirry syvemmälle",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Näin syviä kansioita ei listata tässä. Napsauta lisätäksesi tämän kansion Paikalliseen omaksi paikakseen, jolloin voit avata sen pidemmälle",
+  "Opens as its own place": "Avautuu omana paikkanaan"
 }

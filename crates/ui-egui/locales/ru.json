@@ -2531,5 +2531,8 @@
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Эта библиотека открыта без блокировки, поэтому прерванные перемещения остаются как есть, пока библиотека не будет открыта с блокировкой; «Найти отсутствующие фото» заново свяжет перемещённые файлы.",
   "Unfinished moves": "Незавершённые перемещения",
   "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Вид → Накладка лупы → Параметры вида выбирает строки, которые показывают Info 1 и Info 2.",
-  "Sorting the library": "Сортировка библиотеки"
+  "Sorting the library": "Сортировка библиотеки",
+  "Go Deeper": "Глубже",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Папки на такой глубине здесь не показываются. Нажмите, чтобы добавить эту папку в «Локальное» как отдельное место и раскрывать её дальше",
+  "Opens as its own place": "Открывается как отдельное место"
 }

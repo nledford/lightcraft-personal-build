@@ -353,5 +353,6 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Fotos que não puderam ser movidas e continuam na biblioteca ({n}): {why}",
   "Photos whose file was already gone: {n}": "Fotos cujo arquivo já não existia: {n}",
   "Sidecars left in place: {n}": "Arquivos sidecar deixados no lugar: {n}",
-  "Files other photos still use, kept: {n}": "Arquivos que outras fotos ainda usam (mantidos): {n}"
+  "Files other photos still use, kept: {n}": "Arquivos que outras fotos ainda usam (mantidos): {n}",
+  "“{name}” is now a place in Local: open it there": "“{name}” agora é um lugar em Local: abra-a lá"
 }

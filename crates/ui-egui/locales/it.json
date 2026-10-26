@@ -2522,5 +2522,8 @@
   "This photo is on a disk that has no Trash. Erase its file for good?": "Questa foto si trova su un disco senza Cestino. Cancellare definitivamente il suo file?",
   "This cannot be undone: the files are not kept anywhere.": "Questa operazione non si può annullare: i file non vengono conservati da nessuna parte.",
   "Only these files are erased; XMP sidecars beside them stay.": "Vengono cancellati solo questi file; i file collaterali XMP accanto a essi restano.",
-  "Cancel leaves these photos in the library and their files where they are.": "Annulla lascia queste foto nella libreria e i loro file dove sono."
+  "Cancel leaves these photos in the library and their files where they are.": "Annulla lascia queste foto nella libreria e i loro file dove sono.",
+  "Go Deeper": "Vai più a fondo",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Le cartelle a questa profondità non sono elencate qui. Fai clic per aggiungere questa cartella a Locale come luogo a sé, così potrai aprirla ulteriormente",
+  "Opens as its own place": "Si apre come luogo a sé"
 }

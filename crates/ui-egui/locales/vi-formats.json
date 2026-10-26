@@ -353,5 +353,6 @@
   "Photos whose file was already gone: {n}": "Ảnh có tệp đã mất từ trước: {n}",
   "Sidecars left in place: {n}": "Sidecar để lại tại chỗ: {n}",
   "Files other photos still use, kept: {n}": "Tệp ảnh khác vẫn đang dùng, được giữ lại: {n}",
-  "…and {more} more": "…and {more} more"
+  "…and {more} more": "…and {more} more",
+  "“{name}” is now a place in Local: open it there": "“{name}” giờ là một vị trí trong Cục bộ: hãy mở ở đó"
 }

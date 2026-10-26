@@ -353,5 +353,6 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "有 {n} 個無法移動，仍留在照片庫中：{why}",
   "Photos whose file was already gone: {n}": "檔案已不存在的照片：{n} 張",
   "Sidecars left in place: {n}": "保留在原處的附屬檔案：{n} 個",
-  "Files other photos still use, kept: {n}": "其他照片仍在使用而保留的檔案：{n} 個"
+  "Files other photos still use, kept: {n}": "其他照片仍在使用而保留的檔案：{n} 個",
+  "“{name}” is now a place in Local: open it there": "「{name}」現在是本機中的一個位置：請在那裡開啟"
 }

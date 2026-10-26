@@ -2340,5 +2340,8 @@
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "此照片庫未取得鎖定就被開啟，因此被中斷的移動會保持原樣，直到照片庫以鎖定開啟；用「尋找遺失的照片」可重新連結已移動的檔案。",
   "Unfinished moves": "未完成的移動",
   "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "檢視 → 放大鏡疊加 → 檢視選項 可選擇「資訊 1」和「資訊 2」顯示的行。",
-  "Sorting the library": "正在排序照片庫"
+  "Sorting the library": "正在排序照片庫",
+  "Go Deeper": "繼續深入",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "這麼深的資料夾不會列在這裡。按一下可將此資料夾作為獨立位置加入本機，以便繼續展開",
+  "Opens as its own place": "作為獨立位置開啟"
 }

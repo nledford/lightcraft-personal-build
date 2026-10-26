@@ -2896,5 +2896,8 @@
   "This photo is on a disk that has no Trash. Erase its file for good?": "ეს ფოტო ისეთ დისკზეა, რომელსაც ურნა არ აქვს. წავშალოთ მისი ფაილი სამუდამოდ?",
   "This cannot be undone: the files are not kept anywhere.": "ამის დაბრუნება შეუძლებელია: ფაილები არსად შეინახება.",
   "Only these files are erased; XMP sidecars beside them stay.": "იშლება მხოლოდ ეს ფაილები; მათ გვერდით არსებული XMP თანმხლები ფაილები რჩება.",
-  "Cancel leaves these photos in the library and their files where they are.": "„გაუქმება“ ამ ფოტოებს ბიბლიოთეკაში დატოვებს, მათ ფაილებს კი — თავის ადგილას."
+  "Cancel leaves these photos in the library and their files where they are.": "„გაუქმება“ ამ ფოტოებს ბიბლიოთეკაში დატოვებს, მათ ფაილებს კი — თავის ადგილას.",
+  "Go Deeper": "უფრო ღრმად",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "ამ სიღრმის საქაღალდეები აქ არ ჩანს. დააწკაპეთ, რომ ეს საქაღალდე „ლოკალურს“ ცალკე ადგილად დაემატოს და შემდგომ გახსნათ",
+  "Opens as its own place": "იხსნება როგორც ცალკე ადგილი"
 }

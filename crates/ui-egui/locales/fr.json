@@ -2572,5 +2572,8 @@
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Cette bibliothèque est ouverte sans son verrou : les déplacements interrompus sont laissés tels quels jusqu’à une ouverture avec le verrou ; Rechercher les photos manquantes relie à nouveau les fichiers déplacés.",
   "Unfinished moves": "Déplacements inachevés",
   "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Affichage → Incrustation de la loupe → Options d'affichage choisit les lignes que montrent Info 1 et Info 2.",
-  "Sorting the library": "Tri de la bibliothèque"
+  "Sorting the library": "Tri de la bibliothèque",
+  "Go Deeper": "Aller plus loin",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Les dossiers aussi profonds ne sont pas affichés ici. Cliquez pour ajouter ce dossier à Local comme un emplacement à part, et l’ouvrir plus loin",
+  "Opens as its own place": "S’ouvre comme emplacement à part"
 }

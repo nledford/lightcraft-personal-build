@@ -353,5 +353,6 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Не вдалося перемістити ({n}), вони залишаються в бібліотеці: {why}",
   "Photos whose file was already gone: {n}": "Фото, файлу яких уже не було: {n}",
   "Sidecars left in place: {n}": "Залишено супровідних файлів: {n}",
-  "Files other photos still use, kept: {n}": "Файли, які використовують інші фото (залишено): {n}"
+  "Files other photos still use, kept: {n}": "Файли, які використовують інші фото (залишено): {n}",
+  "“{name}” is now a place in Local: open it there": "«{name}» тепер окреме місце в локальних: відкрийте її там"
 }

@@ -2568,5 +2568,8 @@
   "This photo is on a disk that has no Trash. Erase its file for good?": "Tato fotografie je na disku bez koše. Smazat její soubor natrvalo?",
   "This cannot be undone: the files are not kept anywhere.": "Tuto akci nelze vrátit: soubory se nikde neuchovají.",
   "Only these files are erased; XMP sidecars beside them stay.": "Smažou se jen tyto soubory; doprovodné soubory XMP vedle nich zůstanou.",
-  "Cancel leaves these photos in the library and their files where they are.": "Zrušit ponechá tyto fotografie v knihovně a jejich soubory na místě."
+  "Cancel leaves these photos in the library and their files where they are.": "Zrušit ponechá tyto fotografie v knihovně a jejich soubory na místě.",
+  "Go Deeper": "Jít hlouběji",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Takto hluboko vnořené složky se zde nezobrazují. Kliknutím přidáte tuto složku do místních souborů jako samostatné místo, abyste ji mohli otevírat dál",
+  "Opens as its own place": "Otevře se jako samostatné místo"
 }

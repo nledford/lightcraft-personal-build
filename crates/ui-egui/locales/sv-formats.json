@@ -353,5 +353,6 @@
   "Photos whose file was already gone: {n}": "Foton vars fil redan saknades: {n}",
   "Sidecars left in place: {n}": "Sidofiler som lämnats kvar: {n}",
   "Files other photos still use, kept: {n}": "Filer som andra foton fortfarande använder, behållna: {n}",
-  "Listing folders — folders: {folders}, files: {files}": "Listar mappar — mappar: {folders}, filer: {files}"
+  "Listing folders — folders: {folders}, files: {files}": "Listar mappar — mappar: {folders}, filer: {files}",
+  "“{name}” is now a place in Local: open it there": "“{name}” är nu en plats i Lokalt: öppna den där"
 }
