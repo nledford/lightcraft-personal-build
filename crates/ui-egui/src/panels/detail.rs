@@ -823,17 +823,17 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         shown = draw(Slot::Before, img_rect, canvas);
         // on the photo itself, so it gets the hover label's dark pill to stay readable over light
         // pictures; painted after the window renders below, which would cover it zoomed in
-        let g = p.layout_no_wrap(crate::i18n::tr("Before").to_string(), t.font(12.0), Color32::WHITE);
+        let g = p.layout_no_wrap(crate::i18n::tr("Before").to_string(), t.label(), Tokens::on_photo());
         before_badge = Some((label_badge_rect(img_rect, canvas, g.size(), badge_top_inset), g));
     } else if let Some((_key, label)) = &hover_key
         && let Some(tex) = app.renderer.textures.get(&Slot::Hover).filter(|t| t.photo == id)
     {
         let hover_rect = fit_texture_rect(img_rect, tex.size);
         p.image(tex.tex.id(), hover_rect, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
-        let g = p.layout_no_wrap(label.clone(), t.font(12.0), Color32::WHITE);
+        let g = p.layout_no_wrap(label.clone(), t.label(), Tokens::on_photo());
         let bg = label_badge_rect(hover_rect, canvas, g.size(), badge_top_inset);
-        p.rect_filled(bg, 4.0, Color32::from_black_alpha(160));
-        p.galley(bg.min + vec2(8.0, 4.0), g, Color32::WHITE);
+        p.rect_filled(bg, 4.0, Tokens::photo_shade());
+        p.galley(bg.min + vec2(8.0, 4.0), g, Tokens::on_photo());
         shown = "hover";
     } else {
         shown = draw(Slot::Main, img_rect, canvas);
@@ -884,8 +884,8 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         draw_window(&p.with_clip_rect(clip), app, &window_ctx, v, view);
     }
     if let Some((bg, g)) = before_badge {
-        p.rect_filled(bg, 4.0, Color32::from_black_alpha(160));
-        p.galley(bg.min + vec2(8.0, 4.0), g, Color32::WHITE);
+        p.rect_filled(bg, 4.0, Tokens::photo_shade());
+        p.galley(bg.min + vec2(8.0, 4.0), g, Tokens::on_photo());
         register(ui, "canvas:beforeLabel", bg);
     }
     // the line of a wipe over both

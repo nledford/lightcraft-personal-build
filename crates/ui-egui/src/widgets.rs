@@ -969,6 +969,24 @@ mod tests {
         assert!(preview_only_explanation("unsupported CR3").contains("unsupported CR3"));
     }
 
+    /// Given a narrow photo with five stars and a flag, then the stars close up so the flag ends inside the bar; on a
+    /// wide one they keep their spacing.
+    #[test]
+    fn stars_close_up_to_leave_the_flag_inside_a_narrow_bar() {
+        // grid: 6 in from the left, 3 to spare at the right; the flag is 18 wide with its gap
+        let (stars, flag_w, full) = (5, 18.0, 13.0);
+        for width in [40.0_f32, 51.0, 60.0, 75.0, 90.0] {
+            let room = width - 9.0;
+            let pitch = star_pitch(room, stars, flag_w, full);
+            let flag_right = 6.0 + stars as f32 * pitch + 4.0 + 14.0;
+            assert!(flag_right <= width, "width {width}: the flag ends at {flag_right}");
+            assert!(pitch <= full && pitch >= 3.0);
+        }
+        assert_eq!(star_pitch(400.0, stars, flag_w, full), full, "a wide bar keeps the spacing");
+        assert_eq!(star_pitch(10.0, 0, flag_w, full), full, "no stars, nothing to close up");
+        assert_eq!(star_pitch(1.0, stars, flag_w, full), 3.0, "never closer than 3 pt");
+    }
+
     #[test]
     fn nudges_are_a_sensible_step() {
         let spec = |id, min, max, step| ControlSpec {
@@ -1139,6 +1157,16 @@ pub(crate) fn one_line(painter: &egui::Painter, text: &str, font: egui::FontId, 
     let mut job = egui::text::LayoutJob::simple_singleline(text.to_string(), font, color);
     job.wrap = egui::text::TextWrapping::truncate_at_width(max.max(1.0));
     painter.layout_job(job)
+}
+
+/// How far apart the `stars` of a rating on a photo are set, in a bar with `room` for the stars and the flag after
+/// them (`flag_w`, 0 for no flag): `full` where all fit, closer where the photo is narrow (its marks are clipped to
+/// it, and the flag is the last mark: it was the first to go). The star drawn is one less than the pitch, as at `full`.
+pub(crate) fn star_pitch(room: f32, stars: usize, flag_w: f32, full: f32) -> f32 {
+    if stars == 0 {
+        return full;
+    }
+    ((room - flag_w) / stars as f32).clamp(3.0, full)
 }
 
 /// `text` shortened to fit `max` (as `width` measures it): leading folders drop first

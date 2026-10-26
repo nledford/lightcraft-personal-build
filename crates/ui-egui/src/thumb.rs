@@ -63,9 +63,6 @@ pub(crate) struct Metrics {
     pill_icon: f32,
     font: f32,
     micro: f32,
-    /// Whether a band darkens the row under any marks (the filmstrip's), not only under the pointer
-    /// and on a chosen photo (the grid's).
-    band: bool,
 }
 
 impl Surface {
@@ -94,7 +91,6 @@ impl Surface {
                 pill_icon: 16.0,
                 font: 11.0,
                 micro: 9.5,
-                band: false,
             },
             Surface::Film => Metrics {
                 star: 8.0,
@@ -119,7 +115,6 @@ impl Surface {
                 pill_icon: 14.0,
                 font: 9.5,
                 micro: 8.5,
-                band: true,
             },
         }
     }
@@ -492,21 +487,56 @@ fn marks_row(ctx: &egui::Context, p: &Painter, t: &Tokens, m: &Metrics, th: &Thu
     };
     let layout = bar_layout(rect.width(), marks, m, !th.surround);
     let bar = marks_extent(rect, marks, th.hot, only_label, !th.surround, m)?;
-    if !only_label && (th.hot || m.band) {
+    // (a picture has no theme: its marks are in one light ink on a shade, not in the theme's star and
+    // label colours, which are dark in the light themes. Each group of marks has a shade as wide as it
+    // is; shade and marks end where the photo ends, and under the pointer and on a chosen photo the
+    // band along the lower edge is there as it was: it is what says "this one".)
+    let ink = Tokens::on_photo();
+    let clip = p.with_clip_rect(bar.intersect(p.clip_rect()));
+    let p = &clip;
+    if !only_label && th.hot {
         p.rect_filled(bar, 0.0, Color32::from_black_alpha(120));
+    }
+    let flag_w = if layout.flag { m.flag } else { 0.0 };
+    let right_w = if layout.edited { m.edited } else { 0.0 } + if layout.label { m.label } else { 0.0 };
+    // (on a narrow photo the stars close up, so that the flag after them is still inside the bar it is
+    // clipped to, and clear of the shade under the marks at the right, 6 points beyond it)
+    let room = bar.width() - m.pad - 3.0 - right_w - if right_w > 0.0 { 6.0 } else { 0.0 };
+    let pitch = match layout.stars {
+        Stars::Row(n) => crate::widgets::star_pitch(room, usize::from(n), flag_w, m.star_pitch),
+        _ => m.star_pitch,
+    };
+    let marks_w = match layout.stars {
+        Stars::None => 0.0,
+        Stars::Row(n) => f32::from(n) * pitch,
+        Stars::Compact(_) => m.star + 1.0 + m.digit,
+    };
+    let inset = if m.bar > 20.0 { 3.0 } else { 1.0 };
+    let shade = |from: f32, to: f32| {
+        if to > from {
+            p.rect_filled(Rect::from_min_max(pos2(from, bar.top() + inset), pos2(to, bar.bottom() - inset)), inset + 1.0, Tokens::photo_shade());
+        }
+    };
+    if !only_label {
+        if marks_w + flag_w > 0.0 {
+            shade(bar.left() + inset, (bar.left() + m.pad + 3.0 + marks_w + flag_w).min(bar.right()));
+        }
+        if right_w > 0.0 && (layout.edited || layout.label) {
+            shade((bar.right() - right_w - 6.0).max(bar.left()), bar.right() - inset);
+        }
     }
     let y = bar.center().y;
     let mut x = bar.left() + m.pad;
     match layout.stars {
         Stars::None => {}
         Stars::Row(n) => {
-            let width = crate::rating::paint_rating(p, pos2(x, y), n, m.rating, t.star);
+            let width = crate::rating::paint_rating_spaced(p, pos2(x, y), n, m.rating, pitch, ink);
             mark("stars", Rect::from_min_size(pos2(x, y - m.star / 2.0), vec2(width, m.star)));
             x += width;
         }
         Stars::Compact(n) => {
-            paint(p, Rect::from_min_size(pos2(x, y - m.star / 2.0), vec2(m.star, m.star)), Icon::StarFilled, t.star);
-            p.text(pos2(x + m.star + 1.0, y), Align2::LEFT_CENTER, n.to_string(), t.semibold(m.font), t.star);
+            paint(p, Rect::from_min_size(pos2(x, y - m.star / 2.0), vec2(m.star, m.star)), Icon::StarFilled, ink);
+            p.text(pos2(x + m.star + 1.0, y), Align2::LEFT_CENTER, n.to_string(), t.micro_strong(), ink);
             mark("stars", Rect::from_min_size(pos2(x, y - m.star / 2.0), vec2(m.star + 1.0 + m.digit, m.star)));
             x += m.star + 1.0 + m.digit;
         }
@@ -514,8 +544,8 @@ fn marks_row(ctx: &egui::Context, p: &Painter, t: &Tokens, m: &Metrics, th: &Thu
     if layout.flag {
         let at = Rect::from_min_size(pos2(x + m.flag - m.flag_icon, y - m.flag_icon / 2.0), vec2(m.flag_icon, m.flag_icon));
         match photo.flag {
-            Flag::Pick => paint(p, at, Icon::FlagPickFilled, t.pick),
-            Flag::Reject => paint(p, at, Icon::FlagReject, t.reject),
+            Flag::Pick => paint(p, at, Icon::FlagPickFilled, ink),
+            Flag::Reject => paint(p, at, Icon::FlagReject, Tokens::on_photo_reject()),
             Flag::None => {}
         }
         mark("flag", at);
@@ -530,7 +560,7 @@ fn marks_row(ctx: &egui::Context, p: &Painter, t: &Tokens, m: &Metrics, th: &Thu
     }
     if layout.edited {
         let at = Rect::from_center_size(pos2(right - m.edited / 2.0, y), vec2(m.edited_icon, m.edited_icon));
-        paint(p, at, Icon::Sliders, t.text_label);
+        paint(p, at, Icon::Sliders, ink);
         mark("edited", at);
     }
     Some(bar)
