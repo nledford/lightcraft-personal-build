@@ -777,6 +777,10 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
                 // (one that ended meanwhile has nothing left to stop)
                 let _ = app.session.activity.cancel(task.id);
             }
+            // tasks waiting in line would not run: they leave it
+            for task in app.session.activity.waiting() {
+                let _ = app.session.activity.cancel(task.id);
+            }
             // a stopped move still finishing its file isn't waited for: choosing to quit is what cuts it short
             app.quit_cuts_move = true;
             // the backup and unsaved changes still get their own questions. (If that one is cancelled, the app

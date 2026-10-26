@@ -2252,13 +2252,8 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
                 return Err(crate::i18n::tr("Another library was opened since the photos were dropped: nothing was moved").to_string());
             }
             let ctx = app.tasks.repaint.clone().unwrap_or_default();
-            let started = crate::move_task::start(app, &ctx, &json!({"ids": ids, "folder": folder}))?;
-            // only a move that began turns the question off: one refused, or that found the photos there already
-            // (`moved: 0` at once), leaves it as it was
-            if *dont_ask && started["background"] == json!(true) {
-                app.ui.settings.ask_before_move = false;
-            }
-            Ok(started)
+            // (the question is turned off by the move itself, once a photo has moved: see `move_task::start_asked`)
+            crate::move_task::start_asked(app, &ctx, &json!({"ids": ids, "folder": folder}), *dont_ask)
         }
         Dialog::TrashFiles(ask) => super::trash_files::run(app, ask),
         // the catalog found: no file dialog; none: File ▸ Import Lightroom Catalog… asks for it

@@ -718,18 +718,25 @@ fn move_folders(s: &mut Session, p: &Value) -> Result<Value> {
     let mut relinked = 0;
     for from in &folders {
         let to = Path::new(into).join(Path::new(from).file_name().unwrap_or_default()).to_string_lossy().to_string();
+        let before = s.undo.len();
         match move_folder(s, from, &to) {
             Ok(n) => relinked += n,
             Err(e) => {
+                // (a folder whose catalog change was only partly taken back stays moved, with an undo step of its own that
+                // takes it back: it goes back with the folders before it)
+                let steps = places.len() + s.undo.len().saturating_sub(before);
                 let mut back = String::new();
-                for _ in &places {
+                for _ in 0..steps {
                     if let Err(b) = s.undo_step() {
                         back = format!("; putting the others back failed: {b}");
                         break;
                     }
                 }
-                // nothing changed after all when every folder went back: what could be redone still can
-                s.redo = if places.is_empty() || back.is_empty() { saved_redo } else { Vec::new() };
+                // nothing changed after all when every folder went back: what could be redone still can (what a step that
+                // failed to go back left to redo stays)
+                if back.is_empty() {
+                    s.redo = saved_redo;
+                }
                 return Err(crate::EngineError::Other(format!("{e}{back}")));
             }
         }

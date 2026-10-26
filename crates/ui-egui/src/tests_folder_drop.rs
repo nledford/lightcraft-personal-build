@@ -720,6 +720,7 @@ fn two_folders_with_one_name_are_told_apart_in_the_label_the_question_and_the_to
     // and so does the toast
     h.step();
     click(&mut h, "button:dialogOk");
+    settle(&mut h);
     assert!(toast(&h).starts_with("Moved 1 photo to “home (") && toast(&h).contains("/b)”"), "{}", toast(&h));
     assert!(b.join("beach.png").is_file(), "moved into the one that was asked about");
     let _ = std::fs::remove_dir_all(&root);
@@ -746,6 +747,7 @@ fn a_move_by_drop_offers_undo_on_its_toast() {
     assert!(matches!(h.app.ui.dialog, Some(crate::state::Dialog::MovePhotos { .. })), "{:?}", h.app.ui.dialog);
     h.step();
     click(&mut h, "button:dialogOk");
+    settle(&mut h);
     assert!(home.join("beach.png").is_file(), "moved");
     h.step();
     // Then the toast has an Undo button, and a click on it moves the photo back
@@ -764,6 +766,7 @@ fn undo_is_not_offered_once_something_else_was_done() {
     let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
     h.app.ui.settings.ask_before_move = false;
     drag_beach_onto_home(&mut h, &root, &home);
+    settle(&mut h);
     h.step();
     assert!(toast(&h).starts_with("Moved 1 photo"), "{}", toast(&h));
     assert!(widget(&h, "button:toastUndo").is_some(), "offered after the drop");

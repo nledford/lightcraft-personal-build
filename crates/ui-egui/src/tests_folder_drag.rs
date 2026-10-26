@@ -26,8 +26,7 @@ fn tree(tag: &str) -> (Headless, PathBuf) {
         app(&[(trip.join("beach.png"), false), (sub.join("deep.png"), false), (home.join("garden.png"), false), (archive.join("vault.png"), false)]);
     click(&mut h, &format!("libraryFolderToggle:{}", folder_key(&root)));
     // (opened as a reveal does: the drag tests are about what comes after, not the triangle)
-    let key = lightcraft_catalog::query::folder_key(&folder_key(&trip));
-    h.view.ctx.data_mut(|d| d.insert_temp(egui::Id::unique(("libfolder-open", key)), true));
+    h.app.ui.sidebar_trees.show(&crate::tree_state::Branch::folder(&folder_key(&trip), false));
     for _ in 0..3 {
         h.step();
     }
@@ -334,8 +333,7 @@ fn a_release_of_another_button_in_the_middle_of_a_drag_is_not_a_drop() {
 fn a_closed_folder_does_not_open_under_its_own_drag() {
     let (mut h, root) = tree("own-spring");
     let trip = root.join("trip");
-    let key = lightcraft_catalog::query::folder_key(&folder_key(&trip));
-    h.view.ctx.data_mut(|d| d.insert_temp(egui::Id::unique(("libfolder-open", key)), false));
+    h.app.ui.sidebar_trees.set(&crate::tree_state::Branch::folder(&folder_key(&trip), false), false);
     h.step();
     h.step();
     assert!(folder_row(&h, &trip.join("sub")).is_none(), "closed");

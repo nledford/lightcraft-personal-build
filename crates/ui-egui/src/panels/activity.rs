@@ -469,7 +469,9 @@ fn list(ui: &mut egui::Ui, t: &Tokens, rows: &Rows) -> Option<Act> {
             });
             ui.add_space(5.0);
             if let Some(ready) = rows.ready {
-                act = scan_notice(ui, t, ready, width).map(Act::Notice);
+                if let Some(notice) = scan_notice(ui, t, ready, width) {
+                    act = Some(Act::Notice(notice));
+                }
                 if groups > 0 {
                     ui.add_space(6.0);
                 }
