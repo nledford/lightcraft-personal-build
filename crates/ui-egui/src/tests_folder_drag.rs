@@ -104,7 +104,7 @@ fn a_folder_dropped_on_another_asks_then_moves_and_undo_brings_it_back() {
     let beach = id_of(&h, "beach.png");
     let photo = h.app.session.catalog.photo(lightcraft_catalog::PhotoId(beach)).unwrap();
     assert!(matches!(&photo.source, lightcraft_catalog::Source::File { path } if Path::new(path) == archive.join("trip").join("beach.png")));
-    assert_eq!(toast(&h), "Moved; 2 photo(s) relinked");
+    assert_eq!(toast(&h), "Moved “trip” into “archive”. Photos: 2. Edit → Undo moves it back.");
     // one Undo moves it back
     h.app.run("edit.undo", json!({})).unwrap();
     assert!(trip.join("beach.png").is_file() && !archive.join("trip").exists(), "back where it was");
@@ -205,7 +205,7 @@ fn with_the_question_turned_off_the_drop_moves_at_once() {
     release(&mut h, at);
     assert!(h.app.ui.dialog.is_none(), "not asked");
     assert!(archive.join("trip").join("beach.png").is_file() && !trip.exists(), "moved at once");
-    assert_eq!(toast(&h), "Moved; 2 photo(s) relinked");
+    assert_eq!(toast(&h), "Moved “trip” into “archive”. Photos: 2. Edit → Undo moves it back.");
     h.app.run("edit.undo", json!({})).unwrap();
     assert!(trip.join("beach.png").is_file(), "one Undo");
     let _ = std::fs::remove_dir_all(&root);

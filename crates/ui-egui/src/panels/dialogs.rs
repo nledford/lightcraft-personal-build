@@ -1706,7 +1706,9 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                 app.toast_error(ctx, e);
             }
             Ok(r) if matches!(dlg, Dialog::MoveFolder { .. }) => {
-                crate::panels::left::toast_folder_moved(app, ctx, &r);
+                if let Dialog::MoveFolder { path, into, .. } = &dlg {
+                    crate::panels::left::toast_folder_moved(app, ctx, path, into, &r);
+                }
                 close = true;
             }
             Ok(_) if keeps_open(app, &dlg) => {

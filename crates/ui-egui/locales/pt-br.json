@@ -2425,5 +2425,6 @@
   "Another library was opened since the folder was dropped: nothing was moved": "Outra biblioteca foi aberta depois que a pasta foi solta: nada foi movido",
   "Drag to move, or use the arrow keys": "Arraste para mover ou use as setas",
   "A group can't go inside itself": "Um grupo não pode ficar dentro de si mesmo",
-  "Groups can't nest any deeper": "Os grupos não podem ser aninhados mais fundo"
+  "Groups can't nest any deeper": "Os grupos não podem ser aninhados mais fundo",
+  "Keywords and presets apply to new files only, not to photos already in Local": "Palavras-chave e predefinições valem só para arquivos novos, não para fotos que já estão em Local"
 }

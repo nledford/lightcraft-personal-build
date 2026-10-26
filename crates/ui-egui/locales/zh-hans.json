@@ -2423,5 +2423,6 @@
   "Another library was opened since the folder was dropped: nothing was moved": "拖放文件夹后打开了另一个图库：未移动任何内容",
   "Drag to move, or use the arrow keys": "拖动以移动，或使用方向键",
   "A group can't go inside itself": "组不能放入它自己里面",
-  "Groups can't nest any deeper": "组不能再嵌套得更深"
+  "Groups can't nest any deeper": "组不能再嵌套得更深",
+  "Keywords and presets apply to new files only, not to photos already in Local": "关键词和预设仅应用于新文件，不适用于已在“本地”中的照片"
 }

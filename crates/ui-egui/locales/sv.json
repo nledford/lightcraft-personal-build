@@ -2631,5 +2631,6 @@
   "Another library was opened since the folder was dropped: nothing was moved": "Ett annat bibliotek öppnades efter att mappen släpptes: inget flyttades",
   "Drag to move, or use the arrow keys": "Dra för att flytta, eller använd piltangenterna",
   "A group can't go inside itself": "En grupp kan inte läggas inuti sig själv",
-  "Groups can't nest any deeper": "Grupper kan inte nästlas djupare"
+  "Groups can't nest any deeper": "Grupper kan inte nästlas djupare",
+  "Keywords and presets apply to new files only, not to photos already in Local": "Nyckelord och förinställningar gäller bara nya filer, inte foton som redan finns i Lokalt"
 }

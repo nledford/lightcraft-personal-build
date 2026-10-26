@@ -2601,7 +2601,7 @@ fn folder_drag_target(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::R
         });
     } else {
         match run_folder_move(app, &from, &n.path) {
-            Ok(r) => toast_folder_moved(app, ui.ctx(), &r),
+            Ok(r) => toast_folder_moved(app, ui.ctx(), &from, &n.path, &r),
             Err(e) => app.toast(ui.ctx(), e),
         }
     }
@@ -2617,8 +2617,8 @@ pub(crate) fn run_folder_move(app: &mut LightcraftApp, from: &str, into: &str) -
 }
 
 /// What a finished folder move (`folder.move`'s result `r`) says.
-pub(crate) fn toast_folder_moved(app: &mut LightcraftApp, ctx: &egui::Context, r: &serde_json::Value) {
-    app.toast(ctx, crate::i18n::tr_format!("Moved; {} photo(s) relinked", r["relinked"]));
+pub(crate) fn toast_folder_moved(app: &mut LightcraftApp, ctx: &egui::Context, path: &str, into: &str, r: &serde_json::Value) {
+    app.toast(ctx, folder_moved_text(&last_name(path), &last_name(into), r["relinked"].as_u64().unwrap_or(0)));
 }
 
 /// While a Folders row is dragged: its name at the pointer, or what the row under it says (where

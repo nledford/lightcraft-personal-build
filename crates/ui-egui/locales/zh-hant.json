@@ -2381,5 +2381,6 @@
   "Another library was opened since the folder was dropped: nothing was moved": "拖放資料夾後開啟了另一個照片庫：未移動任何內容",
   "Drag to move, or use the arrow keys": "拖曳以移動，或使用方向鍵",
   "A group can't go inside itself": "群組不能放進它自己裡面",
-  "Groups can't nest any deeper": "群組不能再巢狀得更深"
+  "Groups can't nest any deeper": "群組不能再巢狀得更深",
+  "Keywords and presets apply to new files only, not to photos already in Local": "關鍵字和預設集僅套用於新檔案，不適用於已在「本機」中的照片"
 }

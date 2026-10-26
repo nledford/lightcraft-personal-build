@@ -2937,5 +2937,6 @@
   "Another library was opened since the folder was dropped: nothing was moved": "საქაღალდის ჩაგდების შემდეგ სხვა ბიბლიოთეკა გაიხსნა: არაფერი გადატანილა",
   "Drag to move, or use the arrow keys": "გადასატანად გადაიტანეთ ან გამოიყენეთ ისრები",
   "A group can't go inside itself": "ჯგუფს საკუთარ თავში ვერ ჩადებთ",
-  "Groups can't nest any deeper": "ჯგუფების უფრო ღრმად ჩადგმა შეუძლებელია"
+  "Groups can't nest any deeper": "ჯგუფების უფრო ღრმად ჩადგმა შეუძლებელია",
+  "Keywords and presets apply to new files only, not to photos already in Local": "საკვანძო სიტყვები და პრესეტები მხოლოდ ახალ ფაილებზე მოქმედებს და არა იმ ფოტოებზე, რომლებიც უკვე ლოკალშია"
 }

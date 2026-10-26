@@ -2544,5 +2544,6 @@
   "Another library was opened since the folder was dropped: nothing was moved": "Pustaka lain telah dibuka setelah folder diletakkan: tidak ada yang dipindahkan",
   "Drag to move, or use the arrow keys": "Seret untuk memindahkan, atau gunakan tombol panah",
   "A group can't go inside itself": "Grup tidak dapat dimasukkan ke dalam dirinya sendiri",
-  "Groups can't nest any deeper": "Grup tidak dapat disarangkan lebih dalam"
+  "Groups can't nest any deeper": "Grup tidak dapat disarangkan lebih dalam",
+  "Keywords and presets apply to new files only, not to photos already in Local": "Kata kunci dan prasetel hanya berlaku untuk berkas baru, bukan foto yang sudah ada di Lokal"
 }

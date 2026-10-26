@@ -2572,5 +2572,6 @@
   "Another library was opened since the folder was dropped: nothing was moved": "После перетаскивания папки была открыта другая библиотека: ничего не перемещено",
   "Drag to move, or use the arrow keys": "Перетащите, чтобы переместить, или используйте стрелки",
   "A group can't go inside itself": "Группу нельзя поместить внутрь самой себя",
-  "Groups can't nest any deeper": "Группы нельзя вкладывать глубже"
+  "Groups can't nest any deeper": "Группы нельзя вкладывать глубже",
+  "Keywords and presets apply to new files only, not to photos already in Local": "Ключевые слова и пресеты применяются только к новым файлам, а не к фото, которые уже есть в «Локальных»"
 }
