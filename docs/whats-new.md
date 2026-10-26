@@ -269,6 +269,12 @@
   lossless, separate scans per colour), arithmetic-coded JPEGs, and cut files of other formats. The catalog
   remembers that such a photo was cut short; Reload clears that once the file is whole.
 
+### Quitting on macOS leaves no lock note
+- Quitting LightCraft on macOS no longer leaves `catalog.lock.owner` in the library folder. The note, which names the
+  program that has the library open, stayed behind after Quit and the window's close button, pointing at a process
+  that no longer existed. The library's lock is now released as soon as everything is saved, as it already was on
+  the other systems.
+
 ### Choose where a Lightroom catalog goes
 - File ▸ Import Lightroom Catalog… now asks first: merge the catalog's photos, collections and edits into the
   library open now, or create a new library for them, named after the catalog and placed next to the open library
