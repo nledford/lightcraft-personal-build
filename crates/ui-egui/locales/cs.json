@@ -664,6 +664,7 @@
   "Download Place Names (GeoNames)": "Stáhnout názvy míst (GeoNames)",
   "Download the SAM 3 Model?": "Stáhnout model SAM 3?",
   "Downloaded and checked. Installing…": "Staženo a ověřeno. Probíhá instalace…",
+  "The download failed": "Stažení se nezdařilo",
   "Downloading model": "Stahování modelu",
   "Downloading place names": "Stahování názvů míst",
   "Downloads": "Stažené soubory",
@@ -2334,7 +2335,6 @@
   "The model's file is deleted. To use it again you download or add it again.": "Soubor modelu se odstraní. Chcete-li jej znovu použít, musíte jej znovu stáhnout nebo přidat.",
   "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.": "Miniatury a náhledy se vytvoří znovu při procházení, což ve velké knihovně chvíli trvá. Vaše fotografie a úpravy zůstanou nedotčeny.",
   "Model installation failed": "Instalace modelu se nezdařila",
-  "The download failed": "Stahování se nezdařilo",
   "starting…": "spouštění…",
   "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Fotografie > Upravit v > Upravit v PhotoCraft (⇧⌘E nebo pravé tlačítko na fotografii) vykreslí kopii s vašimi úpravami, přidá ji do sady s originálem a otevře v PhotoCraft. Po uložení se kopie zde aktualizuje. Do PSD ukládá PhotoCraft přímo. Umístění ponechte prázdné, pokud nepoužíváte přenosnou kopii.",
   "Face models (ONNX)": "Modely rozpoznávání obličejů (ONNX)",
@@ -2575,5 +2575,12 @@
   "Damaged file: cut short, shown from the data present": "Poškozený soubor: useknutý, zobrazuje se z dostupných dat",
   "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Soubor byl useknut, například přerušeným stahováním nebo kopírováním. LightCraft zobrazuje dostupná data a soubor nikdy nemění.",
   "Damaged": "Poškozený",
-  "Damaged File": "Poškozený soubor"
+  "Damaged File": "Poškozený soubor",
+  "Face recognition is on": "Rozpoznávání obličejů je zapnuto",
+  "Face recognition is off. Turn it on to get name suggestions and see look-alike faces together.": "Rozpoznávání obličejů je vypnuto. Zapněte je, abyste dostávali návrhy jmen a viděli podobné obličeje pohromadě.",
+  "Turn on": "Zapnout",
+  "Set up face recognition": "Nastavit rozpoznávání obličejů",
+  "Face recognition needs a model to suggest names: a one-time download, in Settings.": "Rozpoznávání obličejů potřebuje model, aby mohlo navrhovat jména: jednorázové stažení v Nastavení.",
+  "Turn on name suggestions": "Zapnout návrhy jmen",
+  "Set up name suggestions…": "Nastavit návrhy jmen…"
 }

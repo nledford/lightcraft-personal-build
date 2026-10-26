@@ -1744,6 +1744,7 @@
   "Denoise Settings": "Налаштування усунення шуму",
   "Denoise all photos with an Amount": "Обробити всі фото зі значенням усунення шуму",
   "Downloaded and checked. Installing…": "Завантажено й перевірено. Установлення…",
+  "The download failed": "Не вдалося завантажити",
   "Failed its last test": "Останню перевірку не пройдено",
   "Graphics card": "Відеокарта",
   "I have read these terms and accept them for my own use": "Я прочитав ці умови й приймаю їх для власного використання",
@@ -2246,7 +2247,6 @@
   "Photos are shown through your monitor's ICC profile, so colours are right on wide-gamut and calibrated displays, and the Detail view uses the display's whole gamut. The histogram, the preview caches and exports are not affected.": "Фото відображаються через ICC-профіль вашого монітора, тому кольори правильні на каліброваних дисплеях і дисплеях із широким колірним охопленням, а подання «Деталі» використовує все охоплення дисплея. На гістограму, кеші переглядів і експорт це не впливає.",
   "Primaries (x, y)": "Основні кольори (x, y)",
   "Profiles assigned in your desktop's colour settings are usually in ~/.local/share/icc.": "Профілі, призначені в налаштуваннях кольору робочого столу, зазвичай містяться в ~/.local/share/icc.",
-  "The download failed": "Завантаження не вдалося",
   "Use Screen Profile": "Використовувати профіль екрана",
   "Use sRGB": "Використовувати sRGB",
   "starting…": "запуск…",
@@ -2543,5 +2543,12 @@
   "Damaged file: cut short, shown from the data present": "Пошкоджений файл: обрізаний, показано за наявними даними",
   "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Файл обрізано, наприклад через перерване завантаження чи копіювання. LightCraft показує наявні дані й ніколи не змінює файл.",
   "Damaged": "Пошкоджений",
-  "Damaged File": "Пошкоджений файл"
+  "Damaged File": "Пошкоджений файл",
+  "Face recognition is on": "Розпізнавання облич увімкнено",
+  "Face recognition is off. Turn it on to get name suggestions and see look-alike faces together.": "Розпізнавання облич вимкнено. Увімкніть його, щоб отримувати підказки імен і бачити схожі обличчя разом.",
+  "Turn on": "Увімкнути",
+  "Set up face recognition": "Налаштувати розпізнавання облич",
+  "Face recognition needs a model to suggest names: a one-time download, in Settings.": "Для підказок імен розпізнаванню облич потрібна модель: одноразове завантаження в Налаштуваннях.",
+  "Turn on name suggestions": "Увімкнути підказки імен",
+  "Set up name suggestions…": "Налаштувати підказки імен…"
 }

@@ -601,6 +601,7 @@
   "Download Place Names (GeoNames)": "Hämta ortnamn (GeoNames)",
   "Download the SAM 3 Model?": "Vill du hämta SAM 3-modellen?",
   "Downloaded and checked. Installing…": "Hämtad och kontrollerad. Installerar…",
+  "The download failed": "Hämtningen misslyckades",
   "Downloading model": "Hämtar modell",
   "Downloading place names": "Hämtar ortnamn",
   "Downloads": "Hämtade filer",
@@ -2566,7 +2567,6 @@
   "The model's file is deleted. To use it again you download or add it again.": "Modellens fil raderas. För att använda den igen hämtar eller lägger du till den på nytt.",
   "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.": "Miniatyrer och förhandsgranskningar skapas på nytt medan du bläddrar, vilket tar en stund i ett stort bibliotek. Dina foton och redigeringar berörs inte.",
   "Model installation failed": "Modellinstallationen misslyckades",
-  "The download failed": "Hämtningen misslyckades",
   "starting…": "startar…",
   "Edit In": "Redigera i",
   "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Foto > Redigera i > Redigera i PhotoCraft (⇧⌘E, eller högerklicka på ett foto) renderar en kopia med dina ändringar, staplar den med originalet och öppnar den i PhotoCraft. Spara där så uppdateras kopian här. Som PSD sparar PhotoCraft direkt tillbaka till den. Lämna platsen tom om du inte använder en portabel kopia.",
@@ -2597,5 +2597,12 @@
   "Damaged file: cut short, shown from the data present": "Skadad fil: avkapad, visas från de data som finns",
   "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Filen har kapats, till exempel av en avbruten nedladdning eller kopiering. LightCraft visar de data som finns och ändrar aldrig filen.",
   "Damaged": "Skadad",
-  "Damaged File": "Skadad fil"
+  "Damaged File": "Skadad fil",
+  "Face recognition is on": "Ansiktsigenkänning är på",
+  "Face recognition is off. Turn it on to get name suggestions and see look-alike faces together.": "Ansiktsigenkänning är av. Slå på den för att få namnförslag och se liknande ansikten tillsammans.",
+  "Turn on": "Slå på",
+  "Set up face recognition": "Ställ in ansiktsigenkänning",
+  "Face recognition needs a model to suggest names: a one-time download, in Settings.": "Ansiktsigenkänning behöver en modell för att föreslå namn: en engångsnedladdning, i Inställningar.",
+  "Turn on name suggestions": "Slå på namnförslag",
+  "Set up name suggestions…": "Ställ in namnförslag…"
 }

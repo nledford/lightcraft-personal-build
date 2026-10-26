@@ -355,5 +355,9 @@
   "Files other photos still use, kept: {n}": "Filer som andra foton fortfarande använder, behållna: {n}",
   "Listing folders — folders: {folders}, files: {files}": "Listar mappar — mappar: {folders}, filer: {files}",
   "“{name}” is now a place in Local: open it there": "“{name}” är nu en plats i Lokalt: öppna den där",
-  " · {} damaged": " · skadade: {}"
+  " · {} damaged": " · skadade: {}",
+  "Panel layout could not be restored: {error}": "Panellayouten kunde inte återställas: {error}",
+  "Panel move was not applied: {error}": "Panelflytten tillämpades inte: {error}",
+  "{name} is installed": "{name} är installerad",
+  "{name} is installed and in use: face recognition is on": "{name} är installerad och används: ansiktsigenkänning är på"
 }

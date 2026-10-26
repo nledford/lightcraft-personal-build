@@ -2480,7 +2480,7 @@
   "The model's file is deleted. To use it again you download or add it again.": "File model akan dihapus. Untuk menggunakannya lagi, Anda perlu mengunduh atau menambahkannya lagi.",
   "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.": "Thumbnail dan pratinjau dibuat ulang saat Anda menelusuri, yang memerlukan waktu di pustaka besar. Foto dan hasil edit Anda tidak diubah.",
   "Model installation failed": "Instalasi model gagal",
-  "The download failed": "Unduhan gagal",
+  "The download failed": "Pengunduhan gagal",
   "starting…": "memulai…",
   "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Foto > Edit di > Edit di PhotoCraft (⇧⌘E, atau klik kanan foto) merender salinan beserta hasil edit Anda, menumpuknya dengan foto asli, lalu membukanya di PhotoCraft. Simpan di sana, dan salinan di sini ikut diperbarui. Jika berformat PSD, PhotoCraft menyimpan langsung ke file tersebut. Kosongkan lokasi kecuali Anda menggunakan salinan portabel.",
   "Move Files to Trash…": "Pindahkan file ke Tempat Sampah…",
@@ -2510,5 +2510,12 @@
   "Damaged file: cut short, shown from the data present": "File rusak: terpotong, ditampilkan dari data yang ada",
   "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "File ini terpotong, misalnya karena unduhan atau penyalinan terhenti. LightCraft menampilkan data yang ada dan tidak pernah mengubah file.",
   "Damaged": "Rusak",
-  "Damaged File": "File rusak"
+  "Damaged File": "File rusak",
+  "Face recognition is on": "Pengenalan wajah aktif",
+  "Face recognition is off. Turn it on to get name suggestions and see look-alike faces together.": "Pengenalan wajah nonaktif. Aktifkan untuk mendapatkan saran nama dan melihat wajah yang mirip bersama-sama.",
+  "Turn on": "Aktifkan",
+  "Set up face recognition": "Siapkan pengenalan wajah",
+  "Face recognition needs a model to suggest names: a one-time download, in Settings.": "Pengenalan wajah memerlukan model untuk menyarankan nama: sekali unduh, di Pengaturan.",
+  "Turn on name suggestions": "Aktifkan saran nama",
+  "Set up name suggestions…": "Siapkan saran nama…"
 }

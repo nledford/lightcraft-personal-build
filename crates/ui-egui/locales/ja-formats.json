@@ -355,5 +355,9 @@
   "Sidecars left in place: {n}": "そのまま残したサイドカー: {n}個",
   "Files other photos still use, kept: {n}": "ほかの写真が使っているため残したファイル: {n}個",
   "“{name}” is now a place in Local: open it there": "「{name}」をローカルの場所に追加しました。そこで開いてください",
-  " · {} damaged": "・{}件は破損"
+  " · {} damaged": "・{}件は破損",
+  "Panel layout could not be restored: {error}": "パネル配置を復元できませんでした：{error}",
+  "Panel move was not applied: {error}": "パネルの移動は適用されませんでした：{error}",
+  "{name} is installed": "{name} をインストールしました",
+  "{name} is installed and in use: face recognition is on": "{name} をインストールして使用中です：顔認識はオンです"
 }

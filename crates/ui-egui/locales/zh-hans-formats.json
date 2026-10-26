@@ -355,5 +355,9 @@
   "Sidecars left in place: {n}": "保留在原处的附属文件：{n} 个",
   "Files other photos still use, kept: {n}": "其他照片仍在使用而保留的文件：{n} 个",
   "“{name}” is now a place in Local: open it there": "“{name}”现在是本地中的一个位置：请在那里打开",
-  " · {} damaged": " · {0} 个已损坏"
+  " · {} damaged": " · {0} 个已损坏",
+  "Panel layout could not be restored: {error}": "无法恢复面板布局：{error}",
+  "Panel move was not applied: {error}": "面板移动未应用：{error}",
+  "{name} is installed": "{name} 已安装",
+  "{name} is installed and in use: face recognition is on": "{name} 已安装并在使用：人脸识别已开启"
 }

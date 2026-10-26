@@ -139,7 +139,7 @@ pub fn take_step(app: &mut LightcraftApp, ctx: &egui::Context, step: Setup) {
             if app.run("faces.enable", json!({"enabled": true})).is_ok() {
                 app.caches.faces_epoch += 1;
                 app.ui.status = "Face recognition is on".into();
-                app.toast(ctx, "Face recognition is on");
+                app.toast(ctx, crate::i18n::tr("Face recognition is on"));
             }
         }
         Setup::GetModel => {
@@ -156,8 +156,8 @@ pub fn setup_banner(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     egui::Frame::NONE.inner_margin(egui::Margin::symmetric(12, 6)).show(ui, |ui| {
         ui.horizontal_wrapped(|ui| {
-            ui.label(RichText::new(message).font(t.label()).color(t.text_dim));
-            let r = Button::new(button).small().widget("faces:setup").show(ui);
+            ui.label(RichText::new(crate::i18n::tr(message)).font(t.label()).color(t.text_dim));
+            let r =  Button::new(crate::i18n::tr(button)).small().widget("faces:setup").show(ui);
             if r.clicked() {
                 take_step(app, ui.ctx(), step);
             }
@@ -379,7 +379,7 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                         });
                     }
                     (Some("failed"), Some(d)) => {
-                        let why = sentence(d["error"].as_str().unwrap_or("The download failed"));
+                        let why = super::denoise::download_failure(d);
                         ui.add(egui::Label::new(RichText::new(why).font(t.caption()).color(t.text_caution())).wrap());
                     }
                     _ => {}
@@ -820,8 +820,13 @@ fn watch_downloads(app: &mut LightcraftApp, ctx: &egui::Context) {
             .ok()
             .is_some_and(|l| l["models"].as_array().is_some_and(|a| a.iter().any(|m| m["id"] == id.as_str() && m["role"] == "detector")));
         let text = if detector { format!("{name} is installed") } else { format!("{name} is installed and in use: face recognition is on") };
-        app.ui.status = text.clone();
-        app.toast(ctx, text);
+        let toast = if detector {
+            crate::i18n::tr_format!("{name} is installed", name = name)
+        } else {
+            crate::i18n::tr_format!("{name} is installed and in use: face recognition is on", name = name)
+        };
+        app.ui.status = text;
+        app.toast(ctx, toast);
     }
     ctx.request_repaint_after(std::time::Duration::from_millis(120));
 }

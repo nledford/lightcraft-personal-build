@@ -622,6 +622,7 @@
   "Download Place Names (GeoNames)": "ადგილების სახელების ჩამოტვირთვა (GeoNames)",
   "Download the SAM 3 Model?": "ჩამოიტვირთოს SAM 3 მოდელი?",
   "Downloaded and checked. Installing…": "ჩამოტვირთულია და შემოწმებულია. ინსტალირდება…",
+  "The download failed": "ჩამოტვირთვა ვერ მოხერხდა",
   "Downloading model": "მოდელი იტვირთება",
   "Downloading place names": "ადგილების სახელები იტვირთება",
   "Downloads": "ჩამოტვირთვები",
@@ -2873,7 +2874,6 @@
   "The model's file is deleted. To use it again you download or add it again.": "მოდელის ფაილი წაიშლება. მის ხელახლა გამოსაყენებლად ისევ უნდა ჩამოტვირთოთ ან დაამატოთ.",
   "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.": "მინიატურები და წინასწარი ხედები ხელახლა იქმნება დათვალიერებისას, რაც დიდ ბიბლიოთეკაში გარკვეულ დროს მოითხოვს. თქვენი ფოტოები და ცვლილებები ხელუხლებელი რჩება.",
   "Model installation failed": "მოდელის ინსტალაცია ვერ მოხერხდა",
-  "The download failed": "ჩამოტვირთვა ვერ მოხერხდა",
   "starting…": "იწყება…",
   "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "ფოტო > რედაქტირება სხვა პროგრამაში > რედაქტირება PhotoCraft-ში (⇧⌘E, ან მარჯვენა დაწკაპუნება ფოტოზე) არენდერებს ასლს თქვენი ცვლილებებით, ორიგინალთან ერთ დასტაში აერთიანებს და PhotoCraft-ში ხსნის. იქ შენახვისას ასლი აქაც განახლდება. PSD-ის შემთხვევაში PhotoCraft პირდაპირ მასში ინახავს. მდებარეობა ცარიელი დატოვეთ, თუ პორტატულ ასლს არ იყენებთ.",
   "Move Files to Trash…": "ფაილების ურნაში გადატანა…",
@@ -2903,5 +2903,12 @@
   "Damaged file: cut short, shown from the data present": "დაზიანებული ფაილი: შეწყვეტილია, ნაჩვენებია არსებული მონაცემებიდან",
   "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "ფაილი შეწყვეტილია, მაგალითად, შეწყვეტილი ჩამოტვირთვის ან კოპირების გამო. LightCraft აჩვენებს არსებულ მონაცემებს და ფაილს არასოდეს ცვლის.",
   "Damaged": "დაზიანებული",
-  "Damaged File": "დაზიანებული ფაილი"
+  "Damaged File": "დაზიანებული ფაილი",
+  "Face recognition is on": "სახეების ამოცნობა ჩართულია",
+  "Face recognition is off. Turn it on to get name suggestions and see look-alike faces together.": "სახეების ამოცნობა გამორთულია. ჩართეთ, რომ მიიღოთ სახელების შეთავაზებები და ერთად ნახოთ მსგავსი სახეები.",
+  "Turn on": "ჩართვა",
+  "Set up face recognition": "სახეების ამოცნობის დაყენება",
+  "Face recognition needs a model to suggest names: a one-time download, in Settings.": "სახეების ამოცნობას სახელების შესათავაზებლად მოდელი სჭირდება: ერთჯერადი ჩამოტვირთვა, პარამეტრებში.",
+  "Turn on name suggestions": "სახელების შეთავაზებების ჩართვა",
+  "Set up name suggestions…": "სახელების შეთავაზებების დაყენება…"
 }

@@ -355,5 +355,9 @@
   "Sidecars left in place: {n}": "Оставлено сопроводительных файлов: {n}",
   "Files other photos still use, kept: {n}": "Файлы, которые используют другие фото (оставлены): {n}",
   "“{name}” is now a place in Local: open it there": "«{name}» теперь отдельное место в «Локальном»: откройте её там",
-  " · {} damaged": " · повреждено: {}"
+  " · {} damaged": " · повреждено: {}",
+  "Panel layout could not be restored: {error}": "Не удалось восстановить расположение панелей: {error}",
+  "Panel move was not applied: {error}": "Перемещение панели не применено: {error}",
+  "{name} is installed": "Модель {name} установлена",
+  "{name} is installed and in use: face recognition is on": "Модель {name} установлена и используется: распознавание лиц включено"
 }

@@ -559,6 +559,7 @@
   "Download Place Names (GeoNames)": "Lataa paikannimet (GeoNames)",
   "Download the SAM 3 Model?": "Ladataanko SAM 3 -malli?",
   "Downloaded and checked. Installing…": "Ladattu ja tarkistettu. Asennetaan…",
+  "The download failed": "Lataus epäonnistui",
   "Downloading model": "Ladataan mallia",
   "Downloading place names": "Ladataan paikannimiä",
   "Downloads": "Lataukset",
@@ -2464,7 +2465,6 @@
   "The model's file is deleted. To use it again you download or add it again.": "Mallin tiedosto poistetaan. Jos haluat käyttää sitä uudelleen, lataat tai lisäät sen uudelleen.",
   "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.": "Pikkukuvat ja esikatselut tehdään uudelleen selatessasi, mikä kestää hetken suuressa kirjastossa. Kuviasi ja muokkauksiasi ei kosketa.",
   "Model installation failed": "Mallin asennus epäonnistui",
-  "The download failed": "Lataus epäonnistui",
   "starting…": "käynnistyy…",
   "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Kuva > Muokkaa ohjelmassa > Muokkaa PhotoCraftissa (⇧⌘E tai napsauta kuvaa hiiren kakkospainikkeella) renderöi kopion muokkauksineen, pinoaa sen alkuperäisen kanssa ja avaa sen PhotoCraftissa. Tallenna siellä, niin kopio päivittyy täällä. PSD-muodossa PhotoCraft tallentaa suoraan siihen. Jätä sijainti tyhjäksi, ellet käytä kannettavaa kopiota.",
   "Move Files to Trash…": "Siirrä tiedostot roskakoriin…",
@@ -2494,5 +2494,12 @@
   "Damaged file: cut short, shown from the data present": "Vahingoittunut tiedosto: katkennut, näytetään saatavilla olevista tiedoista",
   "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Tiedosto on katkennut, esimerkiksi keskeytyneen latauksen tai kopioinnin vuoksi. LightCraft näyttää olemassa olevat tiedot eikä muuta tiedostoa koskaan.",
   "Damaged": "Vahingoittunut",
-  "Damaged File": "Vahingoittunut tiedosto"
+  "Damaged File": "Vahingoittunut tiedosto",
+  "Face recognition is on": "Kasvojentunnistus on päällä",
+  "Face recognition is off. Turn it on to get name suggestions and see look-alike faces together.": "Kasvojentunnistus on pois päältä. Ota se käyttöön, niin saat nimiehdotuksia ja näet samannäköiset kasvot yhdessä.",
+  "Turn on": "Ota käyttöön",
+  "Set up face recognition": "Määritä kasvojentunnistus",
+  "Face recognition needs a model to suggest names: a one-time download, in Settings.": "Kasvojentunnistus tarvitsee mallin nimien ehdottamiseen: kertaluonteinen lataus Asetuksissa.",
+  "Turn on name suggestions": "Ota nimiehdotukset käyttöön",
+  "Set up name suggestions…": "Määritä nimiehdotukset…"
 }

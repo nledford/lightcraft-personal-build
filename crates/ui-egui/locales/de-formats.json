@@ -355,5 +355,9 @@
   "Sidecars left in place: {n}": "An ihrem Ort belassene Begleitdateien: {n}",
   "Files other photos still use, kept: {n}": "Dateien, die andere Fotos noch verwenden (behalten): {n}",
   "“{name}” is now a place in Local: open it there": "„{name}“ ist jetzt ein Ort unter „Lokal“: dort öffnen",
-  " · {} damaged": " · {} beschädigt"
+  " · {} damaged": " · {} beschädigt",
+  "Panel layout could not be restored: {error}": "Die Bereichsanordnung konnte nicht wiederhergestellt werden: {error}",
+  "Panel move was not applied: {error}": "Das Verschieben des Bereichs wurde nicht ausgeführt: {error}",
+  "{name} is installed": "{name} ist installiert",
+  "{name} is installed and in use: face recognition is on": "{name} ist installiert und in Gebrauch: Gesichtserkennung ist eingeschaltet"
 }

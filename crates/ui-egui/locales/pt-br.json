@@ -1753,6 +1753,7 @@
   "Denoise Settings": "Configurações de redução de ruído",
   "Denoise all photos with an Amount": "Reduzir o ruído de todas as fotos com uma Quantidade",
   "Downloaded and checked. Installing…": "Baixado e verificado. Instalando…",
+  "The download failed": "Falha ao baixar",
   "Failed its last test": "Falhou no último teste",
   "Graphics card": "Placa de vídeo",
   "I have read these terms and accept them for my own use": "Li estes termos e os aceito para meu uso pessoal",
@@ -2103,7 +2104,6 @@
   "Photos are shown through your monitor's ICC profile, so colours are right on wide-gamut and calibrated displays, and the Detail view uses the display's whole gamut. The histogram, the preview caches and exports are not affected.": "As fotos são exibidas por meio do perfil ICC do seu monitor, para que as cores fiquem corretas em telas calibradas e de gamut amplo, e a exibição Detalhe usa todo o gamut da tela. O histograma, os caches de pré-visualização e as exportações não são afetados.",
   "Primaries (x, y)": "Primárias (x, y)",
   "Profiles assigned in your desktop's colour settings are usually in ~/.local/share/icc.": "Os perfis atribuídos nas configurações de cor da sua área de trabalho geralmente ficam em ~/.local/share/icc.",
-  "The download failed": "Falha no download",
   "Use Screen Profile": "Usar perfil da tela",
   "Use sRGB": "Usar sRGB",
   "starting…": "iniciando…",
@@ -2391,5 +2391,12 @@
   "Damaged file: cut short, shown from the data present": "Arquivo danificado: cortado, exibido a partir dos dados presentes",
   "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "O arquivo foi cortado, por exemplo por um download ou uma cópia interrompidos. O LightCraft exibe os dados presentes e nunca altera o arquivo.",
   "Damaged": "Danificado",
-  "Damaged File": "Arquivo danificado"
+  "Damaged File": "Arquivo danificado",
+  "Face recognition is on": "O reconhecimento facial está ativado",
+  "Face recognition is off. Turn it on to get name suggestions and see look-alike faces together.": "O reconhecimento facial está desativado. Ative-o para receber sugestões de nomes e ver rostos parecidos juntos.",
+  "Turn on": "Ativar",
+  "Set up face recognition": "Configurar o reconhecimento facial",
+  "Face recognition needs a model to suggest names: a one-time download, in Settings.": "O reconhecimento facial precisa de um modelo para sugerir nomes: um download único, em Configurações.",
+  "Turn on name suggestions": "Ativar sugestões de nomes",
+  "Set up name suggestions…": "Configurar sugestões de nomes…"
 }
