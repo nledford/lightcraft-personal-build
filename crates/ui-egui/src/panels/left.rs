@@ -1472,7 +1472,7 @@ fn folder_tree(
                 match app.run("local.addRoot", json!({"path": path})) {
                     Ok(_) => {
                         // this row is the folder inside another place from now on: it stays open as it was
-                        set_tree_open(ui, open_id, true);
+                        app.ui.sidebar_trees.show(&branch);
                         app.toast(ui.ctx(), crate::i18n::tr_format!("“{name}” is now a place in Local: open it there", name = name));
                     }
                     // the folder went away (or its drive) while the listed row was still shown

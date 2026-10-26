@@ -1197,7 +1197,7 @@ fn local_says_where_its_listing_stops_and_offers_the_way_on() {
     assert_eq!(r["ok"], true, "{r}");
     h.settle(SETTLE);
     assert!(h.app.ui.local_roots.contains(&eighth), "the folder is a Local place now: {:?}", h.app.ui.local_roots);
-    let said = h.app.ui.toast()().map(|t| t.0.clone()).unwrap_or_default();
+    let said = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(said.contains("“8”") && said.contains("Local"), "the click says what it did: {said:?}");
     assert!(!on_screen(&h, &more), "a place of its own now, the row has nothing left to offer");
     // the row inside the first place says where its folders are, and is a row of its own: not
@@ -1260,7 +1260,7 @@ fn go_deeper_says_why_when_the_folder_cannot_be_added() {
     assert_eq!(r["ok"], true, "{r}");
     h.step();
     assert_eq!(h.app.ui.local_roots, places, "nothing was added");
-    let said = h.app.ui.toast()().map(|t| t.0.clone()).unwrap_or_default();
+    let said = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(said.contains("not a folder"), "the refusal is said: {said:?}");
 }
 
