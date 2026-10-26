@@ -732,15 +732,15 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
             let mut params = json!({});
             crate::menubar::menu_defaults(&f, &mut params);
             if app.act(&f, params).is_some() {
-            match f.as_str() {
-                "photo.pick" => app.toast_on(ctx, "flag", crate::i18n::tr("Flagged as Pick")),
-                "photo.reject" => app.toast_on(ctx, "flag", crate::i18n::tr("Flagged as Reject")),
-                "photo.unflag" => app.toast_on(ctx, "flag", crate::i18n::tr("Unflagged")),
-                "edit.undo" => app.toast_on(ctx, "history", crate::i18n::tr("Undo")),
-                "edit.redo" => app.toast_on(ctx, "history", crate::i18n::tr("Redo")),
-                _ => {}
+                match f.as_str() {
+                    "photo.pick" => app.toast_on(ctx, "flag", crate::i18n::tr("Flagged as Pick")),
+                    "photo.reject" => app.toast_on(ctx, "flag", crate::i18n::tr("Flagged as Reject")),
+                    "photo.unflag" => app.toast_on(ctx, "flag", crate::i18n::tr("Unflagged")),
+                    "edit.undo" => app.toast_on(ctx, "history", crate::i18n::tr("Undo")),
+                    "edit.redo" => app.toast_on(ctx, "history", crate::i18n::tr("Redo")),
+                    _ => {}
+                }
             }
-        }
         }
     }
 }

@@ -162,6 +162,7 @@ impl TrashPlan {
     /// The checks `photo.trashFiles` makes before anything (in its words), and what stays. Takes
     /// the session's Trash lease: a second plan is refused while this one (or its work) lives.
     pub fn new(s: &Session, ids: &[PhotoId], c: &str) -> Result<TrashPlan> {
+        s.refuse_while_moving()?;
         if !s.trash.works_here() {
             return Err(bad(c, "moving files to the Trash is not available here yet: nothing was changed"));
         }

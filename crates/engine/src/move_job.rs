@@ -22,7 +22,7 @@ use std::sync::{Arc, OnceLock, Weak};
 use lightcraft_catalog::{Op, PhotoId, Source};
 use serde_json::{Value, json};
 
-use crate::activity::{Cancel, TaskGuard, TaskHandle};
+use crate::activity::{Cancel, Ending, Outcome, TaskGuard, TaskHandle};
 use crate::cmd::bad;
 use crate::move_intent::MoveRecord;
 use crate::rename::{BatchMoveError, MoveFs, RealFs, RenamePlan, folded_path};
@@ -92,6 +92,7 @@ pub fn start(s: &mut Session, p: &Value, cancellable: bool) -> Result<Option<(Mo
     let folder = crate::cmd::browse::folder_param(p, "folder").ok_or_else(|| bad(C, "missing folder"))?;
     let dir = Path::new(folder);
     s.refuse_while_moving()?;
+    s.refuse_while_trashing(C)?;
     // refused before anything touches the disk, as it always was (one look at one folder; the
     // worker looks again before the first file moves)
     if !dir.is_dir() {
@@ -238,16 +239,15 @@ impl MoveFinish {
     /// (in files); an error when nothing moved (`Refused`, `Failed`: the files went back, or the library
     /// follows those that couldn't). The sidecars held back meanwhile are written after.
     pub fn finish(self, s: &mut Session, out: MoveOutcome) -> Result<Value> {
-        let MoveFinish { folder, plans, identity, ticket, guard, record: _ } = self;
+        let MoveFinish { folder, plans, identity, ticket, mut guard, record: _ } = self;
         // the move is over for the session: other file work, and these photos' sidecars, may go on
         drop(ticket);
-        drop(guard);
         let held: Vec<PhotoId> = std::mem::take(&mut s.held_sidecars).into_iter().collect();
         if !Arc::ptr_eq(&identity, &s.library_identity) {
             // (opening a library is refused while a move runs; the record stays for that library)
-            return Err(EngineError::Other(
-                "another library was opened while photos were being moved: their library follows them when it opens".into(),
-            ));
+            let why = "another library was opened while photos were being moved: their library follows them when it opens";
+            guard.report(Outcome::failed(why));
+            return Err(EngineError::Other(why.into()));
         }
         let of = plans.len();
         let r = match out.0 {
@@ -268,6 +268,12 @@ impl MoveFinish {
             s.auto_write_sidecar_ids(held);
         }
         s.save_held_sidecars();
+        // how it ended, for the bell and `activity.finished`
+        guard.report(match &r {
+            Ok(v) if v["stopped"] == true => Outcome::ended(Ending::Stopped),
+            Ok(_) => Outcome::default(),
+            Err(e) => Outcome::failed(e.to_string()),
+        });
         r
     }
 }

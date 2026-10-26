@@ -701,9 +701,9 @@ impl Session {
         self.also_albums.clear();
         self.also_library_folders.clear();
         if report.created && seed_demo {
-        crate::demo::load(self);
-        journal.snapshot(&self.catalog)?;
-    }
+            crate::demo::load(self);
+            journal.snapshot(&self.catalog)?;
+        }
         let mut settings = SettingsLoad::default();
         // preferences
         let prefs = settings.read::<PrefsFile>(files.as_mut(), PREFS).unwrap_or_default();
