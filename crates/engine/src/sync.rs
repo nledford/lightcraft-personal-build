@@ -161,6 +161,9 @@ pub struct SyncChoice {
     pub relink_moved: bool,
     pub remove_missing: bool,
     pub read_metadata: bool,
+    /// What is read from the new photos themselves as they are imported; a part that is `None`
+    /// goes by the library's choice (as for any import, see [`crate::import::ReadChoice`]).
+    pub read: crate::import::ReadChoice,
 }
 
 impl Default for SyncChoice {
@@ -168,7 +171,7 @@ impl Default for SyncChoice {
     /// library already has), leave the rest to be looked at; and photos whose file moved follow it
     /// (nothing is lost, and undo puts them back).
     fn default() -> Self {
-        SyncChoice { import_new: true, import_duplicates: false, relink_moved: true, remove_missing: false, read_metadata: false }
+        SyncChoice { import_new: true, import_duplicates: false, relink_moved: true, remove_missing: false, read_metadata: false, read: Default::default() }
     }
 }
 
@@ -765,7 +768,7 @@ impl SyncJob {
             Vec::new()
         };
         let FolderChanges { new, missing, metadata, moved, probes, .. } = changes;
-        let opts = ImportOptions { mode: ImportMode::Add, import_duplicates: choice.import_duplicates, ..Default::default() };
+        let opts = ImportOptions { mode: ImportMode::Add, read: choice.read, import_duplicates: choice.import_duplicates, ..Default::default() };
         // (the new files first: of two copies of one new picture, the first found keeps the content's key)
         let files: Vec<String> = new.into_iter().map(|c| c.path).chain(importing).collect();
         let import = if choice.import_new && !files.is_empty() {
