@@ -2226,5 +2226,10 @@
   "Add keywords in the Keyword List": "請在關鍵字清單中加入關鍵字",
   "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "要替照片加入關鍵字，請使用關鍵字清單（視窗 → 關鍵字，K），把照片拖到那裡的關鍵字上",
   "Already on these photos": "這些照片已有",
-  "Can't go inside itself": "不能放入自身"
+  "Can't go inside itself": "不能放入自身",
+  "Reduce Motion": "減少動態效果",
+  "Reduce motion": "減少動態效果",
+  "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "關閉縮放與旋轉指示器的動畫。淡入淡出效果保留。在你於此處更改之前，跟隨系統的「減少動態效果」設定。",
+  "Use the system setting": "使用系統設定",
+  "Turns off zoom and spinner animations. Fades stay.": "關閉縮放與旋轉指示器的動畫。淡入淡出效果保留。"
 }

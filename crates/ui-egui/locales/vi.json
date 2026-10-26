@@ -2304,5 +2304,10 @@
   "Can't add to an album folder": "Không thể thêm vào thư mục album",
   "Can't go inside itself": "Không thể đặt vào chính nó",
   "Demo photos have no file on disk, so they can't be moved": "Ảnh demo không có tệp trên đĩa nên không thể di chuyển",
-  "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Gán từ khóa cho ảnh trong Danh sách từ khóa (Cửa sổ → Từ khóa, K): hãy thả ảnh lên từ khóa ở đó"
+  "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Gán từ khóa cho ảnh trong Danh sách từ khóa (Cửa sổ → Từ khóa, K): hãy thả ảnh lên từ khóa ở đó",
+  "Reduce Motion": "Giảm chuyển động",
+  "Reduce motion": "Giảm chuyển động",
+  "Turns off zoom and spinner animations. Fades stay.": "Tắt hiệu ứng phóng to và biểu tượng xoay. Hiệu ứng mờ dần vẫn được giữ nguyên.",
+  "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Tắt hiệu ứng phóng to và biểu tượng xoay. Hiệu ứng mờ dần vẫn được giữ nguyên. Theo cài đặt Giảm chuyển động của hệ thống cho đến khi bạn thay đổi tại đây.",
+  "Use the system setting": "Dùng cài đặt của hệ thống"
 }

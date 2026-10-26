@@ -2475,5 +2475,10 @@
   "Add keywords in the Keyword List": "Klíčová slova přidávejte v Seznamu klíčových slov",
   "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Klíčové slovo fotografiím přidáte v Seznamu klíčových slov (Okno → Klíčová slova, K): pusťte je tam na klíčové slovo",
   "Already on these photos": "Už je mají",
-  "Can't go inside itself": "Nemůže jít samo do sebe"
+  "Can't go inside itself": "Nemůže jít samo do sebe",
+  "Reduce Motion": "Omezit pohyb",
+  "Reduce motion": "Omezit pohyb",
+  "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Vypne animace přiblížení a načítacích indikátorů. Prolínání zůstává. Dokud to zde nezměníte, řídí se nastavením Omezit pohyb v systému.",
+  "Use the system setting": "Použít nastavení systému",
+  "Turns off zoom and spinner animations. Fades stay.": "Vypne animace přiblížení a načítacích indikátorů. Prolínání zůstává."
 }

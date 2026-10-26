@@ -2496,5 +2496,10 @@
   "Can't add to an album folder": "Kan inte läggas till i en albummapp",
   "Can't go inside itself": "Kan inte läggas inuti sig själv",
   "Demo photos have no file on disk, so they can't be moved": "Demofoton har ingen fil på disken och kan därför inte flyttas",
-  "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Ge foton ett nyckelord i nyckelordslistan (Fönster → Nyckelord, K): släpp dem på det där"
+  "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Ge foton ett nyckelord i nyckelordslistan (Fönster → Nyckelord, K): släpp dem på det där",
+  "Reduce Motion": "Minska rörelse",
+  "Reduce motion": "Minska rörelse",
+  "Turns off zoom and spinner animations. Fades stay.": "Stänger av zoom- och snurranimationer. Toningar finns kvar.",
+  "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Stänger av zoom- och snurranimationer. Toningar finns kvar. Följer systemets Minska rörelse tills du ändrar det här.",
+  "Use the system setting": "Använd systeminställningen"
 }
