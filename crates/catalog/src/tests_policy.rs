@@ -77,8 +77,10 @@ fn a_large_library_compacts_when_the_log_is_a_quarter_of_the_snapshot() {
 #[test]
 fn the_snapshot_size_is_known_after_reopening() {
     let (m, j, _c) = library(2000);
+    // (`catalog.snap` and the segments it lists)
+    let total = |m: &MemStore, j: &Journal| m.get(SNAPSHOT).unwrap().len() as u64 + j.segments().iter().map(|s| s.bytes).sum::<u64>();
     let written = j.snapshot_bytes();
-    assert_eq!(written, m.get(SNAPSHOT).unwrap().len() as u64);
+    assert_eq!(written, total(&m, &j));
     drop(j);
     let (j, _, _) = Journal::open(Box::new(m.clone())).unwrap();
     assert_eq!(j.snapshot_bytes(), written);
@@ -191,12 +193,12 @@ impl Store for Fillable {
 /// snapshot with this build's records after it.
 #[test]
 fn an_upgrade_that_could_not_be_written_is_written_on_close() {
+    // (format 10: a library older than the compact records, v9 and below, must be upgraded to open)
     let m = MemStore::new();
-    let older = format!("{{\"format\":\"lightcraft-catalog\",\"version\":8,\"seq\":0,\"catalog\":{}}}\n", Catalog::new().to_snapshot());
-    m.set(SNAPSHOT, older.into_bytes());
+    m.set(SNAPSHOT, include_str!("fixtures/v10-catalog.snap.json").as_bytes().to_vec());
     let full = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
     let (mut j, c, _) = Journal::open(Box::new(Fillable { files: m.clone(), full: full.clone() })).unwrap();
-    assert_eq!(head_version(&m), 8, "the upgrade could not be written");
+    assert_eq!(head_version(&m), 10, "the upgrade could not be written");
     // large, with nothing in the log: closing would write nothing but for the upgrade
     j.policy.close_bytes = 0;
     assert!(j.wants_snapshot_on_close());

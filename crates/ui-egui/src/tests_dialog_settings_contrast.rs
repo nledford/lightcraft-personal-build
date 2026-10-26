@@ -141,8 +141,8 @@ fn explanations_placeholders_and_the_accent_as_text_can_be_read_in_every_theme()
         show(&mut h, "performance");
         let hint = text_colour(&h, "Choose a size to cap");
         assert!(contrast(hint, t.chrome) >= 4.5, "{kind:?}: an explanation is {:.2}:1", contrast(hint, t.chrome));
-        // A text box's placeholder, on the box it is in (General, PhotoCraft's location)
-        show(&mut h, "general");
+        // A text box's placeholder, on the box it is in (Files, PhotoCraft's location)
+        show(&mut h, "files");
         let placeholder = text_colour(&h, "Found automatically");
         assert!(contrast(placeholder, t.field) >= 4.5, "{kind:?}: a placeholder is {:.2}:1", contrast(placeholder, t.field));
         // The line that says which GPU renders, under the Rendering setting
@@ -162,8 +162,8 @@ fn the_lines_that_say_where_a_control_is_stand_out_in_every_theme() {
     for kind in ThemeKind::ALL {
         let mut h = demo(kind);
         let t = Tokens::for_kind(kind);
-        // A text box's border: the top edge of General's "Other editor"
-        show(&mut h, "general");
+        // A text box's border: the top edge of Files' "Other editor"
+        show(&mut h, "files");
         scroll_to_end(&mut h);
         let image = h.paint();
         let field = rect(&h, "field:externalEditor");
@@ -206,7 +206,7 @@ fn a_text_box_in_use_is_outlined_so_it_stands_out_in_every_theme() {
     for kind in ThemeKind::ALL {
         let mut h = demo(kind);
         let t = Tokens::for_kind(kind);
-        show(&mut h, "general");
+        show(&mut h, "files");
         scroll_to_end(&mut h);
         // Given the text box as it is without the keyboard, then with it (a click in it), the pointer away
         let unfocused = h.paint();

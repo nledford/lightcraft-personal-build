@@ -474,6 +474,43 @@ impl Headless {
         self.paint()
     }
 
+    /// Scrolls the page of the open dialog (a wheel over the middle of its window) until the widget `id` is drawn well
+    /// inside the window, and the scroll has come to rest: a widget below or above the fold of a long page is not
+    /// drawn, or only partly, and a click at its middle would miss. Down first, then back up. Whether it is in view
+    /// in the end.
+    #[cfg(test)]
+    pub(crate) fn bring_into_view(&mut self, id: &str) -> bool {
+        let window = |h: &Self| h.app.widgets.iter().find(|(w, _)| w == "dialog:window").map(|(_, r)| *r);
+        let inside = |h: &Self| {
+            let (Some(window), Some(at)) = (window(h), h.app.widgets.iter().find(|(w, _)| w == id).map(|(_, r)| *r)) else { return false };
+            window.shrink2(egui::vec2(0.0, 60.0)).contains(at.center())
+        };
+        let rest = |h: &mut Self| {
+            for _ in 0..240 {
+                h.step();
+                if !h.view.ctx.input(|i| i.is_scrolling()) {
+                    break;
+                }
+            }
+        };
+        if inside(self) {
+            return true;
+        }
+        let Some(window) = window(self) else { return false };
+        let at = window.center();
+        self.request("ui.move", json!({"x": at.x, "y": at.y}), Duration::from_secs(10));
+        for dy in [-250.0, 250.0] {
+            for _ in 0..24 {
+                self.request("ui.scroll", json!({"dy": dy}), Duration::from_secs(10));
+                rest(self);
+                if inside(self) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     /// Tests that browse a folder in the temp directory expect it to be a Local location of its
     /// own. Where the temp directory lies inside the home folder (Windows), the sidebar lists it
     /// inside Home's tree instead, so hide Home for the test; elsewhere this does nothing.

@@ -63,9 +63,19 @@ fn steps(h: &mut Headless) {
 }
 
 fn click(h: &mut Headless, id: &str) {
+    assert!(h.bring_into_view(id), "{id} is not on the page");
     let r = h.request("ui.clickWidget", json!({"id": id}), T);
     assert_eq!(r["ok"], true, "click {id}: {r}");
     steps(h);
+}
+
+/// Scrolls the open tab down (the pointer is still over it from the last click) so that what a
+/// click just made appear at the foot of the long Library tab (#2524) is inside the window.
+fn scroll_down(h: &mut Headless) {
+    for _ in 0..3 {
+        assert_eq!(h.request("ui.scroll", json!({"dy": -600.0}), T)["ok"], true);
+        steps(h);
+    }
 }
 
 fn key(h: &mut Headless, key: &str) {
@@ -224,7 +234,7 @@ fn deleting_the_smart_previews_is_asked_about_when_the_folder_is_chosen() {
     let to = dir.path("elsewhere");
     let mut h = with_smart_preview(&dir, &to);
     assert_eq!(smart(&mut h)["count"], 1);
-    show(&mut h, "performance");
+    show(&mut h, "library");
     // Given "Delete them" chosen for the previews already built
     click(&mut h, "button:settingsSmartExisting-2");
     // When a new folder is chosen
@@ -232,10 +242,11 @@ fn deleting_the_smart_previews_is_asked_about_when_the_folder_is_chosen() {
     // Then nothing has happened yet: it asks, saying how many previews would go
     let now = smart(&mut h);
     assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(1), json!(false)), "nothing is deleted or moved before the answer: {now}");
-    assert!(has(&h, "button:settingsSmartDelete") && has(&h, "button:settingsSmartCancel"), "it asks");
+    assert!(h.bring_into_view("button:settingsSmartDelete") && has(&h, "button:settingsSmartCancel"), "it asks");
     let question: Vec<String> = h.painted_text().into_iter().filter(|text| text.contains("Delete the smart previews")).collect();
     assert!(question.iter().any(|text| text.contains("1 smart preview")), "it asks, saying how many would go: {question:?}");
     // When the answer is no
+    scroll_down(&mut h);
     click(&mut h, "button:settingsSmartCancel");
     // Then the folder and its previews are as they were, and the question is gone
     let now = smart(&mut h);
@@ -252,10 +263,11 @@ fn saying_yes_deletes_the_smart_previews_and_changes_the_folder() {
     let dir = TempFolder::new("settings-trust-smart-yes");
     let to = dir.path("elsewhere");
     let mut h = with_smart_preview(&dir, &to);
-    show(&mut h, "performance");
+    show(&mut h, "library");
     click(&mut h, "button:settingsSmartExisting-2");
     click(&mut h, "button:settingsSmartChoose");
     assert_eq!(smart(&mut h)["count"], 1);
+    scroll_down(&mut h);
     click(&mut h, "button:settingsSmartDelete");
     let now = smart(&mut h);
     assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(0), json!(true)), "{now}");
@@ -268,7 +280,7 @@ fn moving_the_smart_previews_needs_no_question() {
     let dir = TempFolder::new("settings-trust-smart-move");
     let to = dir.path("elsewhere");
     let mut h = with_smart_preview(&dir, &to);
-    show(&mut h, "performance");
+    show(&mut h, "library");
     click(&mut h, "button:settingsSmartChoose");
     let now = smart(&mut h);
     assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(1), json!(true)), "{now}");
@@ -278,7 +290,7 @@ fn moving_the_smart_previews_needs_no_question() {
 #[test]
 fn writing_xmp_by_itself_says_what_is_written_where() {
     let mut h = demo();
-    show(&mut h, "import");
+    show(&mut h, "files");
     assert!(says(&h, "beside the photo"), "{:?}", h.painted_text().iter().filter(|t| t.contains("XMP")).collect::<Vec<_>>());
 }
 
@@ -301,15 +313,15 @@ fn a_question_left_unanswered_is_gone_when_settings_is_opened_again() {
     let dir = TempFolder::new("settings-trust-smart-left");
     let to = dir.path("elsewhere");
     let mut h = with_smart_preview(&dir, &to);
-    show(&mut h, "performance");
+    show(&mut h, "library");
     // Given the question about deleting, left unanswered
     click(&mut h, "button:settingsSmartExisting-2");
     click(&mut h, "button:settingsSmartChoose");
-    assert!(has(&h, "button:settingsSmartDelete"));
+    assert!(h.bring_into_view("button:settingsSmartDelete"));
     // When Settings is closed and opened again
     key(&mut h, "Escape");
     assert!(h.app.ui.dialog.is_none());
-    show(&mut h, "performance");
+    show(&mut h, "library");
     // Then nothing waits: no question, and the choice is back at "Move them"
     assert!(!has(&h, "button:settingsSmartDelete"), "the question does not outlive Settings");
     click(&mut h, "button:settingsSmartChoose");
@@ -323,16 +335,16 @@ fn a_question_asked_in_one_library_is_not_there_in_another() {
     let (library_b, folder_b) = another_library(&dir);
     let to = dir.path("elsewhere");
     let mut h = with_smart_preview(&dir, &to);
-    show(&mut h, "performance");
+    show(&mut h, "library");
     // Given the question about deleting asked in one library, and left
     click(&mut h, "button:settingsSmartExisting-2");
     click(&mut h, "button:settingsSmartChoose");
-    assert!(has(&h, "button:settingsSmartDelete"));
+    assert!(h.bring_into_view("button:settingsSmartDelete"));
     key(&mut h, "Escape");
     // When another library is opened and its Settings looked at
     h.app.run("app.openLibrary", json!({"path": library_b})).unwrap();
     h.settle(T);
-    show(&mut h, "performance");
+    show(&mut h, "library");
     // Then that library is not asked anything, and its smart previews are where they were
     assert!(!has(&h, "button:settingsSmartDelete"), "the question belongs to the library it was asked in");
     let now = smart(&mut h);
@@ -344,10 +356,10 @@ fn a_change_made_another_way_takes_the_question_away() {
     let dir = TempFolder::new("settings-trust-smart-other-way");
     let to = dir.path("elsewhere");
     let mut h = with_smart_preview(&dir, &to);
-    show(&mut h, "performance");
+    show(&mut h, "library");
     click(&mut h, "button:settingsSmartExisting-2");
     click(&mut h, "button:settingsSmartChoose");
-    assert!(has(&h, "button:settingsSmartDelete"));
+    assert!(h.bring_into_view("button:settingsSmartDelete"));
     // When "Move them" is chosen instead and the folder chosen again
     click(&mut h, "button:settingsSmartExisting-0");
     assert!(!has(&h, "button:settingsSmartDelete"), "choosing not to delete takes the question away");
@@ -363,7 +375,7 @@ fn use_library_folder_asks_before_deleting_too() {
     let dir = TempFolder::new("settings-trust-smart-reset");
     let to = dir.path("elsewhere");
     let mut h = with_smart_preview(&dir, &to);
-    show(&mut h, "performance");
+    show(&mut h, "library");
     // Given the previews moved to a chosen folder, then "Delete them" chosen
     click(&mut h, "button:settingsSmartChoose");
     assert_eq!(smart(&mut h)["custom"], true);
@@ -374,7 +386,7 @@ fn use_library_folder_asks_before_deleting_too() {
     click(&mut h, "button:settingsSmartReset");
     let now = smart(&mut h);
     assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(1), json!(true)), "{now}");
-    assert!(has(&h, "button:settingsSmartDelete"));
+    assert!(h.bring_into_view("button:settingsSmartDelete"));
 }
 
 #[test]
@@ -397,15 +409,16 @@ fn a_question_about_a_folder_that_has_changed_since_deletes_nothing() {
     let dir = TempFolder::new("settings-trust-smart-outside");
     let to = dir.path("elsewhere");
     let mut h = with_smart_preview(&dir, &to);
-    show(&mut h, "performance");
+    show(&mut h, "library");
     click(&mut h, "button:settingsSmartExisting-2");
     click(&mut h, "button:settingsSmartChoose");
-    assert!(has(&h, "button:settingsSmartDelete"));
+    assert!(h.bring_into_view("button:settingsSmartDelete"));
     // Given the folder changed from outside Settings (an agent, say) while the question stands
     let other = dir.path("another");
     std::fs::create_dir_all(&other).unwrap();
     h.app.run("library.smartPreviewsLocation", json!({"path": other, "existing": "move"})).unwrap();
     // When Delete and Change Folder is pressed all the same
+    scroll_down(&mut h);
     let r = h.request("ui.clickWidget", json!({"id": "button:settingsSmartDelete"}), T);
     assert_eq!(r["ok"], true, "{r}");
     steps(&mut h);
@@ -528,7 +541,7 @@ fn a_prompt_over_settings_keeps_the_choice_for_the_smart_previews() {
     let dir = TempFolder::new("settings-trust-smart-prompt");
     let to = dir.path("elsewhere");
     let mut h = with_smart_preview(&dir, &to);
-    show(&mut h, "performance");
+    show(&mut h, "library");
     click(&mut h, "button:settingsSmartExisting-2");
     h.app.quit_prompt = Some(crate::QuitPrompt::Tasks("1 task is still running: Import. Quitting stops it.".into()));
     steps(&mut h);
@@ -536,6 +549,6 @@ fn a_prompt_over_settings_keeps_the_choice_for_the_smart_previews() {
     h.app.quit_prompt = None;
     steps(&mut h);
     click(&mut h, "button:settingsSmartChoose");
-    assert!(has(&h, "button:settingsSmartDelete"), "\"Delete them\" is still chosen, so it asks first");
+    assert!(h.bring_into_view("button:settingsSmartDelete"), "\"Delete them\" is still chosen, so it asks first");
     assert_eq!(smart(&mut h)["count"], 1, "nothing was moved or deleted");
 }

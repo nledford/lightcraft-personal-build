@@ -44,7 +44,7 @@ fn settings_of_a_library_in(dir: &Path) -> Headless {
     session.clock = Box::new(|| "2026-01-01T12:00:00".to_string());
     session.open_library(dir.join("library"), false).unwrap();
     let mut h = Headless::new(LightcraftApp::new(session, Services::default()), [1300.0, 1000.0], 1.0);
-    h.app.ui.dialog = Some(Dialog::Settings { tab: "general".into() });
+    h.app.ui.dialog = Some(Dialog::Settings { tab: "library".into() });
     steps(&mut h);
     h
 }
@@ -111,7 +111,7 @@ fn back_up_now_makes_a_backup_from_settings() {
     // Then the library has a backup, Last backup says when, and Settings is still open
     assert_eq!(backups(&mut h), 1);
     assert!(!says(&h, "Not yet") && !says(&h, NEVER));
-    assert_eq!(h.app.ui.dialog, Some(Dialog::Settings { tab: "general".into() }));
+    assert_eq!(h.app.ui.dialog, Some(Dialog::Settings { tab: "library".into() }));
 }
 
 #[test]
@@ -214,7 +214,7 @@ fn a_chosen_folder_that_is_not_there_is_not_called_the_librarys_drive() {
     std::fs::create_dir_all(&top).unwrap();
     h.app.ui.dialog = None;
     steps(&mut h);
-    h.app.ui.dialog = Some(Dialog::Settings { tab: "general".into() });
+    h.app.ui.dialog = Some(Dialog::Settings { tab: "library".into() });
     steps(&mut h);
     assert!(!says(&h, NOT_THERE) && says(&h, SAME_DRIVE) && says(&h, NEVER));
 }
@@ -334,7 +334,7 @@ fn a_backup_that_is_set_to_be_made_is_not_cautioned_about() {
 fn look_again(h: &mut Headless) {
     h.app.ui.dialog = None;
     steps(h);
-    h.app.ui.dialog = Some(Dialog::Settings { tab: "general".into() });
+    h.app.ui.dialog = Some(Dialog::Settings { tab: "library".into() });
     steps(h);
 }
 

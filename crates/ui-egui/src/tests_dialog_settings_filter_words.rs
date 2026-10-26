@@ -166,7 +166,7 @@ fn a_word_people_type_for_a_section_finds_it_though_the_section_does_not_say_it(
     filter(&mut h, "metadata");
     let found = found(&h);
     let place = |id: &str| found.iter().position(|f| f == id).unwrap_or_else(|| panic!("{id} in {found:?}"));
-    assert!(place("import:Metadata") < place("import:XMP sidecars"), "{found:?}");
+    assert!(place("import:Metadata") < place("files:XMP sidecars"), "{found:?}");
 }
 
 #[test]
@@ -187,19 +187,19 @@ fn either_spelling_of_a_word_finds_it() {
     // (Monitor profile says "colours"; External Editing and Appearance are given "color")
     for typed in ["col", "colo", "colou", "colour", "color"] {
         filter(&mut h, typed);
-        for section in ["display:Monitor profile", "general:External Editing", "interface:Appearance"] {
+        for section in ["display:Monitor profile", "files:External Editing", "interface:Appearance"] {
             assert!(found(&h).contains(&section.to_string()), "{typed} finds {section}: {:?}", found(&h));
         }
     }
     // And with another word beside it
     for typed in ["colo space", "colou space", "colour space"] {
         filter(&mut h, typed);
-        assert_eq!(found(&h), ["general:External Editing"], "{typed}");
+        assert_eq!(found(&h), ["files:External Editing"], "{typed}");
     }
     // And for a word Settings has in the one spelling only (Library is given "catalog")
     for typed in ["catalo", "catalog", "catalogu", "catalogue"] {
         filter(&mut h, typed);
-        assert!(found(&h).contains(&"general:Library".to_string()), "{typed}: {:?}", found(&h));
+        assert!(found(&h).contains(&"library:Library".to_string()), "{typed}: {:?}", found(&h));
     }
 }
 
@@ -222,10 +222,10 @@ fn a_section_named_for_the_word_comes_before_one_that_mentions_it() {
 fn sections_that_match_alike_stay_in_the_order_of_the_tabs() {
     let mut h = demo([1200.0, 1000.0]);
     show(&mut h, "general");
-    // "never" is a choice in Performance ▸ Local folders, Interface ▸ Grid and two sections of
+    // "never" is a choice in Library ▸ Local folders, Interface ▸ Grid and two sections of
     // Slideshow, a name of none of them
     filter(&mut h, "never");
-    assert_eq!(found(&h), ["performance:Local folders", "interface:Grid", "slideshow:Playback", "slideshow:Titles"]);
+    assert_eq!(found(&h), ["library:Local folders", "interface:Grid", "slideshow:Playback", "slideshow:Titles"]);
 }
 
 #[test]
@@ -457,26 +457,26 @@ fn the_names_of_folders_are_not_looked_through() {
     let mut session = lightcraft_engine::Session::new().with_fs();
     session.open_library(dir.0.join("zebrafolder"), false).unwrap();
     let mut h = Headless::new(LightcraftApp::new(session, Services::default()), [1200.0, 1000.0], 1.0);
-    h.app.ui.dialog = Some(Dialog::Settings { tab: "general".into() });
+    h.app.ui.dialog = Some(Dialog::Settings { tab: "library".into() });
     steps(&mut h);
-    assert!(h.painted_text().iter().any(|text| text.contains("zebrafolder")), "General ▸ Library shows the folder");
+    assert!(h.painted_text().iter().any(|text| text.contains("zebrafolder")), "Library ▸ Library shows the folder");
     // When a word of the folder's name is typed
     filter(&mut h, "zebrafolder");
     // Then nothing is found: where a library happens to be is not a setting's name
     assert!(found(&h).is_empty(), "{:?}", found(&h));
     // And the row that shows it is still found by what it is called
     filter(&mut h, "location");
-    assert_eq!(found(&h).first().map(String::as_str), Some("general:Library"));
+    assert_eq!(found(&h).first().map(String::as_str), Some("library:Library"));
 }
 
 #[test]
 fn what_stands_where_a_folder_would_is_still_found_when_it_is_no_folder() {
-    // Given the demo, whose library is in memory: General ▸ Library says so where a folder would stand
+    // Given the demo, whose library is in memory: Library ▸ Library says so where a folder would stand
     let mut h = demo([1200.0, 1000.0]);
-    show(&mut h, "general");
+    show(&mut h, "library");
     assert!(h.painted_text().iter().any(|text| text.contains("nothing is saved")));
     filter(&mut h, "nothing is saved");
-    assert_eq!(found(&h), ["general:Library"]);
+    assert_eq!(found(&h), ["library:Library"]);
 }
 
 #[test]
@@ -487,7 +487,7 @@ fn what_is_typed_into_a_box_of_settings_is_not_looked_through() {
     show(&mut h, "general");
     // (External Editing is far down General: choose it from the filter, which brings it into view)
     filter(&mut h, "external editing");
-    click(&mut h, "settingsFound:general:External Editing");
+    click(&mut h, "settingsFound:files:External Editing");
     assert!(h.painted_text().iter().any(|text| text.contains("zebraedit")));
     // Then that folder is not a word a section is found by
     filter(&mut h, "zebraedit");

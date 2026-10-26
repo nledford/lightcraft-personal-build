@@ -2718,7 +2718,13 @@ fn the_bar_reads_the_same_when_the_rows_are_scrolled_sideways() {
     // do not fit the panel
     let deep: String = ('a'..='z').chain('a'..='l').map(|c| format!("/{c}")).collect();
     // (tall enough for the whole chain: Recently Deleted is above it now)
-    let mut h = folders_app_sized(&[&format!("{deep}/x/1.jpg"), &format!("{deep}/y/2.jpg")], [1400.0, 1400.0]);
+    // (a photo in the first folder, so it is a row: a folder that only leads on is passed over, and every folder
+    // below a row that is drawn is a row)
+    let mut h = folders_app_sized(&[&format!("{deep}/x/1.jpg"), &format!("{deep}/y/2.jpg"), "/a/0.jpg"], [1400.0, 1400.0]);
+    // (opened with Option held, down to the last folder: it is a row that holds photos, so it starts folded)
+    let r = h.request("ui.clickWidget", json!({"id": "libraryFolderToggle:/a", "alt": true}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    h.settle(SETTLE);
     click(&mut h, "source:libfolder:/a");
     let panel = widget(&h, "panel:left_panel");
     assert!(crate::panels::left::content_width(&h.view.ctx) > panel.width() + 40.0, "there is somewhere to scroll to");

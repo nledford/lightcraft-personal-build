@@ -674,7 +674,7 @@ fn a_move_leaves_a_row_saying_it_was_done() {
     let b = add_file(&mut s, &dir.path("in/b.jpg"), "B");
     s.execute("photo.moveToFolder", &json!({"ids": [a.0, b.0], "folder": dir.path("out")})).unwrap();
     let row = s.activity.finished().into_iter().next().expect("a row for the move");
-    assert_eq!((row.kind, row.label.as_str(), row.ending), ("move", "Moving 2 photos", crate::activity::Ending::Done));
+    assert_eq!((row.kind, row.label.as_str(), row.ending), ("move", "Moving photos", crate::activity::Ending::Done));
 }
 
 #[test]

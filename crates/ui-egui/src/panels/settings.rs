@@ -274,14 +274,14 @@ pub const ALSO: &[(&str, &str, &str)] = &[
     ("general", "", "locale translation translate"),
     ("general", "Startup", "launch start"),
     ("general", "Culling", "trash bin delete deleted"),
-    ("general", "Library", "catalog database"),
-    ("performance", "Smart previews", "proxy proxies offline"),
+    ("library", "Library", "catalog database"),
+    ("library", "Smart previews", "proxy proxies offline"),
     ("import", "Raw defaults", "preset develop"),
     ("import", "Metadata", "iptc author credit"),
     ("import", "Cameras and Cards", "memory card sd camera connected device"),
     ("import", "Auto Import", "watch tether"),
-    ("import", "XMP sidecars", "metadata"),
-    ("general", "External Editing", "editor photoshop color space bit depth"),
+    ("files", "XMP sidecars", "metadata"),
+    ("files", "External Editing", "editor photoshop color space bit depth"),
     ("performance", "Rendering", "graphics card speed resolution"),
     ("performance", "Thumbnail cache", "disk space storage previews"),
     ("display", "Monitor profile", "screen color management calibration calibrate"),
@@ -1161,7 +1161,7 @@ fn backups(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         hint(ui, t, why);
     }
     row(ui, t, crate::i18n::tr("Folder"), |ui| {
-        ui.add(egui::Label::new(RichText::new(folder.clone()).color(t.text)).truncate()).on_hover_text(folder.clone());
+        path_label(ui, "settingsBackupFolder", &folder, egui::TextStyle::Body.resolve(ui.style()), t.text, 0.0);
     });
     if !chosen {
         row(ui, t, "", |ui| hint(ui, t, crate::i18n::tr("In the library folder")));
@@ -1413,7 +1413,7 @@ fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             }
         });
     }
-    heading(ui, t, crate::i18n::tr("Read from photos"));
+    heading(ui, t, "Read from photos");
     hint(ui, t, crate::import::READ_HINT);
     let mut read = app.session.import_defaults.read;
     for (kind, label, on) in crate::import::read_choices(&mut read) {

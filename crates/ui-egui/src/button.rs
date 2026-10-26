@@ -472,6 +472,10 @@ impl<'a> Button<'a> {
             p.rect_filled(rect, radius, fill);
         }
         if let Some(border) = lk.border {
+            // (a page that makes its controls' borders stand 3:1, as Settings does, says so in the visuals it
+            // gives them: a neutral button's edge follows it)
+            let set = ui.visuals().widgets.inactive.bg_stroke;
+            let border = if self.kind == Kind::Secondary && state != State::Disabled && set.width > 0.0 { set.color } else { border };
             p.rect_stroke(rect, radius, Stroke::new(1.0, border), StrokeKind::Inside);
         }
         // where the keyboard is: an accent ring around it, in the stroke every focus ring shares. It is

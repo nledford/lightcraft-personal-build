@@ -834,9 +834,11 @@ fn cell(
     // rejected photo already has its own dimming (the same shade, painted further down, over its marks), so a
     // dragged one keeps that one and is dimmed once, not twice.
     let is_dragged = photo.flag != lightcraft_catalog::Flag::Reject && dragged.is_some_and(|dragged| dragged.contains(&id.0));
-    let dim_dragged = |p: &egui::Painter| {
+    // (over the picture only, not the cell round a letterboxed one: the selection ring is drawn outside the picture,
+    // where a dimmed cell under its antialiased edge would darken it)
+    let dim_dragged = |p: &egui::Painter, picture: Rect| {
         if is_dragged {
-            p.rect_filled(img_rect, 0.0, Color32::from_black_alpha(DRAGGED_DIM));
+            p.rect_filled(picture, 0.0, Color32::from_black_alpha(DRAGGED_DIM));
         }
     };
     // thumbnail
@@ -847,13 +849,13 @@ fn cell(
         // Preserve the decoded preview's ratio when it differs from the catalog dimensions.
         let fit = super::detail::fit_texture_rect(img_rect, [tw, th]);
         p.image(tex.tex.id(), fit, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
-        dim_dragged(p);
+        dim_dragged(p, fit);
         selection_ring(p, &t, fit, state);
         (fit, None)
     } else {
         let ph = crate::thumb::placeholder_rect(img_rect, photo_aspect(Some(&*photo)));
         crate::thumb::paint_placeholder(p, ph, &t);
-        dim_dragged(p);
+        dim_dragged(p, ph);
         // not drawn yet (or unreadable): the selection is still visible
         selection_ring(p, &t, ph, state);
         (ph, app.renderer.failure(Slot::Thumb(id)).map(str::to_owned))

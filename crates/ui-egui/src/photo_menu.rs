@@ -173,7 +173,16 @@ fn nodes_with(app: &LightcraftApp, photo: PhotoId, infos: &[CommandInfo], preset
         vec![
             row("photo.copyMetadata"),
             with(row("photo.pasteMetadata"), |_, _, e, _| *e &= copied_meta),
-            sub("Photo", "Metadata Preset"),
+            // (Photo ▸ Metadata ▸ Metadata Preset: a submenu of the Metadata submenu)
+            menu("Photo")
+                .iter()
+                .find_map(|n| match n {
+                    MenuNode::Submenu { label, children } if label == "Metadata" => children
+                        .iter()
+                        .find(|c| matches!(c, MenuNode::Submenu { label: l, .. } if l == "Metadata Preset"))
+                        .cloned(),
+                    _ => None,
+                }),
             sep(),
             row("dialog.captureTime"),
             row("photo.tagFromTracklog"),
@@ -283,7 +292,7 @@ fn nodes_with(app: &LightcraftApp, photo: PhotoId, infos: &[CommandInfo], preset
     v.push(sep());
 
     // delete it (Restore and Delete Permanently in Recently Deleted: the menu bar's choice)
-    for id in ["photo.delete", "photo.restore", "photo.deletePermanently"] {
+    for id in ["photo.delete", "photo.restore", "photo.deletePermanently", "dialog.trashFiles"] {
         v.push(menu("Photo").iter().find(|n| matches!(n, MenuNode::Item { id: i, .. } if i == id)).cloned());
     }
     menubar::tidy(v.into_iter().flatten().collect())

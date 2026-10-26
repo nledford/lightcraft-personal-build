@@ -660,11 +660,14 @@ fn a_compaction_after_reopening_rewrites_only_what_changed() {
 #[test]
 fn a_replayed_log_is_due_for_compaction_like_any_other() {
     let (m, mut j, mut c) = library(20_000, 500);
+    // (the rule of 2000 changes alone: a log's share of the snapshot is `tests_policy`'s)
+    j.policy.snapshot_share = 0;
     let ops: Vec<Op> = (0..2000u64).map(|k| Op::SetRating { id: PhotoId(1 + k % 400), rating: 1 + (k % 5) as u8 }).collect();
     run(&mut j, &mut c, ops);
     assert!(j.wants_snapshot());
     drop(j);
-    let (j, _, r) = Journal::open(Box::new(m.clone())).unwrap();
+    let (mut j, _, r) = Journal::open(Box::new(m.clone())).unwrap();
+    j.policy.snapshot_share = 0;
     assert_eq!(r.replayed, 2000);
     assert!(j.wants_snapshot());
 }
@@ -1201,7 +1204,7 @@ fn the_upgrade_is_tried_again_a_compactions_worth_after_the_old_format_save() {
     store.files.set(LOG, log.as_bytes().to_vec());
     *store.refuse_kept.lock().unwrap() = true;
     let (mut j, mut loaded, _) = Journal::open(Box::new(store.clone())).unwrap();
-    j.policy = SnapshotPolicy { max_records: 1, ..SnapshotPolicy::default() };
+    j.policy = SnapshotPolicy { max_records: 1, snapshot_share: 0, ..SnapshotPolicy::default() };
     loaded.apply(Op::SetRating { id: PhotoId(8), rating: 4 }).unwrap();
     j.snapshot_with_unlogged(&loaded, 1).unwrap();
     assert!(!j.wants_snapshot(), "nothing since");

@@ -1279,7 +1279,6 @@ impl Journal {
         self.adopt(saved, on_disk);
         self.seq = seq;
         self.snapshot_seq = seq;
-        self.snapshot_bytes = timing.bytes;
         self.upgraded_later();
         self.header_incomplete = false;
         let t2 = web_time::Instant::now();
@@ -1447,7 +1446,6 @@ impl Journal {
         let mut timing = saved.timing;
         self.adopt(saved, on_disk);
         self.snapshot_seq = p.seq;
-        self.snapshot_bytes = timing.bytes;
         self.upgraded_later();
         self.header_incomplete = false;
         if let Err(e) = self.store.write_atomic(LOG, &p.tail) {
@@ -1487,7 +1485,6 @@ impl Journal {
     }
 
     fn record_snapshot(&mut self, t: SnapshotTiming) {
-        self.snapshot_bytes = t.bytes;
         self.stats.snapshots += 1;
         self.stats.last_snapshot = t;
         self.stats.max_snapshot_ms = self.stats.max_snapshot_ms.max(t.total_ms);

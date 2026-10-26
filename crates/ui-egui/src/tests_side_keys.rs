@@ -255,6 +255,16 @@ fn esc_during_a_drag_is_the_drags() {
     let mut h = app();
     let album = h.app.session.catalog.albums().find(|a| !a.folder).map(|a| a.id.0).expect("a demo album");
     toggle(&mut h);
+    // (an album is dragged with the button down: a drag left over without it ends by itself, before any Esc)
+    let on = h.app.widgets.iter().find(|(w, _)| w == "source:all").map(|(_, r)| r.center()).expect("the All Photos row");
+    h.app.synthetic.push(egui::Event::PointerMoved(on));
+    h.app.synthetic.push(egui::Event::PointerButton {
+        pos: on,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::NONE,
+    });
+    h.step();
     h.app.ui.dragging_album = Some(album);
     key(&mut h, "escape");
     assert_eq!(h.app.ui.dragging_album, None, "the drag saw its Esc");

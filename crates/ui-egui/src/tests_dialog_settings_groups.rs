@@ -34,6 +34,17 @@ fn show(h: &mut Headless, tab: &str) {
     }
 }
 
+/// Scrolls the open page to its foot, so that the line at its end is drawn however long the page is.
+fn to_the_foot(h: &mut Headless) {
+    let window = h.app.widgets.iter().find(|(id, _)| id == "dialog:window").map(|(_, r)| *r).expect("the Settings window is open");
+    h.request("ui.move", json!({"x": window.center().x, "y": window.center().y}), T);
+    for _ in 0..6 {
+        h.request("ui.scroll", json!({"dy": -400.0}), T);
+        h.step();
+    }
+    h.settle(T);
+}
+
 /// Every section heading of the open page, top to bottom (`heading:{its English name}`).
 fn headings(h: &Headless) -> Vec<String> {
     let mut found: Vec<(f32, String)> =
@@ -65,7 +76,10 @@ fn the_tabs_are_named_and_ordered_for_what_they_hold() {
 const SECTIONS: &[(&str, &[&str])] = &[
     ("general", &["Startup", "Culling", "Dialogs"]),
     ("library", &["Library", "Local folders"]),
-    ("import", &["Raw defaults", "Other images (JPEG, PNG, TIFF, HEIC…)", "Metadata", "Dropped Files", "Cameras and Cards", "Auto Import"]),
+    (
+        "import",
+        &["Raw defaults", "Other images (JPEG, PNG, TIFF, HEIC…)", "Metadata", "Read from photos", "Dropped Files", "Cameras and Cards", "Auto Import"],
+    ),
     ("files", &["External Editing", "XMP sidecars"]),
     ("performance", &["Rendering", "Thumbnail cache"]),
     ("display", &["Monitor profile"]),
@@ -122,7 +136,7 @@ fn each_section_is_under_the_tab_a_person_would_look_in() {
     // Import is what happens to photos as they come in, from a camera or card or a watched folder too
     assert_eq!(
         under("import"),
-        ["Raw defaults", "Other images (JPEG, PNG, TIFF, HEIC…)", "Metadata", "Dropped Files", "Cameras and Cards", "Auto Import"]
+        ["Raw defaults", "Other images (JPEG, PNG, TIFF, HEIC…)", "Metadata", "Read from photos", "Dropped Files", "Cameras and Cards", "Auto Import"]
     );
     // Files is what is written beside the photo files and what they are opened in
     assert_eq!(under("files"), ["External Editing", "XMP sidecars"]);
@@ -148,6 +162,7 @@ fn what_is_saved_with_a_library_in_memory_says_it_will_not_last() {
     let note = "In-memory session: these settings last until LightCraft quits.";
     for tab in ["library", "import", "files", "performance"] {
         show(&mut h, tab);
+        to_the_foot(&mut h);
         assert!(h.painted_text().iter().any(|text| text == note), "{tab} says so");
     }
     // On Files it ends the tab, below the XMP setting it is about and not between it and the
@@ -216,7 +231,7 @@ fn a_library_on_disk_has_its_smart_previews_folder_under_library() {
     drop(h);
     let _ = std::fs::remove_dir_all(&dir);
     // (where a library keeps its files is the library's; Performance keeps rendering and the cache)
-    assert_eq!(on_library, ["Library", "Smart previews", "Local folders"]);
+    assert_eq!(on_library, ["Library", "Backups", "Smart previews", "Local folders"]);
     assert_eq!(on_performance, ["Rendering", "Thumbnail cache"]);
 }
 
