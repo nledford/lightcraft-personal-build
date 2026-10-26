@@ -2954,7 +2954,6 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
             crate::widgets::announce(&resp, film_spoken(app.session.catalog.photo(*id).map_or("", |p| p.file_name.as_str()), failed));
             register(ui, format!("film:{}", id.0), cr);
             let state = app.session.selection.state_of(*id);
-            let sel = state == lightcraft_engine::SelectionState::Active;
             let p = ui.painter();
             let label = app.session.catalog.photo(*id).and_then(|ph| ph.label);
             let selected = state != lightcraft_engine::SelectionState::NotSelected;
@@ -2988,20 +2987,12 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                     let s = (img_area.width() / tw as f32).min(img_area.height() / th as f32);
                     let fr = Rect::from_center_size(img_area.center(), vec2(tw as f32 * s, th as f32 * s));
                     p.image(tex.tex.id(), fr, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
-                    if sel {
-                        p.rect_stroke(fr, 0.0, Stroke::new(1.5, Color32::WHITE), StrokeKind::Outside);
-                    } else if state == lightcraft_engine::SelectionState::Selected {
-                        p.rect_stroke(fr, 0.0, Stroke::new(1.5, Color32::from_gray(170)), StrokeKind::Outside);
-                    }
+                    super::grid::selection_ring(p, &t, fr, state);
                     (fr, None)
                 } else {
                     let ph = crate::thumb::placeholder_rect(img_area, super::grid::photo_aspect(Some(&*photo)));
                     crate::thumb::paint_placeholder(p, ph, &t);
-                    if sel {
-                        p.rect_stroke(ph, 0.0, Stroke::new(1.5, Color32::WHITE), StrokeKind::Outside);
-                    } else if state == lightcraft_engine::SelectionState::Selected {
-                        p.rect_stroke(ph, 0.0, Stroke::new(1.5, Color32::from_gray(170)), StrokeKind::Outside);
-                    }
+                    super::grid::selection_ring(p, &t, ph, state);
                     (ph, app.renderer.failure(crate::render::Slot::Thumb(*id)).map(str::to_owned))
                 };
                 let stack = app.session.catalog.stack_of(*id).map(|st| (st.id, st.position(*id).unwrap_or(0)));
