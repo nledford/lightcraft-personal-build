@@ -278,7 +278,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
                             app.ui.tool.clear();
                         } else if let Err(e) = app.run("tool.wbPicker", json!({})) {
                             // the same as W: from Compare, Survey or the grid it opens the photo in Detail
-                            app.toast(ui.ctx(), e);
+                            app.toast_error(ui.ctx(), e);
                         }
                     }
                 });
@@ -565,14 +565,14 @@ fn section(
         // ⌥-click opens just this section, as in Lightroom Classic
         let solo = ui.input(|i| i.modifiers.alt);
         if let Err(e) = app.run(&format!("section.{id}"), json!({"solo": solo})) {
-            app.toast(ui.ctx(), e);
+            app.toast_error(ui.ctx(), e);
         }
     }
     crate::widgets::context_menu(&resp, |ui| {
         let item = MenuItem::new(crate::i18n::tr("Solo Mode")).checked(app.ui.single_panel).widget("sectionMenu:solo").show(ui);
         if item.clicked() {
             if let Err(e) = app.run("view.soloSections", json!({"on": !app.ui.single_panel})) {
-                app.toast(ui.ctx(), e);
+                app.toast_error(ui.ctx(), e);
             }
             ui.close();
         }
@@ -867,7 +867,7 @@ fn soft_proofing(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
                 && let Some(path) = app.services.pick_display_profile.as_mut().and_then(|pick| pick().into_iter().next())
                 && let Err(e) = app.run("view.softProof", json!({"profile": path}))
             {
-                app.toast(ui.ctx(), e);
+                app.toast_error(ui.ctx(), e);
             }
         });
         if app.ui.proof_profile.is_some() {
@@ -2037,7 +2037,7 @@ pub(crate) fn reload_preview_only(app: &mut LightcraftApp, ctx: &egui::Context, 
         Ok(_) if app.session.catalog.photo(id).is_some_and(|p| p.preview_only.is_none()) => {
             app.toast(ctx, crate::i18n::tr("This raw is now developed from its raw data"))
         }
-        Ok(_) => app.toast(ctx, crate::i18n::tr("This raw variant still can't be decoded")),
+        Ok(_) => app.toast_error(ctx, crate::i18n::tr("This raw variant still can't be decoded")),
     }
 }
 

@@ -538,7 +538,7 @@ impl WebApp {
         // a dialog is on screen (the card said so while the files hovered): nothing is read or imported
         // (files read from an earlier drop still finish below)
         if !dropped.is_empty() && self.app.ui.dialog.is_some() {
-            self.app.toast(ctx, lightcraft_ui_egui::i18n::tr("Close the open dialog, then drop the files again"));
+            self.app.toast_error(ctx, lightcraft_ui_egui::i18n::tr("Close the open dialog, then drop the files again"));
             return;
         }
         for f in dropped {
@@ -557,14 +557,10 @@ impl WebApp {
                 // what the import did, not what was submitted: duplicates and unsupported files add nothing,
                 // a drop that only finds duplicates says nothing (as the desktop import's toast does when it
                 // shows where they are), and one whose files could not be read says so
-                Ok(report) => {
-                    if let Some(notice) = lightcraft_ui_egui::i18n::dropped_photos_outcome(&report) {
-                        self.app.toast(ctx, notice);
-                    }
-                }
+                Ok(report) => self.app.toast_dropped_photos(ctx, &report),
                 Err(e) => {
                     log::warn!("import: {e}");
-                    self.app.toast(ctx, lightcraft_ui_egui::i18n::dropped_import_failed(&e));
+                    self.app.toast_error(ctx, lightcraft_ui_egui::i18n::dropped_import_failed(&e));
                 }
             }
         }
@@ -700,7 +696,7 @@ impl eframe::App for WebApp {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         for text in safety::take_notices() {
             let now = self.app.tick_now();
-            self.app.ui.toast = Some((text, now + NOTICE_SECS, None));
+            self.app.ui.show_toast(now, text, NOTICE_SECS, None);
         }
         self.run_inbox();
         self.load_originals(ctx);
