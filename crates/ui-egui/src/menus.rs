@@ -707,7 +707,7 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
             };
             let key = lightcraft_catalog::query::folder_key(path);
             use crate::panels::left::{FolderPlace, folder_place};
-            let tree = app.caches.folder_tree(&app.session.catalog);
+            let tree = app.caches.folder_tree(&app.session.catalog, app.session.library_generation());
             // a folder asked for earlier can always be taken off again, also once it no longer
             // only leads on (photos or a second folder came into it, it was labelled or renamed);
             // not while its row is listed because a folder above it that was asked for too is: that
