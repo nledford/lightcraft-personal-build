@@ -126,7 +126,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
             // (Reset at the right of the row when it has room there, else on a row of its own: in
             // German it is "Zurücksetzen" and lay over HDR)
             let reset = Button::new("Reset");
-            if ui.available_size_before_wrap().x < crate::widgets::text_button_width(ui, reset) {
+            if ui.available_size_before_wrap().x < reset.desired_size(ui).x {
                 ui.end_row();
             }
             // (a layout of the width left on this row, 24 pt tall: after `end_row`, the new row)
