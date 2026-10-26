@@ -292,7 +292,6 @@
   "Move {n} photo{} to “{}”?": "Move {n} photo{} to “{}”?",
   "Moved {n} photo{} to “{}”. Edit → Undo moves them back.": "Moved {n} photo{} to “{}”. Edit → Undo moves them back.",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "{skipped} catalog images were not imported because their records in the catalog are incomplete.",
-  "Listing folders — folders: {folders}, files: {files}": "Listing folders — folders: {folders}, files: {files}",
   "Added {n} photo{}": "{n} foto tillagda{:.0}",
   "Could not read {name}: {e}": "Kunde inte läsa {name}: {e}",
   "Drop to import {n} item{}": "Släpp för att importera {n} objekt{:.0}",
@@ -353,5 +352,6 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Kunde inte flyttas och finns kvar i biblioteket ({n}): {why}",
   "Photos whose file was already gone: {n}": "Foton vars fil redan saknades: {n}",
   "Sidecars left in place: {n}": "Sidofiler som lämnats kvar: {n}",
-  "Files other photos still use, kept: {n}": "Filer som andra foton fortfarande använder, behållna: {n}"
+  "Files other photos still use, kept: {n}": "Filer som andra foton fortfarande använder, behållna: {n}",
+  "Listing folders — folders: {folders}, files: {files}": "Listar mappar — mappar: {folders}, filer: {files}"
 }

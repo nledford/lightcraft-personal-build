@@ -292,7 +292,6 @@
   "{what} merge added at {mp}: its full size, {full}, needs more memory than this computer has": "Hasil penggabungan {what} ditambahkan dengan resolusi {mp}: resolusi penuhnya ({full}) memerlukan memori melebihi kapasitas komputer ini",
   "{what} merge added at {mp}, the largest a panorama can be (its full size is {full})": "Hasil penggabungan {what} ditambahkan dengan resolusi {mp}, resolusi maksimum untuk panorama (resolusi penuhnya {full})",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "{skipped} catalog images were not imported because their records in the catalog are incomplete.",
-  "Listing folders — folders: {folders}, files: {files}": "Listing folders — folders: {folders}, files: {files}",
   "Added {n} photo{}": "{n} foto ditambahkan{:.0}",
   "Could not read {name}: {e}": "Tidak dapat membaca {name}: {e}",
   "Drop to import {n} item{}": "Jatuhkan untuk mengimpor {n} item{:.0}",
@@ -353,5 +352,6 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Tidak dapat dipindahkan dan tetap di pustaka ({n}): {why}",
   "Photos whose file was already gone: {n}": "Foto yang file-nya sudah tidak ada: {n}",
   "Sidecars left in place: {n}": "Sidecar yang dibiarkan di tempatnya: {n}",
-  "Files other photos still use, kept: {n}": "File yang masih dipakai foto lain, dipertahankan: {n}"
+  "Files other photos still use, kept: {n}": "File yang masih dipakai foto lain, dipertahankan: {n}",
+  "Listing folders — folders: {folders}, files: {files}": "Mendata folder — folder: {folders}, file: {files}"
 }
