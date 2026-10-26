@@ -58,7 +58,7 @@ fn refused_move(app: &mut LightcraftApp) -> serde_json::Value {
 }
 
 fn toast(app: &LightcraftApp) -> Option<&str> {
-    app.ui.toast.as_ref().map(|t| t.0.as_str())
+    app.ui.toast.as_ref().map(|t| t.text.as_str())
 }
 
 #[test]
@@ -69,7 +69,7 @@ fn a_refused_command_says_why_in_a_toast() {
     let said = toast(&app).expect("a toast");
     assert!(said.contains("not inside that folder"), "{said}");
     assert!(!said.contains("album.reorder") && !said.contains("invalid parameters"), "words for a person, not the command's id: {said}");
-    let (_, until, _) = app.ui.toast.clone().unwrap();
+    let until = app.ui.toast.clone().unwrap().until;
     assert!(until - app.tick_now() >= 5.0, "long enough to read a sentence");
     // agents still find the full error as the status
     assert!(app.ui.status.contains("album.reorder"), "{}", app.ui.status);

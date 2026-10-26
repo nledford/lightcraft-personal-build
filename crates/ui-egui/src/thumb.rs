@@ -573,7 +573,7 @@ fn stack_badge(app: &mut LightcraftApp, ui: &mut egui::Ui, th: &Thumb, t: &Token
     }
     // a double-click (Lightroom's way) toggles once: its second click would undo the first
     if resp.clicked() && !resp.double_clicked() {
-        crate::panels::grid::toggle_stack(app, ui.ctx(), id);
+        crate::panels::grid::toggle_stack(app, id);
     }
     Some((br, resp))
 }

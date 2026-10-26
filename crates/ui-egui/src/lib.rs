@@ -1044,9 +1044,9 @@ impl LightcraftApp {
                 let now = self.tick_now();
                 // A toast the command made itself (a partial import report) says what did happen:
                 // keep it ahead of the reason rather than replacing it.
-                let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.0);
+                let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
                 let said = refusal_toast(made, &refusal);
-                self.ui.toast = Some((said, now + REFUSAL_SECONDS, None));
+                self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
                 None
             }
         }
