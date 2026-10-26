@@ -743,7 +743,7 @@ fn a_background_scan_that_found_nothing_only_says_so() {
     assert!(r.is_ok(), "{r:?}");
     assert!(h.step_until(T, |h| h.app.sync.is_none()), "the scan ends");
     assert!(h.app.sync_ready.is_none(), "no notice: there is nothing to look at");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.0.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("up to date"), "{toast:?}");
     assert!(h.app.session.folder_changes.is_none());
 }
