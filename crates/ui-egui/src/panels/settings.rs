@@ -110,6 +110,11 @@ const PINNED_PAGE_MIN_HEIGHT: f32 = 100.0;
 pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_height: f32) {
     ui.set_width((ui.ctx().content_rect().width() - 64.0).clamp(240.0, PAGE_SIZE.x));
     let top = ui.cursor().top();
+    let t = Tokens::get(ui.ctx());
+    // What says where a control is, and what a text box says while it is empty, are made legible
+    // here for everything in the window: a theme's border is 1.6 to 1.7:1 against the window and
+    // its weak text under 4.3:1 in a box (the tokens keep their values for the rest of the app).
+    legible_controls(ui, &t);
     // The filter, above the tabs it looks through. What is typed is kept from one frame of the
     // window to the next only: Settings opened again starts with it empty.
     let filter_id = egui::Id::unique("settings-filter");
@@ -162,15 +167,15 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
     // (with something typed the page is what was found, of any tab: no tab is the open one)
     let filtering = !filter.text.trim().is_empty();
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
-        for (id, label) in TABS {
-            if crate::widgets::text_button(ui, &format!("settingsTab-{id}"), tab_label(id, label), tab == id && !filtering).clicked() {
-                *tab = id.to_string();
-                // (a tab opened is its page asked for: the filter gives way)
-                filter.text.clear();
-            }
+    ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
+    for (id, label) in TABS {
+        if crate::widgets::text_button(ui, &format!("settingsTab-{id}"), tab_label(id, label), tab == id && !filtering).clicked() {
+            *tab = id.to_string();
+            // (a tab opened is its page asked for: the filter gives way)
+            filter.text.clear();
         }
-    });
+    }
+});
     ui.separator();
     // With something typed, the page gives way to the sections found, of whatever tab.
     let words = filter.text.trim().to_lowercase();
@@ -845,8 +850,23 @@ pub(super) fn row<R>(ui: &mut egui::Ui, t: &Tokens, label: &str, add: impl FnOnc
     .inner
 }
 
+/// What says where a control is, and what a text box says while it is empty, made legible for
+/// everything drawn in `ui` from here on: the border of a button, checkbox, radio button, list or
+/// text box stands 3:1 against the window and against a theme card's fill, a text box in use is
+/// outlined in an accent that does too, and placeholder text stands 4.5:1 in its box.
+pub(super) fn legible_controls(ui: &mut egui::Ui, t: &Tokens) {
+    // (a little over 3:1 as a colour: a radio button's ring is one antialiased pixel wide, and
+    // what is drawn of it is fainter than the colour it is drawn in)
+    let border = t.legible(t.legible(t.button_border, t.chrome, 3.0), t.inset, 3.6);
+    let visuals = ui.visuals_mut();
+    visuals.widgets.inactive.bg_stroke.color = border;
+    visuals.selection.stroke.color = t.legible(t.accent, t.chrome, 3.0);
+    visuals.weak_text_color = Some(t.legible(t.text_dim, t.field, 4.5));
+}
+
 pub(super) fn hint(ui: &mut egui::Ui, t: &Tokens, text: &str) {
-    ui.label(RichText::new(crate::i18n::tr(text)).font(t.caption()).color(t.text_dim));
+    // (an explanation is small text: the dim colour where it reads, else as near it as reads)
+    ui.label(RichText::new(crate::i18n::tr(text)).font(t.caption()).color(t.legible(t.text_dim, t.chrome, 4.5)));
 }
 
 /// Mutually exclusive buttons (`button:{id}-{index}`).
@@ -989,7 +1009,7 @@ fn external_editing(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         ui,
         t,
         crate::i18n::tr(
-            "Photo ▸ Edit In ▸ Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.",
+            "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.",
         ),
     );
     row(ui, t, crate::i18n::tr("Other editor"), |ui| {
@@ -1489,6 +1509,11 @@ fn auto_import(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 
 // --------------------------------------------------------------------------------- Performance
 
+/// "GPU: <adapter>", or "GPU: starting…" (in the language shown) while the adapter is not known yet.
+pub(crate) fn gpu_line(adapter: Option<String>) -> String {
+    format!("GPU: {}", adapter.unwrap_or_else(|| crate::i18n::tr("starting…").to_string()))
+}
+
 fn performance_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     use lightcraft_engine::gpu;
     heading(ui, t, "Rendering");
@@ -1499,12 +1524,13 @@ fn performance_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             None => "No usable GPU found: rendering on the CPU".to_string(),
         }
     } else {
-        format!("GPU: {}", gpu::adapter_name().unwrap_or_else(|| "starting…".into()))
+        gpu_line(gpu::adapter_name())
     };
     // One line, the whole text on hover: the reason can be a long driver message (no adapter
     // among the backends …), and the GPU state is process-wide, so it may change between frames;
     // a hint that wrapped would move every control below it under the pointer.
-    ui.add(egui::Label::new(RichText::new(crate::i18n::tr(&status)).font(t.caption()).color(t.text_dim)).truncate()).on_hover_text(&status);
+    ui.add(egui::Label::new(RichText::new(crate::i18n::tr(&status)).font(t.caption()).color(t.legible(t.text_dim, t.chrome, 4.5))).truncate())
+        .on_hover_text(&status);
     row(ui, t, crate::i18n::tr("Preview size"), |ui| {
         let opts: Vec<(u32, String)> =
             PREVIEW_LIMITS.iter().map(|e| (*e, if *e == 0 { crate::i18n::tr("Automatic").to_string() } else { format!("{e} px") })).collect();
@@ -1573,6 +1599,14 @@ fn local_folders(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     );
 }
 
+/// What the smart previews row says after the path of a folder the library was not given: "(library
+/// default)", in the language shown. (The catalogs have that message with the two spaces that
+/// follow a path.)
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn smart_folder_default() -> String {
+    crate::i18n::tr("  (library default)").trim().to_string()
+}
+
 /// Where this library keeps its smart previews (the offline-editing proxies, which can be large):
 /// the effective folder, what is in it, and choosing another one.
 #[cfg(not(target_arch = "wasm32"))]
@@ -1596,16 +1630,17 @@ fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     let available = loc["available"].as_bool().unwrap_or(true);
     let custom = loc["custom"].as_bool().unwrap_or(false);
     row(ui, t, crate::i18n::tr("Folder"), |ui| {
+        let default = smart_folder_default();
         path_label(
             ui,
             "settingsSmartFolder",
             &path,
             egui::TextStyle::Body.resolve(ui.style()),
             if available { t.text } else { t.text_error() },
-            if custom { 0.0 } else { label_width(ui, "(library default)", egui::TextStyle::Body) },
+            if custom { 0.0 } else { label_width(ui, &default, egui::TextStyle::Body) },
         );
         if !custom {
-            let r = ui.label(RichText::new("(library default)").color(t.text));
+            let r = ui.label(RichText::new(default).color(t.text));
             register(ui, "text:settingsSmartDefault", r.rect);
         }
     });
@@ -1777,7 +1812,7 @@ fn display_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         let info = d.describe();
         if !screen {
             row(ui, t, crate::i18n::tr("File"), |ui| {
-                path_label(ui, "settingsDisplayFile", &d.path, t.caption(), t.text_dim, 0.0);
+                path_label(ui, "settingsDisplayFile", &d.path, t.caption(), t.legible(t.text_dim, t.chrome, 4.5), 0.0);
             });
         }
         row(ui, t, crate::i18n::tr("Type"), |ui| {
@@ -1791,7 +1826,7 @@ fn display_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             let p = &info["primaries"];
             let xy = |(k, l): (&str, &str)| format!("{l} {:.3}, {:.3}", p[k][0].as_f64().unwrap_or(0.0), p[k][1].as_f64().unwrap_or(0.0));
             let text = [("red", "R"), ("green", "G"), ("blue", "B")].map(xy).join("   ");
-            ui.label(RichText::new(text).font(t.caption()).color(t.text_dim));
+            ui.label(RichText::new(text).font(t.caption()).color(t.legible(t.text_dim, t.chrome, 4.5)));
         });
     }
     hint(
@@ -2094,7 +2129,7 @@ fn theme_card<V: PartialEq + Copy>(
 ) {
     egui::Frame::new()
         .fill(t.inset)
-        .stroke(egui::Stroke::new(1.0, if active { t.accent } else { t.field_border }))
+        .stroke(egui::Stroke::new(1.0, if active { t.legible(t.accent, t.chrome, 3.0) } else { t.field_border }))
         .corner_radius(6)
         .inner_margin(8)
         .show(ui, |ui| {
@@ -2132,7 +2167,7 @@ fn theme_card<V: PartialEq + Copy>(
                             });
                             register(ui, format!("button:themeFavorite-{}", kind.id()), r.rect);
                             if favorite || hovered {
-                                crate::rating::paint_star(ui.painter(), r.rect.shrink(4.0), favorite, if favorite { t.accent } else { t.text_dim });
+                                crate::rating::paint_star(ui.painter(), r.rect.shrink(4.0), favorite, favorite_star_colour(t, favorite));
                             }
                             if r.clicked() {
                                 if favorite {
@@ -2146,6 +2181,12 @@ fn theme_card<V: PartialEq + Copy>(
                 }
             });
         });
+}
+
+/// The star that marks a favourite theme (or offers to), a mark that says what a click does: it
+/// stands 3:1 against the card it is on.
+pub(crate) fn favorite_star_colour(t: &Tokens, favorite: bool) -> egui::Color32 {
+    t.legible(if favorite { t.accent } else { t.text_dim }, t.inset, 3.0)
 }
 
 /// A small LightCraft window painted with `kind`'s tokens: the top bar with its search field, the

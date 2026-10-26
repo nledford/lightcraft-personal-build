@@ -1414,7 +1414,6 @@
   "Photo Grid": "Kuvaruudukko",
   "Photo Grid (G)": "Kuvaruudukko (G)",
   "Photo Merge": "Kuvien yhdistäminen",
-  "Photo ▸ Edit In ▸ Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Kuva → Muokkaa ohjelmassa → Muokkaa PhotoCraftissa (⇧⌘E tai napsauta kuvaa hiiren kakkospainikkeella) renderöi kopion muokkauksineen, pinoaa sen alkuperäisen kanssa ja avaa sen PhotoCraftissa. Tallenna siellä, niin kopio päivittyy täällä. PSD-muodossa PhotoCraft tallentaa suoraan siihen. Jätä sijainti tyhjäksi, ellet käytä kannettavaa kopiota.",
   "Photo ▸ Edit in External Editor (⇧⌘E) renders a 16-bit TIFF copy, stacks it with the original and opens it here (an app name on macOS, a program path elsewhere).": "Kuva → Muokkaa ulkoisessa muokkausohjelmassa (⇧⌘E) renderöi 16-bittisen TIFF-kopion, pinoaa sen alkuperäisen kanssa ja avaa sen täällä (macOS:ssä sovelluksen nimi, muualla ohjelman polku).",
   "PhotoCraft": "PhotoCraft",
   "Photos": "Kuvat",
@@ -2462,5 +2461,9 @@
   "On, every change to a photo's edits or metadata is written to an XMP file beside the photo, for other apps to read. Off, that happens when you choose Save Metadata to File in the Photo menu.": "Kun asetus on päällä, jokainen kuvan muokkausten tai metatietojen muutos kirjoitetaan kuvan viereiseen XMP-tiedostoon, jotta muut sovellukset voivat lukea sen. Kun asetus on pois päältä, tämä tapahtuu, kun valitset Kuva-valikosta Tallenna metatiedot tiedostoon.",
   "Photos whose originals are not connected are shown and edited from their smart previews; new ones can only be made from originals that are connected.": "Kuvat, joiden alkuperäisiä ei ole yhdistetty, näytetään ja niitä muokataan älyesikatseluista; uusia voi tehdä vain yhdistetyistä alkuperäisistä.",
   "The model's file is deleted. To use it again you download or add it again.": "Mallin tiedosto poistetaan. Jos haluat käyttää sitä uudelleen, lataat tai lisäät sen uudelleen.",
-  "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.": "Pikkukuvat ja esikatselut tehdään uudelleen selatessasi, mikä kestää hetken suuressa kirjastossa. Kuviasi ja muokkauksiasi ei kosketa."
+  "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.": "Pikkukuvat ja esikatselut tehdään uudelleen selatessasi, mikä kestää hetken suuressa kirjastossa. Kuviasi ja muokkauksiasi ei kosketa.",
+  "Model installation failed": "Mallin asennus epäonnistui",
+  "The download failed": "Lataus epäonnistui",
+  "starting…": "käynnistyy…",
+  "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Kuva > Muokkaa ohjelmassa > Muokkaa PhotoCraftissa (⇧⌘E tai napsauta kuvaa hiiren kakkospainikkeella) renderöi kopion muokkauksineen, pinoaa sen alkuperäisen kanssa ja avaa sen PhotoCraftissa. Tallenna siellä, niin kopio päivittyy täällä. PSD-muodossa PhotoCraft tallentaa suoraan siihen. Jätä sijainti tyhjäksi, ellet käytä kannettavaa kopiota."
 }
