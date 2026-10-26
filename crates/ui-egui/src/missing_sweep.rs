@@ -19,6 +19,7 @@ use std::time::Duration;
 use web_time::Instant;
 
 use lightcraft_catalog::PhotoId;
+use lightcraft_engine::activity::{Ending, Outcome as TaskOutcome};
 use lightcraft_engine::cmd::missing;
 use serde_json::Value;
 
@@ -97,21 +98,28 @@ pub fn ask(app: &mut LightcraftApp, reply: Sender<Value>) -> Outcome {
         })
     };
     let done = move |app: &mut LightcraftApp, _ctx: &egui::Context, checked: Result<Option<Vec<(PhotoId, String)>>, String>| {
-        let (answer, complete) = match checked {
-            _ if app.session.library_generation() != library => {
-                (control::failure("Missing Photos: another library was opened before the check ended"), false)
+        let (answer, complete, outcome) = match checked {
+            _ if app.session.library_generation() != library => (
+                control::failure("Missing Photos: another library was opened before the check ended"),
+                false,
+                TaskOutcome::ended(Ending::Stopped),
+            ),
+            Err(e) => (control::failure(e.clone()), false, TaskOutcome::failed(e)),
+            Ok(None) => (control::failure("Missing Photos: the check was stopped"), false, TaskOutcome::ended(Ending::Stopped)),
+            Ok(Some(gone)) if missing::fingerprint(&app.session.catalog) == snapshot => {
+                (control::success(missing::missing_json(gone)), true, TaskOutcome::ended(Ending::Done))
             }
-            Err(e) => (control::failure(e), false),
-            Ok(None) => (control::failure("Missing Photos: the check was stopped"), false),
-            Ok(Some(gone)) if missing::fingerprint(&app.session.catalog) == snapshot => (control::success(missing::missing_json(gone)), true),
             // (photos changed while the files were checked, as an import does: the answer is what of the
             // check still holds, and is not kept, for the next request must see the photos as they are then)
-            Ok(Some(gone)) => (control::success(missing::missing_json(missing::still_missing(&app.session.catalog, gone))), false),
+            Ok(Some(gone)) => {
+                (control::success(missing::missing_json(missing::still_missing(&app.session.catalog, gone))), false, TaskOutcome::ended(Ending::Done))
+            }
         };
         let received = app.missing.answer(library, &answer);
         if complete && !received {
             app.missing.kept = Some(Kept { library, snapshot, at: Instant::now(), answer });
         }
+        outcome
     };
     if let Err(e) = crate::tasks::spawn_tracked(app, LABEL, KIND, cancel, work, done) {
         app.missing.fail(library, &e);

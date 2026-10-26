@@ -32,11 +32,11 @@ pub fn missing(s: &Session) -> Vec<(PhotoId, String)> {
     missing_with(&s.catalog, |f| exists(f))
 }
 
-/// Every in-scope photo with its file ([`checked_path`]), without touching the disk: what a
+/// Every in-scope photo with its file ([`Photo::library_file`]), without touching the disk: what a
 /// sweep ([`sweep`]) goes through, so a caller can take the list on its own thread and check
 /// the files on another.
 pub fn checked(cat: &Catalog) -> Vec<(PhotoId, String)> {
-    cat.photos().filter_map(|p| checked_path(p).map(|f| (p.id, f.to_string()))).collect()
+    cat.photos().filter_map(|p| p.library_file().map(|f| (p.id, f.to_string()))).collect()
 }
 
 fn fingerprint_of<'a>(entries: impl Iterator<Item = (PhotoId, &'a str)>) -> u64 {
@@ -53,7 +53,7 @@ fn fingerprint_of<'a>(entries: impl Iterator<Item = (PhotoId, &'a str)>) -> u64 
 /// files on another thread compares it with [`fingerprint_of_checked`] to know whether the photos
 /// changed meanwhile.
 pub fn fingerprint(cat: &Catalog) -> u64 {
-    fingerprint_of(cat.photos().filter_map(|p| checked_path(p).map(|f| (p.id, f))))
+    fingerprint_of(cat.photos().filter_map(|p| p.library_file().map(|f| (p.id, f))))
 }
 
 /// [`fingerprint`] of the list [`checked`] gave.
@@ -65,7 +65,7 @@ pub fn fingerprint_of_checked(files: &[(PhotoId, String)]) -> u64 {
 /// photos still in scope that still point at the file that was not found. A photo removed, moved to
 /// Recently Deleted or relinked since is not reported as missing; one added since was not checked.
 pub fn still_missing(cat: &Catalog, gone: Vec<(PhotoId, String)>) -> Vec<(PhotoId, String)> {
-    gone.into_iter().filter(|(id, file)| cat.photo(*id).and_then(|p| checked_path(p)) == Some(file.as_str())).collect()
+    gone.into_iter().filter(|(id, file)| cat.photo(*id).and_then(|p| p.library_file()) == Some(file.as_str())).collect()
 }
 
 /// How many files [`sweep`] checks between two reports of its progress.
