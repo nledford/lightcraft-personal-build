@@ -1344,6 +1344,7 @@ impl Catalog {
             changes: _,
             index: _,
             plans: _,
+            demo_photos: _,
         } = self;
         Catalog {
             photos: BTreeMap::new(),
@@ -1363,6 +1364,8 @@ impl Catalog {
             index: index::Indexes::default(),
             // (worked out from the albums: not saved)
             plans: PlansMemo::default(),
+            // (counted again from the photos when it is loaded: not saved)
+            demo_photos: 0,
         }
     }
 

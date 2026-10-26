@@ -32,10 +32,10 @@ fn adding_the_samples_says_what_came_and_where() {
     h.app.run("library.addSamples", json!({})).unwrap();
     h.step();
     let n = h.app.session.catalog.sample_photos();
-    let toast = h.app.ui.toast.as_ref().map(|(text, _, _)| text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains(&format!("Added {n} sample photos")) && toast.contains("“Sample Photos”"), "{toast}");
     // long enough to read, as a toast saying where to look is
-    let (_, until, _) = h.app.ui.toast.clone().unwrap();
+    let until = h.app.ui.toast.clone().unwrap().until;
     assert!(until - h.app.last_time >= 3.0, "{until} at {}", h.app.last_time);
     // their albums are together, in the folder the toast names
     let top: Vec<String> = h.app.session.catalog.albums().filter(|a| a.parent.is_none()).map(|a| a.name.clone()).collect();
@@ -47,6 +47,6 @@ fn a_caller_can_name_the_folder_and_the_toast_follows() {
     let mut h = headless(library("named"));
     h.app.run("library.addSamples", json!({"folder": "Try these"})).unwrap();
     h.step();
-    let toast = h.app.ui.toast.as_ref().map(|(text, _, _)| text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("“Try these”"), "{toast}");
 }
