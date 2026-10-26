@@ -697,6 +697,16 @@ impl crate::Store for Trial {
     fn keeps_replaced_formats(&self) -> bool {
         false
     }
+    fn write_new_with(&mut self, name: &str, fill: &mut dyn FnMut(&mut dyn std::io::Write) -> std::io::Result<()>) -> std::io::Result<u64> {
+        if self.now(name)?.is_some() {
+            return Err(std::io::Error::new(std::io::ErrorKind::AlreadyExists, format!("{name} exists")));
+        }
+        let mut data = Vec::new();
+        fill(&mut data)?;
+        let n = data.len() as u64;
+        self.written.insert(name.to_string(), Some(data));
+        Ok(n)
+    }
     fn list(&mut self) -> std::io::Result<Vec<String>> {
         let mut names = crate::Store::list(&mut self.disk)?;
         names.retain(|n| !self.written.contains_key(n));

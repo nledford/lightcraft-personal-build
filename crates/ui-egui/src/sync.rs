@@ -127,7 +127,8 @@ impl SyncReady {
     /// How many changes there are to look at.
     pub fn changes(&self) -> usize {
         let c = &self.counts;
-        c.new + c.moved + c.missing + c.metadata
+        let copies = if self.choice.import_new && self.choice.import_duplicates { c.copies } else { 0 };
+        c.new.saturating_add(copies).saturating_add(c.moved).saturating_add(c.missing).saturating_add(c.metadata)
     }
 }
 

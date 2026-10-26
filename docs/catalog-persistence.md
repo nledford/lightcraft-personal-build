@@ -9,11 +9,7 @@ The catalog is saved in the library folder by `crates/catalog/src/journal.rs`:
   name say which photos it starts at and at which change it was written; what tells LightCraft which photos a segment
   holds is the list in `catalog.snap`.
 
-The catalog is two files in the library folder (`crates/catalog/src/journal.rs`): `catalog.snap`, a JSON snapshot of
-the whole catalog, and `catalog.log`, one JSON line per change made since. Every change is appended to the log and
-fsynced before its command returns; now and then the log is compacted into a new snapshot. This page covers when that
-happens and what it costs, what a record in those files states (catalog format 10), where the photos are kept (format
-11, in segments), and what happens to a library's files when a newer version opens it.
+Every change is appended to the log and fsynced before its command returns; now and then the log is compacted into a new snapshot. This page covers when that happens and what it costs, what a record in those files states (catalog format 10), where the photos are kept (format 11, in segments), what a backup and a restore do with them, and what happens to a library's files when a newer version opens it.
 
 ## When the log is compacted
 
@@ -52,8 +48,7 @@ Before, the snapshots written grow with the square of the library (25 times the 
 after, they stay at about 6 times the final snapshot. Appending one change took 4.5 to 5.0 ms (median, with its fsync)
 in every run, and the time the caller was blocked by a background compaction stayed at 10 to 25 ms.
 
-**What this does not change.** The whole catalog is still held in memory and still written as one file; a compaction
-still takes as long as the snapshot is large (1.5 s on a worker thread at 100,000 photos).
+**What this does not change.** The whole catalog is still held in memory. These runs are of format 10, where the catalog is one file and a compaction takes as long as the snapshot is large (1.5 s on a worker thread at 100,000 photos); format 11 writes only the segments that changed (see "Measurements: only the changed segments are written (format 11)").
 
 ## The stored form
 
@@ -64,7 +59,7 @@ A photo's record states only what was set (`crates/catalog/src/stored.rs`):
   difference from the defaults: `{}` for a photo nobody edited.
 
 Reading did not change: a missing field reads as its default, so libraries of formats 1 to 9 load as they are and are
-rewritten in format 10 when first opened. Builds before format 10 refuse a format 10 library. A new library whose
+rewritten when first opened (in format 11, with the photos in segments: see "Segments"; format 10 is what a record states). Builds before format 10 refuse a format 10 library. A new library whose
 `catalog.snap` can't be written (a full disk, a read-only volume) is not opened either, since what was added to its log
 would leave out defaults that nothing states.
 
@@ -120,7 +115,7 @@ library was, byte for byte, beside it:
   The error says why, and the catalog is not changed (a torn last record of its log is still cut off, as on any
   open). If what is on disk after a failed write can't be read back to say whether the upgrade was written, the
   library is refused too (its way back stays).
-  A library in format 10 or later, which states its defaults, opens as it is (if it lacks a setting this version has,
+  A library in one file, in format 10, which states its defaults, opens as it is (if it lacks a setting this version has,
   records are written whole until the snapshot that upgrades it, which keeps its files first): a later snapshot, during
   the session or when it is closed, upgrades it, keeps the files first and is not written when they can't be kept (a
   change that could not be appended to the log is still saved when the upgrade can't be done, whether the files can't
@@ -154,6 +149,7 @@ it only takes room.
 
 Only a library in one file (formats up to 10) is kept this way. One already in segments would need its segments kept
 too; no upgrade from such a format exists yet, and a backup is the way back from a future one.
+A library already in segments that a snapshot rewrites for settings added since keeps no files: a backup is its way back.
 
 ## Segments (format 11)
 
