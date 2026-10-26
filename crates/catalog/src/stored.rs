@@ -983,6 +983,8 @@ impl Serialize for StoredPhoto<'_> {
             content_hash: Option<&'a str>,
             #[serde(skip_serializing_if = "Option::is_none")]
             embedded_lens: &'a Option<lightcraft_develop::EmbeddedLens>,
+            #[serde(skip_serializing_if = "crate::model::LeftInFile::is_nothing")]
+            left_in_file: crate::model::LeftInFile,
             #[serde(skip_serializing_if = "Option::is_none")]
             copy_of: Option<PhotoId>,
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -1025,6 +1027,7 @@ impl Serialize for StoredPhoto<'_> {
             as_shot_wb,
             content_hash,
             embedded_lens,
+            left_in_file,
             copy_of,
             copy_name,
             import_look,
@@ -1059,6 +1062,7 @@ impl Serialize for StoredPhoto<'_> {
             as_shot_wb: *as_shot_wb,
             content_hash: content_hash.as_deref(),
             embedded_lens,
+            left_in_file: *left_in_file,
             copy_of: *copy_of,
             copy_name: copy_name.as_deref(),
             import_look: import_look.as_deref().map(StoredSettings),
