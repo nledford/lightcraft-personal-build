@@ -233,6 +233,8 @@ mod tests_samples;
 #[cfg(test)]
 mod tests_samples_banner;
 #[cfg(test)]
+mod tests_samples_landing;
+#[cfg(test)]
 mod tests_scroll;
 #[cfg(test)]
 mod tests_side_keys;
@@ -814,6 +816,14 @@ pub struct LightcraftApp {
     pub(crate) welcome_drawn: bool,
     /// The new library's welcome has put the keyboard on Import Photos… (once per library opened).
     pub(crate) welcome_focused: bool,
+    /// The library generation (`Session::library_generation`) in which samples came into an empty library and a
+    /// sample was opened ([`panels::empty_library::land_on_samples`]): in that library the samples banner walks the
+    /// first edit through; another library, or none, has no tour.
+    pub(crate) samples_landed: Option<u64>,
+    /// How far the person has come since then: edited, compared ([`panels::samples::Tour`]).
+    pub(crate) samples_tour: panels::samples::Tour,
+    /// The settings the open photo came with, to tell the person's edit from them ([`panels::samples::TourBase`]).
+    pub(crate) samples_tour_base: Option<panels::samples::TourBase>,
 }
 
 impl LightcraftApp {
@@ -939,6 +949,9 @@ impl LightcraftApp {
             welcome_samples: None,
             welcome_drawn: false,
             welcome_focused: false,
+            samples_landed: None,
+            samples_tour: Default::default(),
+            samples_tour_base: None,
             model_setup: Default::default(),
         }
     }
@@ -1151,7 +1164,13 @@ impl LightcraftApp {
         } else {
             params
         };
+        // samples coming into an empty library, however they are asked for, land on one in Detail
+        // (the welcome showing: not a Local folder or Recently Deleted of an otherwise empty library)
+        let landing = id == "library.addSamples" && panels::empty_library::shown(&self.session);
         let r = self.session.execute(id, &params).map_err(Refusal::from);
+        if r.is_ok() && landing {
+            panels::empty_library::land_on_samples(self);
+        }
         if r.is_ok() && matches!(id, "crop.aspect" | "crop.rotateAspect") {
             self.ui.crop_default_aspect = if id == "crop.aspect" && params.get("aspect").and_then(Value::as_str) == Some("original") {
                 Some(serde_json::json!("original"))
