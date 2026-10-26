@@ -2440,5 +2440,9 @@
   "Dismiss": "Скрыть",
   "Review…": "Просмотреть…",
   "Open Synchronize Folder with what the scan found": "Открыть «Синхронизировать папку» с результатами поиска",
-  "You can go on working: a notice at the top left says when the scan is done.": "Можно продолжать работу: уведомление слева вверху сообщит, когда поиск завершится."
+  "You can go on working: a notice at the top left says when the scan is done.": "Можно продолжать работу: уведомление слева вверху сообщит, когда поиск завершится.",
+  "Show Parent Folder": "Показать родительскую папку",
+  "Hide This Parent": "Скрыть эту родительскую папку",
+  "Hides this row. Nothing on disk or in the library changes": "Скрывает эту строку. На диске и в библиотеке ничего не меняется",
+  "This folder stays listed while the grid shows its photos": "Эта папка остаётся в списке, пока сетка показывает её фотографии"
 }

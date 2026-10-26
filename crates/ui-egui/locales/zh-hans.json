@@ -2291,5 +2291,9 @@
   "Dismiss": "移除",
   "Review…": "查看…",
   "Open Synchronize Folder with what the scan found": "用扫描结果打开“同步文件夹”",
-  "You can go on working: a notice at the top left says when the scan is done.": "你可以继续工作：扫描完成时左上角会出现通知。"
+  "You can go on working: a notice at the top left says when the scan is done.": "你可以继续工作：扫描完成时左上角会出现通知。",
+  "Show Parent Folder": "显示上级文件夹",
+  "Hide This Parent": "隐藏此上级文件夹",
+  "Hides this row. Nothing on disk or in the library changes": "隐藏此行。磁盘和资料库中不会有任何更改",
+  "This folder stays listed while the grid shows its photos": "网格显示此文件夹的照片时，它会保留在列表中"
 }

@@ -2431,5 +2431,9 @@
   "Dismiss": "Tutup",
   "Review…": "Tinjau…",
   "Open Synchronize Folder with what the scan found": "Buka Sinkronkan Folder dengan hasil pemindaian",
-  "You can go on working: a notice at the top left says when the scan is done.": "Anda dapat terus bekerja: pemberitahuan di kiri atas memberi tahu saat pemindaian selesai."
+  "You can go on working: a notice at the top left says when the scan is done.": "Anda dapat terus bekerja: pemberitahuan di kiri atas memberi tahu saat pemindaian selesai.",
+  "Show Parent Folder": "Tampilkan folder induk",
+  "Hide This Parent": "Sembunyikan folder induk ini",
+  "Hides this row. Nothing on disk or in the library changes": "Menyembunyikan baris ini. Tidak ada yang berubah di disk atau di pustaka",
+  "This folder stays listed while the grid shows its photos": "Folder ini tetap tercantum selama grid menampilkan fotonya"
 }

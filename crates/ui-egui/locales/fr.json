@@ -2481,5 +2481,9 @@
   "Dismiss": "Retirer",
   "Review…": "Examiner…",
   "Open Synchronize Folder with what the scan found": "Ouvrir Synchroniser le dossier avec ce que l'analyse a trouvé",
-  "You can go on working: a notice at the top left says when the scan is done.": "Vous pouvez continuer à travailler : un avis en haut à gauche signale la fin de l'analyse."
+  "You can go on working: a notice at the top left says when the scan is done.": "Vous pouvez continuer à travailler : un avis en haut à gauche signale la fin de l'analyse.",
+  "Show Parent Folder": "Afficher le dossier parent",
+  "Hide This Parent": "Masquer ce dossier parent",
+  "Hides this row. Nothing on disk or in the library changes": "Masque cette ligne. Rien ne change sur le disque ni dans la bibliothèque",
+  "This folder stays listed while the grid shows its photos": "Ce dossier reste affiché tant que la grille montre ses photos"
 }

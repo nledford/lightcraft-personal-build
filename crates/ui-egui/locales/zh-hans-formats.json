@@ -321,5 +321,6 @@
   "Add “{keyword}” to {n} photo{}": "将“{keyword}”添加到 {n} 张照片{:.0}",
   "Changes found: {n}": "发现的更改：{n}",
   "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "“{name}”仍在扫描：请等待完成，或用其所在行的 × 停止",
-  "Look at the changes found in “{name}” first, or dismiss them": "请先查看在“{name}”中发现的更改，或将其忽略"
+  "Look at the changes found in “{name}” first, or dismiss them": "请先查看在“{name}”中发现的更改，或将其忽略",
+  "Lists “{name}”, the folder this one is in": "列出此文件夹所在的“{name}”"
 }

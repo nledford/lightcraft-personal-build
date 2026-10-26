@@ -321,5 +321,6 @@
   "Add “{keyword}” to {n} photo{}": "写真{n}枚に「{keyword}」を追加{:.0}",
   "Changes found: {n}": "見つかった変更: {n}",
   "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "「{name}」はまだスキャン中です。終わるまで待つか、その行の × で停止してください",
-  "Look at the changes found in “{name}” first, or dismiss them": "先に「{name}」で見つかった変更を確認するか、閉じてください"
+  "Look at the changes found in “{name}” first, or dismiss them": "先に「{name}」で見つかった変更を確認するか、閉じてください",
+  "Lists “{name}”, the folder this one is in": "このフォルダが入っている「{name}」を表示します"
 }

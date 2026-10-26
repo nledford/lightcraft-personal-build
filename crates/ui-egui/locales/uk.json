@@ -2445,5 +2445,9 @@
   "Dismiss": "Сховати",
   "Review…": "Переглянути…",
   "Open Synchronize Folder with what the scan found": "Відкрити «Синхронізувати теку» з результатами пошуку",
-  "You can go on working: a notice at the top left says when the scan is done.": "Можна працювати далі: сповіщення вгорі ліворуч повідомить, коли пошук завершиться."
+  "You can go on working: a notice at the top left says when the scan is done.": "Можна працювати далі: сповіщення вгорі ліворуч повідомить, коли пошук завершиться.",
+  "Show Parent Folder": "Показати батьківську теку",
+  "Hide This Parent": "Сховати цю батьківську теку",
+  "Hides this row. Nothing on disk or in the library changes": "Ховає цей рядок. На диску й у бібліотеці нічого не змінюється",
+  "This folder stays listed while the grid shows its photos": "Ця тека лишається у списку, доки сітка показує її фотографії"
 }

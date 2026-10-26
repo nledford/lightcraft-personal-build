@@ -321,5 +321,6 @@
   "{n} already there": "redan i albumet: {n}",
   "Changes found: {n}": "Ändringar hittade: {n}",
   "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "”{name}” genomsöks fortfarande: vänta, eller stoppa den med × på dess rad",
-  "Look at the changes found in “{name}” first, or dismiss them": "Titta först på ändringarna som hittades i ”{name}”, eller avfärda dem"
+  "Look at the changes found in “{name}” first, or dismiss them": "Titta först på ändringarna som hittades i ”{name}”, eller avfärda dem",
+  "Lists “{name}”, the folder this one is in": "Visar “{name}”, mappen som den här ligger i"
 }

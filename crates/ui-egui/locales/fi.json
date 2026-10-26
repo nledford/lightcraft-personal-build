@@ -2416,5 +2416,9 @@
   "Dismiss": "Hylkää",
   "Review…": "Tarkista…",
   "Open Synchronize Folder with what the scan found": "Avaa Synkronoi kansio skannauksen löytämillä muutoksilla",
-  "You can go on working: a notice at the top left says when the scan is done.": "Voit jatkaa työskentelyä: vasemmassa yläkulmassa oleva ilmoitus kertoo, kun skannaus on valmis."
+  "You can go on working: a notice at the top left says when the scan is done.": "Voit jatkaa työskentelyä: vasemmassa yläkulmassa oleva ilmoitus kertoo, kun skannaus on valmis.",
+  "Show Parent Folder": "Näytä yläkansio",
+  "Hide This Parent": "Piilota tämä yläkansio",
+  "Hides this row. Nothing on disk or in the library changes": "Piilottaa tämän rivin. Levyllä tai kirjastossa ei muutu mitään",
+  "This folder stays listed while the grid shows its photos": "Tämä kansio pysyy luettelossa, kun ruudukko näyttää sen kuvat"
 }

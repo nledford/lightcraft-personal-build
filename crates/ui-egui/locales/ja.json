@@ -2447,5 +2447,9 @@
   "Dismiss": "消去",
   "Review…": "確認…",
   "Open Synchronize Folder with what the scan found": "スキャンの結果を「フォルダを同期」で開く",
-  "You can go on working: a notice at the top left says when the scan is done.": "作業を続けられます。スキャンが終わると左上に通知が表示されます。"
+  "You can go on working: a notice at the top left says when the scan is done.": "作業を続けられます。スキャンが終わると左上に通知が表示されます。",
+  "Show Parent Folder": "親フォルダを表示",
+  "Hide This Parent": "この親フォルダを隠す",
+  "Hides this row. Nothing on disk or in the library changes": "この行を隠します。ディスクとライブラリは何も変わりません",
+  "This folder stays listed while the grid shows its photos": "グリッドがこのフォルダの写真を表示している間は、一覧に残ります"
 }
