@@ -1323,6 +1323,8 @@ mod tests_background;
 #[cfg(test)]
 mod tests_backup;
 #[cfg(test)]
+mod tests_folder_patch;
+#[cfg(test)]
 mod tests_folder_records;
 #[cfg(test)]
 mod tests_folders;
