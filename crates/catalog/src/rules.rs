@@ -1559,6 +1559,7 @@ mod tests {
             content_hash: Some(hash.into()),
             preview_only: None,
             preview_checked: String::new(),
+            truncated: false,
         };
         cat.apply(set("dd")).unwrap();
         assert_eq!(same(&cat), vec![1, 6, 7]);

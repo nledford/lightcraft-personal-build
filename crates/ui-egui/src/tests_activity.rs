@@ -999,6 +999,6 @@ fn import_message_counts_the_jpegs_cut_short() {
     assert!(h.step_until(Duration::from_secs(60), |h| h.app.import.is_none()));
     assert_eq!(h.app.session.catalog.len(), 3);
     assert_eq!(h.app.session.catalog.photos().filter(|p| p.truncated).count(), 1);
-    assert_eq!(h.app.ui.toast().map(|t| t.0.as_str()), Some("Imported 3 photos · 1 damaged"));
+    assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some("Imported 3 photos · 1 damaged"));
     let _ = std::fs::remove_dir_all(&dir);
 }
