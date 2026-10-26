@@ -2454,5 +2454,9 @@
   "This photo has no file on disk": "Ảnh này không có tệp trên đĩa",
   "This photo is not in a folder of the library": "Ảnh này không nằm trong thư mục của thư viện",
   "Opening other programs needs the desktop app": "Mở chương trình khác cần ứng dụng máy tính",
-  "Only a photo file LightCraft reads can be opened this way": "Chỉ mở được theo cách này tệp ảnh mà LightCraft đọc được"
+  "Only a photo file LightCraft reads can be opened this way": "Chỉ mở được theo cách này tệp ảnh mà LightCraft đọc được",
+  "Copy all": "Sao chép tất cả",
+  "Finished": "Đã xong",
+  "Needs attention": "Cần chú ý",
+  "Running": "Đang chạy"
 }

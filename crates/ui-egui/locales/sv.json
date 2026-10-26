@@ -2647,5 +2647,9 @@
   "This photo has no file on disk": "Det här fotot har ingen fil på disken",
   "This photo is not in a folder of the library": "Det här fotot ligger inte i en mapp i biblioteket",
   "Opening other programs needs the desktop app": "Att öppna andra program kräver skrivbordsappen",
-  "Only a photo file LightCraft reads can be opened this way": "Bara en fotofil som LightCraft läser kan öppnas så här"
+  "Only a photo file LightCraft reads can be opened this way": "Bara en fotofil som LightCraft läser kan öppnas så här",
+  "Copy all": "Kopiera alla",
+  "Finished": "Klara",
+  "Needs attention": "Kräver uppmärksamhet",
+  "Running": "Pågår"
 }

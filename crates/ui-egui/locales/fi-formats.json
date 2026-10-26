@@ -372,5 +372,16 @@
   "“{name}” is no longer there: nothing was moved": "”{name}” ei ole enää siellä: mitään ei siirretty",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Sääntö {n}/{m}: {what}. Siirrä nuolinäppäimillä",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Ryhmä {n}/{m}: täsmää {mode}, sisällä: {count}. Siirrä nuolinäppäimillä",
-  "Copied {n} file paths": "Kopioituja tiedostopolkuja: {n}"
+  "Copied {n} file paths": "Kopioituja tiedostopolkuja: {n}",
+  "{task}: done": "{task}: valmis",
+  "{task}: done, with problems": "{task}: valmis, ongelmia",
+  "{task}: failed": "{task}: epäonnistui",
+  "{task}: stopped": "{task}: pysäytetty",
+  "{task}: stopped unexpectedly": "{task}: pysähtyi odottamatta",
+  "Show failed ({n})": "Näytä epäonnistuneet ({n})",
+  "and {n} more": "ja {n} muuta",
+  "{n} failed": "{n} epäonnistui",
+  "took {n} s": "kesti {n} s",
+  "took {n} min": "kesti {n} min",
+  "took {h} h {m} min": "kesti {h} h {m} min"
 }

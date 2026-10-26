@@ -372,5 +372,16 @@
   "“{name}” is no longer there: nothing was moved": "«{name}» không còn nữa: không có gì được di chuyển",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Quy tắc {n}/{m}: {what}. Di chuyển bằng phím mũi tên",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Nhóm {n}/{m}: khớp {mode}, bên trong: {count}. Di chuyển bằng phím mũi tên",
-  "Copied {n} file paths": "Đã sao chép {n} đường dẫn tệp"
+  "Copied {n} file paths": "Đã sao chép {n} đường dẫn tệp",
+  "{task}: done": "{task}: xong",
+  "{task}: done, with problems": "{task}: xong, có sự cố",
+  "{task}: failed": "{task}: thất bại",
+  "{task}: stopped": "{task}: đã dừng",
+  "{task}: stopped unexpectedly": "{task}: dừng bất ngờ",
+  "Show failed ({n})": "Hiện mục thất bại ({n})",
+  "and {n} more": "và {n} mục khác",
+  "{n} failed": "{n} thất bại",
+  "took {n} s": "mất {n} giây",
+  "took {n} min": "mất {n} phút",
+  "took {h} h {m} min": "mất {h} giờ {m} phút"
 }

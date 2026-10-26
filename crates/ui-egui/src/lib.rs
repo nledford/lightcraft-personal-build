@@ -900,6 +900,8 @@ pub struct LightcraftApp {
     pub(crate) samples_tour: panels::samples::Tour,
     /// The settings the open photo came with, to tell the person's edit from them ([`panels::samples::TourBase`]).
     pub(crate) samples_tour_base: Option<panels::samples::TourBase>,
+    /// The finished task whose failed files the list shows ("Show failed" was clicked).
+    pub(crate) activity_failures: Option<u64>,
 }
 
 impl LightcraftApp {
@@ -1039,6 +1041,7 @@ impl LightcraftApp {
             samples_landed: None,
             samples_tour: Default::default(),
             samples_tour_base: None,
+            activity_failures: None,
             model_setup: Default::default(),
         }
     }

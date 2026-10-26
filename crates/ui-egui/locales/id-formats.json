@@ -372,5 +372,16 @@
   "“{name}” is no longer there: nothing was moved": "“{name}” tidak ditemukan lagi: tidak ada yang dipindahkan",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Aturan {n} dari {m}: {what}. Pindahkan dengan tombol panah",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Grup {n} dari {m}: cocokkan {mode}, isi: {count}. Pindahkan dengan tombol panah",
-  "Copied {n} file paths": "{n} jalur file disalin"
+  "Copied {n} file paths": "{n} jalur file disalin",
+  "{task}: done": "{task}: selesai",
+  "{task}: done, with problems": "{task}: selesai, dengan masalah",
+  "{task}: failed": "{task}: gagal",
+  "{task}: stopped": "{task}: dihentikan",
+  "{task}: stopped unexpectedly": "{task}: berhenti tak terduga",
+  "Show failed ({n})": "Tampilkan yang gagal ({n})",
+  "and {n} more": "dan {n} lainnya",
+  "{n} failed": "{n} gagal",
+  "took {n} s": "butuh {n} detik",
+  "took {n} min": "butuh {n} menit",
+  "took {h} h {m} min": "butuh {h} jam {m} menit"
 }

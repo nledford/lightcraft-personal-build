@@ -2544,5 +2544,9 @@
   "This photo has no file on disk": "Tällä kuvalla ei ole tiedostoa levyllä",
   "This photo is not in a folder of the library": "Tämä kuva ei ole kirjaston kansiossa",
   "Opening other programs needs the desktop app": "Muiden ohjelmien avaaminen vaatii työpöytäsovelluksen",
-  "Only a photo file LightCraft reads can be opened this way": "Näin voi avata vain kuvatiedoston, jonka LightCraft lukee"
+  "Only a photo file LightCraft reads can be opened this way": "Näin voi avata vain kuvatiedoston, jonka LightCraft lukee",
+  "Copy all": "Kopioi kaikki",
+  "Finished": "Valmistuneet",
+  "Needs attention": "Vaatii huomiota",
+  "Running": "Käynnissä"
 }

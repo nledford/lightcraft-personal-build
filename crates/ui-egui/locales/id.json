@@ -2560,5 +2560,9 @@
   "This photo has no file on disk": "Foto ini tidak memiliki file di disk",
   "This photo is not in a folder of the library": "Foto ini tidak berada di folder pustaka",
   "Opening other programs needs the desktop app": "Membuka program lain memerlukan aplikasi desktop",
-  "Only a photo file LightCraft reads can be opened this way": "Hanya file foto yang dibaca LightCraft yang dapat dibuka dengan cara ini"
+  "Only a photo file LightCraft reads can be opened this way": "Hanya file foto yang dibaca LightCraft yang dapat dibuka dengan cara ini",
+  "Copy all": "Salin semua",
+  "Finished": "Selesai",
+  "Needs attention": "Perlu perhatian",
+  "Running": "Berjalan"
 }

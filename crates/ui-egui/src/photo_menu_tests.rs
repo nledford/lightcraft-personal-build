@@ -492,12 +492,12 @@ fn copy_file_path_copies_each_file_once() {
     let r = ask(&mut h, vec![v[0].0]);
     assert_eq!(r["result"]["paths"], json!(["/pics/a.jpg"]), "{r}");
     assert_eq!(h.app.copied.as_deref(), Some("/pics/a.jpg"));
-    assert_eq!(h.app.ui.toast().map(|t| t.0.as_str()), Some("Copied the file path"));
+    assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some("Copied the file path"));
     h.app.session.execute("library.select", &json!({"ids": [v[0].0]})).unwrap();
     let copy = h.app.session.execute("photo.virtualCopy", &json!({})).unwrap();
     let copy = copy["ids"][0].as_u64().or_else(|| copy["id"].as_u64()).expect("the virtual copy's id");
     let r = ask(&mut h, vec![v[0].0, copy, v[1].0]);
     assert_eq!(r["result"]["paths"], json!(["/pics/a.jpg", "/pics/b.jpg"]), "{r}");
     assert_eq!(h.app.copied.as_deref(), Some("/pics/a.jpg\n/pics/b.jpg"));
-    assert_eq!(h.app.ui.toast().map(|t| t.0.as_str()), Some("Copied 2 file paths"));
+    assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some("Copied 2 file paths"));
 }
