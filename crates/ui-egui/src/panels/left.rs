@@ -2172,7 +2172,7 @@ pub(crate) fn follow_shown(app: &LightcraftApp, ctx: &egui::Context) {
     let library = app.session.library_generation();
     let local = app.session.browse.as_ref().filter(|_| app.session.source == LibrarySource::Folder).map(|b| b.path.clone());
     let folder = app.session.library_folder.clone().filter(|_| app.session.source == LibrarySource::LibraryFolder);
-    let id = egui::Id::new(AS_OPENED);
+    let id = egui::Id::unique(AS_OPENED);
     let was = ctx.data(|d| d.get_temp::<AsOpened>(id));
     let now = match &was {
         // (what is no longer shown was left: coming back to it is a choice)
@@ -2189,7 +2189,7 @@ pub(crate) fn follow_shown(app: &LightcraftApp, ctx: &egui::Context) {
 }
 
 fn as_opened(ctx: &egui::Context) -> AsOpened {
-    ctx.data(|d| d.get_temp::<AsOpened>(egui::Id::new(AS_OPENED))).unwrap_or_default()
+    ctx.data(|d| d.get_temp::<AsOpened>(egui::Id::unique(AS_OPENED))).unwrap_or_default()
 }
 
 /// Whenever the shown folder changes (a click, an agent, a rename or its undo), open the rows
