@@ -3464,16 +3464,20 @@ fn still_right(cat: &lightcraft_catalog::Catalog, revision: u64, reads: lightcra
 /// What the tallies below read of a photo, besides whether it is in the library.
 const READS_FILE: lightcraft_catalog::Aspects = lightcraft_catalog::Aspects::PRESENCE.with(lightcraft_catalog::Aspects::FILE);
 const READS_META: lightcraft_catalog::Aspects = lightcraft_catalog::Aspects::PRESENCE.with(lightcraft_catalog::Aspects::META);
-/// The keyword tree: the keywords photos carry, and the keyword list's own.
-const READS_KEYWORDS: lightcraft_catalog::Aspects = READS_META.with(lightcraft_catalog::Aspects::KEYWORD_LIST);
 const READS_PEOPLE: lightcraft_catalog::Aspects = READS_META.with(lightcraft_catalog::Aspects::ANALYSIS);
 
 /// A tree built from the library's tally, kept while the counts it was built from are the
 /// tally's (`stamp`) and nothing but photos changed since `revision` (a folder's label or the
-/// keyword list, which the trees also show, changes no photo). A kept tree moves its revision on.
-fn kept_tree<T>(slot: &mut Option<(u64, u64, std::sync::Arc<T>)>, cat: &lightcraft_catalog::Catalog, stamp: u64) -> Option<std::sync::Arc<T>> {
+/// keyword list, which the trees also show, changes no photo), and no `shown` aspect of the catalog
+/// (the keyword list, for the keyword tree) did. A kept tree moves its revision on.
+fn kept_tree<T>(
+    slot: &mut Option<(u64, u64, std::sync::Arc<T>)>,
+    cat: &lightcraft_catalog::Catalog,
+    stamp: u64,
+    shown: lightcraft_catalog::Aspects,
+) -> Option<std::sync::Arc<T>> {
     let (s, r, tree) = slot.take()?;
-    (s == stamp && (r == cat.revision || cat.aspects_since(r).is_some())).then(|| {
+    (s == stamp && (r == cat.revision || cat.aspects_since(r).is_some_and(|changed| !changed.any_of(shown)))).then(|| {
         *slot = Some((s, cat.revision, tree.clone()));
         tree
     })
@@ -3525,7 +3529,7 @@ impl Caches {
     pub fn keyword_tree(&mut self, cat: &lightcraft_catalog::Catalog, library: u64) -> std::sync::Arc<Vec<lightcraft_catalog::KeywordNode>> {
         let Some(t) = self.library.current(cat, library) else { return std::sync::Arc::default() };
         let stamp = t.keywords_stamp();
-        kept_tree(&mut self.keyword_tree, cat, stamp).unwrap_or_else(|| {
+        kept_tree(&mut self.keyword_tree, cat, stamp, lightcraft_catalog::Aspects::KEYWORD_LIST).unwrap_or_else(|| {
             let tree = std::sync::Arc::new(t.keyword_tree(cat));
             self.keyword_tree = Some((stamp, cat.revision, tree.clone()));
             tree

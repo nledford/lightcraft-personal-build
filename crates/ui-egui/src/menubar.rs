@@ -1496,7 +1496,7 @@ mod tests {
         let ctx = egui::Context::default();
         app.ui.compare = Some(Default::default());
         app.restore_status(&ctx);
-        let said = app.ui.toast.take().map(|t| t.0).unwrap_or_default();
+        let said = app.ui.toast.take().map(|t| t.text).unwrap_or_default();
         assert!(said.contains("Replaced") && said.contains(dir.to_string_lossy().as_ref()), "{said}");
         assert!(app.ui.compare.is_none());
         app.restore_status(&ctx);
