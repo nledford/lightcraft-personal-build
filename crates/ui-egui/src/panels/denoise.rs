@@ -494,6 +494,13 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if installed {
                     let r = Button::new("Remove").widget(format!("denoise:remove:{id}")).show(ui);
+                    let r = super::settings::ask_first(
+                        t,
+                        &format!("denoise:remove:{id}"),
+                        r,
+                        "The model's file is deleted. To use it again you download or add it again.",
+                        "Remove",
+                    );
                     if r.clicked() {
                         app.act("denoise.models.remove", json!({"id": id}));
                         app.caches.denoise.epoch += 1;

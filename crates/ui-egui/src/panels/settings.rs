@@ -716,6 +716,82 @@ fn button_width(ui: &egui::Ui, text: &str) -> f32 {
     label_width(ui, text, egui::TextStyle::Button) + 2.0 * ui.spacing().button_padding.x
 }
 
+/// What the Smart previews section ([`smart_previews`]) keeps between frames: what is chosen for the previews already
+/// built (0 move, 1 leave, 2 delete) and a change of folder that waits for a yes because it would
+/// delete them, with the frame, library and folder they were chosen and asked in.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, Default)]
+struct SmartAsk {
+    pass: u64,
+    library: String,
+    folder: String,
+    mode: u8,
+    waiting: Option<Value>,
+}
+
+/// What [`ask_first`] makes of a button: [`Asked::clicked`] once the person has said yes.
+pub(super) struct Asked {
+    yes: bool,
+}
+
+impl Asked {
+    /// The person pressed the button and then said yes to its question.
+    pub(super) fn clicked(&self) -> bool {
+        self.yes
+    }
+}
+
+/// A button whose action cannot be taken back, or takes long to make good again, asks before it
+/// acts. Pressing `button` (registered by the caller as `id`) opens a small panel under it with
+/// `question`, which says what the action costs, and two buttons: `yes` (`{id}:confirm`) and
+/// Keep (`{id}:keep`), which has the focus when the panel opens. A click elsewhere or Esc answers no. What comes back stands in for the
+/// button: its `clicked` is true on the frame the answer was yes.
+pub(super) fn ask_first(t: &Tokens, id: &str, button: egui::Response, question: &str, yes: &str) -> Asked {
+    let mut answer = false;
+    let opened = button.clicked();
+    let mut ids = None;
+    egui::Popup::from_toggle_button_response(&button).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
+        ui.set_max_width(280.0);
+        ui.add(egui::Label::new(RichText::new(crate::i18n::tr(question)).color(t.text_label)).wrap());
+        ui.horizontal(|ui| {
+            let r = ui.button(crate::i18n::tr(yes));
+            let confirm = r.id;
+            register(ui, format!("{id}:confirm"), r.rect);
+            if r.clicked() {
+                answer = true;
+                ui.close();
+            }
+            let r = ui.button(crate::i18n::tr("Keep"));
+            register(ui, format!("{id}:keep"), r.rect);
+            // (the question opens with the focus on Keep, so Return or Space alone changes nothing)
+            if opened {
+                r.request_focus();
+            }
+            if r.clicked() {
+                ui.close();
+            }
+            ids = Some((confirm, r.id));
+        });
+    });
+    // However the question closed (yes, Keep, Esc, a click elsewhere), the focus goes back to the
+    // button it was about, unless the click elsewhere put it on another widget. Only in the frame
+    // after the question was last drawn: a button that was not drawn since (a model's Remove while
+    // the model was gone) left its entry behind, and the button coming back is not that question's.
+    let ctx = button.ctx.clone();
+    let was_open = egui::Id::unique(("ask-first", id));
+    let frame = ctx.cumulative_frame_nr();
+    if let Some((confirm, keep)) = ids {
+        ctx.data_mut(|d| d.insert_temp(was_open, (confirm, keep, frame)));
+    } else if let Some((confirm, keep, shown)) = ctx.data(|d| d.get_temp::<(egui::Id, egui::Id, u64)>(was_open)) {
+        ctx.data_mut(|d| d.remove::<(egui::Id, egui::Id, u64)>(was_open));
+        let focused = ctx.memory(|m| m.focused());
+        if frame.saturating_sub(shown) <= 1 && (focused.is_none() || focused == Some(keep) || focused == Some(confirm)) {
+            button.request_focus();
+        }
+    }
+    Asked { yes: answer }
+}
+
 pub(super) fn heading(ui: &mut egui::Ui, t: &Tokens, text: &str) {
     ui.add_space(4.0);
     // `text` is the heading's English name (its message key). It is shown translated and
@@ -1336,6 +1412,11 @@ fn xmp_sidecars(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     if check(ui, "settings.autoWriteXmp", &mut xmp.auto_write, "Automatically write changes into XMP sidecars").changed() {
         app.act("library.xmpPreferences", json!({"autoWrite": xmp.auto_write}));
     }
+    hint(
+        ui,
+        t,
+        "On, every change to a photo's edits or metadata is written to an XMP file beside the photo, for other apps to read. Off, that happens when you choose Save Metadata to File in the Photo menu.",
+    );
     row(ui, t, crate::i18n::tr("Sidecar names"), |ui| {
         use lightcraft_engine::sidecar::SidecarNaming as N;
         let mut n = xmp.naming;
@@ -1458,6 +1539,13 @@ fn performance_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
                 .color(t.text),
         );
         let r = Button::new("Clear Cache").small().widget("button:settingsClearCache").show(ui);
+        let r = ask_first(
+            t,
+            "button:settingsClearCache",
+            r,
+            "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.",
+            "Clear Cache",
+        );
         if r.clicked() {
             app.act("library.clearPreviews", json!({}));
         }
@@ -1543,17 +1631,28 @@ fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         );
     }
     // what happens to the previews already built when the folder changes
-    let mode_id = egui::Id::unique("smart-existing");
-    let mut mode: u8 = ui.data(|d| d.get_temp(mode_id)).unwrap_or(0);
+    // That choice, and a change waiting for an answer, are kept from one frame of this section to
+    // the next only, and only for this library and this folder: with Settings closed, another
+    // tab or library opened, or the folder changed some other way, nothing is left chosen or asked.
+    let ask_id = egui::Id::unique("smart-ask");
+    // (counted in frames: the first pass of a frame that opens a prompt draws the prompt alone, so
+    // passes skip a number while Settings is still the same window)
+    let pass = ui.ctx().cumulative_frame_nr();
+    let library = app.session.library.as_ref().map(|l| l.dir.display().to_string()).unwrap_or_default();
+    let kept: Option<SmartAsk> = ui.data(|d| d.get_temp(ask_id));
+    let mut ask = kept.filter(|k| pass.saturating_sub(k.pass) <= 1 && k.library == library && k.folder == path).unwrap_or_default();
+    let mut mode = ask.mode;
     if count > 0 {
         row(ui, t, crate::i18n::tr("Existing previews"), |ui| {
-            if choices(ui, "settingsSmartExisting", &[(0u8, "Move them"), (1, "Leave them"), (2, "Delete them")], &mut mode) {
-                ui.data_mut(|d| d.insert_temp(mode_id, mode));
-            }
+            choices(ui, "settingsSmartExisting", &[(0u8, "Move them"), (1, "Leave them"), (2, "Delete them")], &mut mode);
         });
     }
-    let existing = ["move", "leave", "discard"][mode.min(2) as usize];
-    let mut result = None;
+    let mut existing = ["move", "leave", "discard"][mode.min(2) as usize];
+    // Deleting the previews already built is asked about once more, when the folder they would
+    // be deleted for is known: until then the change (the command's parameters) waits here.
+    // (asked for "Delete them" only: choosing otherwise withdraws the question)
+    let mut waiting: Option<Value> = ask.waiting.take().filter(|_| existing == "discard");
+    let mut change = None;
     ui.horizontal(|ui| {
         ui.add_space(LABEL_W);
         if app.services.pick_folder.is_some() {
@@ -1561,14 +1660,57 @@ fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             if r.clicked()
                 && let Some(dir) = app.services.pick_folder.as_mut().and_then(|f| f())
             {
-                result = Some(app.run("library.smartPreviewsLocation", json!({"path": dir, "existing": existing})));
+                change = Some(json!({"path": dir, "existing": existing}));
             }
         }
         let r = Button::new("Use Library Folder").enabled(custom).widget("button:settingsSmartReset").show(ui);
         if r.clicked() {
-            result = Some(app.run("library.smartPreviewsLocation", json!({"reset": true, "existing": existing})));
+            change = Some(json!({"reset": true, "existing": existing}));
         }
     });
+    if existing == "discard" && count > 0 && change.is_some() {
+        waiting = change.take();
+    }
+    let mut answered = false;
+    if let Some(params) = &waiting {
+        // (said with the count line above and two plain sentences, so no new format string is needed)
+        let how_many =
+            crate::i18n::tr_format!("{count} smart preview{} · {:.1} MB", if count == 1 { "" } else { "s" }, bytes as f64 / 1048576.0, count = count);
+        let question = format!(
+            "{} {how_many}. {}",
+            crate::i18n::tr("Delete the smart previews in the folder used until now?"),
+            crate::i18n::tr(
+                "Photos whose originals are not connected are shown and edited from their smart previews; new ones can only be made from originals that are connected."
+            ),
+        );
+        ui.add(egui::Label::new(RichText::new(question).color(t.caution)).wrap());
+        ui.horizontal(|ui| {
+            let r = ui.button(crate::i18n::tr("Delete and Change Folder"));
+            register(ui, "button:settingsSmartDelete", r.rect);
+            if r.clicked() {
+                // (what the section shows is up to two seconds old: the folder is asked for
+                // again, and a question about a folder that is no longer the one is dropped)
+                let still = app.run("library.smartPreviewsLocation", json!({})).is_ok_and(|now| now["path"].as_str() == Some(path.as_str()));
+                if still {
+                    change = Some(params.clone());
+                    existing = "discard";
+                } else {
+                    ui.data_mut(|d| d.remove::<(f64, Value)>(cache));
+                }
+                answered = true;
+            }
+            let r = ui.button(crate::i18n::tr("Cancel"));
+            register(ui, "button:settingsSmartCancel", r.rect);
+            answered |= r.clicked();
+        });
+    }
+    if answered || change.is_some() {
+        // (the choice goes back to "Move them": deleting is never left set for the next time)
+        waiting = None;
+        mode = 0;
+    }
+    ui.data_mut(|d| d.insert_temp(ask_id, SmartAsk { pass, library, folder: path.clone(), mode, waiting }));
+    let result = change.map(|params| app.run("library.smartPreviewsLocation", params));
     if let Some(r) = result {
         ui.data_mut(|d| d.remove::<(f64, Value)>(cache));
         match r {
