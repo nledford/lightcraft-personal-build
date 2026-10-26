@@ -298,6 +298,7 @@ fn the_synchronize_choices_announce_their_count() {
         disk: false,
         counts: Some(SyncCounts { new: 7, ..Default::default() }),
         import_new: true,
+        import_duplicates: false,
         relink_moved: false,
         remove_missing: false,
         read_metadata: false,

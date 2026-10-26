@@ -436,11 +436,11 @@ fn backups(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         match sign {
             Some(false) => {
                 crate::icons::paint(ui.painter(), at, crate::icons::Icon::Info, t.caution);
-                register(ui.ctx(), "icon:settingsBackupStatus:caution", at);
+                register(ui, "icon:settingsBackupStatus:caution", at);
             }
             Some(true) => {
                 crate::icons::paint(ui.painter(), at, crate::icons::Icon::Check, t.text_label);
-                register(ui.ctx(), "icon:settingsBackupStatus:ok", at);
+                register(ui, "icon:settingsBackupStatus:ok", at);
             }
             None => {}
         }
@@ -454,10 +454,10 @@ fn backups(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
                 ui.add(egui::Label::new(RichText::new(says).color(t.text)).wrap())
             })
             .inner;
-        register(ui.ctx(), "text:settingsBackupStatus", r.rect);
+        register(ui, "text:settingsBackupStatus", r.rect);
         // (not on offer while it would be refused)
         let r = ui.add_enabled(refused.is_none(), egui::Button::new(button));
-        register(ui.ctx(), "button:settingsBackupNow", r.rect);
+        register(ui, "button:settingsBackupNow", r.rect);
         if r.clicked() {
             result = Some(app.run("library.backup", json!({"background": true})));
         }
@@ -486,12 +486,12 @@ fn backups(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     row(ui, t, "", |ui| {
         let can = app.services.picker.is_some() || app.services.pick_folder.is_some();
         let r = ui.add_enabled(can, egui::Button::new(crate::i18n::tr("Choose Folder…")));
-        register(ui.ctx(), "button:settingsBackupChoose", r.rect);
+        register(ui, "button:settingsBackupChoose", r.rect);
         if r.clicked() {
             result = Some(app.run(ID, json!({"choose": true})));
         }
         let r = ui.add_enabled(chosen, egui::Button::new(crate::i18n::tr("Use Library Folder")));
-        register(ui.ctx(), "button:settingsBackupReset", r.rect);
+        register(ui, "button:settingsBackupReset", r.rect);
         if r.clicked() {
             result = Some(app.run(ID, json!({"dir": null})));
         }

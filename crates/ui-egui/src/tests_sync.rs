@@ -547,6 +547,7 @@ fn the_dialogs_choices_read_in_the_chosen_language_with_their_counts() {
         disk: false,
         counts: Some(crate::state::SyncCounts { new: 7, ..Default::default() }),
         import_new: true,
+        import_duplicates: false,
         relink_moved: true,
         remove_missing: false,
         read_metadata: false,

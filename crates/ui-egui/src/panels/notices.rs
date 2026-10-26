@@ -214,6 +214,9 @@ pub(crate) fn prompt_layer(app: &LightcraftApp) -> Option<egui::LayerId> {
     let id = match (&app.quit_prompt, app.notices.is_empty()) {
         (Some(QuitPrompt::Tasks(_)), _) => "quit-tasks",
         (Some(QuitPrompt::Unsaved(_)), _) => "quit-unsaved",
+        (Some(QuitPrompt::BackUp(_)), _) => "quit-backup",
+        (Some(QuitPrompt::BackingUp(_)), _) => "quit-backing-up",
+        (Some(QuitPrompt::BackupFailed(_)), _) => "quit-backup-failed",
         (None, false) => "settings-notice",
         (None, true) => return None,
     };
@@ -648,7 +651,7 @@ fn quit_without_the_backup(app: &mut LightcraftApp) {
 pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
     if let Some(QuitPrompt::BackUp(text)) = app.quit_prompt.clone() {
         let buttons = [("quitBackUp", "Back Up", Choice::BackUp), ("quitSkipBackup", "Skip", Choice::Skip), ("quitCancel", "Cancel", Choice::Cancel)];
-        let Some(i) = window(ctx, "quit-backup", "Back up before quitting?", &text, &buttons) else { return };
+        let Some(i) = window(ctx, "quit-backup", "Back up before quitting?", &text, &buttons, &mut app.notice_input) else { return };
         app.quit_prompt = None;
         match buttons[i].2 {
             Choice::BackUp => back_up_then_quit(app),
@@ -659,7 +662,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
     }
     if let Some(QuitPrompt::BackingUp(text)) = app.quit_prompt.clone() {
         let buttons = [("quitNoWait", "Quit Without Waiting", Choice::QuitAnyway), ("quitCancel", "Cancel", Choice::Cancel)];
-        let Some(i) = window(ctx, "quit-backing-up", "Backing up before quitting", &text, &buttons) else { return };
+        let Some(i) = window(ctx, "quit-backing-up", "Backing up before quitting", &text, &buttons, &mut app.notice_input) else { return };
         app.quit_prompt = None;
         match buttons[i].2 {
             Choice::QuitAnyway => {
@@ -676,7 +679,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
     }
     if let Some(QuitPrompt::BackupFailed(text)) = app.quit_prompt.clone() {
         let buttons = [("quitAnyway", "Quit Anyway", Choice::QuitAnyway), ("quitCancel", "Cancel", Choice::Cancel)];
-        let Some(i) = window(ctx, "quit-backup-failed", "Quit without a backup?", &text, &buttons) else { return };
+        let Some(i) = window(ctx, "quit-backup-failed", "Quit without a backup?", &text, &buttons, &mut app.notice_input) else { return };
         app.quit_prompt = None;
         match buttons[i].2 {
             Choice::QuitAnyway => quit_without_the_backup(app),

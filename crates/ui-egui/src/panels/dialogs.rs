@@ -2505,7 +2505,7 @@ fn restore_backup_body(
                 if opened && *selected == Some(i) {
                     r.scroll_to_me(Some(egui::Align::Center));
                 }
-                crate::widgets::register(ui.ctx(), format!("row:restoreBackup-{i}"), r.rect);
+                crate::widgets::register(ui, format!("row:restoreBackup-{i}"), r.rect);
                 if r.clicked() {
                     *selected = Some(i);
                 }
@@ -2527,7 +2527,7 @@ fn restore_backup_body(
     if app.services.pick_folder.is_some() || app.services.picker.is_some() {
         ui.add_space(4.0);
         let r = ui.button(crate::i18n::tr("Choose Folder…"));
-        crate::widgets::register(ui.ctx(), "button:restoreChooseFolder", r.rect);
+        crate::widgets::register(ui, "button:restoreChooseFolder", r.rect);
         choose = r.clicked();
     }
     choose
