@@ -874,7 +874,7 @@ fn without_the_lock_a_worker_that_dies_still_has_its_own_move_followed() {
     let taken = s.take_recovered_moves().expect("the open leaves the other record alone");
     assert!(matches!(taken.problems.as_slice(), [crate::move_intent::MoveProblem::Unprotected]), "{taken:?}");
     let before = std::fs::read(other.path()).unwrap();
-    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")}), false).unwrap().unwrap();
     // the files moved, then the worker died before saying so
     drop(work.run());
     let r = s.execute_fn("photo.moveToFolder", |s| Ok(json!(finish.abandon(s)))).unwrap();
@@ -912,7 +912,7 @@ fn without_the_lock_a_dead_workers_cleanup_leaves_the_copies_and_partials_anothe
     make_unlockable(&dir);
     let mut s = open(&dir);
     let _ = s.take_recovered_moves();
-    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")}), false).unwrap().unwrap();
     drop(work.run());
     // another program is moving the same photo to the same folder: its copy is at both places, its partial is being written
     std::fs::copy(dir.path("share/a.jpg"), dir.path("local/a.jpg")).unwrap();
