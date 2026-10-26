@@ -668,6 +668,15 @@ fn scan_in_background(h: &mut Headless, dir: &Scratch) {
     assert!(h.app.sync.is_some(), "and the scan goes on");
 }
 
+/// Open the list under the bell (Window ▸ Tasks): the notice of a finished background scan is shown in it.
+fn open_tasks(h: &mut Headless) {
+    let r = h.request("engine.execute", json!({"command": "view.tasks", "params": {"show": true}}), T);
+    assert_eq!(r["result"]["tasks"], true, "{r}");
+    for _ in 0..4 {
+        h.step();
+    }
+}
+
 fn has_widget(h: &Headless, id: &str) -> bool {
     h.app.widgets.iter().any(|(w, _)| w == id)
 }
@@ -709,6 +718,9 @@ fn a_scan_continued_in_the_background_ends_in_a_notice_that_opens_its_result() {
     assert!(h.app.ui.dialog.is_none(), "nothing pops up: {:?}", h.app.ui.dialog);
     let ready = h.app.sync_ready.clone().expect("a notice waits");
     assert_eq!((ready.counts.new, ready.counts.missing, ready.changes()), (1, 1, 2), "{ready:?}");
+    // (a dot at the bell says it waits; the notice itself is in the list under it)
+    assert!(has_widget(&h, "activity:ready"), "marked at the bell");
+    open_tasks(&mut h);
     assert!(has_widget(&h, "activity:scanReady"), "shown in the activity stack");
     assert!(h.app.session.activity.list().is_empty(), "the scan's own row is gone");
     // it stays until it is looked at
@@ -735,7 +747,7 @@ fn clicking_the_notice_title_opens_the_result_too() {
     scan_in_background(&mut h, &dir);
     gate.store(true, std::sync::atomic::Ordering::Relaxed);
     assert!(h.step_until(T, |h| h.app.sync_ready.is_some()), "a notice waits");
-    h.step();
+    open_tasks(&mut h);
     // the title ends before the ✕, so the two don't overlap
     let title = crate::control::widget_rect(&h.app, "activity:scanReady:title");
     let cross = crate::control::widget_rect(&h.app, "activity:scanReady:dismiss");
@@ -753,6 +765,7 @@ fn dismissing_the_notice_lets_go_of_what_the_scan_found() {
     scan_in_background(&mut h, &dir);
     gate.store(true, std::sync::atomic::Ordering::Relaxed);
     assert!(h.step_until(T, |h| h.app.sync_ready.is_some()), "a notice waits");
+    open_tasks(&mut h);
 
     click_widget(&mut h, "activity:scanReady:dismiss", |h| h.app.sync_ready.is_none());
 

@@ -1053,18 +1053,17 @@ fn demo_on_disk() -> Headless {
     h
 }
 
-/// A folder with a valid PNG and, in a subfolder, a JPEG cut short before its end-of-image marker (the real reason).
+/// A folder with a valid PNG and, in a subfolder, a "JPEG" that is not one at all (a damaged one, cut short, is imported and
+/// counted apart: it is not a file the import could not read).
 fn folder_with_a_truncated_jpeg(tag: &str) -> std::path::PathBuf {
-    use lightcraft_codecs::{ChromaSubsampling, EncodeImage, EncodeMeta};
+    use lightcraft_codecs::{EncodeImage, EncodeMeta};
     let dir = std::env::temp_dir().join(format!("lc-activity-unreadable-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("trip")).unwrap();
     let img = lightcraft_raster::Rgba8 { width: 64, height: 48, data: vec![[90, 120, 160, 255]; 64 * 48] };
     let png = lightcraft_codecs::encode_png(&EncodeImage::rgba8(&img), &EncodeMeta::default()).unwrap();
     std::fs::write(dir.join("good.png"), png).unwrap();
-    let mut jpeg = lightcraft_codecs::encode_jpeg(&EncodeImage::rgba8(&img), 90, ChromaSubsampling::S444, &EncodeMeta::default()).unwrap();
-    jpeg.truncate(jpeg.len() - 2);
-    std::fs::write(dir.join("trip").join("bad.jpg"), jpeg).unwrap();
+    std::fs::write(dir.join("trip").join("bad.jpg"), b"this is not a picture, whatever its name says").unwrap();
     dir
 }
 
@@ -1076,7 +1075,7 @@ fn the_row_names_the_truncated_jpeg(h: &Headless) {
     assert_eq!((row.kind, row.ending, row.failed), ("import", Ending::Problems, 1), "{row:?}");
     let names: Vec<&str> = row.failures.iter().map(|f| f.name.as_str()).collect();
     assert_eq!(names, vec![std::path::Path::new("trip").join("bad.jpg").to_string_lossy()], "{row:?}");
-    assert!(row.failures[0].reason.contains("truncated"), "{}", row.failures[0].reason);
+    assert!(!row.failures[0].reason.is_empty(), "the real reason is kept: {row:?}");
     assert!(failures_text(row).contains(&format!("bad.jpg\t{}", row.failures[0].reason)), "{}", failures_text(row));
 }
 
