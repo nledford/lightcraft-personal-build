@@ -23,6 +23,15 @@
 - For agents: `album.delete` and `album.move` take `ids`, `keyword.delete` and `keyword.move` take `keywords`,
   `library.removeFolder` and `folder.label` take `paths`, as one undo step each.
 
+### Cut, Copy and Paste for albums and keywords
+- In the menus of albums and keywords in the left panel and the Keyword List, Cut and Copy take the rows (one or
+  several chosen) and Paste puts them down: cut albums move into the folder where you choose Paste (the Albums +
+  menu pastes at the top level), copied albums are duplicated there with their photos, a copied smart album keeps its
+  rules and a copied folder everything inside it; cut keywords are nested inside the keyword where you choose Paste;
+  copied keywords are text you can paste in a keyword box. Paste is grayed out where it can't work, such as a
+  folder inside itself, and one Edit ▸ Undo takes back a paste.
+- For agents: the new `album.duplicate` takes `id` or `ids` and an optional `parent` (null: the top level).
+
 ## 2026-10-24
 
 ### Relative-date filters and smart albums follow the clock
