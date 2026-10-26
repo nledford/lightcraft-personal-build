@@ -1791,6 +1791,8 @@ mod tests_backup_prune;
 #[cfg(test)]
 mod tests_backup_schedule;
 #[cfg(test)]
+mod tests_batch_sidebar;
+#[cfg(test)]
 mod tests_color;
 #[cfg(test)]
 mod tests_constrain_crop;
