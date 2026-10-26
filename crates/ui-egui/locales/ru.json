@@ -2467,6 +2467,7 @@
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Клавиши работают в боковой панели: стрелки перемещают, Enter открывает, набор текста ищет, Esc возвращает к фотографиям",
   "This row has no name to change": "У этой строки нет имени, которое можно изменить",
   "Moving photos": "Перемещение фото",
-  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "Перемещение остановлено из-за ошибки (см. журнал). Библиотека следует за уже перемещёнными файлами; XMP-файл мог остаться на старом месте.",
-  "Stopped: no photo was moved": "Остановлено: ни одно фото не перемещено"
+  "Stopped: no photo was moved": "Остановлено: ни одно фото не перемещено",
+  "Moving was stopped by an error (see the log). The library follows the files that had moved.": "Перемещение остановлено из-за ошибки (см. журнал). Библиотека следует за уже перемещёнными файлами.",
+  "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Перемещение остановлено из-за ошибки (см. журнал). Библиотека может не следовать за всеми уже перемещёнными файлами: «Найти отсутствующие фото» заново свяжет потерянные."
 }

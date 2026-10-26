@@ -298,7 +298,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Move to Folder",
             [],
             None,
-            "{folder, ids?} — move the photos' files (default: the selection) with their XMP sidecars into `folder` on disk and relink them; virtual copies follow their master; across volumes the file is copied, verified and only then removed; never overwrites (a name taken in `folder` refuses the whole move); missing/offline and Local photos are refused; one undo step (undo moves them back). In the desktop app `background: true` moves the files on a worker thread (`activity.list` kind `move`, `activity.cancel` stops it after the file in hand; `ui.inspect` → `move`) → {moved, of, folder, stopped}",
+            "{folder, ids?} — move the photos' files (default: the selection) with their XMP sidecars into `folder` on disk and relink them; virtual copies follow their master; across volumes the file is copied, verified and only then removed; never overwrites (a name taken in `folder` refuses the whole move); missing/offline and Local photos are refused; one undo step (undo moves them back); a record in the library lets the next open follow a move cut short (a force-quit). In the desktop app `background: true` moves the files on a worker thread (`activity.list` kind `move`, `activity.cancel` stops it after the file in hand; `ui.inspect` → `move`) → {moved, of, folder, stopped}",
             always,
             move_to_folder
         ),

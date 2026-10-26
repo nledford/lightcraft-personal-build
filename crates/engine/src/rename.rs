@@ -631,7 +631,7 @@ fn move_across_volumes(fs: &RealFs, a: &Path, b: &Path) -> std::io::Result<()> {
 
 /// Whether files `a` and `b` hold the same bytes: lengths first, then 1 MiB chunks at a time, so
 /// a large raw or video is never read into memory whole.
-fn same_contents(a: &Path, b: &Path) -> std::io::Result<bool> {
+pub(crate) fn same_contents(a: &Path, b: &Path) -> std::io::Result<bool> {
     const CHUNK: usize = 1 << 20;
     let (mut fa, mut fb) = (std::fs::File::open(a)?, std::fs::File::open(b)?);
     if fa.metadata()?.len() != fb.metadata()?.len() {
@@ -882,6 +882,42 @@ impl std::fmt::Display for MoveError {
     }
 }
 
+/// A sidecar candidate of [`sidecars`] that is there. An upper-case `.XMP` spelling that only
+/// answers through a case-insensitive volume is the lower-case sidecar: it is tracked and moved
+/// under its own name, so `a.xmp` doesn't become `b.XMP`.
+fn sidecar_present(fs: &dyn MoveFs, (sc, _, upper): &(PathBuf, SidecarNaming, bool)) -> bool {
+    fs.is_file(sc) && (!*upper || fs.listed(sc))
+}
+
+/// The sidecars of the photo file `from` that go along to `to`, worked out lazily: each one is
+/// looked at only when the one before it has moved (two spellings can name one file).
+fn sidecar_moves<'a>(fs: &'a dyn MoveFs, from: &str, to: &'a str) -> impl Iterator<Item = SidecarMove> + 'a {
+    sidecars(from).into_iter().filter(move |s| sidecar_present(fs, s)).map(move |(sc, naming, upper)| {
+        let mut dst = crate::sidecar::sidecar_path(to, naming);
+        if upper {
+            dst = dst.with_extension("XMP");
+        }
+        // A stem sidecar another photo still uses is copied, not taken away (issue #92).
+        let copied = naming == SidecarNaming::Stem && fs.stem_sibling(&sc).is_some();
+        SidecarMove { from: sc, to: dst, copied, companions: Vec::new() }
+    })
+}
+
+/// The photo file already went from `from` to `to`, and its sidecars may not have (the app was
+/// stopped between the two): take them along, as [`move_file`] would have. Never overwrites: a
+/// sidecar whose place is taken stays where it is. How many moved, or the first that couldn't.
+pub(crate) fn finish_sidecars(fs: &dyn MoveFs, from: &str, to: &str) -> std::result::Result<usize, String> {
+    let mut moved = 0;
+    for m in sidecar_moves(fs, from, to) {
+        if !m.needed(fs) {
+            continue;
+        }
+        m.apply(fs).map_err(|e| format!("{} → {}: {e}", m.from.display(), m.to.display()))?;
+        moved += 1;
+    }
+    Ok(moved)
+}
+
 /// Move `from` to `to` (never over an existing file) together with its sidecars. On error the
 /// moves are undone; whatever can't be undone is named in the error (see [`MoveError`]).
 pub fn move_file(from: &str, to: &str) -> std::result::Result<(), MoveError> {
@@ -900,22 +936,14 @@ pub(crate) fn move_file_with(fs: &dyn MoveFs, from: &str, to: &str) -> std::resu
     if fs.exists(t) && !is_respelling(fs, f, t) {
         return Err(fail(format!("{to} already exists")));
     }
-    // An upper-case `.XMP` spelling that only answers through a case-insensitive volume is the
-    // lower-case sidecar: track and move it under its own name, so `a.xmp` doesn't become `b.XMP`.
-    let present = |(sc, _, upper): &(PathBuf, SidecarNaming, bool)| fs.is_file(sc) && (!*upper || fs.listed(sc));
-    let mut packets: Vec<RetainedPacket> =
-        sidecars(from).into_iter().filter(present).map(|(path, _, _)| RetainedPacket { version: fs.packet_version(&path).ok(), path }).collect();
+    let mut packets: Vec<RetainedPacket> = sidecars(from)
+        .into_iter()
+        .filter(|s| sidecar_present(fs, s))
+        .map(|(path, _, _)| RetainedPacket { version: fs.packet_version(&path).ok(), path })
+        .collect();
     move_one(fs, f, t).map_err(|e| fail(format!("rename {from}: {e}")))?;
     let mut done: Vec<SidecarMove> = Vec::new();
-    let mut remaining = sidecars(from).into_iter().filter(present).map(|(sc, naming, upper)| {
-        let mut dst = crate::sidecar::sidecar_path(to, naming);
-        if upper {
-            dst = dst.with_extension("XMP");
-        }
-        // A stem sidecar another photo still uses is copied, not taken away (issue #92).
-        let copied = naming == SidecarNaming::Stem && fs.stem_sibling(&sc).is_some();
-        SidecarMove { from: sc, to: dst, copied, companions: Vec::new() }
-    });
+    let mut remaining = sidecar_moves(fs, from, to);
     while let Some(m) = remaining.next() {
         if !m.needed(fs) {
             continue; // never overwrite: the old sidecar stays where it was
@@ -1228,18 +1256,29 @@ impl Session {
                 _ => None,
             })
             .collect();
-        if let Err(e) = move_all(fs, &moves) {
-            return Err(EngineError::Other(self.follow_stuck(&op, e, true).0));
+        // noted before anything moves: a stop part-way is found and followed at the next open
+        let record = self.record_moves(&moves)?;
+        let moved = move_all(fs, &moves);
+        if let Err(e) = moved {
+            let (message, _, followed) = self.follow_stuck(&op, e, true);
+            // (a library that could not follow keeps the record for the next open)
+            if followed {
+                self.settle_moves(record);
+            }
+            return Err(EngineError::Other(message));
         }
         if n > 0
             && let Err(err) = self.commit(&label(n), op)
         {
             let back: Vec<(String, String)> = moves.iter().rev().map(|(a, b)| (b.clone(), a.clone())).collect();
             if let Err(e) = move_all(fs, &back) {
+                // the files stay at the new place and the library doesn't point there: the record stays for the next open
                 return Err(EngineError::Other(format!("{err}; the renamed files could not all be moved back: {}", e.message)));
             }
+            self.settle_moves(record);
             return Err(err);
         }
+        self.settle_moves(record);
         Ok(n)
     }
 
@@ -1268,13 +1307,14 @@ impl Session {
 
     /// After a failed batch of moves for `op`: point the photos whose files stayed moved at
     /// their new paths (an undoable "partly" rename when `undoable`, otherwise a plain logged
-    /// change), so the library matches the disk. Returns the message and, for a history retry,
-    /// the correction's inverse file ops (so a retry doesn't lose the original paths).
-    pub(crate) fn follow_stuck(&mut self, op: &Op, e: BatchMoveError, undoable: bool) -> (String, Vec<Op>) {
+    /// change), so the library matches the disk. Returns the message, for a history retry the
+    /// correction's inverse file ops (so a retry doesn't lose the original paths), and whether the
+    /// library follows the files now (when not, the move's record has to stay for the next open).
+    pub(crate) fn follow_stuck(&mut self, op: &Op, e: BatchMoveError, undoable: bool) -> (String, Vec<Op>, bool) {
         let mut msg = e.message;
         let pending_sidecars = e.pending_sidecars;
         if e.stuck.is_empty() && (!undoable || pending_sidecars.is_empty()) {
-            return (msg, Vec::new());
+            return (msg, Vec::new(), true);
         }
         let to: HashSet<&str> = e.stuck.iter().map(|m| m.1.as_str()).collect();
         let mut keep = Vec::new();
@@ -1304,6 +1344,8 @@ impl Session {
                 Err(e) => Err(e),
             }
         };
+        // (with no file stuck at the new place there is nothing the library has to follow)
+        let followed = applied.is_ok() || n == 0;
         match applied {
             Ok(()) if n > 0 => msg
                 .push_str(&format!(". {n} file{s} could not be moved back and kept the new name; the library now points there: {}", list.join(", "))),
@@ -1313,7 +1355,7 @@ impl Session {
                 list.join(", ")
             )),
         }
-        (msg, inverses)
+        (msg, inverses, followed)
     }
 
     /// Physical moves to the final `SetFile` destination of each photo. A merged history

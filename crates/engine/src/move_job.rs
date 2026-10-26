@@ -5,8 +5,9 @@
 //! * [`start`] (on the session): the checks that need only the library (Local photos, files the
 //!   library doesn't have, names clashing within the batch), the plan, and the activity row.
 //! * [`MoveWork::run`] (anywhere): the checks that read the disk (the folder, each file, names
-//!   already taken there), then the files, one at a time, reporting progress to the activity row.
-//!   The row's ✕ (or `activity.cancel`) stops it after the file in hand.
+//!   already taken there), the record of the move ([`crate::move_intent`]), then the files, one at
+//!   a time, reporting progress to the activity row. The row's ✕ (or `activity.cancel`) stops it
+//!   after the file in hand.
 //! * [`MoveFinish::finish`] (on the session): the library follows the files that moved, as one
 //!   undo step.
 //!
@@ -15,14 +16,15 @@
 //! (they're written once the move ends, at the new place).
 
 use std::collections::HashSet;
-use std::path::Path;
-use std::sync::{Arc, Weak};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, OnceLock, Weak};
 
 use lightcraft_catalog::{Op, PhotoId, Source};
 use serde_json::{Value, json};
 
 use crate::activity::{Cancel, TaskGuard, TaskHandle};
 use crate::cmd::bad;
+use crate::move_intent::MoveRecord;
 use crate::rename::{BatchMoveError, MoveFs, RealFs, RenamePlan, folded_path};
 use crate::{EngineError, Result, Session};
 
@@ -47,7 +49,11 @@ pub struct MoveWork {
     folder: String,
     /// (from, to), one per file (a master and its virtual copies move once).
     moves: Vec<(String, String)>,
+    /// Where the record of the move goes; `None` for a library without a folder of its own.
+    library: Option<PathBuf>,
     task: TaskHandle,
+    /// Where the worker put the record of the move, for [`MoveFinish::abandon`].
+    record: Arc<OnceLock<PathBuf>>,
 }
 
 /// What [`MoveWork::run`] did, for [`MoveFinish::finish`].
@@ -57,11 +63,9 @@ enum Ran {
     /// Nothing moved, and why (a name taken, a file offline…).
     Refused(String),
     /// The first `moved` files moved; fewer than all when the move was stopped.
-    Moved { moved: usize },
-    /// The worker died part-way and left no outcome: the disk says what moved.
-    Died,
+    Moved { moved: usize, record: Option<MoveRecord> },
     /// A file couldn't move: the earlier ones were moved back (what couldn't be is in `error`).
-    Failed { error: BatchMoveError },
+    Failed { error: BatchMoveError, record: Option<MoveRecord> },
 }
 
 /// The half of a move that brings the library along ([`MoveFinish::finish`]); it holds the
@@ -72,6 +76,7 @@ pub struct MoveFinish {
     identity: Arc<()>,
     ticket: Arc<MoveTicket>,
     guard: TaskGuard,
+    record: Arc<OnceLock<PathBuf>>,
 }
 
 impl std::fmt::Debug for MoveFinish {
@@ -139,8 +144,10 @@ pub fn start(s: &mut Session, p: &Value, cancellable: bool) -> Result<Option<(Mo
     s.moving = Arc::downgrade(&ticket);
     let guard = s.activity.start("move", "Moving photos", if cancellable { Cancel::Yes } else { Cancel::No });
     guard.progress(0, moves.len() as u64);
-    let work = MoveWork { folder: folder.to_string(), moves, task: guard.handle() };
-    let finish = MoveFinish { folder: folder.to_string(), plans, identity: Arc::clone(&s.library_identity), ticket, guard };
+    let library = s.library.as_ref().filter(|l| l.on_disk).map(|l| l.dir.clone());
+    let record = Arc::new(OnceLock::new());
+    let work = MoveWork { folder: folder.to_string(), moves, library, task: guard.handle(), record: Arc::clone(&record) };
+    let finish = MoveFinish { folder: folder.to_string(), plans, identity: Arc::clone(&s.library_identity), ticket, guard, record };
     Ok(Some((work, finish)))
 }
 
@@ -156,7 +163,7 @@ impl MoveWork {
     }
 
     pub(crate) fn run_with(self, fs: &dyn MoveFs) -> MoveOutcome {
-        let MoveWork { folder, moves, task } = self;
+        let MoveWork { folder, moves, library, task, record: slot } = self;
         if !Path::new(&folder).is_dir() {
             return MoveOutcome(Ran::Refused(format!("{folder} is not a folder (create it first with folder.create)")));
         }
@@ -172,6 +179,14 @@ impl MoveWork {
         if !clashes.is_empty() {
             return MoveOutcome(Ran::Refused(clash_message(&clashes, &folder)));
         }
+        // the record goes first: whatever stops this from here on, the next open finds the files
+        let record = match library.as_deref().map(|dir| crate::move_intent::write(dir, &moves)).transpose() {
+            Ok(r) => r,
+            Err(e) => return MoveOutcome(Ran::Refused(format!("can't note the move in the library ({e}): nothing was moved"))),
+        };
+        if let Some(r) = &record {
+            let _ = slot.set(r.path().to_path_buf());
+        }
         let total = moves.len() as u64;
         let ran = crate::rename::move_all_with(fs, &moves, &mut |k, (from, _)| {
             task.progress(k as u64, total);
@@ -181,9 +196,9 @@ impl MoveWork {
         match ran {
             Ok(moved) => {
                 task.progress(moved as u64, total);
-                MoveOutcome(Ran::Moved { moved })
+                MoveOutcome(Ran::Moved { moved, record })
             }
-            Err(error) => MoveOutcome(Ran::Failed { error }),
+            Err(error) => MoveOutcome(Ran::Failed { error, record }),
         }
     }
 }
@@ -204,10 +219,18 @@ impl MoveFinish {
     }
 
     /// The worker died part-way (a panic, logged; this path runs only then) and left no outcome: the move is over for the
-    /// session. The library follows the files that reached the new place (and are gone from the
-    /// old one); the sidecars held back meanwhile are written where their photos now are.
-    pub fn abandon(self, s: &mut Session) -> Result<Value> {
-        self.finish(s, MoveOutcome(Ran::Died))
+    /// session, the library follows whatever had moved from the move's record, and the sidecars
+    /// held back meanwhile are written where their photos now are.
+    pub fn abandon(self, s: &mut Session) -> crate::move_intent::Recovered {
+        let own = self.record.get().cloned();
+        drop(self);
+        let recovered = s.recover_own_move(own.as_deref());
+        let held: Vec<PhotoId> = std::mem::take(&mut s.held_sidecars).into_iter().collect();
+        if s.xmp.auto_write {
+            s.auto_write_sidecar_ids(held);
+        }
+        s.save_held_sidecars();
+        recovered
     }
 
     /// Point the photos whose files moved at their new place, as one undo step (labelled as
@@ -215,40 +238,36 @@ impl MoveFinish {
     /// (in files); an error when nothing moved (`Refused`, `Failed`: the files went back, or the library
     /// follows those that couldn't). The sidecars held back meanwhile are written after.
     pub fn finish(self, s: &mut Session, out: MoveOutcome) -> Result<Value> {
-        let MoveFinish { folder, plans, identity, ticket, guard } = self;
+        let MoveFinish { folder, plans, identity, ticket, guard, record: _ } = self;
         // the move is over for the session: other file work, and these photos' sidecars, may go on
         drop(ticket);
         drop(guard);
         let held: Vec<PhotoId> = std::mem::take(&mut s.held_sidecars).into_iter().collect();
         if !Arc::ptr_eq(&identity, &s.library_identity) {
-            // (opening a library is refused while a move runs)
+            // (opening a library is refused while a move runs; the record stays for that library)
             return Err(EngineError::Other(
-                "the library changed while photos were being moved: the files are in their new folder, but the library still points at the old places (File ▸ Find Missing Photos… relinks them)".into(),
+                "another library was opened while photos were being moved: their library follows them when it opens".into(),
             ));
         }
         let of = plans.len();
         let r = match out.0 {
             Ran::Refused(why) => Err(bad(C, why)),
-            Ran::Failed { error } => {
+            Ran::Failed { error, record } => {
                 let op = Op::Batch { ops: s.set_file_ops(&plans) };
-                Err(EngineError::Other(s.follow_stuck(&op, error, true).0))
+                let (message, _, followed) = s.follow_stuck(&op, error, true);
+                // (a library that could not follow keeps the record for the next open)
+                if followed {
+                    s.settle_moves(record);
+                }
+                Err(EngineError::Other(message))
             }
-            Ran::Moved { moved } => s.follow_moved(&folder, plans.get(..moved).unwrap_or(&plans), of),
-            Ran::Died => {
-                let arrived: Vec<RenamePlan> = plans
-                    .into_iter()
-                    .filter(|pl| match (&pl.from_path, &pl.to_path) {
-                        (Some(from), Some(to)) => !Path::new(from).is_file() && Path::new(to).is_file(),
-                        _ => false,
-                    })
-                    .collect();
-                s.follow_moved(&folder, &arrived, of)
-            }
+            Ran::Moved { moved, record } => s.follow_moved(&folder, plans.get(..moved).unwrap_or(&plans), of, record),
         };
         // (a sidecar write the person switched off meanwhile isn't made now)
         if s.xmp.auto_write {
             s.auto_write_sidecar_ids(held);
         }
+        s.save_held_sidecars();
         r
     }
 }
@@ -260,20 +279,28 @@ fn label(n: usize, folder: &str) -> String {
 
 impl Session {
     /// The library follows the files `done` moved, out of `of` planned: one undo step. When it
-    /// can't (a failed commit), the files go back.
-    fn follow_moved(&mut self, folder: &str, done: &[RenamePlan], of: usize) -> Result<Value> {
+    /// can't (a failed commit), the files go back (the record covers a stop meanwhile).
+    fn follow_moved(&mut self, folder: &str, done: &[RenamePlan], of: usize, record: Option<MoveRecord>) -> Result<Value> {
         let result = json!({"moved": done.len(), "of": of, "folder": folder, "stopped": done.len() < of});
         let ops = self.set_file_ops(done);
         if ops.is_empty() {
+            self.settle_moves(record);
             return Ok(result);
         }
         match self.commit(&label(ops.len(), folder), Op::Batch { ops }) {
-            Ok(()) => Ok(result),
+            Ok(()) => {
+                self.settle_moves(record);
+                Ok(result)
+            }
             Err(err) => {
-                // the library can't follow: the files go back
                 let back: Vec<(String, String)> = done.iter().rev().filter_map(|pl| Some((pl.to_path.clone()?, pl.from_path.clone()?))).collect();
-                match crate::rename::move_all(&RealFs, &back) {
-                    Ok(()) => Err(err),
+                let r = crate::rename::move_all(&RealFs, &back);
+                match r {
+                    Ok(()) => {
+                        self.settle_moves(record);
+                        Err(err)
+                    }
+                    // the files stay at the new place and the library doesn't point there: the record stays for the next open
                     Err(e) => Err(EngineError::Other(format!("{err}; the moved files could not all be moved back: {}", e.message))),
                 }
             }
