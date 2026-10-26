@@ -2338,5 +2338,12 @@
   "Imports, exports and other long jobs show here while they run.": "Nhập, xuất và các tác vụ dài khác hiển thị tại đây khi đang chạy.",
   "No tasks are running": "Không có tác vụ nào đang chạy",
   "Tasks": "Tác vụ",
-  "cancelled": "đã hủy"
+  "cancelled": "đã hủy",
+  "Welcome to LightCraft": "Chào mừng đến với LightCraft",
+  "Start with photos of your own, or look around with a set of sample photos first. Nothing is copied or moved unless you choose to.": "Hãy bắt đầu với ảnh của bạn, hoặc xem thử với một bộ ảnh mẫu trước. Không có gì được sao chép hay di chuyển trừ khi bạn chọn.",
+  "Try Sample Photos": "Dùng thử ảnh mẫu",
+  "These are sample photos, to try LightCraft on. Import your own whenever you're ready.": "Đây là các ảnh mẫu để dùng thử LightCraft. Hãy nhập ảnh của bạn bất cứ khi nào bạn sẵn sàng.",
+  "Your photos are in. The sample photos are still here too.": "Ảnh của bạn đã được nhập. Các ảnh mẫu vẫn còn ở đây.",
+  "Keep Them": "Giữ lại",
+  "Hide": "Ẩn"
 }

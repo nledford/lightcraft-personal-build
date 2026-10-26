@@ -329,5 +329,6 @@
   "{n} tasks": "{n} tehtävää",
   "Exported contact sheet: {photos} photos, {pages} pages": "Kontaktivedos viety (kuvia: {photos}, sivuja: {pages})",
   "Printed to PDF: {photos} photos, {pages} pages": "Tulostettu PDF-tiedostoon (kuvia: {photos}, sivuja: {pages})",
-  "{} import warning{}": "Tuontivaroituksia: {}{:.0}"
+  "{} import warning{}": "Tuontivaroituksia: {}{:.0}",
+  "Removed {n} sample photos. Edit → Undo brings them back.": "Poistetut esimerkkikuvat: {n}. Muokkaa → Kumoa palauttaa ne."
 }

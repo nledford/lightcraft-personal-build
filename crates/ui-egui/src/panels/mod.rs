@@ -30,6 +30,7 @@ pub mod profiles;
 pub mod right;
 pub mod rules_editor;
 pub mod rules_move;
+pub mod samples;
 pub mod second;
 pub mod settings;
 pub(crate) mod side_keys;
@@ -119,6 +120,13 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
     let alpha = toast_alpha(now, shown.shown_at, shown.until);
     painter.rect_filled(r, 6.0, background.gamma_multiply(alpha));
     painter.galley_with_override_text_color(r.center() - galley.size() / 2.0, galley, foreground.gamma_multiply(alpha));
+    // a screen reader reads it out when it comes, without leaving what it was reading
+    let words = shown.text.clone();
+    egui::Area::new(egui::Id::unique("toast-words")).order(egui::Order::Foreground).fixed_pos(r.min).interactable(false).show(ctx, |ui| {
+        let resp = ui.interact(r, ui.scope_id().with("toast"), egui::Sense::hover());
+        resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &words));
+        ctx.accesskit_node_builder(resp.id, |node| node.set_live(egui::accesskit::Live::Polite));
+    });
     // a toast held under the pointer is static once faded in: no timer, the pointer leaving wakes the app
     if crate::toast::needs_repaint(hovered, now, shown.shown_at) {
         ctx.request_repaint_after(std::time::Duration::from_millis(30));

@@ -6,10 +6,11 @@
 //! `$LIGHTCRAFT_LIBRARY`, else — with Settings ▸ General ▸ At launch set to *Ask me*, or Alt/Option
 //! held as the window appears — the one chosen in a list of the recent libraries, else the library
 //! last opened, else `~/Pictures/LightCraft Library`
-//! ([`lightcraft_ui_egui::panels::library_problem::launch_plan`]); a new library starts with the
-//! procedural demo photos unless `--no-demo` or files are given. Files and folders on the command
-//! line are imported (duplicates are skipped). `--memory` runs an in-memory session that writes
-//! nothing (demo photos unless files are given; used by the README showcase scripts). A library
+//! ([`lightcraft_ui_egui::panels::library_problem::launch_plan`]); a new library starts empty, and
+//! its first screen offers to import photos, a Lightroom catalog, or the procedural sample photos
+//! (`library.addSamples`). Files and folders on the command line are imported (duplicates are
+//! skipped). `--memory` runs an in-memory session that writes nothing (demo photos unless
+//! `--no-demo` or files are given; used by the README showcase scripts). A library
 //! that can't be opened is never replaced silently: the window says why and asks what to do
 //! (`lightcraft_ui_egui::panels::library_problem`).
 //!
@@ -793,7 +794,8 @@ fn open_library_session(in_memory: bool, dir: Option<std::path::PathBuf>, seed_d
     };
     let t0 = std::time::Instant::now();
     let mut s = Session::new().with_fs().with_default_denoise_models().with_system_clock();
-    match s.open_library(&dir, seed_demo) {
+    // a new library starts empty: its first screen asks how to begin (sample photos are one way)
+    match s.open_library(&dir, false) {
         Ok(r) => {
             let (replayed, torn) = (r.replayed, r.torn_bytes);
             log::info!(
@@ -821,7 +823,7 @@ OPTIONS:
   --library DIR    open (or create) this library (env LIGHTCRAFT_LIBRARY; default: the last library opened, or
                    a list of the recent ones with Settings > General > At launch: Ask me or Alt/Option held,
                    else ~/Pictures/LightCraft Library)
-  --no-demo        don't seed a new library with the procedural demo photos
+  --no-demo        with --memory, start without the procedural demo photos
   --memory         throwaway in-memory session (alias --demo); nothing is saved
   --control PORT   serve the JSON-lines control channel on 127.0.0.1:PORT (env LIGHTCRAFT_CONTROL_PORT;
                    see docs/control-protocol.md)

@@ -49,7 +49,7 @@ The release also has `lightcraft-web-<version>.zip`, a static site that runs Lig
 
 ## First run
 
-1. Start LightCraft. It opens your library at `~/Pictures/LightCraft Library`. A new library starts with demo photos.
+1. Start LightCraft. It opens your library at `~/Pictures/LightCraft Library`. A new library starts empty and asks how to begin: import your own photos, or try sample photos first.
 2. To bring in your own photos, see [Import photos](../guides/import-photos.md).
 
 ## Still stuck?
