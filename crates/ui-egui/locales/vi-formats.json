@@ -330,5 +330,7 @@
   "Exported contact sheet: {photos} photos, {pages} pages": "Đã xuất tờ tiếp xúc (ảnh: {photos}, trang: {pages})",
   "Printed to PDF: {photos} photos, {pages} pages": "Đã in ra PDF (ảnh: {photos}, trang: {pages})",
   "{} import warning{}": "Cảnh báo khi nhập: {}{:.0}",
-  "Removed {n} sample photos. Edit → Undo brings them back.": "Đã xóa {n} ảnh mẫu. Chỉnh sửa → Hoàn tác sẽ đưa chúng trở lại."
+  "Removed {n} sample photos. Edit → Undo brings them back.": "Đã xóa {n} ảnh mẫu. Chỉnh sửa → Hoàn tác sẽ đưa chúng trở lại.",
+  "Open the sample photo “{title}”": "Mở ảnh mẫu “{title}”",
+  "Or explore LightCraft with {n} sample photos": "Hoặc khám phá LightCraft với {n} ảnh mẫu"
 }

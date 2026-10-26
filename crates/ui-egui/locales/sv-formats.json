@@ -330,5 +330,7 @@
   "Printed to PDF: {photos} photos, {pages} pages": "Utskrivet till PDF (foton: {photos}, sidor: {pages})",
   "{} import warning{}": "Importvarningar: {}{:.0}",
   "Added {n} sample photos, with albums under “{folder}” and keywords to try": "Lade till {n} exempelfoton, med album under ”{folder}” och nyckelord att prova",
-  "Removed {n} sample photos. Edit → Undo brings them back.": "Borttagna exempelfoton: {n}. Redigera → Ångra tar tillbaka dem."
+  "Removed {n} sample photos. Edit → Undo brings them back.": "Borttagna exempelfoton: {n}. Redigera → Ångra tar tillbaka dem.",
+  "Open the sample photo “{title}”": "Öppna exempelfotot ”{title}”",
+  "Or explore LightCraft with {n} sample photos": "Eller utforska LightCraft med {n} exempelfoton"
 }
