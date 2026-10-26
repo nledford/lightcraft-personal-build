@@ -2599,5 +2599,11 @@
   "This photo has no file on disk": "この写真にはディスク上のファイルがありません",
   "This photo is not in a folder of the library": "この写真はライブラリのフォルダにありません",
   "Opening other programs needs the desktop app": "ほかのプログラムを開くにはデスクトップ版が必要です",
-  "Only a photo file LightCraft reads can be opened this way": "この方法で開けるのは LightCraft が読み込める写真ファイルだけです"
+  "Only a photo file LightCraft reads can be opened this way": "この方法で開けるのは LightCraft が読み込める写真ファイルだけです",
+  "Waiting": "待機中",
+  "Starts next": "次に開始",
+  "Remove from Queue": "キューから削除",
+  "Retry": "再試行",
+  "Queued: it starts when the task ahead of it ends": "キューに追加: 前のタスクが終わると開始します",
+  "1 task waiting in line won't run.": "待機中の 1 件は実行されません。"
 }

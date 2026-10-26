@@ -2592,5 +2592,11 @@
   "This photo has no file on disk": "У этого фото нет файла на диске",
   "This photo is not in a folder of the library": "Это фото не находится в папке библиотеки",
   "Opening other programs needs the desktop app": "Открывать другие программы можно только в настольном приложении",
-  "Only a photo file LightCraft reads can be opened this way": "Так можно открыть только файл фото, который читает LightCraft"
+  "Only a photo file LightCraft reads can be opened this way": "Так можно открыть только файл фото, который читает LightCraft",
+  "Waiting": "Ожидает",
+  "Starts next": "Начнётся следующей",
+  "Remove from Queue": "Убрать из очереди",
+  "Retry": "Повторить",
+  "Queued: it starts when the task ahead of it ends": "В очереди: начнётся, когда закончится задача перед ней",
+  "1 task waiting in line won't run.": "1 задача в очереди не будет запущена."
 }

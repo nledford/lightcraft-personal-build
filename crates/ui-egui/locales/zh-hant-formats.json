@@ -383,5 +383,9 @@
   "“{name}” is no longer there: nothing was moved": "「{name}」已不存在：未移動任何內容",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "規則 {n}/{m}：{what}。用方向鍵移動",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "群組 {n}/{m}：符合{mode}，內含 {count} 項。用方向鍵移動",
-  "Copied {n} file paths": "已複製 {n} 個檔案路徑"
+  "Copied {n} file paths": "已複製 {n} 個檔案路徑",
+  "{n} waiting": "{n} 個等待中",
+  "Starts after {n} more": "再過 {n} 個後開始",
+  "Queued: it starts after {n} more": "已加入佇列：再過 {n} 個後開始",
+  "{n} tasks waiting in line won't run.": "佇列中等待的 {n} 個工作不會執行。"
 }

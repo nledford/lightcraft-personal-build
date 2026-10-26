@@ -2583,5 +2583,11 @@
   "This photo has no file on disk": "Questa foto non ha un file sul disco",
   "This photo is not in a folder of the library": "Questa foto non è in una cartella della libreria",
   "Opening other programs needs the desktop app": "Aprire altri programmi richiede l’app desktop",
-  "Only a photo file LightCraft reads can be opened this way": "Così si può aprire solo un file foto che LightCraft legge"
+  "Only a photo file LightCraft reads can be opened this way": "Così si può aprire solo un file foto che LightCraft legge",
+  "Waiting": "In attesa",
+  "Starts next": "Parte subito dopo",
+  "Remove from Queue": "Rimuovi dalla coda",
+  "Retry": "Riprova",
+  "Queued: it starts when the task ahead of it ends": "In coda: parte quando finisce l'attività precedente",
+  "1 task waiting in line won't run.": "1 attività in coda non verrà eseguita."
 }

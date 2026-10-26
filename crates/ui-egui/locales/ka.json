@@ -2957,5 +2957,11 @@
   "This photo has no file on disk": "ამ ფოტოს დისკზე ფაილი არ აქვს",
   "This photo is not in a folder of the library": "ეს ფოტო ბიბლიოთეკის საქაღალდეში არ არის",
   "Opening other programs needs the desktop app": "სხვა პროგრამების გასახსნელად საჭიროა სამუშაო მაგიდის აპი",
-  "Only a photo file LightCraft reads can be opened this way": "ასე მხოლოდ ისეთი ფოტოს ფაილი იხსნება, რომელსაც LightCraft კითხულობს"
+  "Only a photo file LightCraft reads can be opened this way": "ასე მხოლოდ ისეთი ფოტოს ფაილი იხსნება, რომელსაც LightCraft კითხულობს",
+  "Waiting": "ელოდება",
+  "Starts next": "შემდეგი დაიწყება",
+  "Remove from Queue": "რიგიდან ამოღება",
+  "Retry": "ხელახლა ცდა",
+  "Queued: it starts when the task ahead of it ends": "რიგშია: დაიწყება, როცა წინა ამოცანა დასრულდება",
+  "1 task waiting in line won't run.": "რიგში მყოფი 1 ამოცანა არ გაეშვება."
 }

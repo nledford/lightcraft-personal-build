@@ -2401,5 +2401,11 @@
   "This photo has no file on disk": "這張照片在磁碟上沒有檔案",
   "This photo is not in a folder of the library": "這張照片不在照片庫的資料夾中",
   "Opening other programs needs the desktop app": "開啟其他程式需要桌面版 App",
-  "Only a photo file LightCraft reads can be opened this way": "只有 LightCraft 能讀取的照片檔案才能這樣開啟"
+  "Only a photo file LightCraft reads can be opened this way": "只有 LightCraft 能讀取的照片檔案才能這樣開啟",
+  "Waiting": "等待中",
+  "Starts next": "下一個開始",
+  "Remove from Queue": "從佇列中移除",
+  "Retry": "重試",
+  "Queued: it starts when the task ahead of it ends": "已加入佇列：前一個工作結束後開始",
+  "1 task waiting in line won't run.": "佇列中等待的 1 個工作不會執行。"
 }

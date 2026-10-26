@@ -2629,5 +2629,11 @@
   "This photo has no file on disk": "Tato fotografie nemá soubor na disku",
   "This photo is not in a folder of the library": "Tato fotografie není ve složce knihovny",
   "Opening other programs needs the desktop app": "Otevírání jiných programů vyžaduje desktopovou aplikaci",
-  "Only a photo file LightCraft reads can be opened this way": "Takto lze otevřít jen soubor fotografie, který LightCraft umí načíst"
+  "Only a photo file LightCraft reads can be opened this way": "Takto lze otevřít jen soubor fotografie, který LightCraft umí načíst",
+  "Waiting": "Čeká",
+  "Starts next": "Začne jako další",
+  "Remove from Queue": "Odebrat z fronty",
+  "Retry": "Zkusit znovu",
+  "Queued: it starts when the task ahead of it ends": "Ve frontě: začne, až skončí úloha před ní",
+  "1 task waiting in line won't run.": "1 úloha čekající ve frontě se nespustí."
 }

@@ -383,5 +383,9 @@
   "“{name}” is no longer there: nothing was moved": "«{name}» більше немає: нічого не переміщено",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Правило {n} з {m}: {what}. Переміщення стрілками",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Група {n} з {m}: збіг {mode}, усередині {count}. Переміщення стрілками",
-  "Copied {n} file paths": "Скопійовано шляхів до файлів: {n}"
+  "Copied {n} file paths": "Скопійовано шляхів до файлів: {n}",
+  "{n} waiting": "Очікують: {n}",
+  "Starts after {n} more": "Почнеться після ще {n}",
+  "Queued: it starts after {n} more": "У черзі: почнеться після ще {n}",
+  "{n} tasks waiting in line won't run.": "Завдання в черзі ({n}) не буде запущено."
 }

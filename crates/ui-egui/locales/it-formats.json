@@ -383,5 +383,9 @@
   "“{name}” is no longer there: nothing was moved": "“{name}” non c'è più: non è stato spostato nulla",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Regola {n} di {m}: {what}. Sposta con le frecce",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Gruppo {n} di {m}: corrispondenza {mode}, {count} all’interno. Sposta con le frecce",
-  "Copied {n} file paths": "Percorsi dei file copiati: {n}"
+  "Copied {n} file paths": "Percorsi dei file copiati: {n}",
+  "{n} waiting": "{n} in attesa",
+  "Starts after {n} more": "Parte dopo altre {n}",
+  "Queued: it starts after {n} more": "In coda: parte dopo altre {n}",
+  "{n} tasks waiting in line won't run.": "{n} attività in coda non verranno eseguite."
 }

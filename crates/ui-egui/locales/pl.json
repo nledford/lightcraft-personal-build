@@ -2524,5 +2524,11 @@
   "This photo has no file on disk": "To zdjęcie nie ma pliku na dysku",
   "This photo is not in a folder of the library": "To zdjęcie nie jest w folderze biblioteki",
   "Opening other programs needs the desktop app": "Otwieranie innych programów wymaga aplikacji na komputer",
-  "Only a photo file LightCraft reads can be opened this way": "W ten sposób można otworzyć tylko plik zdjęcia, który LightCraft odczytuje"
+  "Only a photo file LightCraft reads can be opened this way": "W ten sposób można otworzyć tylko plik zdjęcia, który LightCraft odczytuje",
+  "Waiting": "Oczekujące",
+  "Starts next": "Rozpocznie się jako następne",
+  "Remove from Queue": "Usuń z kolejki",
+  "Retry": "Ponów",
+  "Queued: it starts when the task ahead of it ends": "W kolejce: rozpocznie się po zakończeniu poprzedniego zadania",
+  "1 task waiting in line won't run.": "1 zadanie oczekujące w kolejce nie zostanie uruchomione."
 }

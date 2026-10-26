@@ -383,5 +383,9 @@
   "“{name}” is no longer there: nothing was moved": "「{name}」が見つかりません。何も移動していません",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "条件 {n}/{m}：{what}。矢印キーで移動",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "グループ {n}/{m}：一致条件 {mode}、中に {count} 件。矢印キーで移動",
-  "Copied {n} file paths": "{n} 件のファイルパスをコピーしました"
+  "Copied {n} file paths": "{n} 件のファイルパスをコピーしました",
+  "{n} waiting": "待機中 {n} 件",
+  "Starts after {n} more": "あと {n} 件の後に開始",
+  "Queued: it starts after {n} more": "キューに追加: あと {n} 件の後に開始します",
+  "{n} tasks waiting in line won't run.": "待機中の {n} 件は実行されません。"
 }
