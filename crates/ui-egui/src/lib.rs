@@ -283,6 +283,8 @@ mod tests_wb_selector;
 #[cfg(test)]
 mod tests_welcome;
 #[cfg(test)]
+mod tests_welcome_access;
+#[cfg(test)]
 mod tests_zoom;
 #[cfg(test)]
 mod tests_zoom_keys;
@@ -583,6 +585,9 @@ pub struct LightcraftApp {
     /// A text field had the keyboard at the end of the last frame. egui drops the focus as Esc
     /// arrives, before the shortcuts are read, so this is how Esc there stays the field's own.
     pub text_focus: bool,
+    /// A plain button (the welcome's, a sample thumbnail, the banner's) had the keyboard at the end of the last frame: not a
+    /// text field, so shortcuts act, but Esc there only lets go of the button, as with a text field.
+    pub(crate) plain_button_focus: bool,
     /// The host is [`headless::Headless`] (it answers viewport screenshot commands itself).
     pub headless_host: bool,
     /// The library is backed up by itself when its schedule says a backup is due
@@ -807,6 +812,8 @@ pub struct LightcraftApp {
     pub(crate) welcome_samples: Option<panels::empty_library::SampleStrip>,
     /// The welcome was drawn this frame (its thumbnails go the frame after it isn't).
     pub(crate) welcome_drawn: bool,
+    /// The new library's welcome has put the keyboard on Import Photos… (once per library opened).
+    pub(crate) welcome_focused: bool,
 }
 
 impl LightcraftApp {
@@ -828,6 +835,7 @@ impl LightcraftApp {
             native_shortcuts: Default::default(),
             recording_shortcut: None,
             text_focus: false,
+            plain_button_focus: false,
             headless_host: false,
             backs_up_by_itself: true,
             notices: vec![],
@@ -930,6 +938,7 @@ impl LightcraftApp {
             welcome_seen: None,
             welcome_samples: None,
             welcome_drawn: false,
+            welcome_focused: false,
             model_setup: Default::default(),
         }
     }
@@ -2908,6 +2917,13 @@ impl LightcraftApp {
         p.rect_filled(Rect::from_min_max(pos2(k.right(), k.top()), pos2(screen.right(), k.bottom())), 0.0, veil);
     }
 
+    /// Who has the keyboard as the frame ends: a text field (`text_focus`: the native menu leaves it its letters and edit
+    /// keys) or a plain button (not a text field the person is typing in, but Esc there still only lets go).
+    fn note_keyboard_owner(&mut self, ctx: &egui::Context) {
+        self.plain_button_focus = widgets::plain_button_has_focus(ctx);
+        self.text_focus = ctx.egui_wants_keyboard_input() && !self.plain_button_focus;
+    }
+
     /// Frame timings once layout is done (`t0`: when layout started).
     fn end_frame(&mut self, ctx: &egui::Context, t0: f64) {
         if self.ui.frame_rate {
@@ -2944,16 +2960,18 @@ impl LightcraftApp {
         // (a row's id in the last library may name another row in this one)
         self.ui.sidebar_cursor = None;
         panels::side_keys::forget_rows(ctx);
+        // a new library's welcome puts the keyboard on Import Photos… once for each library
+        self.welcome_focused = false;
         if let Some(l) = self.session.library.as_ref().filter(|l| l.on_disk) {
-            let path = l.dir.to_string_lossy().into_owned();
-            panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);
-            // it is open: whatever an earlier check said about it is over
-            self.recent_checks.opened(&path);
-            // when, for the launch window (issue #1290); only the listed libraries keep a time
-            let settings = &mut self.ui.settings;
-            settings.recent_opened.insert(path, (self.session.clock)());
-            settings.recent_opened.retain(|p, _| settings.recent_libraries.contains(p));
-        }
+        let path = l.dir.to_string_lossy().into_owned();
+        panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);
+        // it is open: whatever an earlier check said about it is over
+        self.recent_checks.opened(&path);
+        // when, for the launch window (issue #1290); only the listed libraries keep a time
+        let settings = &mut self.ui.settings;
+        settings.recent_opened.insert(path, (self.session.clock)());
+        settings.recent_opened.retain(|p, _| settings.recent_libraries.contains(p));
+    }
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
     }
 
@@ -3119,6 +3137,7 @@ impl LightcraftApp {
                 panels::notices::restore_prompt_pointer(self, &ctx);
             }
             (self.next_widgets, self.next_widget_hits) = widgets::take_registries(&ctx);
+            self.note_keyboard_owner(&ctx);
             self.end_frame(&ctx, t0);
             return;
         }
@@ -3166,7 +3185,7 @@ impl LightcraftApp {
             panels::notices::restore_prompt_pointer(self, &ctx);
         }
         (self.next_widgets, self.next_widget_hits) = widgets::take_registries(&ctx);
-        self.text_focus = ctx.egui_wants_keyboard_input();
+        self.note_keyboard_owner(&ctx);
         self.end_frame(&ctx, t0);
     }
 }
