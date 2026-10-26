@@ -334,5 +334,13 @@
   "Lists “{name}”, the folder this one is in": "Zobrazuje „{name}“, složku, ve které je tato",
   "Showing {what}": "Zobrazeno: {what}",
   "{title}, showing {what}": "{title}, zobrazeno: {what}",
-  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Zastaveno: do „{2}“ přesunuto {0} z {1} fotografií. Úpravy → Zpět je vrátí."
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Zastaveno: do „{2}“ přesunuto {0} z {1} fotografií. Úpravy → Zpět je vrátí.",
+  "Photos being moved when LightCraft last closed: {}. The library now points at where the files are; Edit → Undo moves them back.": "Fotografie, které se přesouvaly, když se LightCraft naposledy zavřel: {}. Knihovna teď ukazuje tam, kde soubory jsou; Úpravy → Zpět je vrátí.",
+  "Files being moved that can't be reached now (a disk not connected?): {}. LightCraft looks again the next time this library opens.": "Přesouvané soubory, které teď nejsou dostupné (nepřipojený disk?): {}. LightCraft se podívá znovu při příštím otevření této knihovny.",
+  "A record of a move ({}) can't be read ({}); it was left as it is.": "Záznam o přesunu ({}) nelze přečíst ({}); zůstal, jak byl.",
+  "{} was being moved and is now at both places: the library keeps {}.": "{0} se přesouval a je teď na obou místech: knihovna ponechává {1}.",
+  "A sidecar of {} couldn't follow it ({}).": "Přidružený soubor XMP k {} se s ním nepřesunul ({}).",
+  "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Knihovna nemohla následovat soubory, které se přesouvaly ({}); Najít chybějící fotografie je znovu propojí.",
+  "The files that were being moved are followed, but that couldn't be saved ({}).": "Knihovna následuje soubory, které se přesouvaly, ale nepodařilo se to uložit ({}).",
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopie odstraněné z nového místa, protože originál byl stále tam, kde ho knihovna má: {}."
 }

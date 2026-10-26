@@ -2547,5 +2547,7 @@
   "Moving photos": "Flyttar foton",
   "Stopped: no photo was moved": "Stoppad: inget foto flyttades",
   "Moving was stopped by an error (see the log). The library follows the files that had moved.": "Flyttningen stoppades av ett fel (se loggen). Biblioteket följer de filer som redan flyttats.",
-  "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Flyttningen stoppades av ett fel (se loggen). Biblioteket följer kanske inte alla filer som redan flyttats: Sök efter saknade foton länkar om de som tappats bort."
+  "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Flyttningen stoppades av ett fel (se loggen). Biblioteket följer kanske inte alla filer som redan flyttats: Sök efter saknade foton länkar om de som tappats bort.",
+  "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Det här biblioteket är öppet utan sitt lås, så avbrutna flyttningar lämnas som de är tills det öppnas med låset; Sök efter saknade foton länkar om de filer som flyttats.",
+  "Unfinished moves": "Ofullständiga flyttningar"
 }

@@ -334,5 +334,13 @@
   "Showing {what}": "Mostrando {what}",
   "{title}, showing {what}": "{title}, mostrando {what}",
   "+{n} more": "+{n} mais",
-  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Interrompido: {0} de {1} fotos movidas para “{2}”. Editar → Desfazer as traz de volta."
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Interrompido: {0} de {1} fotos movidas para “{2}”. Editar → Desfazer as traz de volta.",
+  "Photos being moved when LightCraft last closed: {}. The library now points at where the files are; Edit → Undo moves them back.": "Fotos sendo movidas quando o LightCraft foi fechado pela última vez: {}. A biblioteca agora aponta para onde os arquivos estão; Editar → Desfazer as traz de volta.",
+  "Files being moved that can't be reached now (a disk not connected?): {}. LightCraft looks again the next time this library opens.": "Arquivos sendo movidos que não podem ser acessados agora (um disco desconectado?): {}. O LightCraft verifica de novo na próxima vez que esta biblioteca for aberta.",
+  "A record of a move ({}) can't be read ({}); it was left as it is.": "Um registro de movimentação ({}) não pode ser lido ({}); ele foi deixado como estava.",
+  "{} was being moved and is now at both places: the library keeps {}.": "{0} estava sendo movido e agora está nos dois lugares: a biblioteca mantém {1}.",
+  "A sidecar of {} couldn't follow it ({}).": "Um arquivo XMP auxiliar de {} não conseguiu acompanhá-lo ({}).",
+  "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "A biblioteca não conseguiu acompanhar os arquivos que estavam sendo movidos ({}); Localizar fotos ausentes os vincula de novo.",
+  "The files that were being moved are followed, but that couldn't be saved ({}).": "A biblioteca acompanha os arquivos que estavam sendo movidos, mas isso não pôde ser salvo ({}).",
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Cópias removidas do novo local, porque o original ainda estava onde a biblioteca o registra: {}."
 }

@@ -334,5 +334,13 @@
   "Showing {what}": "正在顯示 {what}",
   "{title}, showing {what}": "{title}，正在顯示 {what}",
   "+{n} more": "還有 {n} 項",
-  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "已停止：已將 {1} 張中的 {0} 張照片移到「{2}」。編輯 → 復原 可移回。"
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "已停止：已將 {1} 張中的 {0} 張照片移到「{2}」。編輯 → 復原 可移回。",
+  "Photos being moved when LightCraft last closed: {}. The library now points at where the files are; Edit → Undo moves them back.": "上次關閉 LightCraft 時正在移動的照片：{}。照片庫現在指向檔案所在的位置；編輯 → 復原 可移回。",
+  "Files being moved that can't be reached now (a disk not connected?): {}. LightCraft looks again the next time this library opens.": "正在移動但目前無法存取的檔案（磁碟未連接？）：{}。下次開啟此照片庫時 LightCraft 會再次檢查。",
+  "A record of a move ({}) can't be read ({}); it was left as it is.": "無法讀取移動記錄（{}）（{}）；已保持原樣。",
+  "{} was being moved and is now at both places: the library keeps {}.": "{0} 正在移動，現在兩個位置都有：照片庫保留 {1}。",
+  "A sidecar of {} couldn't follow it ({}).": "{} 的附屬檔案未能隨之移動（{}）。",
+  "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "照片庫未能跟隨正在移動的檔案（{}）；尋找遺失的照片 可重新連結它們。",
+  "The files that were being moved are followed, but that couldn't be saved ({}).": "照片庫已跟隨正在移動的檔案，但無法儲存（{}）。",
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "已從新位置刪除的副本（原始檔案仍在照片庫記錄的位置）：{}。"
 }

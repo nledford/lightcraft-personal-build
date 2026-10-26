@@ -334,5 +334,13 @@
   "Or explore LightCraft with {n} sample photos": "Eller utforska LightCraft med {n} exempelfoton",
   "Press {key} to compare before and after.": "Tryck på {key} för att jämföra före och efter.",
   "Press {key} to see it beside the original.": "Tryck på {key} för att se den bredvid originalet.",
-  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Stoppad: {0} av {1} foton flyttades till ”{2}”. Redigera → Ångra flyttar tillbaka dem."
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Stoppad: {0} av {1} foton flyttades till ”{2}”. Redigera → Ångra flyttar tillbaka dem.",
+  "Photos being moved when LightCraft last closed: {}. The library now points at where the files are; Edit → Undo moves them back.": "Foton som flyttades när LightCraft stängdes senast: {}. Biblioteket pekar nu dit filerna finns; Redigera → Ångra flyttar tillbaka dem.",
+  "Files being moved that can't be reached now (a disk not connected?): {}. LightCraft looks again the next time this library opens.": "Filer som flyttades och inte kan nås nu (en disk som inte är ansluten?): {}. LightCraft tittar igen nästa gång biblioteket öppnas.",
+  "A record of a move ({}) can't be read ({}); it was left as it is.": "En post om en flyttning ({}) kan inte läsas ({}); den lämnades som den var.",
+  "{} was being moved and is now at both places: the library keeps {}.": "{0} höll på att flyttas och finns nu på båda platserna: biblioteket behåller {1}.",
+  "A sidecar of {} couldn't follow it ({}).": "En sidofil till {} kunde inte följa med ({}).",
+  "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Biblioteket kunde inte följa de filer som flyttades ({}); Sök efter saknade foton länkar om dem.",
+  "The files that were being moved are followed, but that couldn't be saved ({}).": "Biblioteket följer de filer som flyttades, men det kunde inte sparas ({}).",
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopior som togs bort från den nya platsen, eftersom originalet fortfarande låg där biblioteket har det: {}."
 }

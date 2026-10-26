@@ -2481,5 +2481,7 @@
   "Keyboard in Sidebar": "Tastiera nella barra laterale",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "I tasti agiscono sulla barra laterale: le frecce spostano, Invio apre, digita per cercare, Esc torna alle foto",
   "This row has no name to change": "Questa riga non ha un nome da cambiare",
-  "Stopped: no photo was moved": "Interrotto: nessuna foto è stata spostata"
+  "Stopped: no photo was moved": "Interrotto: nessuna foto è stata spostata",
+  "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Questa libreria è aperta senza il suo blocco, quindi gli spostamenti interrotti restano come sono finché non viene aperta con il blocco; Trova foto mancanti ricollega i file spostati.",
+  "Unfinished moves": "Spostamenti incompleti"
 }

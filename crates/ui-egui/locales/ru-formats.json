@@ -334,5 +334,13 @@
   "Showing {what}": "Показано: {what}",
   "{title}, showing {what}": "{title}, показано: {what}",
   "+{n} more": "ещё {n}",
-  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Остановлено: в «{2}» перемещено {0} из {1} фото. Правка → Отменить вернёт их."
+  "Stopped: moved {} of {} photos to “{}”. Edit → Undo moves them back.": "Остановлено: в «{2}» перемещено {0} из {1} фото. Правка → Отменить вернёт их.",
+  "Photos being moved when LightCraft last closed: {}. The library now points at where the files are; Edit → Undo moves them back.": "Фото, которые перемещались при последнем закрытии LightCraft: {}. Библиотека теперь указывает туда, где находятся файлы; Правка → Отменить вернёт их.",
+  "Files being moved that can't be reached now (a disk not connected?): {}. LightCraft looks again the next time this library opens.": "Перемещаемые файлы, которые сейчас недоступны (диск не подключён?): {}. LightCraft проверит снова при следующем открытии этой библиотеки.",
+  "A record of a move ({}) can't be read ({}); it was left as it is.": "Запись о перемещении ({}) не читается ({}); она оставлена как есть.",
+  "{} was being moved and is now at both places: the library keeps {}.": "{0} перемещался и теперь находится в обоих местах: библиотека оставляет {1}.",
+  "A sidecar of {} couldn't follow it ({}).": "XMP-файл для {} не удалось переместить вместе с ним ({}).",
+  "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Библиотека не смогла последовать за перемещавшимися файлами ({}); «Найти отсутствующие фото» свяжет их заново.",
+  "The files that were being moved are followed, but that couldn't be saved ({}).": "Библиотека следует за перемещавшимися файлами, но сохранить это не удалось ({}).",
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Копии, удалённые из нового места, потому что оригинал оставался там, где его хранит библиотека: {}."
 }

@@ -2460,5 +2460,7 @@
   "That's your first edit.": "Itulah suntingan pertama Anda.",
   "View → Before/After Side by Side shows it beside the original.": "Tampilan → Sebelum/Sesudah berdampingan menampilkannya di samping aslinya.",
   "The original beside your edit: the file itself never changes.": "Aslinya berdampingan dengan suntingan Anda: file itu sendiri tidak pernah berubah.",
-  "Stopped: no photo was moved": "Dihentikan: tidak ada foto yang dipindahkan"
+  "Stopped: no photo was moved": "Dihentikan: tidak ada foto yang dipindahkan",
+  "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Pustaka ini terbuka tanpa kuncinya, sehingga pemindahan yang terputus dibiarkan apa adanya sampai pustaka dibuka dengan kunci; Cari foto hilang menautkan kembali file yang sudah dipindahkan.",
+  "Unfinished moves": "Pemindahan yang belum selesai"
 }
