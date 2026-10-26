@@ -1942,7 +1942,12 @@ fn drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::Response
             Ok(r) => {
                 let n = r.get("added").and_then(serde_json::Value::as_u64).unwrap_or(0);
                 let skipped = r.get("skipped").and_then(serde_json::Value::as_u64).unwrap_or(0);
-                let mut msg = crate::i18n::tr_format!("Added {n} photo{} to “{}”", if n == 1 { "" } else { "s" }, a.name, n = n);
+                let mut msg = crate::i18n::tr_format!(
+                    "Added {n} photo{} to “{}”",
+                    if n == 1 { "" } else { "s" },
+                    crate::destination::album(&app.session.catalog, a),
+                    n = n
+                );
                 if there > 0 {
                     msg.push_str(" · ");
                     msg.push_str(&crate::i18n::tr_format!("{n} already there", n = there));
@@ -2451,7 +2456,8 @@ fn folder_drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::R
         // open for the session, not a choice kept (as the folders above the browsed one); a row folded by hand opens for good
         app.ui.sidebar_trees.show(branch);
     }
-    let name = std::path::Path::new(&n.path).file_name().map(|f| f.to_string_lossy().to_string()).unwrap_or_else(|| n.name.clone());
+    // (the label, the confirmation and the toast say which folder when another row has the name)
+    let name = crate::destination::folder(&app.caches.folder_tree(&app.session.catalog), &n.path);
     let photos: Vec<_> = ids.iter().filter_map(|id| app.session.catalog.photo(lightcraft_catalog::PhotoId(*id))).collect();
     let refused = if !n.selectable {
         Some(crate::i18n::tr("This row covers more than one disk: drop on a folder inside it"))
