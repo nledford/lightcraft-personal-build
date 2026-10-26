@@ -1191,7 +1191,7 @@ pub(crate) fn info_line_rows(ui: &mut egui::Ui, id: &str, line: &mut crate::stat
 /// photo changes, and whether the loupe shows its loading and rendering message
 /// (`view.viewOptions`). Changes apply as they are made.
 pub(super) fn view_options(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
-    use crate::state::{InfoOverlay as I, LoupeInfo, LoupeInfoField as F};
+    use crate::state::{InfoOverlay as I, LoupeInfo};
     heading(ui, t, "Loupe View");
     let mut show = app.ui.info_overlay != I::Off;
     if check(ui, "viewOptions.showInfo", &mut show, "Show Info Overlay").changed() {
