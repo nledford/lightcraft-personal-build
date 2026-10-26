@@ -2741,7 +2741,7 @@ fn the_new_smart_album_shortcut_says_why_a_view_of_several_albums_cannot_be_save
     assert_eq!(r["ok"], true, "{r}");
     h.step();
     h.step();
-    let toast = h.app.ui.toast.as_ref().map(|t| t.0.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("\"Rated\" is a smart album"), "{toast:?}");
     assert!(h.app.ui.dialog.is_none());
 }
