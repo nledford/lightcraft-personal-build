@@ -202,6 +202,10 @@
   import review puts a "Damaged" badge on it; the message after an import counts them ("· 2 damaged"); and a
   smart album can collect them with the rule File → Damaged File.
 
+### A right-click while you carry photos opens no menu
+- While you drag photos from the grid, a right-click opens no context menu, on an album, folder or keyword row in
+  the sidebar or anywhere else. Before, the menu opened on the row the photos were over.
+
 ## 2026-10-23
 
 ### Large libraries (#2968)
