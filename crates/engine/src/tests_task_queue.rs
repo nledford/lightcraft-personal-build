@@ -284,3 +284,35 @@ fn a_build_that_was_announced_is_not_kept_when_the_next_one_replaces_it() {
     assert!(s.take_unreported_builds().is_empty());
     settle(&mut s);
 }
+
+/// Given a build that ended and a build waiting in line behind it that has not been started yet, when Build Previews is
+/// asked for without `queue`, then it is refused, as it is while a build runs: it does not start ahead of the one
+/// waiting, which the line starts after this command.
+#[test]
+fn a_build_asked_for_without_queue_does_not_go_ahead_of_one_waiting_in_line() {
+    let mut s = Session::with_demo();
+    let ids = build_ids(&s, 1);
+    let running = hold(&mut s);
+    s.execute("library.buildPreviews", &json!({"ids": ids, "edge": 256, "queue": true})).unwrap()["queued"].as_u64().expect("it waits");
+    // the build ends, and nothing has started the one waiting yet (no command or frame since)
+    release(running);
+    let refused = s.execute("library.buildPreviews", &json!({"ids": ids, "edge": 256})).unwrap_err().to_string();
+    assert!(refused.contains("preview build"), "{refused}");
+    settle(&mut s);
+}
+
+/// Given a build running and two builds waiting behind it, when the build ends, then both start in turn, each one when
+/// the lane is free (the line is not "ahead" of the build it is starting).
+#[test]
+fn builds_waiting_in_line_all_start_in_turn() {
+    let mut s = Session::with_demo();
+    let ids = build_ids(&s, 1);
+    let running = hold(&mut s);
+    for _ in 0..2 {
+        s.execute("library.buildPreviews", &json!({"ids": ids, "edge": 256, "queue": true})).unwrap()["queued"].as_u64().expect("it waits");
+    }
+    release(running);
+    settle(&mut s);
+    // the held build, and the first of the two, were replaced by the next: three builds ran in all
+    assert_eq!(s.take_unreported_builds().len(), 2, "both waiting builds started");
+}
