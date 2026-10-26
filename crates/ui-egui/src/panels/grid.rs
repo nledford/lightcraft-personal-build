@@ -931,7 +931,8 @@ fn cell(
         app.act("library.select", json!({"ids": [id.0]}));
         app.act("view.detail", json!({}));
     }
-    if resp.drag_started() {
+    // only the primary button drags, so a right-button drag leaves the selection alone
+    if resp.drag_started_by(egui::PointerButton::Primary) {
         begin_photo_drag(app, id);
     }
     crate::widgets::context_menu(&resp, |ui| context_menu(app, ui, id));
@@ -1082,7 +1083,7 @@ pub fn refuse_drop(app: &mut LightcraftApp, ctx: &egui::Context, hint: String, w
 
 pub fn drag_feedback(app: &mut LightcraftApp, ctx: &egui::Context) {
     let Some(ids) = &app.ui.dragging_photos else { return };
-    let (released, down, pos) = ctx.input(|i| (i.pointer.any_released(), i.pointer.any_down(), i.pointer.latest_pos()));
+    let (released, down, pos) = ctx.input(|i| (i.pointer.primary_released(), i.pointer.primary_down(), i.pointer.latest_pos()));
     if released || !down {
         app.ui.dragging_photos = None;
         return;
