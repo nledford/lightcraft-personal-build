@@ -237,6 +237,42 @@ impl ImportDialog {
     }
 }
 
+/// The worker's loop: ready `files` batch by batch with `prepare` and send each to `tx`. `ended` is set when the loop
+/// ends by itself (every file, a stop, or an import that was dropped); a panic in `prepare` (logged) stops the loop
+/// and leaves it unset, so the receiving side can tell a worker that died from one that finished.
+#[cfg(not(target_arch = "wasm32"))]
+fn feed_batches(
+    files: Vec<String>,
+    batch: usize,
+    cancel: &std::sync::atomic::AtomicBool,
+    tx: &std::sync::mpsc::Sender<lightcraft_engine::import::Prepared>,
+    ctx: &egui::Context,
+    ended: &std::sync::atomic::AtomicBool,
+    mut prepare: impl FnMut(Vec<String>) -> lightcraft_engine::import::Prepared,
+) {
+    for chunk in files.chunks(batch.max(1)) {
+        if cancel.load(Ordering::Relaxed) {
+            break;
+        }
+        let prepared = match lightcraft_engine::guard::catch("import", || prepare(chunk.to_vec())) {
+            Ok(p) => p,
+            Err(_) => {
+                // logged; the files readied so far are added, and the import ends as one that died
+                ctx.request_repaint();
+                return;
+            }
+        };
+        if let Err(unsent) = tx.send(prepared) {
+            // the import was dropped: nothing will add these, so take back what a Move placed
+            unsent.0.rollback();
+            break;
+        }
+        ctx.request_repaint();
+    }
+    ended.store(true, Ordering::Release);
+    ctx.request_repaint();
+}
+
 /// A running import (see the module docs). The file-system work — expanding folders, probing,
 /// reading sidecars, copying or placing files — runs on a worker thread
 /// ([`lightcraft_engine::import::ImportJob`]); each batch it readies is added to the catalog on the
@@ -272,6 +308,8 @@ pub struct ImportTask {
     browse: bool,
     /// Cancel was pressed: no further files are started; batches already readied are added.
     pub cancelled: bool,
+    /// The worker that readies the files died (a panic, logged) before it got to the last one.
+    died: bool,
     /// Auto Import (the watched folder): the selection stays as it is, a short toast when done.
     auto: bool,
     /// Auto Import: the selection to keep.
@@ -314,10 +352,25 @@ impl ImportTask {
 /// Where an import's batches are readied: a worker thread, or (browser build: no threads, and no
 /// slow drives) inline, one batch per frame.
 enum Runner {
+    /// The batches the worker readies, and whether it came to its end by itself (a stop, a dropped import or the
+    /// last file) rather than by a panic: a channel that closes without it was a worker that died.
     #[cfg(not(target_arch = "wasm32"))]
-    Thread(std::sync::mpsc::Receiver<lightcraft_engine::import::Prepared>),
+    Thread(std::sync::mpsc::Receiver<lightcraft_engine::import::Prepared>, std::sync::Arc<std::sync::atomic::AtomicBool>),
     #[cfg(target_arch = "wasm32")]
     Inline { job: Box<lightcraft_engine::import::ImportJob>, queue: Vec<String>, files: Option<std::collections::VecDeque<String>> },
+}
+
+impl Runner {
+    /// The worker stopped without coming to its end: a panic (logged), so the files it did not get to were not
+    /// read. Only meaningful once [`ImportRun::next_batches`] has said it is done.
+    fn died(&self) -> bool {
+        match self {
+            #[cfg(not(target_arch = "wasm32"))]
+            Runner::Thread(_, ended) => !ended.load(Ordering::Acquire),
+            #[cfg(target_arch = "wasm32")]
+            Runner::Inline { .. } => false,
+        }
+    }
 }
 
 struct ImportRun {
@@ -367,27 +420,20 @@ impl ImportRun {
         ctx: &egui::Context,
     ) -> Result<Runner, String> {
         let (tx, rx) = std::sync::mpsc::channel();
+        let ended = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let worker_ended = ended.clone();
         let ctx = ctx.clone();
         let work = move || {
             let files = job.expand(&queue);
-            for chunk in files.chunks(lightcraft_engine::import::batch_size()) {
-                if cancel.load(Ordering::Relaxed) {
-                    break;
-                }
-                let prepared = match lightcraft_engine::guard::catch("import", || job.prepare_files(chunk.to_vec(), &cancel)) {
-                    Ok(p) => p,
-                    Err(_) => break, // logged; the files readied so far are added
-                };
-                if let Err(unsent) = tx.send(prepared) {
-                    // the import was dropped: nothing will add these, so take back what a Move placed
-                    unsent.0.rollback();
-                    break;
-                }
-                ctx.request_repaint();
-            }
-            ctx.request_repaint();
+            feed_batches(files, lightcraft_engine::import::batch_size(), &cancel, &tx, &ctx, &worker_ended, |chunk| {
+                job.prepare_files(chunk, &cancel)
+            });
         };
-        std::thread::Builder::new().name("lc-import".into()).spawn(work).map(|_| Runner::Thread(rx)).map_err(|e| format!("could not start: {e}"))
+        std::thread::Builder::new()
+            .name("lc-import".into())
+            .spawn(work)
+            .map(|_| Runner::Thread(rx, ended))
+            .map_err(|e| format!("could not start: {e}"))
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -404,7 +450,7 @@ impl ImportRun {
     fn next_batches(&mut self) -> Option<Vec<lightcraft_engine::import::Prepared>> {
         match &mut self.runner {
             #[cfg(not(target_arch = "wasm32"))]
-            Runner::Thread(rx) => {
+            Runner::Thread(rx, _) => {
                 let mut out = Vec::new();
                 while out.len() < 4 {
                     match rx.try_recv() {
@@ -850,6 +896,9 @@ pub fn tick(app: &mut LightcraftApp, ctx: &egui::Context) {
     let Some(run) = task.run.as_mut() else { return };
     let batches = run.next_batches();
     let finished = batches.is_none();
+    if finished {
+        task.died = run.runner.died();
+    }
     if task.left.as_ref().is_some_and(|(sel, source)| *sel != app.session.selection || *source != app.session.source) {
         task.moved_on = true;
     }
@@ -1086,6 +1135,8 @@ fn ending_of(task: &ImportTask) -> lightcraft_engine::activity::Ending {
     use lightcraft_engine::activity::Ending;
     if task.cancelled {
         Ending::Stopped
+    } else if task.died {
+        Ending::Died
     } else if task.failed > 0 && task.imported == 0 && task.restored == 0 {
         Ending::Failed
     } else if task.failed > 0 || !task.warnings.is_empty() {
@@ -1798,6 +1849,46 @@ fn field<R>(ui: &mut egui::Ui, label: &str, add: impl FnOnce(&mut egui::Ui) -> R
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The worker's end is told from its death: a channel that closes after every batch was sent is a finished
+    /// import, one that closes after a panic in readying a batch is an import that died (and ends as `Died`).
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn a_worker_that_panics_is_told_from_one_that_finished() {
+        let ctx = egui::Context::default();
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        for (panics, died) in [(false, false), (true, true)] {
+            let (tx, rx) = std::sync::mpsc::channel();
+            let ended = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+            let files: Vec<String> = (0..3).map(|i| format!("f{i}")).collect();
+            let mut seen = 0;
+            feed_batches(files, 1, &cancel, &tx, &ctx, &ended, |_| {
+                seen += 1;
+                if panics && seen == 2 {
+                    panic!("a bug in readying a batch");
+                }
+                lightcraft_engine::import::Prepared::default()
+            });
+            drop(tx);
+            let sent = rx.try_iter().count();
+            assert_eq!(sent, if panics { 1 } else { 3 }, "batches readied before the end");
+            assert!(matches!(rx.try_recv(), Err(std::sync::mpsc::TryRecvError::Disconnected)), "the channel closed");
+            let runner = Runner::Thread(rx, ended);
+            assert_eq!(runner.died(), died, "panics: {panics}");
+        }
+    }
+
+    #[test]
+    fn an_import_whose_worker_died_ends_as_died() {
+        use lightcraft_engine::activity::Ending;
+        let mut task = ImportTask::new(vec!["a".into()], json!({}), 0, false);
+        task.imported = 2;
+        assert_eq!(ending_of(&task), Ending::Done);
+        task.died = true;
+        assert_eq!(ending_of(&task), Ending::Died);
+        task.cancelled = true;
+        assert_eq!(ending_of(&task), Ending::Stopped, "a stop the person asked for stays a stop");
+    }
 
     #[test]
     fn grid_height_follows_the_window() {
