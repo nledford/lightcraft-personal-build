@@ -100,6 +100,8 @@ mod tests_check;
 #[cfg(test)]
 mod tests_carried_right_click;
 #[cfg(test)]
+mod tests_carried_text_field_menu;
+#[cfg(test)]
 mod tests_compare;
 #[cfg(test)]
 mod tests_copy_paste_dialogs;
