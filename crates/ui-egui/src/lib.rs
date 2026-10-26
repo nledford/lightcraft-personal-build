@@ -39,6 +39,7 @@ mod missing_sweep;
 mod model_setup;
 pub mod motion;
 pub mod move_task;
+pub mod multi_select;
 pub mod panels;
 pub mod pick;
 pub mod print_view;
