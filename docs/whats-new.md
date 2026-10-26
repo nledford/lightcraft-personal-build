@@ -223,6 +223,9 @@
   `library.backup` (`dir`; returns when the backup is made, or at once with `background`), `library.backupStatus`,
   `library.backupPreferences` (the folder a library's backups go to), `library.checkBackup` (reads a backup against
   the list of files it was made with, and names one that was edited or damaged since).
+- File ▸ Restore Library from Backup… now lists the library's backups to choose from, newest first, with when each
+  was made, how many photos it holds and its size; a backup of another library in the same folder is marked. Choose
+  Folder… is still there for a backup kept elsewhere, and also takes the folder the backups are in.
 - Old backups can go by themselves: Settings ▸ General ▸ Backups ▸ **Keep backups** (Forever, which is the usual, or
   1, 3, 6 months or a year). After a backup is made, the library's own backups older than that are removed, and the note
   that the library was backed up says how many; its newest three always stay, as does a backup you renamed or put
@@ -249,7 +252,8 @@
   or damaged, or that a newer LightCraft made, is refused with the library untouched; a restore interrupted after
   `restore.json` is written is finished when the library is next opened; an interruption before that leaves the
   library unchanged. A backup folder itself no longer opens as a library, so that it stays what it was.
-  `library.backups` lists a folder's backups. In the app the backup is copied while you go on working (the
+  `library.backups` lists a folder's backups. In the app `library.restore` without `dir` lists the library's backups
+  to choose from; run headless (the command line, an agent) it needs `dir`, the backup's folder. In the app the backup is copied while you go on working (the
   activity stack shows it and can stop it) and moved into place when the library is at rest; a toast says where what
   the library held went. Agents: `background`, `library.restoreStatus`.
 - Libraries are upgraded when first opened (catalog format 11) and can't be opened by earlier versions afterwards. The
