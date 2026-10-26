@@ -2810,5 +2810,8 @@
   "Use the system setting": "სისტემის პარამეტრის გამოყენება",
   "Turns off zoom and spinner animations. Fades stay.": "გამორთავს მასშტაბირებისა და მიმდინარეობის ინდიკატორის ანიმაციებს. გაბუნდოვნება შენარჩუნდება.",
   "Files": "ფაილები",
-  "Monitor": "მონიტორი"
+  "Monitor": "მონიტორი",
+  "Filter settings": "პარამეტრების გაფილტვრა",
+  "No setting matches what is typed.": "აკრეფილს არც ერთი პარამეტრი არ ემთხვევა.",
+  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "სცადეთ ერთი სიტყვა ან მისი ნაწილი: იძებნება ჩანართებისა და სექციების სახელებში, წარწერებსა და განმარტებებში."
 }

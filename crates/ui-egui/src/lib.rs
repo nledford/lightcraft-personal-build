@@ -111,6 +111,8 @@ mod tests_dialog_settings;
 #[cfg(test)]
 mod tests_dialog_settings_groups;
 #[cfg(test)]
+mod tests_dialog_settings_filter;
+#[cfg(test)]
 mod tests_dialog_tab;
 #[cfg(test)]
 mod tests_dialogs;

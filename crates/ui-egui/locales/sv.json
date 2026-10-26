@@ -2503,5 +2503,8 @@
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Stänger av zoom- och snurranimationer. Toningar finns kvar. Följer systemets Minska rörelse tills du ändrar det här.",
   "Use the system setting": "Använd systeminställningen",
   "Files": "Filer",
-  "Monitor": "Bildskärm"
+  "Monitor": "Bildskärm",
+  "Filter settings": "Filtrera inställningar",
+  "No setting matches what is typed.": "Ingen inställning matchar det som skrivits.",
+  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Prova ett ord eller en del av ett: namnen på flikar och avsnitt, etiketter och förklaringar genomsöks."
 }
