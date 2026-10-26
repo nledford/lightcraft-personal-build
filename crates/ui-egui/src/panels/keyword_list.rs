@@ -363,10 +363,14 @@ fn drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, rect: Rect, path: &st
         if released {
             app.ui.dragging_photos = None;
             match app.run("photo.setMeta", json!({"ids": ids, "addKeywords": [path]})) {
-                Ok(_) => app.toast(
-                    ui.ctx(),
-                    crate::i18n::tr_format!("Added “{keyword}” to {n} photo{}", if n == 1 { "" } else { "s" }, keyword = keyword, n = n),
-                ),
+                Ok(_) => {
+                    let text = crate::i18n::tr_format!("Added “{keyword}” to {n} photo{}", if n == 1 { "" } else { "s" }, keyword = keyword, n = n);
+                    if n > 0 {
+                        app.toast_undoable(ui.ctx(), text);
+                    } else {
+                        app.toast(ui.ctx(), text);
+                    }
+                }
                 Err(e) => app.toast_error(ui.ctx(), e),
             }
         }

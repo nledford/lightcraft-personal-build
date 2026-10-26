@@ -1136,6 +1136,11 @@ pub struct UiState {
     /// How many times a toast was shown ([`UiState::show_toast`]), a repeat of one showing included: what
     /// [`LightcraftApp::act`] reads to tell whether a command made a toast of its own.
     pub toasts_shown: u64,
+    /// The toast that offers Undo: its text, how many undo steps the session had committed, and how many the undo
+    /// stack held, when the action it tells of finished. The toast shows the button only while it is still on
+    /// screen and the stacks are as that action left them, so Undo can only reach that action ([`crate::LightcraftApp::toast_undoable`]).
+    #[serde(skip)]
+    pub toast_undo: Option<(String, u64, usize)>,
     /// The result of the last Find Missing Photos (it searches in the background).
     #[serde(skip)]
     pub last_find_missing: Option<serde_json::Value>,
@@ -1710,6 +1715,7 @@ impl Default for UiState {
             reference: None,
             toasts: Vec::new(),
             toasts_shown: 0,
+            toast_undo: None,
             last_find_missing: None,
             last_find_missing_result: None,
             #[cfg(test)]

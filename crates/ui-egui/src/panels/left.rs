@@ -1960,7 +1960,11 @@ fn drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::Response
                         n = skipped
                     ));
                 }
-                app.toast(ui.ctx(), msg);
+                if n > 0 {
+                    app.toast_undoable(ui.ctx(), msg);
+                } else {
+                    app.toast(ui.ctx(), msg);
+                }
             }
             Err(e) => app.toast_error(ui.ctx(), e),
         }
@@ -2457,7 +2461,7 @@ fn folder_drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::R
         app.ui.sidebar_trees.show(branch);
     }
     // (the label, the confirmation and the toast say which folder when another row has the name)
-    let name = crate::destination::folder(&app.caches.folder_tree(&app.session.catalog), &n.path);
+    let name = crate::destination::folder(&app.caches.folder_tree(&app.session.catalog, app.session.library_generation()), &n.path);
     let photos: Vec<_> = ids.iter().filter_map(|id| app.session.catalog.photo(lightcraft_catalog::PhotoId(*id))).collect();
     let refused = if !n.selectable {
         Some(crate::i18n::tr("This row covers more than one disk: drop on a folder inside it"))

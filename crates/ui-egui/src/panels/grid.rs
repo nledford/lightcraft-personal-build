@@ -833,7 +833,7 @@ fn cell(
     // right over the thumbnail, under the selection ring, labels and badges, so those stay as bright as ever; a
     // rejected photo already has its own dimming (the same shade, painted further down, over its marks), so a
     // dragged one keeps that one and is dimmed once, not twice.
-    let is_dragged = photo.flag != Flag::Reject && dragged.is_some_and(|dragged| dragged.contains(&id.0));
+    let is_dragged = photo.flag != lightcraft_catalog::Flag::Reject && dragged.is_some_and(|dragged| dragged.contains(&id.0));
     let dim_dragged = |p: &egui::Painter| {
         if is_dragged {
             p.rect_filled(img_rect, 0.0, Color32::from_black_alpha(DRAGGED_DIM));

@@ -137,6 +137,8 @@ mod tests_drag_dim;
 #[cfg(test)]
 mod tests_drop_import;
 #[cfg(test)]
+mod tests_drop_undo;
+#[cfg(test)]
 mod tests_edit_layout;
 #[cfg(test)]
 mod tests_empty_library;
@@ -405,6 +407,9 @@ impl From<lightcraft_engine::EngineError> for Refusal {
 
 /// A toast with more to read (where something went).
 const TOAST_READ_SECONDS: f64 = 4.0;
+
+/// How long a toast that offers Undo stays: time to read it and reach the button.
+const UNDO_TOAST_SECONDS: f64 = 6.0;
 /// The `path` of a display profile read from the screen rather than chosen as a file.
 pub const SCREEN_PROFILE: &str = "screen";
 
@@ -3147,6 +3152,29 @@ impl LightcraftApp {
         self.ui.dragging_photos = None;
         self.ui.dragging_section = None;
         self.ui.dragging_keyword = None;
+    }
+
+    /// A toast for an action that has just committed one undo step (a drop or a menu move that moved, added or tagged
+    /// photos): it carries an Undo button for [`UNDO_TOAST_SECONDS`], until the next step is committed or
+    /// the toast is replaced, whichever comes first.
+    pub fn toast_undoable(&mut self, ctx: &egui::Context, text: impl Into<String>) {
+        let text = text.into();
+        self.toast_for(ctx, text.clone(), UNDO_TOAST_SECONDS);
+        self.ui.toast_undo = Some((text, self.session.commits(), self.session.undo.len()));
+    }
+
+    /// The text of the toast on screen that offers Undo: the one [`Self::toast_undoable`] showed, while it is still up,
+    /// nothing has been committed since (a later step would make Undo reach that instead), the undo stack is as the drop
+    /// left it (Edit > Undo from the menu or a new library would change it, and a click would then undo something else),
+    /// and no dialog is open over it.
+    pub fn toast_offering_undo(&self) -> Option<String> {
+        let (text, commits, steps) = self.ui.toast_undo.as_ref()?;
+        (self.ui.toasts.iter().any(|t| &t.text == text)
+            && *commits == self.session.commits()
+            && *steps == self.session.undo.len()
+            && self.session.redo.is_empty()
+            && self.ui.dialog.is_none())
+        .then(|| text.clone())
     }
 
     /// Lay out the whole window: input/setup for the known UI phase, then presentation, then the

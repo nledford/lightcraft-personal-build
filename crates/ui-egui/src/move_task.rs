@@ -65,7 +65,7 @@ fn start_inner(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value) -> 
     let raw = params.get("folder").and_then(Value::as_str).unwrap_or_default();
     let path = raw.trim_end_matches(['/', '\\']).to_string();
     // (which folder, when another row of the Folders tree has the name: as the drag label and the question said it)
-    let name = crate::destination::folder(&app.caches.folder_tree(&app.session.catalog), &path);
+    let name = crate::destination::folder(&app.caches.folder_tree(&app.session.catalog, app.session.library_generation()), &path);
     let started = lightcraft_engine::move_job::start(&mut app.session, params, true).map_err(|e| e.to_string())?;
     let Some((work, finish)) = started else {
         app.toast(ctx, crate::panels::left::moved_text(0, &name));
