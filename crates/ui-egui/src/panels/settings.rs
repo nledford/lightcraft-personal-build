@@ -18,6 +18,7 @@ use serde_json::{Value, json};
 
 use crate::LightcraftApp;
 use crate::button::Button;
+use crate::menu_item::MenuItem;
 use crate::state::{GridBadges, PREVIEW_LIMITS, StartupView};
 use crate::theme::Tokens;
 use crate::widgets::register;
@@ -577,7 +578,7 @@ fn preset_combo(app: &LightcraftApp, ui: &mut egui::Ui, id: &str, label: &str, c
     let text = current.map(name).unwrap_or_else(|| crate::i18n::tr(none_label).to_string());
     let mut out = None;
     let r = crate::widgets::combo_box(id).width(240.0).selected_text(text).show_ui(ui, |ui| {
-        if ui.selectable_label(current.is_none(), crate::i18n::tr(none_label)).clicked() {
+        if MenuItem::new(crate::i18n::tr(none_label)).selected(current.is_none()).show(ui).clicked() {
             out = Some(None);
         }
         if let Some(pid) = crate::panels::presets::picker_rows(ui, id, &app.session.presets, current) {
@@ -648,10 +649,10 @@ fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
                     };
                     let id = format!("settingsCamera-{i}");
                     let r = crate::widgets::combo_box(&id).width(240.0).selected_text(label).show_ui(ui, |ui| {
-                        if ui.selectable_label(current == Some(RAW_DEFAULT), crate::i18n::tr("Same as raw default")).clicked() {
+                        if MenuItem::new(crate::i18n::tr("Same as raw default")).selected(current == Some(RAW_DEFAULT)).show(ui).clicked() {
                             pick = Some(json!({"camera": cam, "remove": true}));
                         }
-                        if ui.selectable_label(current.is_none(), crate::i18n::tr("LightCraft Default")).clicked() {
+                        if MenuItem::new(crate::i18n::tr("LightCraft Default")).selected(current.is_none()).show(ui).clicked() {
                             pick = Some(json!({"camera": cam, "preset": null}));
                         }
                         if let Some(pid) = crate::panels::presets::picker_rows(ui, &id, &app.session.presets, current) {
@@ -701,11 +702,11 @@ fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
                 .width(240.0)
                 .selected_text(cur.clone().unwrap_or_else(|| crate::i18n::tr("None").into()))
                 .show_ui(ui, |ui| {
-                    if ui.selectable_label(cur.is_none(), crate::i18n::tr("None")).clicked() {
+                    if MenuItem::new(crate::i18n::tr("None")).selected(cur.is_none()).show(ui).clicked() {
                         pick = Some(String::new());
                     }
                     for m in &app.session.metadata_presets {
-                        if ui.selectable_label(cur.as_deref() == Some(m.name.as_str()), &m.name).clicked() {
+                        if MenuItem::new(&m.name).selected(cur.as_deref() == Some(m.name.as_str())).show(ui).clicked() {
                             pick = Some(m.name.clone());
                         }
                     }
@@ -1071,12 +1072,23 @@ fn interface_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     hint(ui, t, crate::i18n::tr("View → View Options chooses the lines Info 1 and Info 2 show."));
 }
 
+/// The rows of one Info line's list, one `MenuItem` per field; choosing one sets `line`. Each row
+/// is registered as `button:{id}-{field}`.
+pub(crate) fn info_line_rows(ui: &mut egui::Ui, id: &str, line: &mut crate::state::LoupeInfoField) {
+    for f in crate::state::LoupeInfoField::ALL {
+        let key = serde_json::to_value(f).ok().and_then(|v| v.as_str().map(str::to_string)).unwrap_or_default();
+        if MenuItem::new(crate::i18n::tr(f.label())).selected(*line == *f).widget(format!("button:{id}-{key}")).show(ui).clicked() {
+            *line = *f;
+        }
+    }
+}
+
 /// View ▸ View Options (⌘J), Lightroom Classic's Loupe View tab: whether the info overlay shows and
 /// which, the three lines each of Info 1 and Info 2 shows, which of them shows briefly when the
 /// photo changes, and whether the loupe shows its loading and rendering message
 /// (`view.viewOptions`). Changes apply as they are made.
 pub(super) fn view_options(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
-    use crate::state::{InfoOverlay as I, LoupeInfo, LoupeInfoField as F};
+    use crate::state::{InfoOverlay as I, LoupeInfo};
     heading(ui, t, crate::i18n::tr("Loupe View"));
     let mut show = app.ui.info_overlay != I::Off;
     if check(ui, "viewOptions.showInfo", &mut show, "Show Info Overlay").changed() {
@@ -1093,14 +1105,7 @@ pub(super) fn view_options(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Token
         for (i, line) in lines.iter_mut().enumerate() {
             let id = format!("viewOptionsInfo{n}Line{}", i + 1);
             let r = crate::widgets::combo_box(&id).width(220.0).selected_text(crate::i18n::tr(line.label())).show_ui(ui, |ui| {
-                for f in F::ALL {
-                    let key = serde_json::to_value(f).ok().and_then(|v| v.as_str().map(str::to_string)).unwrap_or_default();
-                    let r = ui.selectable_label(line == f, crate::i18n::tr(f.label()));
-                    register(ui, format!("button:{id}-{key}"), r.rect);
-                    if r.clicked() {
-                        *line = *f;
-                    }
-                }
+                info_line_rows(ui, &id, line);
             });
             crate::widgets::name_combo(
                 &r.response,

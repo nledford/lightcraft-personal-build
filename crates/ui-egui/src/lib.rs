@@ -25,9 +25,11 @@ pub mod i18n;
 pub mod icons;
 pub mod import;
 pub mod library_work;
+pub mod kbd;
 pub mod lightroom_destination;
 pub mod lightroom_import;
 pub mod links;
+pub mod menu_item;
 pub mod menu_level;
 pub mod menubar;
 pub mod menus;
@@ -165,6 +167,8 @@ mod tests_mask_effects;
 mod tests_masking;
 #[cfg(test)]
 mod tests_masking_layout;
+#[cfg(test)]
+mod tests_menu_item;
 #[cfg(test)]
 mod tests_menubar;
 #[cfg(test)]
