@@ -1855,6 +1855,8 @@ mod tests;
 #[cfg(test)]
 mod tests_album_folder_source;
 #[cfg(test)]
+mod tests_album_missing;
+#[cfg(test)]
 mod tests_album_order;
 #[cfg(test)]
 mod tests_album_remove;
