@@ -1264,7 +1264,7 @@ impl LightcraftApp {
             return;
         }
         const LOOK_EVERY: f64 = 5.0;
-        let id = egui::Id::new("backup-schedule-looked");
+        let id = egui::Id::unique("backup-schedule-looked");
         let now = ctx.input(|i| i.time);
         let looked: Option<f64> = ctx.data(|d| d.get_temp(id));
         if looked.is_none_or(|at| now - at >= LOOK_EVERY || now < at) {
