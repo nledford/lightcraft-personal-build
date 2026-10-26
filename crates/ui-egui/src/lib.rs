@@ -229,6 +229,8 @@ mod tests_rules_editor;
 #[cfg(test)]
 mod tests_sam_setup;
 #[cfg(test)]
+mod tests_samples;
+#[cfg(test)]
 mod tests_scroll;
 #[cfg(test)]
 mod tests_side_keys;
@@ -366,6 +368,8 @@ impl From<lightcraft_engine::EngineError> for Refusal {
     }
 }
 
+/// A toast with more to read (where something went).
+const TOAST_READ_SECONDS: f64 = 4.0;
 /// The `path` of a display profile read from the screen rather than chosen as a file.
 pub const SCREEN_PROFILE: &str = "screen";
 
@@ -1111,6 +1115,14 @@ impl LightcraftApp {
         } else {
             params
         };
+        // the samples' folder named in the interface's language, unless the caller names it
+        let params = if id == "library.addSamples" && params.get("folder").is_none_or(Value::is_null) {
+            let mut p = if params.is_object() { params } else { serde_json::json!({}) };
+            p["folder"] = serde_json::json!(i18n::tr(lightcraft_engine::demo::SAMPLES_FOLDER));
+            p
+        } else {
+            params
+        };
         let r = self.session.execute(id, &params).map_err(Refusal::from);
         if r.is_ok() && matches!(id, "crop.aspect" | "crop.rotateAspect") {
             self.ui.crop_default_aspect = if id == "crop.aspect" && params.get("aspect").and_then(Value::as_str) == Some("original") {
@@ -1144,15 +1156,23 @@ impl LightcraftApp {
         if r.is_ok() {
             // These commands finish synchronously, so their completion would otherwise
             // be invisible once the activity stack is gone. Never show success on error.
+            let added = r.as_ref().ok().filter(|_| id == "library.addSamples").map(|v| {
+                let n = v["added"].as_u64().unwrap_or(0);
+                let folder = v["folder"].as_str().unwrap_or_default();
+                i18n::tr_format!("Added {n} sample photos, with albums under “{folder}” and keywords to try", n = n, folder = folder)
+            });
             let completed = match id {
                 "library.compact" => Some(format!("✓ {}", i18n::tr("Optimize Library"))),
                 "library.clearPreviews" => Some(format!("✓ {}", i18n::tr("Discard Preview Cache"))),
                 "develop.autoSync" => Some(format!("{}: {}", i18n::tr("Auto Sync"), i18n::tr(if self.session.auto_sync { "On" } else { "Off" }))),
                 _ => None,
             };
-            if let Some(message) = completed {
+            // (where the samples' albums went is a message to read: it stays as long as one that
+            // says where to look)
+            let completed = completed.map(|m| (m, TOAST_SECONDS)).or(added.map(|m| (m, TOAST_READ_SECONDS)));
+            if let Some((message, secs)) = completed {
                 let now = self.tick_now();
-                self.ui.show_toast(now, message, TOAST_SECONDS, None);
+                self.ui.show_toast(now, message, secs, None);
             }
         }
         if r.is_ok() && id == "photo.label" {
