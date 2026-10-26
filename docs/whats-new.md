@@ -256,6 +256,14 @@
   import adds some, others are removed, moved to Recently Deleted or relinked), the answer leaves out the photos that
   no longer apply, a photo added meanwhile is not part of that check, and the answer is not kept for a later request.
 
+### JPEGs that were cut short now import
+- A JPEG that stops before its end (an interrupted download or copy) used to be refused as "not readable". It now
+  imports and shows what is there: a progressive JPEG from the scans that arrived (blurry, then sharper the more
+  of it came), a baseline JPEG from the rows that arrived, the rest flat grey. The original file is never changed.
+  Still refused: a file with no picture data yet, a cut JPEG of a kind only the slower decoder reads (CMYK, 12-bit,
+  lossless, separate scans per colour), arithmetic-coded JPEGs, and cut files of other formats. The catalog
+  remembers that such a photo was cut short; Reload clears that once the file is whole.
+
 ### Choose where a Lightroom catalog goes
 - File ▸ Import Lightroom Catalog… now asks first: merge the catalog's photos, collections and edits into the
   library open now, or create a new library for them, named after the catalog and placed next to the open library
