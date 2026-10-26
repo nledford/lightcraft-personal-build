@@ -91,17 +91,26 @@ fn in_library(h: &Headless) -> Vec<String> {
     v
 }
 
-/// Open the dialog from the folder's menu and wait for the scan.
-fn open_and_scan(h: &mut Headless, folder: &str) {
-    // the library's tally is counted by a worker (#2047) and the folders' menus read it: a menu opened while the
-    // count lags the catalog is rebuilt when the count lands, and is gone under the click
+/// Wait until the sidebar's rows have their places, which workers decide: the library's folders come from its first
+/// count (until then a folder's menu has no library photos to offer Synchronize for, #2047: a menu opened while the
+/// count lags the catalog is rebuilt when the count lands and is gone under the click), and the Missing Photos row
+/// (#2629: the file checks run on workers, not part of `busy`) appears above Local when they end, moving every row below
+/// it a row down. A click aimed at a row's old rect hits its neighbour.
+fn sidebar_is_still(h: &mut Headless, folders_listed: bool) {
     assert!(
         h.step_until(T, |h| {
             let library = h.app.session.library_generation();
-            h.app.caches.folder_tree_if_fresh(&h.app.session.catalog, library).is_some()
+            h.file_checks_done()
+                && h.app.caches.folder_tree_if_fresh(&h.app.session.catalog, library).is_some_and(|tree| !folders_listed || !tree.is_empty())
         }),
-        "the library's folders are counted"
+        "the library's folders are counted and its files checked"
     );
+    h.settle(SETTLE);
+}
+
+/// Open the dialog from the folder's menu and wait for the scan.
+fn open_and_scan(h: &mut Headless, folder: &str) {
+    sidebar_is_still(h, false);
     // the rows above it hold one folder each and open by themselves
     let row = format!("source:libfolder:{folder}");
     assert!(h.step_until(T, |h| h.app.widgets.iter().any(|(w, _)| *w == row)), "no row {row}");
@@ -550,15 +559,7 @@ fn a_local_folder_with_library_photos_offers_synchronize() {
         let r = h.request("engine.execute", json!({"command": "local.addRoot", "params": {"path": native(f)}}), T);
         assert_eq!(r["ok"], true, "{r}");
     }
-    // (the library's folders come from its first count, which a worker makes: until then a folder's menu has no
-    // library photos to offer Synchronize for (#2047), so the menus are opened once the tree is there)
-    assert!(
-        h.step_until(T, |h| {
-            let library = h.app.session.library_generation();
-            h.app.caches.folder_tree_if_fresh(&h.app.session.catalog, library).is_some_and(|tree| !tree.is_empty())
-        }),
-        "the library's folders are counted"
-    );
+    sidebar_is_still(&mut h, true);
     assert!(!local_menu_offers_synchronize(&mut h, &native("empty")), "no library photos in it: nothing to synchronize");
     // close that menu, then open the other folder's
     let r = h.request("ui.key", json!({"key": "Escape"}), T);
