@@ -1590,6 +1590,14 @@ fn folders_app_with_services(paths: &[&str], size: [f32; 2], services: Services)
     // background checks find them gone; the tests aim at rows, so they wait for it)
     h.step_until(T, |h| h.file_checks_done());
     h.settle(SETTLE);
+    // The sidebar looks for the photos' files on a worker thread that `Headless::busy` does not
+    // count, and the Missing Photos row it adds above Folders pushes every row below it down when
+    // the answer lands. Wait for that row, so a position read here is still right when a click
+    // is made on it (a loaded machine took longer than the quiet frames `settle` waits for).
+    if paths.iter().any(|p| !std::path::Path::new(p).exists()) {
+        assert!(h.step_until(T, |h| has(h, "source:missing")), "the Missing Photos row is drawn");
+        assert!(h.settle(SETTLE), "the sidebar did not settle after the Missing Photos row was drawn");
+    }
     h
 }
 
