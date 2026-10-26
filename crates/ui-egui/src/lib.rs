@@ -132,6 +132,8 @@ mod tests_dialogs;
 #[cfg(test)]
 mod tests_drag_contract;
 #[cfg(test)]
+mod tests_drag_dim;
+#[cfg(test)]
 mod tests_drop_import;
 #[cfg(test)]
 mod tests_edit_layout;

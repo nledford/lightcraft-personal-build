@@ -336,6 +336,10 @@
   English before. So did "The download failed", shown under a denoise or face recognition model's download when the
   download gives no reason.
 
+### Dragged photos step back in the grid
+- While you drag photos from the grid, their thumbnails are dimmed (as dark as a rejected photo's), so the label at
+  the pointer and the row it is over are what stands out. They return to normal when you let go of them.
+
 ## 2026-10-22
 
 ### Reliability
