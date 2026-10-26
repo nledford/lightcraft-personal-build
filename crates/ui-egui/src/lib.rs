@@ -1255,8 +1255,8 @@ impl LightcraftApp {
                 }
                 // a move running in the background is in the way: said wherever the command came from (a menu, a key, a
                 // button), since the status line isn't drawn
-                if e.kind == ErrorKind::MoveInProgress {
-                    self.toast_move_in_progress(&e.message);
+                if refusal.kind == ErrorKind::MoveInProgress {
+                    self.toast_move_in_progress(&refusal.error);
                 }
             }
             Ok(v) if id == "faces.detect" => self.ui.status = detect_summary(v),
@@ -1634,7 +1634,7 @@ impl LightcraftApp {
     /// app clock's, which a menu click that arrives before the next frame reads as well.
     fn toast_move_in_progress(&mut self, text: &str) {
         let now = self.tick_now();
-        self.ui.toast = Some((text.to_string(), now + 6.0, None));
+        self.ui.show_toast(now, text.to_string(), 6.0, None);
     }
 
     /// Take the control receiver for this frame, run every queued request whose sender still

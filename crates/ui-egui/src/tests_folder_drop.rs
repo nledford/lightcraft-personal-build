@@ -521,7 +521,7 @@ fn a_background_move_refused_for_another_running_move_says_so_in_a_toast() {
     // and it stays up for 6 s of the app clock
     h.app.ui.toast = None;
     let _ = h.app.run("photo.moveToFolder", json!({"ids": [garden], "folder": trip.to_string_lossy(), "background": true}));
-    let expires = h.app.ui.toast.as_ref().map(|(_, until, _)| *until).expect("a toast");
+    let expires = h.app.ui.toast.as_ref().map(|t| t.until).expect("a toast");
     assert!((expires - (h.app.tick_now() + 6.0)).abs() < 1.0, "{expires}");
     settle(&mut h);
     let _ = std::fs::remove_dir_all(&root);
@@ -538,7 +538,8 @@ fn a_move_started_from_the_grid_or_a_folder_row_that_is_refused_says_so_for_as_l
     let ctx = h.view.ctx.clone();
     let e = crate::move_task::start(&mut h.app, &ctx, &json!({"ids": [garden], "folder": trip.to_string_lossy()})).unwrap_err();
     assert!(e.contains("being moved"), "{e}");
-    let (text, until, _) = h.app.ui.toast.clone().expect("the refusal is told");
+    let toast = h.app.ui.toast.clone().expect("the refusal is told");
+    let (text, until) = (toast.text, toast.until);
     assert_eq!(text, e);
     assert!(until - h.app.tick_now() > 5.0, "an error stays 6 s, not the 1.4 s of a plain toast: {}", until - h.app.tick_now());
     settle(&mut h);
@@ -561,7 +562,8 @@ fn a_move_refused_when_the_question_is_answered_stays_up_as_long_as_an_error() {
     let _held = lightcraft_engine::move_job::start(&mut h.app.session, &json!({"ids": [dunes], "folder": home.to_string_lossy()})).unwrap();
     h.app.ui.toast = None;
     click(&mut h, "button:dialogOk");
-    let (text, until, _) = h.app.ui.toast.clone().expect("the refusal is told");
+    let toast = h.app.ui.toast.clone().expect("the refusal is told");
+    let (text, until) = (toast.text, toast.until);
     assert!(text.contains("being moved"), "{text}");
     assert!(until - h.app.tick_now() > 5.0, "an error stays 6 s, not the 1.4 s of a plain toast: {}", until - h.app.tick_now());
     settle(&mut h);
