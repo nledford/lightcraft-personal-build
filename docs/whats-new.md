@@ -495,6 +495,14 @@
 - Edit Smart Album ▸ OK on a smart album saved from the view of an album no longer drops the album: it used to
   save the rules without it, and the smart album quietly matched the whole library.
 
+### Refused commands say why
+- When something you click, drop, drag a slider for, choose from a menu or press a key for can't be done, a message
+  at the bottom of the photo says why ("No photos selected", "Nothing copied: use Copy Metadata first") and stays long enough to read. Before, most such clicks did nothing and said nothing; only a few places,
+  such as an export that couldn't start, explained themselves.
+- Nothing claims a success that didn't happen: pressing 3 with no photo selected no longer says "Rated ★★★", ⌘Z with
+  nothing to undo no longer says "Undo", and Auto, a preset or Paste Settings that couldn't be applied say why
+  instead of "applied".
+
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a
   photo by half a pixel used to lose a third of its finest detail; now it keeps most of it, without halos around

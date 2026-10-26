@@ -33,7 +33,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 ui.spacing_mut().item_spacing.y = GAP;
                 let sz = vec2(t.strip_w, BUTTON_H);
                 if icon_button(ui, "presets", Icon::Presets, sz, app.ui.presets, has_photo, &tip(app, mac, "Presets", "panel.presets")).clicked() {
-                    let _ = app.run("panel.presets", json!({}));
+                    app.act("panel.presets", json!({}));
                 }
                 for (id, icon, panel, name) in [
                     ("edit", Icon::Sliders, RightPanel::Edit, "Edit"),
@@ -44,7 +44,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 ] {
                     let on = app.ui.right == panel || (panel == RightPanel::Edit && app.ui.right == RightPanel::Profiles);
                     if icon_button(ui, id, icon, sz, on, has_photo, &tip(app, mac, name, &format!("panel.{id}"))).clicked() {
-                        let _ = app.run(&format!("panel.{id}"), json!({}));
+                        app.act(&format!("panel.{id}"), json!({}));
                     }
                     if id == "edit" {
                         separator(ui, &t);
@@ -62,7 +62,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 )
                 .clicked()
                 {
-                    let _ = app.run("panel.versions", json!({}));
+                    app.act("panel.versions", json!({}));
                 }
                 if icon_button(
                     ui,
@@ -75,7 +75,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 )
                 .clicked()
                 {
-                    let _ = app.run("panel.activity", json!({}));
+                    app.act("panel.activity", json!({}));
                 }
                 if icon_button(ui, "more", Icon::More, sz, false, true, "More").clicked() {
                     app.ui.dialog = Some(crate::state::Dialog::About);
@@ -103,12 +103,12 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 )
                 .clicked()
                 {
-                    let _ = app.run("panel.keywords", json!({}));
+                    app.act("panel.keywords", json!({}));
                 }
                 if icon_button(ui, "info", Icon::Info, sz, app.ui.right == RightPanel::Info, has_photo, &tip(app, mac, "Info", "panel.info"))
                     .clicked()
                 {
-                    let _ = app.run("panel.info", json!({}));
+                    app.act("panel.info", json!({}));
                 }
             });
         });

@@ -150,7 +150,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, name: &str) {
         ui.add_space(PAD - 4.0);
         let back = crate::button::Button::new("People").icon(crate::icons::Icon::ChevronLeft).ghost().small().widget("person:back").show(ui);
         if back.clicked() {
-            let _ = app.run("view.people", json!({}));
+            app.act("view.people", json!({}));
         }
         ui.label(RichText::new(&shown_name).font(t.semibold(15.0)).color(t.text));
         let rename = crate::button::Button::new("Rename Person…").small().widget("person:rename").show(ui);
@@ -163,8 +163,8 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, name: &str) {
             ui.add_space(PAD - 4.0);
             let photos = crate::button::Button::new("Show photos").small().tooltip("Their photos in the grid").widget("person:photos").show(ui);
             if photos.clicked() {
-                let _ = app.run("library.filter", json!({"person": shown_name}));
-                let _ = app.run("view.photoGrid", json!({}));
+                app.act("library.filter", json!({"person": shown_name}));
+                app.act("view.photoGrid", json!({}));
             }
         });
     });
@@ -239,7 +239,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, name: &str) {
                 if step == super::faces::Setup::TurnOn {
                     super::faces::take_step(app, ui.ctx(), step);
                 } else {
-                    let _ = app.run("app.settings", json!({"tab": "faces"}));
+                    app.act("app.settings", json!({"tab": "faces"}));
                 }
             }
         }
@@ -264,15 +264,15 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, name: &str) {
     if let Some((what, f)) = hit {
         match what {
             Hit::Open => {
-                let _ = app.run("library.select", json!({"ids": [f.photo], "active": f.photo}));
-                let _ = app.run("view.detail", json!({}));
+                app.act("library.select", json!({"ids": [f.photo], "active": f.photo}));
+                app.act("view.detail", json!({}));
                 // Escape comes back to this page; the People button to everyone, with this person next to its title
                 app.ui.person_from = Some((Some(shown_name.clone()), f.photo));
                 app.ui.last_person = Some(shown_name.clone());
                 app.ui.person_page = None;
             }
             Hit::Confirm => {
-                let _ = app.run("faces.setName", json!({"id": f.photo, "index": f.index, "name": shown_name}));
+                app.act("faces.setName", json!({"id": f.photo, "index": f.index, "name": shown_name}));
             }
             Hit::ConfirmAbove => confirm_above(app, ui.ctx(), &shown_name, &more, f.score),
             Hit::Dismiss => {

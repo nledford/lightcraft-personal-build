@@ -135,6 +135,7 @@ fn watch_downloads(app: &mut LightcraftApp, ctx: &egui::Context) {
     }
     app.caches.denoise.dl_watch = keep;
     for id in installed {
+        // refusal expected: the watcher clearing a finished download's row, nobody's click; a row already gone is as good
         let _ = app.session.execute("denoise.models.downloadCancel", &json!({"id": id}));
         app.caches.denoise.epoch += 1;
         let text = tr("The denoise model is installed and in use: the AI Denoise Amount slider under Detail now works");
@@ -151,7 +152,7 @@ pub fn detail_toggle(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, on
         let r = Check::new("denoise.enabled", &mut enabled, "AI Denoise").enabled(applicable).show(ui);
         register(ui, "denoise:enabled", r.rect);
         if r.changed() {
-            let _ = app.run("denoise.toggle", json!({"id": id.0, "enabled": enabled}));
+            app.act("denoise.toggle", json!({"id": id.0, "enabled": enabled}));
         }
     });
 }
@@ -189,7 +190,7 @@ pub fn detail_status(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, am
                 ui.add_space(2.0);
                 let r = Button::new("Set up AI Denoise…").small().widget("denoise:setup").show(ui);
                 if r.clicked() {
-                    let _ = app.run("denoise.toggle", json!({"id": id.0, "enabled": true}));
+                    app.act("denoise.toggle", json!({"id": id.0, "enabled": true}));
                 }
             });
         }
@@ -211,7 +212,7 @@ pub fn detail_status(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, am
                     ui.add_space(2.0);
                     let r = Button::new("Make it now").small().widget("denoise:make").show(ui);
                     if r.clicked() {
-                        let _ = app.run("denoise.queue", json!({"ids": [id.0]}));
+                        app.act("denoise.queue", json!({"ids": [id.0]}));
                     }
                 });
             }
@@ -238,7 +239,7 @@ pub fn detail_status(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, am
                 if !unsupported {
                     let r = Button::new("Try again").small().widget("denoise:retry").show(ui);
                     if r.clicked() {
-                        let _ = app.run("denoise.queue", json!({"ids": [id.0], "retry": true}));
+                        app.act("denoise.queue", json!({"ids": [id.0], "retry": true}));
                     }
                 }
             });
@@ -324,7 +325,7 @@ fn work_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, list: &V
     let mut run_on = current.as_str();
     let options = [("auto", "Automatic"), ("gpu", "Graphics card"), ("cpu", "Processor")];
     if ui.horizontal(|ui| choices(ui, "denoiseRunOn", &options, &mut run_on)).inner {
-        let _ = app.run("denoise.settings", json!({"runOn": run_on}));
+        app.act("denoise.settings", json!({"runOn": run_on}));
         app.caches.denoise.epoch += 1;
     }
     hint(
@@ -337,14 +338,14 @@ fn work_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, list: &V
         let r = Button::new("Try the graphics card again").small().widget("denoise:retryGpu").show(ui);
         if r.clicked() {
             // choosing where it runs, even the same again, forgets the failed set-up
-            let _ = app.run("denoise.settings", json!({"runOn": run_on}));
+            app.act("denoise.settings", json!({"runOn": run_on}));
             app.caches.denoise.epoch += 1;
         }
     }
     heading(ui, t, "Photos");
     let mut auto = list["auto"].as_bool().unwrap_or(true);
     if check(ui, "settings.denoiseAuto", &mut auto, "Make the denoised picture of the photos I am looking at").changed() {
-        let _ = app.run("denoise.settings", json!({"auto": auto}));
+        app.act("denoise.settings", json!({"auto": auto}));
         app.caches.denoise.epoch += 1;
     }
     hint(ui, t, "Only photos whose AI Denoise amount is above 0 are made. Exports always make theirs if it is missing.");
@@ -373,12 +374,12 @@ fn work_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, list: &V
     ui.horizontal(|ui| {
         let r = Button::new("Denoise all photos with an Amount").widget("denoise:queueAll").show(ui);
         if r.clicked() {
-            let _ = app.run("denoise.queue", json!({"scope": "withAmount"}));
+            app.act("denoise.queue", json!({"scope": "withAmount"}));
         }
         if running.is_some() || queued > 0 {
             let r = Button::new("Stop").widget("denoise:stop").show(ui);
             if r.clicked() {
-                let _ = app.run("denoise.cancel", json!({}));
+                app.act("denoise.cancel", json!({}));
             }
         }
     });
@@ -406,12 +407,12 @@ fn work_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, list: &V
         });
         crate::widgets::name_combo(&combo.response, tr("Cache limit"));
         if choice != current {
-            let _ = app.run("denoise.settings", json!({"cacheGb": choice}));
+            app.act("denoise.settings", json!({"cacheGb": choice}));
             app.caches.denoise.epoch += 1;
         }
         let r = Button::new("Clear cache").widget("denoise:clear").show(ui);
         if r.clicked() {
-            let _ = app.run("denoise.clear", json!({}));
+            app.act("denoise.clear", json!({}));
         }
     });
 }
@@ -494,19 +495,19 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                 if installed {
                     let r = Button::new("Remove").widget(format!("denoise:remove:{id}")).show(ui);
                     if r.clicked() {
-                        let _ = app.run("denoise.models.remove", json!({"id": id}));
+                        app.act("denoise.models.remove", json!({"id": id}));
                         app.caches.denoise.epoch += 1;
                     }
                     if selected {
                         let r = Button::new("Turn off").widget(format!("denoise:off:{id}")).show(ui);
                         if r.clicked() {
-                            let _ = app.run("denoise.models.select", json!({"id": null}));
+                            app.act("denoise.models.select", json!({"id": null}));
                             app.caches.denoise.epoch += 1;
                         }
                     } else {
                         let r = Button::new("Use").widget(format!("denoise:use:{id}")).show(ui);
                         if r.clicked() {
-                            let _ = app.run("denoise.models.select", json!({"id": id}));
+                            app.act("denoise.models.select", json!({"id": id}));
                             app.caches.denoise.epoch += 1;
                         }
                     }
@@ -515,7 +516,7 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                         Some("running") => {
                             let r = Button::new("Cancel").widget(format!("denoise:cancelDownload:{id}")).show(ui);
                             if r.clicked() {
-                                let _ = app.run("denoise.models.downloadCancel", json!({"id": id}));
+                                app.act("denoise.models.downloadCancel", json!({"id": id}));
                                 app.caches.denoise.dl_watch.retain(|w| w != &id);
                             }
                         }
