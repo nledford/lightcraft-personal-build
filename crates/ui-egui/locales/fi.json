@@ -2399,5 +2399,7 @@
   "Reduce motion": "Vähennä liikettä",
   "Turns off zoom and spinner animations. Fades stay.": "Poistaa zoomaus- ja pyörivät animaatiot käytöstä. Häivytykset säilyvät.",
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Poistaa zoomaus- ja pyörivät animaatiot käytöstä. Häivytykset säilyvät. Seuraa järjestelmän Vähennä liikettä -asetusta, kunnes muutat sitä täällä.",
-  "Use the system setting": "Käytä järjestelmän asetusta"
+  "Use the system setting": "Käytä järjestelmän asetusta",
+  "Files": "Tiedostot",
+  "Monitor": "Näyttö"
 }

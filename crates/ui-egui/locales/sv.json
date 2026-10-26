@@ -2501,5 +2501,7 @@
   "Reduce motion": "Minska rörelse",
   "Turns off zoom and spinner animations. Fades stay.": "Stänger av zoom- och snurranimationer. Toningar finns kvar.",
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Stänger av zoom- och snurranimationer. Toningar finns kvar. Följer systemets Minska rörelse tills du ändrar det här.",
-  "Use the system setting": "Använd systeminställningen"
+  "Use the system setting": "Använd systeminställningen",
+  "Files": "Filer",
+  "Monitor": "Bildskärm"
 }

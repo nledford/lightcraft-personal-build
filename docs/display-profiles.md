@@ -6,6 +6,7 @@ displays. Without one, previews are sRGB, which a wide-gamut panel shows oversat
 **macOS uses the screen's own profile** (the one System Settings ▸ Displays assigns) while none is chosen. macOS doesn't
 colour-manage LightCraft's window (wgpu leaves its Metal layer without a colour space, which Core Animation shows
 unmatched), so on a P3 screen previews used to look more saturated than the exported files in Preview or Photos (issue
+
 #787). The profile is read again about once a second, so moving the window to another screen is followed.
 
 **Linux uses the profile the desktop assigns in colord** (GNOME / KDE Settings ▸ Color, or a calibrator such as
@@ -18,7 +19,7 @@ would correct twice; KWin keeps that profile in its own settings, not colord, so
 
 ## Using it
 
-Settings ▸ Display ▸ **Choose Profile…** picks an `.icc` / `.icm` file (the dialog opens where the system keeps
+Settings ▸ Monitor ▸ **Choose Profile…** picks an `.icc` / `.icm` file (the dialog opens where the system keeps
 them: `~/.local/share/icc` on Linux, ColorSync's folders on macOS, `…\spool\drivers\color` on Windows). **Use sRGB**
 (on macOS and Linux **Use Screen Profile**) goes back to no profile. The choice is an app setting (`ui.json`, `displayProfile`)
 and applies at once; a file that can't be used is reported there and previews stay sRGB.
