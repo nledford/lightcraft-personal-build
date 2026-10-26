@@ -22,7 +22,6 @@
   "+{} more": "+{} nữa",
   ", {failed} file{} not readable": ", {failed} tệp{:.0} không đọc được",
   ", {} label": ", nhãn {}",
-  ", {} star{}": ", {} sao{:.0}",
   "1 task is still running: {names}. Quitting stops it.": "Còn 1 tác vụ đang chạy: {names}. Thoát sẽ dừng tác vụ.",
   "; {kept} already had a location": "; {kept} đã có vị trí",
   "; {n} gained synonyms": "; {n} có thêm từ đồng nghĩa",
@@ -315,5 +314,6 @@
   "Backups in {}": "Bản sao lưu trong {}",
   "Folders of what restores replaced, removed: {}": "Đã xóa các thư mục chứa những gì lần khôi phục đã thay thế: {}",
   "Folders of what restores replaced that could not be removed: {}": "Các thư mục chứa những gì lần khôi phục đã thay thế không thể xóa: {}",
-  "Not available right now: {}": "Hiện không khả dụng: {}"
+  "Not available right now: {}": "Hiện không khả dụng: {}",
+  ", rating {} of 5": ", xếp hạng: {} trên 5"
 }

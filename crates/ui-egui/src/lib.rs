@@ -53,6 +53,7 @@ pub mod sync;
 pub mod tasks;
 pub mod text_field;
 pub mod theme;
+mod thumb;
 pub mod updates_ui;
 pub mod widgets;
 pub mod window_place;
@@ -127,6 +128,8 @@ mod tests_folder_drop;
 mod tests_grading;
 #[cfg(test)]
 mod tests_grid;
+#[cfg(test)]
+mod tests_grid_badges;
 #[cfg(test)]
 mod tests_guided_guides;
 #[cfg(test)]
@@ -223,6 +226,8 @@ mod tests_sync;
 mod tests_tallies;
 #[cfg(test)]
 mod tests_temp_slider;
+#[cfg(test)]
+mod tests_thumb;
 #[cfg(test)]
 mod tests_titlebar;
 #[cfg(test)]

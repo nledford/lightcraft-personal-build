@@ -22,7 +22,6 @@
   "+{} more": "+{} till",
   ", {failed} file{} not readable": ", {failed} fil{} kunde inte läsas",
   ", {} label": ", {} etikett",
-  ", {} star{}": ", {} stjärna{}",
   "1 task is still running: {names}. Quitting stops it.": "1 uppgift körs fortfarande: {names}. Om du avslutar stoppas den.",
   "; {kept} already had a location": "; {kept} hade redan en plats",
   "; {n} gained synonyms": "; {n} fick synonymer",
@@ -315,5 +314,6 @@
   "Backups in {}": "Säkerhetskopior i {}",
   "Folders of what restores replaced, removed: {}": "Mappar med det som återställningar ersatt, borttagna: {}",
   "Folders of what restores replaced that could not be removed: {}": "Mappar med det som återställningar ersatt som inte kunde tas bort: {}",
-  "Not available right now: {}": "Inte tillgängligt just nu: {}"
+  "Not available right now: {}": "Inte tillgängligt just nu: {}",
+  ", rating {} of 5": ", betyg: {} av 5"
 }

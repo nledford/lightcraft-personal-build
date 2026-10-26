@@ -22,7 +22,6 @@
   "+{} more": "+{} lisää",
   ", {failed} file{} not readable": ", ei luettavissa olevia tiedostoja: {failed}{:.0}",
   ", {} label": ", {} merkintä",
-  ", {} star{}": ", tähtiä {}{:.0}",
   "1 task is still running: {names}. Quitting stops it.": "1 tehtävä on yhä käynnissä: {names}. Lopettaminen pysäyttää sen.",
   "; {kept} already had a location": "; jo sijaintitiedolliset: {kept}",
   "; {n} gained synonyms": "; {n} sai synonyymejä",
@@ -315,5 +314,6 @@
   "Backups in {}": "Varmuuskopiot kansiossa {}",
   "Folders of what restores replaced, removed: {}": "Palautusten korvaaman sisällön kansioita poistettu: {}",
   "Folders of what restores replaced that could not be removed: {}": "Palautusten korvaaman sisällön kansioita, joita ei voitu poistaa: {}",
-  "Not available right now: {}": "Ei käytettävissä juuri nyt: {}"
+  "Not available right now: {}": "Ei käytettävissä juuri nyt: {}",
+  ", rating {} of 5": ", luokitus: {} / 5"
 }
