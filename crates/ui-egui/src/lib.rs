@@ -1578,7 +1578,7 @@ impl LightcraftApp {
     /// A notice from code that has no frame at hand (a dialog's action): shown for `secs` seconds.
     pub fn say(&mut self, text: impl Into<String>, secs: f64) {
         let now = self.now();
-        self.ui.toast = Some((text.into(), now + secs, None));
+        self.ui.show_toast(now, text.into(), secs, None);
     }
 
     /// The interface's clock (seconds), for code that has no frame at hand.
