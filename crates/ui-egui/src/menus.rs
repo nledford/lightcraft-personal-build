@@ -1876,7 +1876,15 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
             r
         }
         "photo.locate" => {
-            let Some(id) = app.session.active() else { return Some(Err("no photo selected".into())) };
+            // `id`: the photo whose file is missing (a photo's menu names it), else the active one
+            let id = match photo_param(p, "photo.locate") {
+                Ok(id) => id.or(app.session.active()),
+                Err(e) => return Some(Err(e)),
+            };
+            let Some(id) = id else { return Some(Err("no photo selected".into())) };
+            if app.session.catalog.photo(id).is_none() {
+                return Some(Err(format!("photo.locate: no photo {}", id.0)));
+            }
             let path = match p.get("path").and_then(Value::as_str) {
                 Some(x) => Some(x.to_string()),
                 None => {
@@ -2265,8 +2273,8 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
             return Some(r);
         }
         "app.export" => crate::control::export_active(app, p),
-        "app.showInFinder" => show_in_finder(app),
-        "app.showInFolders" => show_in_folders(app, p.get("id").and_then(Value::as_u64).map(lightcraft_catalog::PhotoId)),
+        "app.showInFinder" => photo_param(p, id).and_then(|photo| show_in_finder(app, photo)),
+        "app.showInFolders" => photo_param(p, id).and_then(|photo| show_in_folders(app, photo)),
         "photo.copyPath" => copy_file_paths(app, &ctx),
         "app.openLogFolder" => open_log_folder(app),
         "app.discord" | "app.website" | "app.github" | "app.artcraft" | "app.help" | "app.feedback" => {
@@ -2314,14 +2322,7 @@ pub fn ui_enabled(app: &LightcraftApp, id: &str) -> bool {
                     _ => false,
                 })
         }
-        "app.showInFinder" => {
-            app.services.reveal.is_some()
-                && app
-                    .session
-                    .active()
-                    .and_then(|id| app.session.catalog.photo(id))
-                    .is_some_and(|p| matches!(p.source, lightcraft_engine::catalog::Source::File { .. }))
-        }
+        "app.showInFinder" => show_in_finder_enabled(app, None),
         "app.showInFolders" => show_in_folders_enabled(app, None),
         // (asked every frame a menu is open: reads the selection in place, copies no path)
         "photo.copyPath" => {
@@ -2476,12 +2477,33 @@ fn copy_file_paths(app: &mut LightcraftApp, ctx: &egui::Context) -> Result<Value
     Ok(json!({"paths": paths}))
 }
 
-/// Reveal the active photo's original in the system file manager.
-fn show_in_finder(app: &mut LightcraftApp) -> Result<Value, String> {
-    let id = app.session.active().ok_or("no photo selected")?;
+/// Can Show in Finder reveal `id` (`None`: the active photo)? Needs a file manager and a photo
+/// with a file on disk.
+pub(crate) fn show_in_finder_enabled(app: &LightcraftApp, id: Option<lightcraft_catalog::PhotoId>) -> bool {
+    app.services.reveal.is_some()
+        && id
+            .or(app.session.active())
+            .and_then(|id| app.session.catalog.photo(id))
+            .is_some_and(|p| matches!(p.source, lightcraft_engine::catalog::Source::File { .. }))
+}
+
+/// A command's optional `id` (a photo): none or null means the active photo; anything else must
+/// be a photo id, as the engine's commands require, so a mistyped one isn't quietly the active
+/// photo.
+fn photo_param(p: &Value, cmd: &str) -> Result<Option<lightcraft_catalog::PhotoId>, String> {
+    match p.get("id") {
+        None | Some(Value::Null) => Ok(None),
+        Some(v) => v.as_u64().map(|n| Some(lightcraft_catalog::PhotoId(n))).ok_or_else(|| format!("{cmd}: `id` must be a photo id, not {v}")),
+    }
+}
+
+/// Reveal `id`'s original (`None`: the active photo's) in the system file manager.
+fn show_in_finder(app: &mut LightcraftApp, id: Option<lightcraft_catalog::PhotoId>) -> Result<Value, String> {
+    let id = id.or(app.session.active()).ok_or("no photo selected")?;
     let path = match app.session.catalog.photo(id).map(|p| p.source.clone()) {
         Some(lightcraft_engine::catalog::Source::File { path }) => path,
-        _ => return Err("this photo has no file (demo scene)".into()),
+        Some(_) => return Err("this photo has no file (demo scene)".into()),
+        None => return Err(format!("app.showInFinder: no photo {}", id.0)),
     };
     let reveal = app.services.reveal.as_mut().ok_or("not available here")?;
     reveal(&path)?;
@@ -2511,6 +2533,11 @@ pub fn show_in_folders_enabled(app: &LightcraftApp, id: Option<lightcraft_catalo
 /// row in the sidebar's Folders section does, and bring the row into view: the sidebar, the
 /// section and the folders above it open, and it scrolls there (`reveal_folder`).
 fn show_in_folders(app: &mut LightcraftApp, id: Option<lightcraft_catalog::PhotoId>) -> Result<Value, String> {
+    if let Some(id) = id
+        && app.session.catalog.photo(id).is_none()
+    {
+        return Err(format!("app.showInFolders: no photo {}", id.0));
+    }
     let dir = photo_folder(app, id).ok_or("this photo is not in a folder of the library")?;
     let tree = app.caches.folder_tree(&app.session.catalog);
     // the row's own spelling (forward slashes): what its click hands `library.source`, and its id
