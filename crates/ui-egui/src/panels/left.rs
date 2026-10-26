@@ -245,8 +245,10 @@ fn row_sensed(
     };
     let count_galley = count.filter(|_| app.ui.show_counts).map(|n| crate::readout::figures(ui.painter(), &n.to_string(), t.label(), count_color(n)));
     let label_left = r.left() + 42.0 + indent;
-    let measure = |s: &str| ui.painter().layout_no_wrap(s.to_string(), font.clone(), color).size().x;
-    let full_w = measure(label);
+    let measure_in = |font: &egui::FontId, s: &str| ui.painter().layout_no_wrap(s.to_string(), font.clone(), color).size().x;
+    let regular = t.font(13.5);
+    let heavy = t.semibold(13.5);
+    let full_w = measure_in(&regular, label);
     // a label's dot sits just before the count
     let count_w = count_galley.as_ref().map(|g| g.size().x);
     let past_edge = count_past_edge(label_left, full_w, mark_w, count_w, mark.is_some(), edge);
@@ -264,9 +266,6 @@ fn row_sensed(
     // rows ask for the width of the regular face either way, so choosing a row never changes how
     // wide they are, and the heavier face never pushes a panel that just fit into scrolling
     let room = count_left - mark_w - 8.0 - label_left;
-    let measure_in = |font: &egui::FontId, s: &str| ui.painter().layout_no_wrap(s.to_string(), font.clone(), color).size().x;
-    let regular = t.font(13.5);
-    let heavy = t.semibold(13.5);
     let font = if selected && measure_in(&heavy, label) <= room { heavy } else { regular.clone() };
     let measure = |s: &str| measure_in(&font, s);
     let full_w = measure(label);
