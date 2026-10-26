@@ -369,5 +369,7 @@
   "Move “{name}” into “{into}”": "「{name}」を「{into}」に移動",
   "Move “{name}” into “{into}”?": "「{name}」を「{into}」に移動しますか？",
   "Photos in it and in the folders inside it: {count}": "その中およびその中のフォルダ内の写真：{count}",
-  "“{name}” is no longer there: nothing was moved": "「{name}」が見つかりません。何も移動していません"
+  "“{name}” is no longer there: nothing was moved": "「{name}」が見つかりません。何も移動していません",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "条件 {n}/{m}：{what}。矢印キーで移動",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "グループ {n}/{m}：一致条件 {mode}、中に {count} 件。矢印キーで移動"
 }

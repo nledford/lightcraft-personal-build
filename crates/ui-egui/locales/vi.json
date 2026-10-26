@@ -2435,5 +2435,8 @@
   "The library's own folder can't be moved": "Không thể di chuyển thư mục của chính thư viện",
   "A folder can't move into itself or a folder inside it": "Không thể di chuyển thư mục vào chính nó hoặc vào thư mục bên trong nó",
   "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "Thư mục, các tệp và sidecar XMP của nó được di chuyển trên đĩa. Chỉnh sửa → Hoàn tác sẽ di chuyển lại.",
-  "Another library was opened since the folder was dropped: nothing was moved": "Một thư viện khác đã được mở sau khi thả thư mục: không có gì được di chuyển"
+  "Another library was opened since the folder was dropped: nothing was moved": "Một thư viện khác đã được mở sau khi thả thư mục: không có gì được di chuyển",
+  "Drag to move, or use the arrow keys": "Kéo để di chuyển, hoặc dùng phím mũi tên",
+  "A group can't go inside itself": "Nhóm không thể nằm trong chính nó",
+  "Groups can't nest any deeper": "Không thể lồng nhóm sâu hơn"
 }

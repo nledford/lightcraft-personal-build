@@ -2574,5 +2574,8 @@
   "The library's own folder can't be moved": "Теку самої бібліотеки не можна перемістити",
   "A folder can't move into itself or a folder inside it": "Теку не можна перемістити в саму себе або в теку всередині неї",
   "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "Тека, її файли та XMP-файли переміщуються на диску. Редагування → Скасувати поверне її.",
-  "Another library was opened since the folder was dropped: nothing was moved": "Після перетягування теки було відкрито іншу бібліотеку: нічого не переміщено"
+  "Another library was opened since the folder was dropped: nothing was moved": "Після перетягування теки було відкрито іншу бібліотеку: нічого не переміщено",
+  "Drag to move, or use the arrow keys": "Перетягніть, щоб перемістити, або скористайтеся стрілками",
+  "A group can't go inside itself": "Групу не можна помістити саму в себе",
+  "Groups can't nest any deeper": "Групи не можна вкладати глибше"
 }

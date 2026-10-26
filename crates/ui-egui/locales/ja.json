@@ -2576,5 +2576,8 @@
   "The library's own folder can't be moved": "ライブラリ自体のフォルダは移動できません",
   "A folder can't move into itself or a folder inside it": "フォルダを自身またはその中のフォルダに移動することはできません",
   "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "フォルダ、そのファイル、XMP サイドカーがディスク上で移動します。編集 → 取り消す で元に戻せます。",
-  "Another library was opened since the folder was dropped: nothing was moved": "フォルダをドロップした後に別のライブラリが開かれました。何も移動していません"
+  "Another library was opened since the folder was dropped: nothing was moved": "フォルダをドロップした後に別のライブラリが開かれました。何も移動していません",
+  "Drag to move, or use the arrow keys": "ドラッグして移動、または矢印キーを使います",
+  "A group can't go inside itself": "グループを自分自身の中に入れることはできません",
+  "Groups can't nest any deeper": "グループはこれ以上深く入れ子にできません"
 }

@@ -2422,5 +2422,8 @@
   "The library's own folder can't be moved": "A pasta da própria biblioteca não pode ser movida",
   "A folder can't move into itself or a folder inside it": "Uma pasta não pode ser movida para dentro de si mesma ou de uma pasta dentro dela",
   "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "A pasta, seus arquivos e os arquivos XMP auxiliares são movidos no disco. Editar → Desfazer a traz de volta.",
-  "Another library was opened since the folder was dropped: nothing was moved": "Outra biblioteca foi aberta depois que a pasta foi solta: nada foi movido"
+  "Another library was opened since the folder was dropped: nothing was moved": "Outra biblioteca foi aberta depois que a pasta foi solta: nada foi movido",
+  "Drag to move, or use the arrow keys": "Arraste para mover ou use as setas",
+  "A group can't go inside itself": "Um grupo não pode ficar dentro de si mesmo",
+  "Groups can't nest any deeper": "Os grupos não podem ser aninhados mais fundo"
 }

@@ -369,5 +369,7 @@
   "Move “{name}” into “{into}”": "將「{name}」移到「{into}」",
   "Move “{name}” into “{into}”?": "將「{name}」移到「{into}」？",
   "Photos in it and in the folders inside it: {count}": "其中及其子資料夾中的照片：{count}",
-  "“{name}” is no longer there: nothing was moved": "「{name}」已不存在：未移動任何內容"
+  "“{name}” is no longer there: nothing was moved": "「{name}」已不存在：未移動任何內容",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "規則 {n}/{m}：{what}。用方向鍵移動",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "群組 {n}/{m}：符合{mode}，內含 {count} 項。用方向鍵移動"
 }

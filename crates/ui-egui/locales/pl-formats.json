@@ -369,5 +369,7 @@
   "Move “{name}” into “{into}”": "Przenieś „{name}” do „{into}”",
   "Move “{name}” into “{into}”?": "Przenieść „{name}” do „{into}”?",
   "Photos in it and in the folders inside it: {count}": "Zdjęcia w nim i w folderach w nim zawartych: {count}",
-  "“{name}” is no longer there: nothing was moved": "„{name}” już nie istnieje: nic nie zostało przeniesione"
+  "“{name}” is no longer there: nothing was moved": "„{name}” już nie istnieje: nic nie zostało przeniesione",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Reguła {n} z {m}: {what}. Przenoś strzałkami",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Grupa {n} z {m}: dopasuj {mode}, w środku {count}. Przenoś strzałkami"
 }

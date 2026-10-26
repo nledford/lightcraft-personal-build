@@ -369,5 +369,7 @@
   "Move “{name}” into “{into}”": "Siirrä ”{name}” kohteeseen ”{into}”",
   "Move “{name}” into “{into}”?": "Siirretäänkö ”{name}” kohteeseen ”{into}”?",
   "Photos in it and in the folders inside it: {count}": "Kuvia siinä ja sen sisällä olevissa kansioissa: {count}",
-  "“{name}” is no longer there: nothing was moved": "”{name}” ei ole enää siellä: mitään ei siirretty"
+  "“{name}” is no longer there: nothing was moved": "”{name}” ei ole enää siellä: mitään ei siirretty",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Sääntö {n}/{m}: {what}. Siirrä nuolinäppäimillä",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Ryhmä {n}/{m}: täsmää {mode}, sisällä: {count}. Siirrä nuolinäppäimillä"
 }

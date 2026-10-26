@@ -2560,5 +2560,8 @@
   "The library's own folder can't be moved": "La cartella della libreria stessa non può essere spostata",
   "A folder can't move into itself or a folder inside it": "Una cartella non può essere spostata in se stessa o in una cartella al suo interno",
   "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "La cartella, i suoi file e i file XMP collegati vengono spostati sul disco. Modifica → Annulla la riporta indietro.",
-  "Another library was opened since the folder was dropped: nothing was moved": "Dopo il trascinamento della cartella è stata aperta un'altra libreria: non è stato spostato nulla"
+  "Another library was opened since the folder was dropped: nothing was moved": "Dopo il trascinamento della cartella è stata aperta un'altra libreria: non è stato spostato nulla",
+  "Drag to move, or use the arrow keys": "Trascina per spostare, oppure usa le frecce",
+  "A group can't go inside itself": "Un gruppo non può stare dentro se stesso",
+  "Groups can't nest any deeper": "I gruppi non si possono annidare più in profondità"
 }

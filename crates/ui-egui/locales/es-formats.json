@@ -369,5 +369,7 @@
   "Move “{name}” into “{into}”": "Mover “{name}” a “{into}”",
   "Move “{name}” into “{into}”?": "¿Mover “{name}” a “{into}”?",
   "Photos in it and in the folders inside it: {count}": "Fotos en ella y en las carpetas que contiene: {count}",
-  "“{name}” is no longer there: nothing was moved": "“{name}” ya no está: no se movió nada"
+  "“{name}” is no longer there: nothing was moved": "“{name}” ya no está: no se movió nada",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Regla {n} de {m}: {what}. Mover con las teclas de flecha",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Grupo {n} de {m}: coincidir con {mode}, {count} dentro. Mover con las teclas de flecha"
 }

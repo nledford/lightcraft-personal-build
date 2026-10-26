@@ -31,6 +31,7 @@ pub mod right;
 pub mod rules_editor;
 pub mod rules_move;
 pub mod samples;
+pub mod rules_reorder;
 pub mod second;
 pub mod settings;
 pub(crate) mod side_keys;

@@ -369,5 +369,7 @@
   "Move “{name}” into “{into}”": "Přesunout „{name}“ do „{into}“",
   "Move “{name}” into “{into}”?": "Přesunout „{name}“ do „{into}“?",
   "Photos in it and in the folders inside it: {count}": "Fotografie v ní a ve složkách v ní: {count}",
-  "“{name}” is no longer there: nothing was moved": "„{name}“ už neexistuje: nic nebylo přesunuto"
+  "“{name}” is no longer there: nothing was moved": "„{name}“ už neexistuje: nic nebylo přesunuto",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Pravidlo {n} z {m}: {what}. Přesun pomocí šipek",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Skupina {n} z {m}: shoda {mode}, uvnitř {count}. Přesun pomocí šipek"
 }

@@ -369,5 +369,7 @@
   "Move “{name}” into “{into}”": "Pindahkan “{name}” ke “{into}”",
   "Move “{name}” into “{into}”?": "Pindahkan “{name}” ke “{into}”?",
   "Photos in it and in the folders inside it: {count}": "Foto di dalamnya dan di folder di dalamnya: {count}",
-  "“{name}” is no longer there: nothing was moved": "“{name}” tidak ditemukan lagi: tidak ada yang dipindahkan"
+  "“{name}” is no longer there: nothing was moved": "“{name}” tidak ditemukan lagi: tidak ada yang dipindahkan",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Aturan {n} dari {m}: {what}. Pindahkan dengan tombol panah",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Grup {n} dari {m}: cocokkan {mode}, isi: {count}. Pindahkan dengan tombol panah"
 }
