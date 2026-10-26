@@ -2506,5 +2506,11 @@
   "Monitor": "Bildskärm",
   "Filter settings": "Filtrera inställningar",
   "No setting matches what is typed.": "Ingen inställning matchar det som skrivits.",
-  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Prova ett ord eller en del av ett: namnen på flikar och avsnitt, etiketter och förklaringar genomsöks."
+  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Prova ett ord eller en del av ett: namnen på flikar och avsnitt, etiketter och förklaringar genomsöks.",
+  "What imports take from the photos themselves and the sidecars beside them. What is not read stays in the files, and LightCraft does not write it back into their sidecars either.": "Vad importer hämtar från själva fotona och från sidofilerna bredvid dem. Det som inte läses stannar kvar i filerna, och LightCraft skriver det inte heller tillbaka till deras sidofiler.",
+  "Read from photos": "Läs från fotona",
+  "Ratings and labels": "Betyg och etiketter",
+  "Develop settings": "Framkallningsinställningar",
+  "Titles and captions": "Titlar och bildtexter",
+  "Read": "Läs"
 }

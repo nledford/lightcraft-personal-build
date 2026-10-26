@@ -114,6 +114,191 @@ pub struct ImportOptions {
     /// Import Suspected Duplicates" unchecked). A file at a path the library already lists, or one
     /// in Recently Deleted, is still handled as a duplicate.
     pub import_duplicates: bool,
+    /// What is read from the photos themselves; a part that is `None` goes by the library's
+    /// own choice ([`ImportDefaults::read`]).
+    pub read: ReadChoice,
+}
+
+/// What of a photo's own an import reads into the library: the things a file, or the sidecar
+/// beside it, says about the photo that a person (or another program) put there. Everything by
+/// default. What the camera recorded (which camera and lens, the exposure, when it was taken,
+/// which way up) is always read: the library can't work without it.
+///
+/// A kind that is not read is left where it is: nothing is taken out of the file or sidecar, at
+/// import or by a sidecar written later (the photo remembers it: `Photo::left_in_file`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct ReadFromPhotos {
+    /// Keywords, and the named regions of faces that go with them.
+    pub keywords: bool,
+    /// Star ratings, pick / reject flags and colour labels.
+    pub ratings: bool,
+    /// Title, caption, creator, copyright and its terms, and the accessibility texts.
+    pub descriptions: bool,
+    /// Where it was taken: GPS coordinates, and the place by name (location, city, state, country).
+    pub location: bool,
+    /// Develop settings a sidecar carries (LightCraft's own, or another editor's `crs:` ones).
+    pub develop: bool,
+}
+
+impl Default for ReadFromPhotos {
+    fn default() -> Self {
+        ReadFromPhotos::ALL
+    }
+}
+
+impl ReadFromPhotos {
+    pub const ALL: ReadFromPhotos = ReadFromPhotos { keywords: true, ratings: true, descriptions: true, location: true, develop: true };
+    /// The kinds, by the names commands know them under.
+    pub const KINDS: [&'static str; 5] = ["keywords", "ratings", "descriptions", "location", "develop"];
+
+    pub fn is_all(&self) -> bool {
+        *self == ReadFromPhotos::ALL
+    }
+
+    /// What reading this much leaves in the file.
+    pub fn left(&self) -> lightcraft_catalog::LeftInFile {
+        lightcraft_catalog::LeftInFile {
+            keywords: !self.keywords,
+            ratings: !self.ratings,
+            descriptions: !self.descriptions,
+            location: !self.location,
+            develop: !self.develop,
+        }
+    }
+
+    /// Everything but what was left in a photo's file: what a later look at its sidecar reads.
+    pub fn but(left: lightcraft_catalog::LeftInFile) -> ReadFromPhotos {
+        ReadFromPhotos {
+            keywords: !left.keywords,
+            ratings: !left.ratings,
+            descriptions: !left.descriptions,
+            location: !left.location,
+            develop: !left.develop,
+        }
+    }
+
+    /// What a file said about the photo, less the kinds that are not read.
+    pub fn of_the_file(&self, m: &mut lightcraft_catalog::Meta) {
+        if !self.keywords {
+            m.keywords.clear();
+            m.regions.clear();
+        }
+        if !self.descriptions {
+            for text in [
+                &mut m.title,
+                &mut m.caption,
+                &mut m.alt_text,
+                &mut m.extended_description,
+                &mut m.copyright,
+                &mut m.usage_terms,
+                &mut m.copyright_url,
+                &mut m.creator,
+            ] {
+                text.clear();
+            }
+            m.copyright_status = Default::default();
+        }
+        if !self.location {
+            m.gps = None;
+            for place in [&mut m.location, &mut m.city, &mut m.state, &mut m.country] {
+                place.clear();
+            }
+        }
+    }
+
+    /// What a sidecar said about the photo, less the kinds that are not read.
+    pub(crate) fn of_the_sidecar(&self, mut sc: crate::sidecar::SidecarData) -> crate::sidecar::SidecarData {
+        if !self.keywords {
+            (sc.keywords, sc.regions) = (None, None);
+        }
+        if !self.ratings {
+            (sc.rating, sc.flag, sc.label, sc.label_text) = (None, None, None, None);
+        }
+        if !self.descriptions {
+            (sc.title, sc.caption, sc.alt_text, sc.extended_description) = (None, None, None, None);
+            (sc.copyright, sc.copyright_marked, sc.usage_terms, sc.copyright_url, sc.creator) = (None, None, None, None, None);
+        }
+        if !self.location {
+            (sc.location, sc.city, sc.state, sc.country) = (None, None, None, None);
+        }
+        if !self.develop {
+            sc.develop = None;
+            // (nothing of its develop settings is carried over: there is nothing to warn of)
+            sc.warnings.clear();
+        }
+        sc
+    }
+
+    /// Whether a sidecar says something of a kind that is not read: what an import leaves in it, and so what a Copy
+    /// has to bring along with the photo ([`Self::of_the_sidecar`] leaves it out of the library).
+    pub(crate) fn skipped_in(&self, sc: &crate::sidecar::SidecarData) -> bool {
+        // (of the same sidecar: what it takes out is what is skipped; its warnings go with the develop settings)
+        let mut read = self.of_the_sidecar(sc.clone());
+        read.warnings.clone_from(&sc.warnings);
+        read != *sc
+    }
+}
+
+/// What one import says about what it reads: each kind, or `None` for the library's choice.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ReadChoice {
+    pub keywords: Option<bool>,
+    pub ratings: Option<bool>,
+    pub descriptions: Option<bool>,
+    pub location: Option<bool>,
+    pub develop: Option<bool>,
+}
+
+impl ReadChoice {
+    /// Everything, whatever the library says: for an import that brings its own account of the
+    /// photos and needs the files' to go with it (a Lightroom catalog's).
+    pub const ALL: ReadChoice =
+        ReadChoice { keywords: Some(true), ratings: Some(true), descriptions: Some(true), location: Some(true), develop: Some(true) };
+
+    /// The choice as a command gives it: an object of the kinds ([`ReadFromPhotos::KINDS`]),
+    /// each true or false; the ones left out are not chosen.
+    pub fn parse(v: &serde_json::Value) -> std::result::Result<ReadChoice, String> {
+        let kinds = ReadFromPhotos::KINDS.join(", ");
+        let Some(given) = v.as_object() else {
+            return Err(format!("`read` is an object of what to read from the photos ({kinds}), each true or false"));
+        };
+        let mut choice = ReadChoice::default();
+        for (kind, read) in given {
+            let Some(read) = read.as_bool() else { return Err(format!("`read.{kind}` is true or false ({kinds})")) };
+            match kind.as_str() {
+                "keywords" => choice.keywords = Some(read),
+                "ratings" => choice.ratings = Some(read),
+                "descriptions" => choice.descriptions = Some(read),
+                "location" => choice.location = Some(read),
+                "develop" => choice.develop = Some(read),
+                other => return Err(format!("`read` has no `{other}`: it is one of {kinds}")),
+            }
+        }
+        Ok(choice)
+    }
+
+    /// A choice of every kind.
+    pub fn of(read: ReadFromPhotos) -> ReadChoice {
+        ReadChoice {
+            keywords: Some(read.keywords),
+            ratings: Some(read.ratings),
+            descriptions: Some(read.descriptions),
+            location: Some(read.location),
+            develop: Some(read.develop),
+        }
+    }
+
+    /// What is read, the parts not chosen as `otherwise` (the library) has them.
+    pub fn over(&self, otherwise: ReadFromPhotos) -> ReadFromPhotos {
+        ReadFromPhotos {
+            keywords: self.keywords.unwrap_or(otherwise.keywords),
+            ratings: self.ratings.unwrap_or(otherwise.ratings),
+            descriptions: self.descriptions.unwrap_or(otherwise.descriptions),
+            location: self.location.unwrap_or(otherwise.location),
+            develop: self.develop.unwrap_or(otherwise.develop),
+        }
+    }
 }
 
 /// How copies are filed in the destination. The date is the capture time, else the time of the
@@ -321,6 +506,10 @@ pub struct ImportDefaults {
     /// another path) as photos of their own: "Don't import files already in the library" turned
     /// off, and kept as it was last left. Off (such files left out) unless turned on.
     pub import_duplicates: bool,
+    /// What imports read from the photos themselves, unless one says otherwise (everything,
+    /// until chosen): also photos that are dropped in, found by Auto Import or Synchronize
+    /// Folder, or browsed in place.
+    pub read: ReadFromPhotos,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -350,12 +539,19 @@ impl ImportDefaults {
 /// Give a freshly imported photo its default settings: the camera defaults, then the matching
 /// default preset ([`ImportDefaults::preset_for`]), remembered as the photo's import look.
 pub fn apply_import_defaults(s: &Session, p: &mut Photo) {
-    // metadata defaults fill gaps only: the file's own copyright / creator win
+    apply_import_defaults_beside(s, p, (false, false));
+}
+
+/// [`apply_import_defaults`] for a photo whose file has a copyright / a creator of its own
+/// that was not read (`own`): it is not given the library's in its place.
+fn apply_import_defaults_beside(s: &Session, p: &mut Photo, own: (bool, bool)) {
+    // metadata defaults fill gaps only: the file's own copyright / creator win, also when they
+    // were left in the file
     let d = &s.import_defaults;
-    if p.meta.copyright.trim().is_empty() && !d.copyright.trim().is_empty() {
+    if p.meta.copyright.trim().is_empty() && !d.copyright.trim().is_empty() && !own.0 {
         p.meta.copyright = d.copyright.trim().to_string();
     }
-    if p.meta.creator.trim().is_empty() && !d.creator.trim().is_empty() {
+    if p.meta.creator.trim().is_empty() && !d.creator.trim().is_empty() && !own.1 {
         p.meta.creator = d.creator.trim().to_string();
     }
     if let Some(mp) = d.metadata_preset.as_ref().and_then(|n| s.metadata_presets.iter().find(|m| m.name.eq_ignore_ascii_case(n))) {
@@ -1103,7 +1299,10 @@ fn normalize_import_path(path: &str) -> String {
 impl ImportJob {
     /// Snapshot what an import with `opts` needs from the session (no file-system calls). Takes
     /// the probes a preceding scan left ([`Session::import_probes`]).
-    pub fn new(s: &mut Session, opts: ImportOptions) -> crate::Result<Self> {
+    pub fn new(s: &mut Session, mut opts: ImportOptions) -> crate::Result<Self> {
+        // what is read from the photos is settled once, for all of the import: this import's
+        // choice, else the library's as it is now
+        opts.read = ReadChoice::of(opts.read.over(s.import_defaults.read));
         let mode = opts.mode;
         // Only a library on disk has an `Originals/` folder. The browser build keeps the bytes of
         // every added file in its own storage already, so "copy" there means "add".
@@ -1320,7 +1519,11 @@ impl ImportJob {
             // the XMP sidecar (or a raw's embedded XMP), read before copying: its capture time files
             // and names the copy when the file itself has none
             let raw = info.kind == MediaKind::Raw;
-            let packet = found_sidecar.and_then(|f| std::fs::read_to_string(f).ok()).or_else(|| info.xmp.clone().filter(|_| raw));
+            let sidecar_file = found_sidecar;
+            let file_packet = sidecar_file.as_ref()
+                .and_then(|f| std::fs::read_to_string(f).ok());
+            let from_file = file_packet.is_some();
+            let packet = file_packet.or_else(|| info.xmp.clone().filter(|_| raw));
             let target = crate::crs::Target::for_file(info.kind, &info.format, info.preview_only.is_some(), &info.meta.camera);
             let sidecar = packet.and_then(|x| match crate::sidecar::parse_sidecar(&x, target) {
                 Ok(sc) => Some(sc),
@@ -1346,6 +1549,8 @@ impl ImportJob {
                     let mut q = Photo::new(PhotoId(0), Source::File { path: path.clone() }, &own, &info.format, 0, 0, &self.now);
                     q.captured = info.captured.clone();
                     q.meta = info.meta.clone();
+                    // (what is not read names no file or folder either)
+                    opts.read.over(ReadFromPhotos::ALL).of_the_file(&mut q.meta);
                     let name = opts.rename.as_deref().filter(|t| !t.trim().is_empty()).map(|t| {
                         let n = crate::rename::expand(t, &q, self.seq);
                         self.seq += 1;
@@ -1374,8 +1579,18 @@ impl ImportJob {
                     };
                     // Copy as DNG: the copied raw becomes a DNG (the copy is ours to replace)
                     let dng = opts.convert_dng && mode == ImportMode::Copy && raw && !info.format.eq_ignore_ascii_case("DNG");
+                    // Copy: a sidecar that holds a kind this import leaves unread goes with the copy
+                    let bring_sidecar = sidecar_file
+                        .as_ref()
+                        .filter(|_| {
+                            mode == ImportMode::Copy
+                                && from_file
+                                && sidecar.as_ref().is_some_and(|sc| opts.read.over(ReadFromPhotos::ALL).skipped_in(sc))
+                        })
+                        // (named after the stem when its own stem is the photo's: the name it was found under, in any case)
+                        .map(|f| (f.clone(), f.file_stem() == Path::new(&path).file_stem()));
                     plan.slots.push(Slot::Transfer);
-                    plan.transfers.push(Transfer { path, info, sidecar, dir, how, dng, family });
+                    plan.transfers.push(Transfer { path, info, sidecar, dir, how, dng, bring_sidecar, family });
                     continue;
                 }
                 (ImportMode::Move, _) => {
@@ -1442,6 +1657,8 @@ struct Transfer {
     how: How,
     /// Copy as DNG.
     dng: bool,
+    /// Copy: the source's sidecar (and whether it is named after the stem) that goes with the copy.
+    bring_sidecar: Option<(PathBuf, bool)>,
     /// The folder (lowercase) and [`name_family`]: transfers of one family can take each other's
     /// names, so they never run at the same time.
     family: (String, String),
@@ -1554,7 +1771,7 @@ fn run_transfers(
 
 /// Copy or move one planned file (and Copy as DNG); its item.
 fn run_transfer(t: Transfer, file_bytes: Option<&crate::merge::ByteReader>) -> PreparedItem {
-    let Transfer { path, mut info, sidecar, dir, how, dng, .. } = t;
+    let Transfer { path, mut info, sidecar, dir, how, dng, bring_sidecar, .. } = t;
     let mut placed = None;
     let mut stored = match how {
         How::Place { name } => match crate::import_move::place(Path::new(&path), &dir, &name) {
@@ -1583,6 +1800,13 @@ fn run_transfer(t: Transfer, file_bytes: Option<&crate::merge::ByteReader>) -> P
             Err(e) => log::warn!("import {path}: copy as DNG: {e}"),
         }
     }
+    // what this import leaves unread is in the source's sidecar: it goes with the copy, which is nothing without it
+    if let Some((sc, stem)) = &bring_sidecar
+        && let Err(e) = crate::import_move::copy_sidecar_beside(sc, *stem, Path::new(&stored))
+    {
+        let _ = std::fs::remove_file(&stored);
+        return PreparedItem::Failed(path, e);
+    }
     PreparedItem::Ready(Box::new(ReadyFile { path, stored, info, sidecar, placed }))
 }
 
@@ -1601,6 +1825,8 @@ fn trashed_file_is_gone(cat: &lightcraft_catalog::Catalog, id: PhotoId) -> bool 
 /// taken back.
 pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepared: Prepared) -> crate::Result<ImportReport> {
     let now = now.to_string();
+    // what is read from the photos themselves: this import's choice, else the library's
+    let read = opts.read.over(s.import_defaults.read);
     let mut report = ImportReport { scanned: prepared.scanned, ..Default::default() };
     let mut ops = Vec::new();
     // Move: placed at the destination, sources untouched until the records are committed
@@ -1715,7 +1941,16 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 {
                     *h = format!("{h}:dup{}", id.0);
                 }
-                let sidecar = sidecar.map(|sc| sc.resolve_label(&s.catalog)).filter(|sc| *sc != crate::sidecar::SidecarData::default());
+                // the photo's own copyright and creator, read or not: the library's defaults are
+                // for photos that have none
+                let stated = |file: &str, sidecar: Option<&String>| !file.trim().is_empty() || sidecar.is_some_and(|s| !s.trim().is_empty());
+                let own = (
+                    stated(&info.meta.copyright, sidecar.as_ref().and_then(|sc| sc.copyright.as_ref())),
+                    stated(&info.meta.creator, sidecar.as_ref().and_then(|sc| sc.creator.as_ref())),
+                );
+                // (only the kinds this import reads: the others stay in the file and its sidecar)
+                let sidecar =
+                sidecar.map(|sc| read.of_the_sidecar(sc).resolve_label(&s.catalog)).filter(|sc| *sc != crate::sidecar::SidecarData::default());
                 // a copy is catalogued under its new name
                 let name = Path::new(&stored).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.clone());
                 let mut p = Photo::new(id, Source::File { path: stored }, &name, &info.format, info.width, info.height, &now);
@@ -1723,11 +1958,14 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 p.file_size = info.file_size;
                 p.captured = info.captured;
                 p.meta = info.meta;
+                read.of_the_file(&mut p.meta);
+                // (what was not read is the file's still: a sidecar written later leaves it there)
+                p.left_in_file = read.left();
                 p.as_shot_wb = info.as_shot_wb;
                 p.content_hash = hash;
                 p.embedded_lens = info.embedded_lens;
                 p.set_preview_only(info.preview_only.clone());
-                apply_import_defaults(s, &mut p);
+                apply_import_defaults_beside(s, &mut p, own);
                 if let Some(sc) = &sidecar {
                     crate::sidecar::merge_into(&mut p, sc, &now);
                     report.sidecars += 1;
