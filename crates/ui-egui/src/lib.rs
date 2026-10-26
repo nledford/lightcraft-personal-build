@@ -36,6 +36,7 @@ pub mod menus;
 pub mod merge;
 mod model_setup;
 pub mod motion;
+pub mod move_task;
 pub mod panels;
 pub mod pick;
 pub mod print_view;
@@ -609,6 +610,8 @@ pub struct LightcraftApp {
     /// How far the backup the library has when LightCraft quits has got in this quit (see
     /// `panels::notices`).
     pub quit_backup: QuitBackup,
+    /// Quit Anyway was chosen while photos were moving: the move (which has no ✕) is cut short.
+    pub quit_cuts_move: bool,
     control_rx: Option<Receiver<ControlRequest>>,
     pending_screenshots: Vec<PendingShot>,
     /// Synthetic-input control requests waiting for a fresh layout and delivery (plan §4.5).
@@ -745,6 +748,10 @@ pub struct LightcraftApp {
     pub sync_ready: Option<sync::SyncReady>,
     /// A Synchronize Folder at work in the background.
     pub sync_run: Option<sync::SyncRun>,
+    /// Photos being moved to another folder in the background (`move_task`).
+    pub move_run: Option<move_task::MoveRun>,
+    /// How the last background move ended (`ui.inspect` → `move.last`).
+    pub last_move: Option<Value>,
     /// A Lightroom catalog inspect/import in progress.
     pub lightroom: Option<lightroom_import::LightroomTask>,
     /// Last terminal Lightroom result, exposed by the command's status/wait response.
@@ -854,6 +861,7 @@ impl LightcraftApp {
             notice_input: Default::default(),
             quit_confirmed: false,
             quit_backup: QuitBackup::default(),
+            quit_cuts_move: false,
             control_rx: None,
             pending_screenshots: vec![],
             pending_gestures: vec![],
@@ -917,6 +925,8 @@ impl LightcraftApp {
             sync_scanned_at: f64::NEG_INFINITY,
             sync_ready: None,
             sync_run: None,
+            move_run: None,
+            last_move: None,
             lightroom: None,
             lightroom_last: None,
             lightroom_result: None,
@@ -1242,6 +1252,11 @@ impl LightcraftApp {
                 // no detector yet: offer it (its terms first) instead of only saying so
                 if id == "faces.detect" && refusal.kind == ErrorKind::ModelMissing(AiModel::FaceDetector) {
                     panels::faces::offer_detector(self);
+                }
+                // a move running in the background is in the way: said wherever the command came from (a menu, a key, a
+                // button), since the status line isn't drawn
+                if e.kind == ErrorKind::MoveInProgress {
+                    self.toast_move_in_progress(&e.message);
                 }
             }
             Ok(v) if id == "faces.detect" => self.ui.status = detect_summary(v),
@@ -1613,6 +1628,13 @@ impl LightcraftApp {
         } else {
             self.toast(ctx, notice);
         }
+    }
+
+    /// Tell the person that a background move of photos is in the way of what they asked (stays 6 s). The time is the
+    /// app clock's, which a menu click that arrives before the next frame reads as well.
+    fn toast_move_in_progress(&mut self, text: &str) {
+        let now = self.tick_now();
+        self.ui.toast = Some((text.to_string(), now + 6.0, None));
     }
 
     /// Take the control receiver for this frame, run every queued request whose sender still
@@ -2312,6 +2334,14 @@ impl LightcraftApp {
         self.pending_screenshots = keep;
     }
 
+    /// Called as the app exits, before the library is saved and closed: a move whose worker has
+    /// already finished (its result waiting for the next frame) is applied now, so the catalog
+    /// matches the files. A worker still running is abandoned, as quitting always did.
+    pub fn finish_ready_move(&mut self) {
+        let ctx = self.tasks.repaint.clone().unwrap_or_default();
+        move_task::poll(self, &ctx);
+    }
+
     /// The process is about to end (settings and library are saved by then): make sure nothing is
     /// inside the GPU driver when it does (issue #620: a render running on a worker thread while
     /// the process exits crashes in the driver). No GPU work starts from here on; the render
@@ -2416,6 +2446,7 @@ impl LightcraftApp {
         import::poll_scan(self, ctx);
         sync::poll(self, ctx);
         sync::poll_run(self, ctx);
+        move_task::poll(self, ctx);
         // Import commits batches and must not run twice in one host frame. The first layout pass
         // and a hidden logic tick both report pass index 0; a second pass reports 1. A wall-clock
         // gate cannot express that (a slow discarded first pass would re-run it).

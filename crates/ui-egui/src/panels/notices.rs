@@ -50,7 +50,14 @@ pub fn may_close(app: &mut LightcraftApp) -> bool {
         return true;
     }
     // before the library is touched: a Cancel here keeps working with it
-    let running = tasks_quitting_would_stop(app);
+    let mut running = tasks_quitting_would_stop(app);
+    // photos on their way to another folder can't be stopped, but quitting cuts the move short
+    if app.move_run.is_some()
+        && !app.quit_cuts_move
+        && let Some(task) = app.session.activity.list().into_iter().find(|t| t.kind == "move")
+    {
+        running.push(task);
+    }
     if !running.is_empty() {
         let names = running.iter().map(|t| crate::i18n::tr(&t.label)).collect::<Vec<_>>().join(", ");
         app.quit_prompt = Some(QuitPrompt::Tasks(if running.len() == 1 {
@@ -168,6 +175,7 @@ fn backup_failed(app: &mut LightcraftApp, why: &str) {
 /// The quit was called off: the next one starts over, with its own question about the backup.
 fn quit_called_off(app: &mut LightcraftApp) {
     app.quit_prompt = None;
+    app.quit_cuts_move = false;
     app.quit_backup = QuitBackup::Undecided;
 }
 
@@ -699,6 +707,8 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
                 // (one that ended meanwhile has nothing left to stop)
                 let _ = app.session.activity.cancel(task.id);
             }
+            // a move can't be stopped, so choosing to quit is what lets it be cut short
+            app.quit_cuts_move = true;
             // the backup and unsaved changes still get their own questions
             if may_close(app) {
                 app.ui.quit = true;

@@ -2474,5 +2474,7 @@
   "This folder stays listed while the grid shows its photos": "Esta carpeta sigue en la lista mientras la cuadrícula muestre sus fotos",
   "Keyboard in Sidebar": "Teclado en la barra lateral",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Las teclas están en la barra lateral: las flechas mueven, Intro abre, escribe para buscar, Esc vuelve a las fotos",
-  "This row has no name to change": "Esta fila no tiene un nombre que cambiar"
+  "This row has no name to change": "Esta fila no tiene un nombre que cambiar",
+  "Moving photos": "Moviendo fotos",
+  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "Un error detuvo el movimiento (consulta el registro). La biblioteca sigue los archivos que ya se habían movido; un archivo sidecar XMP puede haberse quedado en el lugar anterior."
 }

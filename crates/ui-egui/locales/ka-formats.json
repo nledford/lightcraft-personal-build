@@ -106,7 +106,6 @@
   "Matches: {}": "დამთხვევა: {}",
   "Merging… {stage} {:.0}%": "გაერთიანება… {stage} {:.0}%",
   "Move {what} to Recently Deleted?": "გადავიდეს {what} ახლახან წაშლილებში?",
-  "Moved {} photo(s)": "გადატანილია ფოტო: {}",
   "Moved; {} photo(s) relinked": "გადატანილია; ხელახლა დაკავშირდა ფოტო: {}",
   "Named ({named_n})": "სახელიანი ({named_n})",
   "New Folder in “{name}”": "ახალი საქაღალდე „{name}“-ში",
@@ -317,7 +316,6 @@
   "Move {n} photo{} to “{}”": "Move {n} photo{} to “{}”",
   "Move {n} photo{} to “{}”?": "Move {n} photo{} to “{}”?",
   "Listing folders — folders: {folders}, files: {files}": "საქაღალდეების ჩამოთვლა — საქაღალდეები: {folders}, ფაილები: {files}",
-  "Moved {n} photo{} to “{}”. Edit → Undo moves them back.": "Moved {n} photo{} to “{}”. Edit → Undo moves them back.",
   "Drop to review {n} item{} for import": "ჩააგდეთ იმპორტამდე გადასახედად (ელემენტები: {n}){:.0}",
   "Drop to import {n} item{}": "ჩააგდეთ იმპორტისთვის (ელემენტები: {n}){:.0}",
   "Drop to import {n} preset{}": "ჩააგდეთ პრესეტების იმპორტისთვის: {n}{:.0}",
@@ -334,5 +332,6 @@
   "Look at the changes found in “{name}” first, or dismiss them": "ჯერ ნახეთ „{name}“-ში ნაპოვნი ცვლილებები, ან უარყავით ისინი",
   "Lists “{name}”, the folder this one is in": "აჩვენებს „{name}“-ს, საქაღალდეს, რომელშიც ეს არის",
   "Showing {what}": "ნაჩვენებია: {what}",
-  "{title}, showing {what}": "{title}, ნაჩვენებია: {what}"
+  "{title}, showing {what}": "{title}, ნაჩვენებია: {what}",
+  "Moved {n} photo{} to “{}”. Edit → Undo moves them back.": "„{1}“-ში გადატანილია ფოტო: {n}{0:.0}. რედაქტირება → გაუქმება დააბრუნებს მათ."
 }

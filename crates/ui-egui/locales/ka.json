@@ -2850,5 +2850,7 @@
   "This folder stays listed while the grid shows its photos": "ეს საქაღალდე სიაში რჩება, სანამ ბადე მის ფოტოებს აჩვენებს",
   "Keyboard in Sidebar": "კლავიატურა გვერდით ზოლში",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "კლავიშები გვერდით ზოლს მართავს: ისრები გადაადგილებს, Enter ხსნის, აკრიფეთ საძებნად, Esc ფოტოებს უბრუნდება",
-  "This row has no name to change": "ამ მწკრივს შესაცვლელი სახელი არ აქვს"
+  "This row has no name to change": "ამ მწკრივს შესაცვლელი სახელი არ აქვს",
+  "Moving photos": "ფოტოების გადატანა",
+  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "გადატანა შეცდომის გამო შეჩერდა (იხილეთ ჟურნალი). ბიბლიოთეკა მიჰყვება უკვე გადატანილ ფაილებს; XMP გვერდითი ფაილი შეიძლება ძველ ადგილას დარჩენილიყოს."
 }

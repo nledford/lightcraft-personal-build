@@ -2543,5 +2543,7 @@
   "Drag any slider: the original never changes.": "Dra i valfritt reglage: originalet ändras aldrig.",
   "That's your first edit.": "Det är din första redigering.",
   "View → Before/After Side by Side shows it beside the original.": "Visa → Före/efter sida vid sida visar den bredvid originalet.",
-  "The original beside your edit: the file itself never changes.": "Originalet bredvid din redigering: själva filen ändras aldrig."
+  "The original beside your edit: the file itself never changes.": "Originalet bredvid din redigering: själva filen ändras aldrig.",
+  "Moving photos": "Flyttar foton",
+  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "Flyttningen stoppades av ett fel (se loggen). Biblioteket följer de filer som redan flyttats; en XMP-sidofil kan ha blivit kvar på den gamla platsen."
 }

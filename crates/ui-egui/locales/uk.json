@@ -2470,5 +2470,7 @@
   "This folder stays listed while the grid shows its photos": "Ця тека лишається у списку, доки сітка показує її фотографії",
   "Keyboard in Sidebar": "Клавіатура в бічній панелі",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Клавіші працюють у бічній панелі: стрілки переміщують, Enter відкриває, набір тексту шукає, Esc повертає до фотографій",
-  "This row has no name to change": "Цей рядок не має назви, яку можна змінити"
+  "This row has no name to change": "Цей рядок не має назви, яку можна змінити",
+  "Moving photos": "Переміщення фото",
+  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "Переміщення зупинено через помилку (див. журнал). Бібліотека слідує за вже переміщеними файлами; супровідний файл XMP міг залишитися на старому місці."
 }
