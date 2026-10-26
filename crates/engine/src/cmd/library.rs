@@ -743,13 +743,13 @@ pub fn specs() -> Vec<CommandSpec> {
             "Enable Filters",
             ["View"],
             Some("Cmd+L"),
-            "{} — with a filter set, puts it aside and shows everything; with one put aside, brings it back as it was (stars, flag, text… together). Setting or clearing a filter while it is off forgets the one put aside → {enabled, count}",
+            "{} — with a filter set, puts it aside and shows everything; with one put aside, brings it back as it was (stars, flag, text… together), except its library folder or album when a library folder or an album is shown now. Setting or clearing a filter while it is off forgets the one put aside → {enabled, count}",
             always,
             |s, _| {
                 if s.filter != Filter::default() {
                     s.shelved_filter = Some(std::mem::take(&mut s.filter));
                 } else if let Some(mut f) = s.shelved_filter.take() {
-                    // one folder at a time: the folder shown now wins over the one the filter had
+                    // one folder or album at a time: the one shown now wins over the one the filter had
                     if s.source == LibrarySource::LibraryFolder {
                         f.library_folder = None;
                         f.library_folders.clear();
@@ -757,6 +757,9 @@ pub fn specs() -> Vec<CommandSpec> {
                     // the album(s) shown are what the grid shows: albums in the filter would be ignored
                     if matches!(s.source, LibrarySource::Album(_)) {
                         f.albums.clear();
+                    }
+                    if matches!(s.source, LibrarySource::Album(_)) {
+                        f.album = None;
                     }
                     s.filter = f;
                 }
