@@ -13,6 +13,7 @@ use egui::{Color32, Rect};
 use serde_json::{Value, json};
 
 use crate::headless::Headless;
+use crate::panels::library_problem::LibraryProblem;
 use crate::panels::settings::TABS;
 use crate::theme::{TextSize, ThemeKind, Tokens};
 use crate::{LightcraftApp, Services};
@@ -347,6 +348,36 @@ fn the_warnings_of_the_slideshow_overlays_can_be_read_in_every_theme() {
         assert!(h.painted_text().iter().any(|t| t.contains("isn't a token")), "{kind:?}: the warning is on the page");
         // Then it stands 4.5:1 from the panel
         assert_readable(&h, kind, "Settings ▸ slideshow, an overlay warning", &mut bad);
+    }
+    report(bad);
+}
+
+#[test]
+fn the_unknown_tag_warning_of_a_template_can_be_read_in_every_theme() {
+    let mut bad = Vec::new();
+    for kind in ThemeKind::ALL {
+        let mut h = demo(kind);
+        // Given photos chosen, and the Rename dialog open with a template that has a tag that is no token
+        run(&mut h, "library.select", json!({"ids": [1, 2]}));
+        run(&mut h, "dialog.rename", json!({"template": "{notatoken}-{seq:3}"}));
+        assert!(h.painted_text().iter().any(|t| t.contains("as typed")), "{kind:?}: the template is warned about");
+        // Then the warning stands 4.5:1 from the dialog
+        assert_readable(&h, kind, "Rename, an unknown tag", &mut bad);
+    }
+    report(bad);
+}
+
+#[test]
+fn the_temporary_session_banner_can_be_read_in_every_theme() {
+    let mut bad = Vec::new();
+    for kind in ThemeKind::ALL {
+        // Given a session that is temporary (the library did not open), in a theme
+        let mut h = demo(kind);
+        h.app.library_problem = Some(LibraryProblem { dismissed: true, ..LibraryProblem::new("/no/such/library", "a test error") });
+        rest(&mut h);
+        assert!(h.app.widgets.iter().any(|(w, _)| w == "indicator:temporarySession"), "{kind:?}: the banner is shown");
+        // Then its words and its button stand 4.5:1 from the caution colour it is filled with
+        assert_readable(&h, kind, "the temporary-session banner", &mut bad);
     }
     report(bad);
 }

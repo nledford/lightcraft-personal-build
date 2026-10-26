@@ -498,12 +498,22 @@ fn marks_row(ctx: &egui::Context, p: &Painter, t: &Tokens, m: &Metrics, th: &Thu
         p.rect_filled(bar, 0.0, Color32::from_black_alpha(120));
     }
     let flag_w = if layout.flag { m.flag } else { 0.0 };
+    // (where the stars and the flag cannot close up enough to stay clear of the marks at the right, those
+    // marks give way, the label's dot first: a labeled cell is tinted by its label as well, and the
+    // "edited" mark has no other sign. With nothing at the left there is nothing to keep apart.)
+    let mut layout = layout;
+    let stars_n = match layout.stars {
+        Stars::Row(n) => usize::from(n),
+        _ => 0,
+    };
+    let fit = crate::widgets::badge_marks_in(bar.width(), stars_n, flag_w, layout.edited, layout.label, m.pad + 3.0, m.edited, m.label, m.star_pitch);
+    layout.edited = fit.edited;
+    layout.label = fit.label;
     let right_w = if layout.edited { m.edited } else { 0.0 } + if layout.label { m.label } else { 0.0 };
     // (on a narrow photo the stars close up, so that the flag after them is still inside the bar it is
     // clipped to, and clear of the shade under the marks at the right, 6 points beyond it)
-    let room = bar.width() - m.pad - 3.0 - right_w - if right_w > 0.0 { 6.0 } else { 0.0 };
     let pitch = match layout.stars {
-        Stars::Row(n) => crate::widgets::star_pitch(room, usize::from(n), flag_w, m.star_pitch),
+        Stars::Row(_) => fit.pitch,
         _ => m.star_pitch,
     };
     let marks_w = match layout.stars {

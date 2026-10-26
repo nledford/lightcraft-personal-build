@@ -962,7 +962,7 @@ fn backups(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     // shown anew, when the library or the folder changes and when a backup starts or ends, not
     // on a timer: a sleeping or missing drive is not asked again and again.
     let running = lightcraft_engine::cmd::backup::status(&app.session).is_some_and(|job| !job.finished.load(std::sync::atomic::Ordering::Relaxed));
-    let look_id = egui::Id::new("backup-folder-look");
+    let look_id = egui::Id::unique("backup-folder-look");
     let pass = ui.ctx().cumulative_pass_nr();
     let library = app.session.library.as_ref().map(|l| l.dir.display().to_string()).unwrap_or_default();
     // (the library's id too: a restore puts another library where this one was, and a backup is

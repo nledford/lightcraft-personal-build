@@ -987,6 +987,38 @@ mod tests {
         assert_eq!(star_pitch(1.0, stars, flag_w, full), 3.0, "never closer than 3 pt");
     }
 
+    /// Given a square cell narrow enough that the stars and flag at the left and the marks at the right cannot all fit,
+    /// When the badge bar is laid out,
+    /// Then no mark at the left reaches the shade under the marks at the right, whatever the width and the marks.
+    #[test]
+    fn the_marks_of_a_narrow_badge_bar_never_lie_on_each_other() {
+        for width in (30..=200).map(|w| w as f32) {
+            for stars in 0..=5_usize {
+                for flag_w in [0.0_f32, 18.0] {
+                    for (edited, label) in [(false, false), (true, false), (false, true), (true, true)] {
+                        let marks = badge_marks(width, stars, flag_w, edited, label);
+                        let at = format!("width {width}, {stars} stars, flag {flag_w}, edited {edited}, label {label}: {marks:?}");
+                        assert!(marks.pitch >= 3.0 && marks.pitch <= 13.0, "{at}");
+                        assert!((!marks.edited || edited) && (!marks.label || label), "{at}: only marks that were asked for");
+                        let left_end = 9.0 + stars as f32 * marks.pitch + flag_w;
+                        let right_w = if marks.edited { 20.0 } else { 0.0 } + if marks.label { 20.0 } else { 0.0 };
+                        // (with no mark at the left there is nothing to keep apart)
+                        if right_w > 0.0 && (stars > 0 || flag_w > 0.0) {
+                            assert!(left_end <= width - right_w - 6.0, "{at}: the left marks end at {left_end}");
+                        }
+                    }
+                }
+            }
+        }
+        // a wide bar keeps every mark it was given
+        assert_eq!(badge_marks(400.0, 5, 18.0, true, true), BadgeMarks { pitch: 13.0, edited: true, label: true });
+        // a narrow bar gives up the label's dot before the "edited" mark, which has no other sign
+        let marks = badge_marks(80.0, 5, 18.0, true, true);
+        assert!(marks.edited && !marks.label, "{marks:?}");
+        // and a bar with nothing at the left keeps the marks at the right, however narrow
+        assert_eq!(badge_marks(30.0, 0, 0.0, true, true), BadgeMarks { pitch: 13.0, edited: true, label: true });
+    }
+
     #[test]
     fn nudges_are_a_sensible_step() {
         let spec = |id, min, max, step| ControlSpec {
@@ -1167,6 +1199,47 @@ pub(crate) fn star_pitch(room: f32, stars: usize, flag_w: f32, full: f32) -> f32
         return full;
     }
     ((room - flag_w) / stars as f32).clamp(3.0, full)
+}
+
+/// Which marks a thumbnail's badge bar has room for, and how its stars are spaced ([`badge_marks`]).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct BadgeMarks {
+    /// [`star_pitch`] of the stars.
+    pub pitch: f32,
+    /// Whether the "edited" mark at the right is drawn.
+    pub edited: bool,
+    /// Whether the color label's dot at the right is drawn.
+    pub label: bool,
+}
+
+/// What a badge bar `bar_w` wide holds: the stars and the flag (`flag_w`) from the left, and at the right the "edited"
+/// mark (20 wide) and the label's dot (20 wide), a 6 point gap between the two groups. The stars close up as far as
+/// [`star_pitch`] lets them; when they and the flag still do not fit beside the marks at the right, those marks go, the
+/// label's dot first (a labeled cell is tinted by its label as well, and the "edited" mark has no other sign), so that no
+/// mark lies on another. With nothing at the left there is nothing to keep apart.
+pub(crate) fn badge_marks_in(bar_w: f32, stars: usize, flag_w: f32, edited: bool, label: bool, lead: f32, edited_w: f32, label_w: f32, max_pitch: f32) -> BadgeMarks {
+    let right = |edited: bool, label: bool| {
+        let w = if edited { edited_w } else { 0.0 } + if label { label_w } else { 0.0 };
+        (w, if w > 0.0 { 6.0 } else { 0.0 })
+    };
+    let fits = |room: f32| (stars == 0 && flag_w == 0.0) || stars as f32 * 3.0 + flag_w <= room;
+    let layout = |edited: bool, label: bool| {
+        let (w, gap) = right(edited, label);
+        let room = bar_w - lead - w - gap;
+        (BadgeMarks { pitch: star_pitch(room, stars, flag_w, max_pitch), edited, label }, fits(room))
+    };
+    // (the last resort, no marks at the right, is what a bar too narrow for anything is left with)
+    [(edited, label), (edited, false)]
+        .into_iter()
+        .map(|(edited, label)| layout(edited, label))
+        .find_map(|(marks, fits)| fits.then_some(marks))
+        .unwrap_or_else(|| layout(false, false).0)
+}
+
+/// [`badge_marks_in`] with the square grid's measures.
+#[cfg(test)]
+pub(crate) fn badge_marks(bar_w: f32, stars: usize, flag_w: f32, edited: bool, label: bool) -> BadgeMarks {
+    badge_marks_in(bar_w, stars, flag_w, edited, label, 9.0, 20.0, 20.0, 13.0)
 }
 
 /// `text` shortened to fit `max` (as `width` measures it): leading folders drop first

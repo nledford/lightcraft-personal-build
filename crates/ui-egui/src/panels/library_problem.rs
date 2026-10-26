@@ -1235,6 +1235,9 @@ pub fn banner(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     }
     let t = Tokens::get(ui.ctx());
     let mut reopen = false;
+    // what is written on the caution colour is black or white, whichever stands out more; the button's veil goes the
+    // other way, so that it never takes the ink's contrast down
+    let ink = t.ink_on(t.caution);
     egui::Panel::top("library-problem-banner")
         .exact_size(30.0)
         .frame(egui::Frame::NONE.fill(t.caution).inner_margin(egui::Margin::symmetric(12, 0)))
@@ -1243,7 +1246,7 @@ pub fn banner(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 let r = ui.label(
                     RichText::new(crate::i18n::tr("Temporary session — your library isn't open, and nothing you do here is saved."))
                         .font(t.body_strong())
-                        .color(t.canvas),
+                        .color(ink),
                 );
                 register(ui, "indicator:temporarySession", r.rect);
                 // Secondary keeps its own fill and border, so it reads on the amber banner
