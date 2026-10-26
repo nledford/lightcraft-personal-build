@@ -315,5 +315,8 @@
   "Folders of what restores replaced, removed: {}": "Folder berisi hasil yang digantikan pemulihan, dihapus: {}",
   "Folders of what restores replaced that could not be removed: {}": "Folder berisi hasil yang digantikan pemulihan yang tidak dapat dihapus: {}",
   "Not available right now: {}": "Saat ini tidak tersedia: {}",
-  ", rating {} of 5": ", rating: {} dari 5"
+  ", rating {} of 5": ", rating: {} dari 5",
+  "Add {n} photo{} to “{}”": "Tambahkan {n} foto{0:.0} ke “{1}”",
+  "Add “{keyword}” to {n} photo{}": "Tambahkan “{keyword}” ke {n} foto{:.0}",
+  "{n} already there": "{n} sudah ada"
 }

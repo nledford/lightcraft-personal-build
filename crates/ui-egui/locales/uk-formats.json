@@ -315,5 +315,8 @@
   "Added {n} photo{}": "Додано фото: {n}{:.0}",
   "Where should the Lightroom catalog “{catalog}” go?": "Куди імпортувати каталог Lightroom «{catalog}»?",
   "Merge into the open library “{library}” ({count} photo{})": "Об’єднати з відкритою бібліотекою «{library}» (фото: {count}){:.0}",
-  ", rating {} of 5": ", оцінка: {} з 5"
+  ", rating {} of 5": ", оцінка: {} з 5",
+  "Add {n} photo{} to “{}”": "Додати до «{1}» фото: {n}{0:.0}",
+  "{n} already there": "{n} уже там",
+  "Add “{keyword}” to {n} photo{}": "Додати «{keyword}» до фото: {n}{:.0}"
 }

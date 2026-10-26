@@ -315,5 +315,8 @@
   "Added {n} photo{}": "{n} photo{} ajoutée(s)",
   "Where should the Lightroom catalog “{catalog}” go?": "Où importer le catalogue Lightroom « {catalog} » ?",
   "Merge into the open library “{library}” ({count} photo{})": "Fusionner avec la bibliothèque ouverte « {library} » ({count} photo{})",
-  ", rating {} of 5": ", note : {} sur 5"
+  ", rating {} of 5": ", note : {} sur 5",
+  "Add {n} photo{} to “{}”": "Ajouter {n} photo{} à « {} »",
+  "{n} already there": "{n} déjà présent(s)",
+  "Add “{keyword}” to {n} photo{}": "Ajouter « {keyword} » à {n} photo{}"
 }

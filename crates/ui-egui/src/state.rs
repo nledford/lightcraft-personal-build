@@ -1430,6 +1430,9 @@ pub enum Dialog {
         ids: Vec<u64>,
         folder: String,
         name: String,
+        /// How many files the move touches (the drag label's count, `files_moved`): photos
+        /// already in the folder stay, and virtual copies of one file move it once.
+        files: usize,
         dont_ask: bool,
         /// The library the photos were dropped in (`Session::library_generation`): ids are
         /// numbered per library, so in another one they name other photos.
@@ -1661,6 +1664,11 @@ impl Default for UiState {
 }
 
 impl UiState {
+    /// Whether photos, an album, a sidebar section or a keyword are being dragged.
+    pub fn drag_active(&self) -> bool {
+        self.dragging_photos.is_some() || self.dragging_album.is_some() || self.dragging_section.is_some() || self.dragging_keyword.is_some()
+    }
+
     /// Which colour grading wheels (shadows, midtones, highlights) are hidden for viewing `photo`.
     pub fn grading_hidden_for(&self, photo: lightcraft_catalog::PhotoId) -> [bool; 3] {
         match self.grading_hidden {

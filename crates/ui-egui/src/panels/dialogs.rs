@@ -1303,8 +1303,8 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                     ui.label(crate::i18n::tr_format!("Move {what} to Recently Deleted?", what = what));
                     ui.label(egui::RichText::new(crate::i18n::tr("They can be restored from Recently Deleted until it is emptied.")).color(t.text_dim));
                 }
-                Dialog::MovePhotos { ids, name, dont_ask, .. } => {
-                    let n = ids.len();
+                Dialog::MovePhotos { files, name, dont_ask, .. } => {
+                    let n = *files;
                     ui.label(crate::i18n::tr_format!("Move {n} photo{} to “{}”?", if n == 1 { "" } else { "s" }, name, n = n));
                     ui.label(egui::RichText::new(crate::i18n::tr("Their files and XMP sidecars move on disk. Edit → Undo moves them back.")).color(t.text_dim));
                     ui.add_space(4.0);

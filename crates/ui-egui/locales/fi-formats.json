@@ -315,5 +315,8 @@
   "Folders of what restores replaced, removed: {}": "Palautusten korvaaman sisällön kansioita poistettu: {}",
   "Folders of what restores replaced that could not be removed: {}": "Palautusten korvaaman sisällön kansioita, joita ei voitu poistaa: {}",
   "Not available right now: {}": "Ei käytettävissä juuri nyt: {}",
-  ", rating {} of 5": ", luokitus: {} / 5"
+  ", rating {} of 5": ", luokitus: {} / 5",
+  "Add {n} photo{} to “{}”": "Lisää kuvia albumiin ”{1}”: {n}{0:.0}",
+  "Add “{keyword}” to {n} photo{}": "Lisää ”{keyword}” kuviin: {n}{:.0}",
+  "{n} already there": "jo albumissa: {n}"
 }

@@ -315,5 +315,8 @@
   "Folders of what restores replaced, removed: {}": "Mappar med det som återställningar ersatt, borttagna: {}",
   "Folders of what restores replaced that could not be removed: {}": "Mappar med det som återställningar ersatt som inte kunde tas bort: {}",
   "Not available right now: {}": "Inte tillgängligt just nu: {}",
-  ", rating {} of 5": ", betyg: {} av 5"
+  ", rating {} of 5": ", betyg: {} av 5",
+  "Add {n} photo{} to “{}”": "Lägg till foton i ”{1}”: {n}{0:.0}",
+  "Add “{keyword}” to {n} photo{}": "Lägg till ”{keyword}” på foton: {n}{:.0}",
+  "{n} already there": "redan i albumet: {n}"
 }
