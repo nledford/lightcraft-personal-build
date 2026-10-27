@@ -7,6 +7,7 @@ use serde_json::json;
 
 use crate::LightcraftApp;
 use crate::icons::{Icon, paint};
+use crate::panels::side_keys;
 use crate::sidebar::SidebarSection;
 use crate::theme::Tokens;
 use crate::widgets::{icon_button, register};
@@ -45,6 +46,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     let frame = egui::Frame::NONE.fill(t.chrome).stroke(egui::Stroke::new(1.0, t.divider));
     frame.show(ui, |ui| {
         ui.spacing_mut().item_spacing.y = 0.0;
+        super::side_keys::begin(app, ui, ui.max_rect());
         // the title offers the sections' menu too: where hidden sections come back from
         let (hr, title) = ui.allocate_exact_size(vec2(ui.available_width(), 44.0), Sense::click());
         crate::widgets::announce(&title, crate::i18n::tr("My Photos"));
@@ -90,18 +92,21 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 ("recentlyAdded", Icon::Clock, "Recently Added", None, LibrarySource::RecentlyAdded),
                 ("picks", Icon::FlagPick, "Picks", Some(picks), LibrarySource::Picks),
             ] {
-                if row(app, ui, id, icon, label, count, src == s, 0.0).clicked() {
+                let resp = row(app, ui, id, icon, label, count, src == s, 0.0);
+                if super::side_keys::chosen(ui, &resp) {
                     let _ = app.run("library.source", json!({"kind": id}));
                 }
             }
             // photos whose files can't be found (checked every few seconds, not every frame)
             let missing = missing_count(app, ui);
-            if (missing > 0 || src == LibrarySource::Missing)
-                && row(app, ui, "missing", Icon::Folder, "Missing Photos", Some(missing), src == LibrarySource::Missing, 0.0).clicked()
-            {
+            if (missing > 0 || src == LibrarySource::Missing) && {
+                let resp = row(app, ui, "missing", Icon::Folder, "Missing Photos", Some(missing), src == LibrarySource::Missing, 0.0);
+                super::side_keys::chosen(ui, &resp)
+            } {
                 let _ = app.run("library.source", json!({"kind": "missing"}));
             }
-            if row(app, ui, "recentlyDeleted", Icon::Trash, "Recently Deleted", Some(deleted), src == LibrarySource::RecentlyDeleted, 0.0).clicked() {
+            let resp = row(app, ui, "recentlyDeleted", Icon::Trash, "Recently Deleted", Some(deleted), src == LibrarySource::RecentlyDeleted, 0.0);
+            if super::side_keys::chosen(ui, &resp) {
                 let _ = app.run("library.source", json!({"kind": "recentlyDeleted"}));
             }
             // the album just made: the folders down to it open, once (also when the section is shut)
