@@ -279,8 +279,8 @@ fn a_photo_s_menu_in_the_grid_offers_it_in_the_library_and_in_recently_deleted()
     let dir = Scratch::new("menu");
     let (mut h, ids, paths) = app(&dir, &["a.jpg", "b.jpg", "c.jpg"]);
     ask(&mut h, "ui.clickWidget", json!({"id": format!("thumb:{}", ids[0]), "button": "right"}));
-    assert!(has(&h, "button:contextTrashFiles"), "beside Delete Photo");
-    click(&mut h, "button:contextTrashFiles");
+    assert!(has(&h, "photomenu:dialog.trashFiles"), "beside Delete Photo");
+    click(&mut h, "photomenu:dialog.trashFiles");
     assert!(matches!(h.app.ui.dialog, Some(Dialog::TrashFiles(TrashAsk::Trash { .. }))));
     ask(&mut h, "ui.dialog.cancel", json!({}));
     // in Recently Deleted: one photo, then all that are left
@@ -290,11 +290,11 @@ fn a_photo_s_menu_in_the_grid_offers_it_in_the_library_and_in_recently_deleted()
     run(&mut h, "library.source", json!({"kind": "recentlyDeleted"}));
     run(&mut h, "library.select", json!({"ids": [ids[0]]}));
     ask(&mut h, "ui.clickWidget", json!({"id": format!("thumb:{}", ids[0]), "button": "right"}));
-    click(&mut h, "button:contextTrashFiles");
+    click(&mut h, "photomenu:dialog.trashFiles");
     click(&mut h, "button:dialogOk");
     assert!(!in_library(&h, ids[0]) && !exists(&paths[0]) && exists(&paths[1]));
     ask(&mut h, "ui.clickWidget", json!({"id": format!("thumb:{}", ids[1]), "button": "right"}));
-    click(&mut h, "button:contextEmptyTrashFiles");
+    click(&mut h, r#"photomenu:dialog.trashFiles|{"recentlyDeleted":true}"#);
     assert_eq!(
         h.app.ui.dialog,
         Some(Dialog::TrashFiles(TrashAsk::Trash {

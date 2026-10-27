@@ -2941,16 +2941,17 @@ fn export_folder_item(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode
         }
         return;
     }
-    let menu = MenuItem::new(crate::i18n::tr("Export Folder with Preset")).widget("folderExportPresetMenu").enabled(blocker.is_none()).submenu(ui, |ui| {
-        for (p, _) in app.session.all_export_presets() {
-            if MenuItem::new(&p.name).widget(format!("folderExportPreset:{}", p.name)).show(ui).clicked() {
-                if let Err(e) = show_all(app).and_then(|()| app.run("app.export", json!({"preset": p.name, "background": true})).map(|_| ())) {
-                    app.toast_error(ui.ctx(), e);
+    let menu =
+        MenuItem::new(crate::i18n::tr("Export Folder with Preset")).widget("folderExportPresetMenu").enabled(blocker.is_none()).submenu(ui, |ui| {
+            for (p, _) in app.session.all_export_presets() {
+                if MenuItem::new(&p.name).widget(format!("folderExportPreset:{}", p.name)).show(ui).clicked() {
+                    if let Err(e) = show_all(app).and_then(|()| app.run("app.export", json!({"preset": p.name, "background": true})).map(|_| ())) {
+                        app.toast_error(ui.ctx(), e);
+                    }
+                    ui.close();
                 }
-                ui.close();
             }
-        }
-    });
+        });
     if let Some(why) = blocker {
         menu.response.on_disabled_hover_text(crate::i18n::tr(why));
     }

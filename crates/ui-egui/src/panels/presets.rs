@@ -51,6 +51,13 @@ impl AppliedPreset {
     }
 }
 
+/// After `preset.apply` of `preset` at `amount` succeeded (here or from a photo's menu): the
+/// panel marks the preset on the photos it changed and offers its Amount slider.
+pub(crate) fn note_applied(ctx: &egui::Context, session: &lightcraft_engine::Session, preset: &str, amount: f64) {
+    AppliedByPhoto::remember(ctx, session, preset);
+    ctx.data_mut(|d| d.insert_temp(egui::Id::unique("preset-amount"), AppliedPreset::new(session, preset.to_string(), amount)));
+}
+
 /// The preset each photo was given, with its settings right after: the panel marks it while the
 /// photo still has exactly those settings, so it is still marked on coming back to the photo
 /// (issue #2392) and drops once the photo is edited further.

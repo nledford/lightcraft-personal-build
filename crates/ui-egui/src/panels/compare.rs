@@ -518,15 +518,9 @@ pub fn show_compare(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         if resp.double_clicked() {
             app.ui.zoom = if app.ui.zoom == Zoom::Fit { Zoom::Percent(100.0) } else { Zoom::Fit };
         }
+        // Compare's own rows first, in the same bounded menu as the photo's
         crate::widgets::context_menu(&resp, |ui| {
-            if MenuItem::new(crate::i18n::tr("Swap")).show(ui).clicked() {
-                let _ = swap(app);
-            }
-            if MenuItem::new(crate::i18n::tr("Make Candidate the Select")).show(ui).clicked() {
-                let _ = make_select(app);
-            }
-            ui.separator();
-            super::grid::context_menu(app, ui, id);
+            crate::photo_menu::show(app, ui, id, crate::photo_menu::Lead::Rows(&["compare.swap", "compare.makeSelect"]));
         });
     }
     let mid = area.center().x;
@@ -585,7 +579,7 @@ pub fn show_survey(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 app.act("library.select", json!({"ids": [id.0], "mode": "toggle"}));
             }
         }
-        crate::widgets::context_menu(&resp, |ui| super::grid::context_menu(app, ui, *id));
+        crate::widgets::context_menu(&resp, |ui| crate::photo_menu::show(app, ui, *id, crate::photo_menu::Lead::None));
     }
     let n = photos.len();
     let msg = if app.session.selection.ids.len() > SURVEY_MAX {

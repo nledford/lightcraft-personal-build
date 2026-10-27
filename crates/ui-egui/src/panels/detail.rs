@@ -9,7 +9,6 @@ use lightcraft_pipeline::geometry::Frame;
 use serde_json::json;
 
 use crate::LightcraftApp;
-use crate::menu_item::MenuItem;
 use crate::render::Slot;
 use crate::state::{BeforeAfter, RightPanel, ToolOverlay, Zoom};
 use crate::theme::Tokens;
@@ -1015,16 +1014,10 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     if let Some(why) = photo.preview_only.as_deref().filter(|_| !fullscreen) {
         preview_only_pill(ui, canvas, why);
     }
+    // the loupe's own rows first, in the same bounded menu as the photo's
+    use crate::photo_menu::Lead;
     crate::widgets::context_menu(&resp, |ui| {
-        MenuItem::new(crate::i18n::tr("Zoom")).submenu(ui, |ui| {
-            for (label, cmd) in [("Fit", "view.zoomFit"), ("100%", "view.zoom100"), ("Zoom In", "view.zoomIn"), ("Zoom Out", "view.zoomOut")] {
-                if MenuItem::new(crate::i18n::tr(label)).show(ui).clicked() {
-                    app.act(cmd, json!({}));
-                }
-            }
-        });
-        ui.separator();
-        super::grid::context_menu(app, ui, id);
+        crate::photo_menu::show(app, ui, id, Lead::Submenu("Zoom", &["view.zoomFit", "view.zoom100", "view.zoomIn", "view.zoomOut"]));
     });
 }
 
@@ -3043,9 +3036,9 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                 }
             }
             // the same photo actions as the grid and loupe (Restore / Delete Permanently in Recently Deleted)
-            crate::widgets::context_menu(&resp, |ui| super::grid::context_menu(app, ui, *id));
+            crate::widgets::context_menu(&resp, |ui| crate::photo_menu::show(app, ui, *id, crate::photo_menu::Lead::None));
             if let Some(badge) = badge {
-                crate::widgets::context_menu(&badge, |ui| super::grid::context_menu(app, ui, *id));
+                crate::widgets::context_menu(&badge, |ui| crate::photo_menu::show(app, ui, *id, crate::photo_menu::Lead::None));
             }
         }
     });
