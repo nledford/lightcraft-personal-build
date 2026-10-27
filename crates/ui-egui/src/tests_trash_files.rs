@@ -433,6 +433,22 @@ fn cancel_on_the_erase_question_still_moves_the_rest_and_asks_no_more() {
     assert_eq!(h.app.ui.dialog, None, "and is not asked about again");
 }
 
+/// The menu item is on for a photo of the library, and not for a selection holding only photos the catalog no
+/// longer has (taken away by undo, still selected for the redo): there is no file to move.
+#[test]
+fn the_menu_item_is_off_for_photos_the_catalog_no_longer_has() {
+    let dir = Scratch::new("enabled-gone");
+    let (mut h, ids, _) = app(&dir, &["a.jpg"]);
+    h.app.session.selection.ids = vec![PhotoId(ids[0])];
+    assert!(crate::menus::ui_enabled(&h.app, "dialog.trashFiles"), "a photo of the library");
+    let gone = PhotoId(ids[0] + 1000);
+    assert!(h.app.session.catalog.photo(gone).is_none());
+    h.app.session.selection.ids = vec![gone];
+    assert!(!crate::menus::ui_enabled(&h.app, "dialog.trashFiles"), "only a photo the catalog doesn't have");
+    h.app.session.selection.ids = vec![gone, PhotoId(ids[0])];
+    assert!(crate::menus::ui_enabled(&h.app, "dialog.trashFiles"), "with one that it has");
+}
+
 #[test]
 fn a_second_move_to_trash_waits_for_the_first() {
     let dir = Scratch::new("second");

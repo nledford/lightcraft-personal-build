@@ -2660,8 +2660,9 @@ pub fn ui_enabled(app: &LightcraftApp, id: &str) -> bool {
         "dialog.trashFiles" => {
             crate::panels::trash_files::available()
                 && app.trash_run.is_none()
-                // (asked every frame: the selection's cached answer, not a walk of a 500,000-photo selection)
-                && app.session.selection_facts().any_in_library(&app.session)
+                // (asked every frame: the selection's cached answer, not a walk of a 500,000-photo selection; a photo the
+                // catalog no longer has, taken away by undo and still selected, doesn't count: there is no file to move)
+                && app.session.selection_facts().any_kept_in_library(&app.session)
         }
         "photo.editInPhotoCraft" | "photo.editInExternal" => app.session.active().is_some() && app.services.open_with.is_some(),
         "app.exportPrevious" => app.session.active().is_some() && app.session.last_export.is_some(),

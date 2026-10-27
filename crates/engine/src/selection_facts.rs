@@ -103,6 +103,7 @@ impl SelectionView<'_> {
 pub struct SelectionFacts {
     key: Key,
     in_library: OnceLock<bool>,
+    kept_in_library: OnceLock<bool>,
     stacked: OnceLock<bool>,
     outdated: OnceLock<bool>,
     deleted: OnceLock<bool>,
@@ -110,12 +111,19 @@ pub struct SelectionFacts {
 
 impl SelectionFacts {
     fn new(key: Key) -> Self {
-        SelectionFacts { key, in_library: OnceLock::new(), stacked: OnceLock::new(), outdated: OnceLock::new(), deleted: OnceLock::new() }
+        SelectionFacts { key, in_library: OnceLock::new(), kept_in_library: OnceLock::new(), stacked: OnceLock::new(), outdated: OnceLock::new(), deleted: OnceLock::new() }
     }
 
     /// Some photo is in the library: not a browsed (Local) one. A photo the catalog doesn't have counts as in the library.
     pub fn any_in_library(&self, s: &Session) -> bool {
         *self.in_library.get_or_init(|| s.selected_ids().iter().any(|id| s.catalog.photo(*id).is_none_or(|p| !p.local)))
+    }
+
+    /// Some photo the catalog has is in the library: not a browsed (Local) one. Unlike [`Self::any_in_library`] a photo the
+    /// catalog no longer has (taken away by undo, still selected for the redo) doesn't count: what a command that needs
+    /// the photo itself (its file) can act on.
+    pub fn any_kept_in_library(&self, s: &Session) -> bool {
+        *self.kept_in_library.get_or_init(|| s.selected_ids().iter().any(|id| s.catalog.photo(*id).is_some_and(|p| !p.local)))
     }
 
     /// Some photo is in a stack.
