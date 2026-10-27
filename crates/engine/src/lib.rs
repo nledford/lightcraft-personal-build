@@ -799,7 +799,9 @@ impl Session {
 
     // ---------------------------------------------------------------- ops, undo
 
-    /// Apply an op as one undoable step.
+    /// Apply an op as one undoable step. A new edit: one that would make a smart album include
+    /// itself is refused here, whichever command asked ([`Catalog::apply_new`]); undo, redo and
+    /// opening a library bring back what was and are not held to that.
     ///
     /// A batch that fails and cannot be rolled back whole ([`CatalogError::PartlyApplied`]) did change the catalog, so
     /// it is journaled all the same (replaying it leaves the same changes), and what is left of its rollback is the
@@ -808,7 +810,7 @@ impl Session {
         self.not_stuck()?;
         self.refuse_detaching(&self.detached_moving_photos(&op))?;
         let fwd = op.clone();
-        let (inv, failure) = match self.apply_catalog(op) {
+        let (inv, failure) = match self.apply_to_catalog(op, true) {
             Ok(inv) => (inv, None),
             Err(EngineError::Catalog(CatalogError::PartlyApplied { cause, remaining })) => {
                 let remaining = *remaining;
@@ -837,13 +839,33 @@ impl Session {
         failure.map_or(Ok(()), Err)
     }
 
+    /// [`Catalog::apply`] for what brings back what was (an undo, a redo, a repair): not held to
+    /// the loop rule a new edit is ([`Session::commit`]).
     fn apply_catalog(&mut self, op: Op) -> Result<Op> {
+        self.apply_to_catalog(op, false)
+    }
+
+    /// Apply `op` to the catalog, a new edit (`new`: [`Catalog::apply_new`]) or what brings back
+    /// what was ([`Catalog::apply`]), and drop what is cached of the files of the photos it gave
+    /// another file or content, added or removed.
+    fn apply_to_catalog(&mut self, op: Op, new: bool) -> Result<Op> {
         // Retain only cache IDs while the catalog consumes the operation. Cloning an import
         // batch here also cloned every photo, although commit already keeps the journal copy.
-        let mut invalidated = Vec::new();
-        // photos whose file was replaced: the faces made from the old pixels go too (issue #1524)
-        let mut replaced = Vec::new();
-        let mut pending = vec![&op];
+        let media = Self::media_of(&op);
+        // (a batch that was only partly taken back changed the catalog all the same: what hangs on its photos goes too)
+        let applied = if new { self.catalog.apply_new(op) } else { self.catalog.apply(op) };
+        if applied.is_err() && !matches!(applied, Err(CatalogError::PartlyApplied { .. })) {
+            return applied.map_err(Into::into);
+        }
+        self.forget_media(media);
+        Ok(applied?)
+    }
+
+    /// The photos `op` gives another file or content, adds or removes, and of those the ones
+    /// whose file was replaced (their faces were made from the old pixels, issue #1524).
+    fn media_of(op: &Op) -> (Vec<PhotoId>, Vec<PhotoId>) {
+        let (mut invalidated, mut replaced) = (Vec::new(), Vec::new());
+        let mut pending = vec![op];
         while let Some(op) = pending.pop() {
             match op {
                 Op::SetContent { id, .. } => {
@@ -856,11 +878,11 @@ impl Session {
                 _ => {}
             }
         }
-        // (a batch that was only partly taken back changed the catalog all the same: what hangs on its photos goes too)
-        let applied = self.catalog.apply(op);
-        if applied.is_err() && !matches!(applied, Err(CatalogError::PartlyApplied { .. })) {
-            return applied.map_err(Into::into);
-        }
+        (invalidated, replaced)
+    }
+
+    /// Forgets what [`Session::media_of`] found, once the op is applied.
+    fn forget_media(&mut self, (invalidated, replaced): (Vec<PhotoId>, Vec<PhotoId>)) {
         for id in invalidated {
             self.media.forget(id);
         }
@@ -870,7 +892,6 @@ impl Session {
         }
         #[cfg(target_arch = "wasm32")]
         let _ = replaced;
-        Ok(applied?)
     }
 
     /// [`Session::commit`] for an op that goes with a folder already renamed on disk; the undo
@@ -1889,6 +1910,8 @@ mod tests;
 mod tests_album_folder_source;
 #[cfg(test)]
 mod tests_album_missing;
+#[cfg(test)]
+mod tests_album_loops;
 #[cfg(test)]
 mod tests_album_order;
 #[cfg(test)]
