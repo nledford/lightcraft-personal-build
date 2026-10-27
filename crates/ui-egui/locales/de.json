@@ -3695,5 +3695,10 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "Ein Ordner wird noch für die Ansicht „Lokal“ gelesen. Lege die Fotos ab, wenn das fertig ist",
   "An import review is waiting to open: drop photos when it is closed": "Die Importprüfung wartet darauf, geöffnet zu werden. Lege die Fotos ab, wenn sie geschlossen ist",
   "Switch library while tasks are waiting?": "Bibliothek wechseln, während Aufgaben warten?",
-  "Switch Library": "Bibliothek wechseln"
+  "Switch Library": "Bibliothek wechseln",
+  "Queue without review": "Ohne Prüfung einreihen",
+  "A folder is already being scanned": "Ein Ordner wird bereits durchsucht",
+  "Without review: add in place": "Ohne Prüfung: am Speicherort hinzufügen",
+  "Without review: copy into the library": "Ohne Prüfung: in die Bibliothek kopieren",
+  "Close the open dialog, then choose Review… again": "Schließe den geöffneten Dialog und wähle dann erneut Prüfen…"
 }

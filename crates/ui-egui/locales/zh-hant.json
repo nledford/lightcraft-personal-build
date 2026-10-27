@@ -2434,5 +2434,10 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "正在讀取資料夾以供「本機」檢視使用。讀取完成後再拖放照片",
   "An import review is waiting to open: drop photos when it is closed": "匯入預覽正等待開啟。關閉後再拖放照片",
   "Switch library while tasks are waiting?": "要在有工作排隊等待時切換照片庫嗎？",
-  "Switch Library": "切換照片庫"
+  "Switch Library": "切換照片庫",
+  "Queue without review": "不經檢視直接加入佇列",
+  "A folder is already being scanned": "正在掃描另一個資料夾",
+  "Without review: add in place": "不經檢視：原地加入",
+  "Without review: copy into the library": "不經檢視：複製到照片庫",
+  "Close the open dialog, then choose Review… again": "請先關閉開啟的對話框，然後再次選擇「檢視…」"
 }

@@ -2489,5 +2489,10 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "Thư mục vẫn đang được đọc cho chế độ xem Cục bộ. Hãy thả ảnh khi hoàn tất",
   "An import review is waiting to open: drop photos when it is closed": "Bản xem lại lần nhập đang chờ mở. Hãy thả ảnh sau khi đóng nó",
   "Switch library while tasks are waiting?": "Chuyển thư viện khi còn tác vụ đang chờ trong hàng đợi?",
-  "Switch Library": "Chuyển thư viện"
+  "Switch Library": "Chuyển thư viện",
+  "Queue without review": "Đưa vào hàng đợi không xem lại",
+  "A folder is already being scanned": "Một thư mục đang được quét",
+  "Without review: add in place": "Không xem lại: thêm tại chỗ",
+  "Without review: copy into the library": "Không xem lại: sao chép vào thư viện",
+  "Close the open dialog, then choose Review… again": "Hãy đóng hộp thoại đang mở, rồi chọn lại Xem lại…"
 }

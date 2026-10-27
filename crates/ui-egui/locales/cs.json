@@ -2662,5 +2662,10 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "Složka se ještě načítá pro zobrazení Místní soubory. Fotky přetáhněte, až skončí",
   "An import review is waiting to open: drop photos when it is closed": "Kontrola importu čeká na otevření. Fotky přetáhněte, až ji zavřete",
   "Switch library while tasks are waiting?": "Přepnout knihovnu, když úlohy čekají ve frontě?",
-  "Switch Library": "Přepnout knihovnu"
+  "Switch Library": "Přepnout knihovnu",
+  "Queue without review": "Zařadit do fronty bez kontroly",
+  "A folder is already being scanned": "Jiná složka se již prohledává",
+  "Without review: add in place": "Bez kontroly: přidat ze současného umístění",
+  "Without review: copy into the library": "Bez kontroly: kopírovat do knihovny",
+  "Close the open dialog, then choose Review… again": "Zavřete otevřené okno, pak znovu zvolte Zkontrolovat…"
 }

@@ -27,6 +27,7 @@ pub mod icons;
 pub mod import;
 pub mod kbd;
 pub mod library_work;
+mod import_queue;
 pub mod lightroom_destination;
 pub mod lightroom_import;
 pub mod links;
@@ -246,6 +247,8 @@ mod tests_profile_menu;
 mod tests_profiles_layout;
 #[cfg(test)]
 mod tests_progress;
+#[cfg(test)]
+mod tests_queue_no_review;
 #[cfg(test)]
 mod tests_queue_ux;
 #[cfg(test)]
@@ -818,6 +821,10 @@ pub struct LightcraftApp {
     pub scan: Option<import::ScanTask>,
     /// The folders the scan of the review on screen listed, for the import that review starts (and no other).
     pub review_listed: Option<lightcraft_engine::import::ListedFolders>,
+    /// How the last confirmed import review brought its files in (this run only): what "Queue without review" asks.
+    pub(crate) last_import: Option<import_queue::Remembered>,
+    /// The imports waiting in line that were queued without a review, by their task id.
+    pub(crate) unreviewed: Vec<import::Unreviewed>,
     /// A Synchronize Folder scan in progress (feeds its dialog).
     pub sync: Option<sync::SyncTask>,
     /// `session.folder_changes` came from the Synchronize Folder dialog (and goes with it).
@@ -1023,6 +1030,8 @@ impl LightcraftApp {
             import: None,
             scan: None,
             review_listed: None,
+            last_import: None,
+            unreviewed: Vec::new(),
             sync: None,
             sync_owns_changes: false,
             sync_scanned_at: f64::NEG_INFINITY,
@@ -3211,6 +3220,8 @@ impl LightcraftApp {
         panels::side_keys::forget_rows(ctx);
         // a new library's welcome puts the keyboard on Import Photos… once for each library
         self.welcome_focused = false;
+        // (how a review of another library was confirmed is no guide for this one)
+        self.last_import = None;
         if let Some(l) = self.session.library.as_ref().filter(|l| l.on_disk) {
             let path = l.dir.to_string_lossy().into_owned();
             panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);

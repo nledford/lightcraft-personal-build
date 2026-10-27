@@ -402,5 +402,6 @@
   "1 task is waiting in line: {names}. Switching libraries drops it.": "1 Aufgabe wartet in der Warteschlange: {names}. Beim Wechseln der Bibliothek wird sie verworfen.",
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} Aufgaben warten in der Warteschlange: {names}. Beim Wechseln der Bibliothek werden sie verworfen.",
   "Waiting tasks dropped: {n}": "Verworfene wartende Aufgaben: {n}",
-  "Too many tasks are waiting ({n}): wait for some to finish": "Zu viele Aufgaben warten ({n}): Warte, bis einige fertig sind"
+  "Too many tasks are waiting ({n}): wait for some to finish": "Zu viele Aufgaben warten ({n}): Warte, bis einige fertig sind",
+  "Without review: copy to {destination}": "Ohne Prüfung: kopieren nach {destination}"
 }

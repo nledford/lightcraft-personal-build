@@ -2595,5 +2595,10 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "Folder masih dibaca untuk tampilan Lokal. Jatuhkan foto setelah selesai",
   "An import review is waiting to open: drop photos when it is closed": "Tinjauan impor menunggu untuk dibuka. Jatuhkan foto setelah ditutup",
   "Switch library while tasks are waiting?": "Ganti pustaka saat tugas masih mengantre?",
-  "Switch Library": "Ganti pustaka"
+  "Switch Library": "Ganti pustaka",
+  "Queue without review": "Antrekan tanpa tinjauan",
+  "A folder is already being scanned": "Sebuah folder sedang dipindai",
+  "Without review: add in place": "Tanpa tinjauan: tambahkan di lokasi asli",
+  "Without review: copy into the library": "Tanpa tinjauan: salin ke pustaka",
+  "Close the open dialog, then choose Review… again": "Tutup dialog yang terbuka, lalu pilih Tinjau… lagi"
 }

@@ -841,14 +841,8 @@ pub fn poll_run(app: &mut LightcraftApp, ctx: &egui::Context) {
         run.commit = Some(commit);
         return;
     }
-    let (name, stopped, crashed, mut not_saved, guard, left_alone) = (
-        run.name.clone(),
-        run.stopping,
-        run.crashed.load(Ordering::Relaxed),
-        std::mem::take(&mut run.not_saved),
-        run.guard.take(),
-        run.left_alone,
-    );
+    let (name, stopped, crashed, mut not_saved, guard, left_alone) =
+        (run.name.clone(), run.stopping, run.crashed.load(Ordering::Relaxed), std::mem::take(&mut run.not_saved), run.guard.take(), run.left_alone);
     app.sync_run = None;
     let mut report = None;
     if let Err(e) = app.session.execute_fn("folder.synchronize", |s| {

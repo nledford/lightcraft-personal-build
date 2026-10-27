@@ -2476,5 +2476,10 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "正在读取文件夹以供“本地”视图使用。读取完成后再拖放照片",
   "An import review is waiting to open: drop photos when it is closed": "导入预览正等待打开。关闭后再拖放照片",
   "Switch library while tasks are waiting?": "要在有任务排队等待时切换图库吗？",
-  "Switch Library": "切换图库"
+  "Switch Library": "切换图库",
+  "Queue without review": "不经查看直接加入队列",
+  "A folder is already being scanned": "正在扫描另一个文件夹",
+  "Without review: add in place": "不经查看：在原位置添加",
+  "Without review: copy into the library": "不经查看：拷贝到图库",
+  "Close the open dialog, then choose Review… again": "请先关闭打开的对话框，然后再次选择“查看…”"
 }

@@ -6,7 +6,9 @@
 //! did, what went wrong and for which files, and where its results are. One that did not end well comes first there,
 //! and puts a mark on the bell until it is dismissed; Retry asks for it again when it kept what it was asked. Tasks
 //! waiting in line for the ones ahead of them (a second preview build) are listed under the running ones, with ✕ to
-//! take them out of the line. The tasks come from the engine's registry ([`lightcraft_engine::activity`]); ✕ runs
+//! take them out of the line. While the library lane is busy, the row of the review's folder scan offers Queue
+//! without review, and a folder queued that way offers Review… on its waiting row ([`crate::import`]). The tasks come
+//! from the engine's registry ([`lightcraft_engine::activity`]); ✕ runs
 //! `activity.cancel` and Retry `activity.retry`, like any other frontend would.
 
 use std::f32::consts::{FRAC_PI_2, TAU};
@@ -136,6 +138,7 @@ pub fn is_open(ctx: &egui::Context) -> bool {
 /// bell's square; the line naming what runs goes left of it, no further than `room_left`.
 pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, room_left: f32) {
     let ctx = ui.ctx().clone();
+    crate::import::prune_unreviewed(app);
     // a scan that finished in the background and waits to be looked at
     let ready = app.sync_ready.clone();
     // newest first: the one just started is the one looked for
@@ -249,6 +252,10 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
     let resp = if was_open { resp } else { resp.on_hover_text(label.as_str()) };
     let mut act = None;
     let (activity, opened, reveal) = (app.session.activity.clone(), app.activity_failures, app.services.reveal.is_some());
+    // while the library lane is busy the review's folder scan can be queued without its review, and a folder queued
+    // that way can still be reviewed from its waiting row
+    let queue_scan = crate::import::queueable_scan(app);
+    let unreviewed: Vec<(u64, String)> = app.unreviewed.iter().map(|u| (u.id, crate::import_queue::describe(&u.transfer))).collect();
     egui::Popup::from_response(&resp)
         .id(popup_id())
         .open_memory(set)
@@ -258,7 +265,11 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
         .show(|ui| {
             // (the ended tasks with all their failed files are only read while the list is on screen)
             let finished = activity.finished();
-            act = list(ui, t, &Rows { tasks: &all, waiting: &waiting, finished: &finished, opened, reveal, ready: ready.as_ref() });
+            act = list(
+                ui,
+                t,
+                &Rows { tasks: &all, waiting: &waiting, finished: &finished, opened, reveal, ready: ready.as_ref(), queue_scan, unreviewed: &unreviewed },
+            );
         });
     app.activity_open = is_open(&ctx);
     match act {
@@ -290,6 +301,16 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
                 app.activity_failures = None;
             }
         }
+        Some(Act::QueueScan) => {
+            if let Err(e) = crate::import::queue_scan(app) {
+                app.toast(&ctx, e);
+            }
+        }
+        Some(Act::Review(id)) => {
+            if let Err(e) = crate::import::review_queued(app, id) {
+                app.toast(&ctx, e);
+            }
+        }
         Some(Act::Copy(text)) => ctx.copy_text(text),
         Some(Act::Reveal(path)) => {
             if let Some(Err(e)) = app.services.reveal.as_mut().map(|reveal| reveal(&path)) {
@@ -316,6 +337,10 @@ struct Rows<'a> {
     reveal: bool,
     /// The scan that finished in the background and waits to be looked at.
     ready: Option<&'a crate::sync::SyncReady>,
+    /// The running scan of the import review that can be put in line without its review.
+    queue_scan: Option<u64>,
+    /// The imports waiting in line that were queued without a review: their id, and how they bring their files in.
+    unreviewed: &'a [(u64, String)],
 }
 
 /// What was asked for in the list.
@@ -325,6 +350,10 @@ enum Act {
     Clear,
     /// Ask again for an ended task that did not go well.
     Retry(u64),
+    /// Put the folder being scanned in line without its review.
+    QueueScan,
+    /// Open the review of an import waiting in line.
+    Review(u64),
     /// List the failed files of an ended task, or put them away again.
     Failures(u64),
     Copy(String),
@@ -522,6 +551,9 @@ fn list(ui: &mut egui::Ui, t: &Tokens, rows: &Rows) -> Option<Act> {
                     if row(ui, t, task, width) {
                         act = Some(Act::Cancel(task.id));
                     }
+                    if rows.queue_scan == Some(task.id) && link(ui, t, &tr("Queue without review"), "activity:queueScan") {
+                        act = Some(Act::QueueScan);
+                    }
                 }
                 if !rows.waiting.is_empty() {
                     group(ui, "Waiting");
@@ -532,6 +564,11 @@ fn list(ui: &mut egui::Ui, t: &Tokens, rows: &Rows) -> Option<Act> {
                     }
                     if waiting_row(ui, t, task, width) {
                         act = Some(Act::Cancel(task.id));
+                    }
+                    if let Some((_, how)) = rows.unreviewed.iter().find(|(id, _)| *id == task.id)
+                        && let Some(id) = review_line(ui, t, how, task.id, width)
+                    {
+                        act = Some(Act::Review(id));
                     }
                 }
                 if !done.is_empty() {
@@ -812,6 +849,23 @@ fn waiting_line(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) {
         let r = ui.add(egui::Label::new(RichText::new(tail).font(font).color(t.text_dim)).wrap_mode(egui::TextWrapMode::Extend));
         register(ui, at, r.rect);
     });
+}
+
+/// The line under a waiting row of a folder queued without its review: how it brings its files in, and Review…
+/// (the link is laid out first, from the right: a long destination is cut short, never the link).
+fn review_line(ui: &mut egui::Ui, t: &Tokens, how: &str, id: u64, width: f32) -> Option<u64> {
+    let mut asked = None;
+    ui.allocate_ui_with_layout(vec2(width, 16.0), Layout::right_to_left(Align::Center), |ui| {
+        if link(ui, t, &tr("Review…"), format!("activity:review:{id}")) {
+            asked = Some(id);
+        }
+        let room = ui.available_width();
+        ui.allocate_ui_with_layout(vec2(room, 16.0), Layout::left_to_right(Align::Center), |ui| {
+            ui.set_width(room);
+            ui.add(egui::Label::new(RichText::new(how).font(t.font(11.0)).color(t.text_dim)).truncate());
+        });
+    });
+    asked
 }
 
 /// A task waiting in line: its name and ✕ (out of the line), what it works on, and when it starts. True when ✕ was

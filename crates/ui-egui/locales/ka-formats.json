@@ -402,5 +402,6 @@
   "1 task is waiting in line: {names}. Switching libraries drops it.": "რიგში ელოდება 1 ამოცანა: {names}. ბიბლიოთეკის შეცვლა მას გააუქმებს.",
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "რიგში ელოდება ამოცანები ({n}): {names}. ბიბლიოთეკის შეცვლა მათ გააუქმებს.",
   "Waiting tasks dropped: {n}": "გაუქმებული მოლოდინის ამოცანები: {n}",
-  "Too many tasks are waiting ({n}): wait for some to finish": "ძალიან ბევრი ამოცანა ელოდება ({n}): დაელოდეთ, სანამ ზოგი დასრულდება"
+  "Too many tasks are waiting ({n}): wait for some to finish": "ძალიან ბევრი ამოცანა ელოდება ({n}): დაელოდეთ, სანამ ზოგი დასრულდება",
+  "Without review: copy to {destination}": "გადახედვის გარეშე: კოპირება: {destination}"
 }

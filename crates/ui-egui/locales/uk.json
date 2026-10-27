@@ -2630,5 +2630,10 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "Тека ще читається для подання «Локальні». Перетягніть фото, коли це завершиться",
   "An import review is waiting to open: drop photos when it is closed": "Перевірка імпорту чекає на відкриття. Перетягніть фото, коли її закриють",
   "Switch library while tasks are waiting?": "Змінити бібліотеку, поки завдання чекають у черзі?",
-  "Switch Library": "Змінити бібліотеку"
+  "Switch Library": "Змінити бібліотеку",
+  "Queue without review": "Поставити в чергу без перевірки",
+  "A folder is already being scanned": "Тека вже сканується",
+  "Without review: add in place": "Без перевірки: додати на місці",
+  "Without review: copy into the library": "Без перевірки: копіювати до бібліотеки",
+  "Close the open dialog, then choose Review… again": "Закрийте відкрите вікно та ще раз виберіть «Перевірити…»"
 }
