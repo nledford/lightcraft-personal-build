@@ -1984,8 +1984,6 @@ mod tests_album_folder_photos;
 #[cfg(test)]
 mod tests_album_loops;
 #[cfg(test)]
-mod tests_looping_albums;
-#[cfg(test)]
 mod tests_album_order;
 #[cfg(test)]
 mod tests_background;
@@ -2011,6 +2009,8 @@ mod tests_library_tally;
 mod tests_local;
 #[cfg(test)]
 mod tests_lock;
+#[cfg(test)]
+mod tests_looping_albums;
 #[cfg(test)]
 mod tests_order;
 #[cfg(test)]

@@ -962,7 +962,6 @@ impl Roving {
     }
 }
 
-
 fn chip(ui: &mut Ui, id: &str, label: &str, active: bool, choice: bool, row: Option<&mut Roving>) -> Response {
     let label = crate::i18n::tr(label);
     let t = Tokens::get(ui.ctx());

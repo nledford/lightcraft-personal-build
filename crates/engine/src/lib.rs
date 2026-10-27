@@ -58,9 +58,9 @@ pub mod media;
 pub mod memory;
 pub mod merge;
 mod model_download;
+mod move_check;
 pub mod move_intent;
 pub mod move_job;
-mod move_check;
 pub mod open_path;
 pub mod originals;
 mod pdf;
@@ -1910,9 +1910,9 @@ mod tests;
 #[cfg(test)]
 mod tests_album_folder_source;
 #[cfg(test)]
-mod tests_album_missing;
-#[cfg(test)]
 mod tests_album_loops;
+#[cfg(test)]
+mod tests_album_missing;
 #[cfg(test)]
 mod tests_album_order;
 #[cfg(test)]

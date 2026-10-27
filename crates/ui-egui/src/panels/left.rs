@@ -2518,7 +2518,16 @@ fn folder_drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::R
         // Selected Photos Here is asked for by name and goes at once
         if app.ui.settings.ask_before_move || !problems.is_empty() {
             let library = app.session.library_generation();
-            app.ui.dialog = Some(crate::state::Dialog::MovePhotos { ids, folder: n.path.clone(), name, files: count, dont_ask: false, library, problems, movable });
+            app.ui.dialog = Some(crate::state::Dialog::MovePhotos {
+                ids,
+                folder: n.path.clone(),
+                name,
+                files: count,
+                dont_ask: false,
+                library,
+                problems,
+                movable,
+            });
         } else {
             move_photos_here(app, ui.ctx(), Some(&ids), &n.path);
         }
