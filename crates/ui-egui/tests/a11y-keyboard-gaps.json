@@ -118,6 +118,7 @@
     "Button \"Scroll menu down\" not reached by Tab in View": 1,
     "Button shows no focus in (top level)": 74,
     "Button shows no focus in View": 31,
+    "CheckBox shows no focus in View": 3,
     "DisclosureTriangle shows no focus in (top level)": 5
   },
   "Menu Window": {

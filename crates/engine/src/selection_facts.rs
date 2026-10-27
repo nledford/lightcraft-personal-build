@@ -111,7 +111,14 @@ pub struct SelectionFacts {
 
 impl SelectionFacts {
     fn new(key: Key) -> Self {
-        SelectionFacts { key, in_library: OnceLock::new(), kept_in_library: OnceLock::new(), stacked: OnceLock::new(), outdated: OnceLock::new(), deleted: OnceLock::new() }
+        SelectionFacts {
+            key,
+            in_library: OnceLock::new(),
+            kept_in_library: OnceLock::new(),
+            stacked: OnceLock::new(),
+            outdated: OnceLock::new(),
+            deleted: OnceLock::new(),
+        }
     }
 
     /// Some photo is in the library: not a browsed (Local) one. A photo the catalog doesn't have counts as in the library.
