@@ -746,8 +746,13 @@ fn tab_round<S>(h: &mut Harness<'_, S>) -> Result<(Vec<u64>, BTreeMap<u64, bool>
 fn keyboard_problems<S>(h: &mut Harness<'_, S>) -> Result<(Vec<(String, String)>, usize), String> {
     let all = controls(h);
     let (order, shows) = tab_round(h)?;
+    // (a row of choices or the tabs of Settings is one Tab stop, and the arrow keys reach the rest of it)
+    let roving = lightcraft_ui_egui::widgets::roving_members(&h.ctx);
     let mut keys = Vec::new();
     for c in &all {
+        if roving.contains(&c.id) && !order.contains(&c.id) {
+            continue;
+        }
         if !order.contains(&c.id) {
             keys.push((c.key("not reached by Tab"), c.at.clone()));
         } else if shows.get(&c.id) == Some(&false) {

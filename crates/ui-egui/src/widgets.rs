@@ -958,8 +958,19 @@ impl Roving {
             ui.memory_mut(|m| m.request_focus(to));
             ui.ctx().request_repaint();
         }
+        ui.ctx().data_mut(|d| {
+            d.get_temp_mut_or_insert_with::<std::collections::HashSet<u64>>(egui::Id::unique("lc-roving-members"), Default::default)
+                .extend(self.now.iter().map(|id| id.value()))
+        });
         ui.data_mut(|d| d.insert_temp(self.key, self.now));
     }
+}
+
+/// The widgets of every [`Roving`] row drawn so far (their ids' values): Tab stops at one of a row
+/// and the arrow keys reach the others, so a gate that counts what Tab reaches counts these as
+/// reached.
+pub fn roving_members(ctx: &egui::Context) -> std::collections::HashSet<u64> {
+    ctx.data(|d| d.get_temp(egui::Id::unique("lc-roving-members"))).unwrap_or_default()
 }
 
 fn chip(ui: &mut Ui, id: &str, label: &str, active: bool, choice: bool, row: Option<&mut Roving>) -> Response {

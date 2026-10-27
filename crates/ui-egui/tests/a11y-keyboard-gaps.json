@@ -36,7 +36,8 @@
   },
   "Dialog Settings interface": {
     "Button shows no focus in Settings": 19,
-    "CheckBox shows no focus in Settings": 1
+    "CheckBox shows no focus in Settings": 1,
+    "RadioButton shows no focus in Settings": 1
   },
   "Dialog Settings performance": {
     "Button shows no focus in Settings": 28
@@ -45,6 +46,7 @@
     "Button shows no focus in Settings": 24,
     "CheckBox shows no focus in Settings": 15,
     "ColorWell shows no focus in Settings": 1,
+    "RadioButton shows no focus in Settings": 2,
     "Slider shows no focus in Settings": 3,
     "SpinButton shows no focus in Settings": 3,
     "Unknown shows no focus in Settings": 5
