@@ -2900,6 +2900,62 @@ fn locate_item(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode) {
     }
 }
 
+/// Why a Folders row can't be exported as it is shown, `None` when it can: it holds no photo, or
+/// choosing it would show the photos of other disks too (see [`FolderNode::selectable`]), so
+/// the grid could not be made to hold exactly this folder's photos.
+pub(crate) fn folder_export_blocker(n: &FolderNode) -> Option<&'static str> {
+    if !n.selectable {
+        Some("This row covers more than one disk: export a folder inside it")
+    } else if n.count == 0 {
+        Some("No photo in this folder is in the library yet")
+    } else {
+        None
+    }
+}
+
+/// Export Folder… and Export Folder with Preset ▸ of a Folders row (`with_preset`: the second):
+/// like an album's, they show the folder as the Folders row does (its photos and those of the
+/// folders inside it), select them all, then open the Export dialog or run the preset in the
+/// background. Grayed out, with the reason, for a row that can't be shown as a source or holds no
+/// photo. Widgets `folderExport`, `folderExportPresetMenu` and `folderExportPreset:<name>`.
+fn export_folder_item(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode, with_preset: bool) {
+    let blocker = folder_export_blocker(n);
+    let show_all = |app: &mut LightcraftApp| -> Result<(), String> {
+        app.run("library.source", json!({"kind": "libraryFolder", "path": n.path}))?;
+        app.run("library.selectAll", json!({})).map(|_| ())
+    };
+    if !with_preset {
+        let mut r = MenuItem::new(crate::i18n::tr("Export Folder…"))
+            .widget("folderExport")
+            .enabled(blocker.is_none())
+            .show(ui)
+            .on_hover_text(crate::i18n::tr("Exports this folder's photos and those in the folders inside it"));
+        if let Some(why) = blocker {
+            r = r.on_disabled_hover_text(crate::i18n::tr(why));
+        }
+        if r.clicked() {
+            if let Err(e) = show_all(app).and_then(|()| app.run("dialog.export", json!({})).map(|_| ())) {
+                app.toast_error(ui.ctx(), e);
+            }
+            ui.close();
+        }
+        return;
+    }
+    let menu = MenuItem::new(crate::i18n::tr("Export Folder with Preset")).widget("folderExportPresetMenu").enabled(blocker.is_none()).submenu(ui, |ui| {
+        for (p, _) in app.session.all_export_presets() {
+            if MenuItem::new(&p.name).widget(format!("folderExportPreset:{}", p.name)).show(ui).clicked() {
+                if let Err(e) = show_all(app).and_then(|()| app.run("app.export", json!({"preset": p.name, "background": true})).map(|_| ())) {
+                    app.toast_error(ui.ctx(), e);
+                }
+                ui.close();
+            }
+        }
+    });
+    if let Some(why) = blocker {
+        menu.response.on_disabled_hover_text(crate::i18n::tr(why));
+    }
+}
+
 /// Set Color Label ▸ of a Folders row (`folder.label`; the submenu is widget `folderLabelMenu`,
 /// its colours `folderLabel:<colour>`).
 fn folder_label_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode) {
@@ -2947,6 +3003,8 @@ enum FolderItem {
     Synchronize,
     LocateMissing,
     UpdateLocation,
+    ExportFolder,
+    ExportFolderWithPreset,
     NewFolder,
     Rename,
     Move,
@@ -2970,13 +3028,13 @@ fn folder_menu_groups(row: FolderRow) -> &'static [&'static [FolderItem]] {
     use FolderItem::*;
     match row {
         FolderRow::Library => &[
-            &[ImportHere, Synchronize, LocateMissing, UpdateLocation],
+            &[ImportHere, Synchronize, LocateMissing, UpdateLocation, ExportFolder, ExportFolderWithPreset],
             &[NewFolder, Rename, Move, MovePhotosHere],
             &[ColorLabel, Parents],
             &[Reveal],
             &[RemoveFromLibrary],
         ],
-        FolderRow::Disk => &[&[Synchronize, LocateMissing, UpdateLocation], &[ColorLabel], &[RemoveDisk]],
+        FolderRow::Disk => &[&[Synchronize, LocateMissing, UpdateLocation, ExportFolder, ExportFolderWithPreset], &[ColorLabel], &[RemoveDisk]],
         FolderRow::Local { .. } => &[&[AddToMyPhotos, Synchronize], &[Rename, Move], &[Reveal], &[KeepInLocal, RemoveFromLocal]],
     }
 }
@@ -3018,7 +3076,12 @@ fn folder_item_available(app: &LightcraftApp, item: FolderItem, node: Option<&Fo
         FolderItem::Reveal => app.services.reveal.is_some(),
         FolderItem::UpdateLocation => node.is_some() && (app.services.pick_folder.is_some() || app.services.picker.is_some()),
         FolderItem::Parents => node.is_some() && (parents.above.is_some() || parents.asked_for),
-        FolderItem::LocateMissing | FolderItem::ColorLabel | FolderItem::RemoveFromLibrary | FolderItem::RemoveDisk => node.is_some(),
+        FolderItem::LocateMissing
+        | FolderItem::ExportFolder
+        | FolderItem::ExportFolderWithPreset
+        | FolderItem::ColorLabel
+        | FolderItem::RemoveFromLibrary
+        | FolderItem::RemoveDisk => node.is_some(),
         _ => true,
     }
 }
@@ -3083,6 +3146,11 @@ fn folder_item(
         FolderItem::UpdateLocation => {
             if let Some(n) = node {
                 locate_item(app, ui, n);
+            }
+        }
+        FolderItem::ExportFolder | FolderItem::ExportFolderWithPreset => {
+            if let Some(n) = node {
+                export_folder_item(app, ui, n, item == FolderItem::ExportFolderWithPreset);
             }
         }
         FolderItem::NewFolder => {
