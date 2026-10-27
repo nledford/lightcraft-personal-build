@@ -2571,5 +2571,7 @@
   "Import to This Folder…": "Tuo tähän kansioon…",
   "Copies the photos of a folder you choose into this folder; the review lets you change that": "Kopioi valitsemasi kansion kuvat tähän kansioon; tarkistuksessa voit muuttaa tätä",
   "Add to My Photos…": "Lisää Omiin kuviin…",
-  "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Näyttää tämän kansion kuvat tarkistettavaksi ja lisää ne sitten kirjastoon paikoilleen; tiedostoihin ei kosketa"
+  "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Näyttää tämän kansion kuvat tarkistettavaksi ja lisää ne sitten kirjastoon paikoilleen; tiedostoihin ei kosketa",
+  "Copy Path": "Kopioi polku",
+  "Path copied": "Polku kopioitu"
 }

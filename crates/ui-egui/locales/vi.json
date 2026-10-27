@@ -2481,5 +2481,7 @@
   "Import to This Folder…": "Nhập vào thư mục này…",
   "Copies the photos of a folder you choose into this folder; the review lets you change that": "Sao chép ảnh từ một thư mục bạn chọn vào thư mục này; bạn có thể đổi điều đó ở bước xem lại",
   "Add to My Photos…": "Thêm vào Ảnh của tôi…",
-  "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Cho xem lại ảnh trong thư mục này, rồi thêm vào thư viện tại chỗ; không tệp nào bị đụng đến"
+  "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Cho xem lại ảnh trong thư mục này, rồi thêm vào thư viện tại chỗ; không tệp nào bị đụng đến",
+  "Copy Path": "Sao chép đường dẫn",
+  "Path copied": "Đã sao chép đường dẫn"
 }

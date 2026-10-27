@@ -2587,5 +2587,7 @@
   "Import to This Folder…": "Impor ke folder ini…",
   "Copies the photos of a folder you choose into this folder; the review lets you change that": "Menyalin foto dari folder yang Anda pilih ke folder ini; di tinjauan Anda bisa mengubahnya",
   "Add to My Photos…": "Tambahkan ke Foto saya…",
-  "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Meninjau foto di folder ini, lalu menambahkannya ke pustaka di tempatnya; tidak ada berkas yang disentuh"
+  "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Meninjau foto di folder ini, lalu menambahkannya ke pustaka di tempatnya; tidak ada berkas yang disentuh",
+  "Copy Path": "Salin jalur",
+  "Path copied": "Jalur disalin"
 }
