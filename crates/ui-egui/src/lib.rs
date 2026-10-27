@@ -305,6 +305,8 @@ mod tests_tool_overlay;
 #[cfg(test)]
 mod tests_trash_files;
 #[cfg(test)]
+mod tests_tree_branch;
+#[cfg(test)]
 mod tests_tree_state;
 #[cfg(test)]
 mod tests_type_contrast;

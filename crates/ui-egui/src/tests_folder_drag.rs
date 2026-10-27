@@ -26,7 +26,7 @@ fn tree(tag: &str) -> (Headless, PathBuf) {
         app(&[(trip.join("beach.png"), false), (sub.join("deep.png"), false), (home.join("garden.png"), false), (archive.join("vault.png"), false)]);
     click(&mut h, &format!("libraryFolderToggle:{}", folder_key(&root)));
     // (opened as a reveal does: the drag tests are about what comes after, not the triangle)
-    h.app.ui.sidebar_trees.show(&crate::tree_state::Branch::folder(&folder_key(&trip), false));
+    h.app.ui.sidebar_trees.show(&crate::tree_state::Branch::folder(&folder_key(&trip), false), None);
     for _ in 0..3 {
         h.step();
     }
