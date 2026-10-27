@@ -218,9 +218,9 @@ fn the_loops_are_remembered_until_an_album_changes() {
     assert!(!c.album_on_a_loop(AlbumId(1)));
     c.apply(Op::RemoveAlbum { id: AlbumId(9) }).unwrap();
     assert!(!c.loops_known(), "a removed album");
-    // a copy builds its own when asked
+    // a copy starts with what its original knew
     assert!(!c.album_on_a_loop(AlbumId(1)));
-    assert!(!c.clone().loops_known());
+    assert!(c.clone().loops_known());
 }
 
 /// A refused op leaves no half-forgotten state behind: the answer after it is still right.

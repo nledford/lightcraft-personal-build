@@ -57,7 +57,8 @@ fn with_a_loop() -> Headless {
         smart(13, "Delta", json!([rating, is_in(13)])),
         smart(14, "Quiet", json!([none])),
     ] {
-        h.app.session.commit("Add album", Op::AddAlbum { album }).unwrap();
+        // as a library from before the loop rule holds them: the catalog refuses a new edit that makes a loop (#776)
+        h.app.session.catalog.apply(Op::AddAlbum { album }).unwrap();
     }
     h.settle(SETTLE);
     h

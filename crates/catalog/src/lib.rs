@@ -647,6 +647,12 @@ impl Catalog {
         self.loops.0.get_or_init(|| self.album_graph().on_a_loop())
     }
 
+    /// Whether the albums on a loop are worked out and kept now (what the tests look at).
+    #[cfg(test)]
+    pub(crate) fn loops_known(&self) -> bool {
+        self.loops.0.get().is_some()
+    }
+
     /// A damaged library, for tests: `change` an album as no op would, and forget what was
     /// worked out from the albums as an op does.
     #[cfg(test)]
