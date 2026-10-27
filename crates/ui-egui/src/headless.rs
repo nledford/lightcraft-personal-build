@@ -420,7 +420,6 @@ impl Headless {
             || self.app.session.denoise_busy()
             || self.app.welcome_samples.as_ref().is_some_and(|s| s.drawing())
             || !self.app.tasks.is_empty()
-            || !self.app.session.activity.waiting().is_empty()
             || !self.app.synthetic.is_empty()
             || !self.app.pending_gestures.is_empty()
             || !self.events.is_empty()

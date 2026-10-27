@@ -914,9 +914,6 @@ pub struct LightcraftApp {
     pub(crate) samples_tour_base: Option<panels::samples::TourBase>,
     /// The finished task whose failed files the list shows ("Show failed" was clicked).
     pub(crate) activity_failures: Option<u64>,
-    /// The preview build seen running: its end is announced even when the next one in line has replaced it in
-    /// `session.preview_build` by then.
-    preview_watch: Option<std::sync::Arc<lightcraft_engine::cmd::previews::PreviewBuild>>,
 }
 
 impl LightcraftApp {
@@ -1057,7 +1054,6 @@ impl LightcraftApp {
             samples_tour: Default::default(),
             samples_tour_base: None,
             activity_failures: None,
-            preview_watch: None,
             model_setup: Default::default(),
         }
     }
@@ -1367,19 +1363,6 @@ impl LightcraftApp {
                     self.follow_renamed_person(from, &to);
                 }
             }
-            // (`place` tells a task put in line from the older `queued` counts of AI Denoise and Read Focus Points)
-            Ok(v) if v.get("queued").and_then(Value::as_u64).is_some() && v.get("place").and_then(Value::as_u64).is_some() => {
-                // a task asked for while one of its lane runs waits in line: say so, or nothing seems to happen
-                let place = v.get("place").and_then(Value::as_u64).unwrap_or(1);
-                // (counted as its row counts: the waiting tasks ahead of it, after the running one)
-                let text = if place <= 1 {
-                    i18n::tr("Queued: it starts when the task ahead of it ends").to_string()
-                } else {
-                    i18n::tr_format!("Queued: it starts after {n} more", n = place - 1)
-                };
-                let now = self.tick_now();
-                self.ui.show_toast(now, text, TOAST_SECONDS, None);
-            }
             Ok(_) => {}
         }
         r
@@ -1563,44 +1546,32 @@ impl LightcraftApp {
     /// Announce the end of a Build Previews run.
     fn preview_build_status(&mut self, ctx: &egui::Context) {
         use std::sync::atomic::Ordering;
-        // a build that ended after the next one in line took its place is still announced
-        if let Some(watched) = self.preview_watch.take_if(|b| b.finished.load(Ordering::Relaxed)) {
-            self.announce_preview_build(ctx, &watched);
-        }
         let Some(b) = self.session.preview_build.clone() else { return };
+        let key = std::sync::Arc::as_ptr(&b) as usize;
         if b.finished.load(Ordering::Relaxed) {
-            self.announce_preview_build(ctx, &b);
+            if self.ui.preview_build_seen != Some((key, true)) {
+                self.ui.preview_build_seen = Some((key, true));
+                let (done, failed) = (b.done.load(Ordering::Relaxed), b.failed.load(Ordering::Relaxed));
+                let plural = if done == 1 { "" } else { "s" };
+                let mut msg = match (b.error(), b.what) {
+                    (Some(e), what) => format!("{}: {e}", if what.is_empty() { "previews" } else { what }),
+                    (None, "") => crate::i18n::tr_format!("Previews ready for {done} photo{plural}", done = done, plural = plural),
+                    (None, what) => {
+                        crate::i18n::tr_format!("Done ({what}): {done} photo{plural}", done = done, plural = plural, what = crate::i18n::tr(what))
+                    }
+                };
+                if failed > 0 {
+                    msg.push_str(&crate::i18n::tr_format!(" · {failed} couldn't be rendered", failed = failed));
+                }
+                if failed > 0 || b.error().is_some() {
+                    self.toast_error(ctx, msg);
+                } else {
+                    self.toast(ctx, msg);
+                }
+            }
         } else {
-            self.preview_watch = Some(b);
             // The activity stack shows the run while it works; poll for the end.
             ctx.request_repaint_after(std::time::Duration::from_millis(250));
-        }
-    }
-
-    /// Say how the preview build `b` ended, once.
-    fn announce_preview_build(&mut self, ctx: &egui::Context, b: &std::sync::Arc<lightcraft_engine::cmd::previews::PreviewBuild>) {
-        use std::sync::atomic::Ordering;
-        let key = std::sync::Arc::as_ptr(b) as usize;
-        if self.ui.preview_build_seen == Some((key, true)) {
-            return;
-        }
-        self.ui.preview_build_seen = Some((key, true));
-        let (done, failed) = (b.done.load(Ordering::Relaxed), b.failed.load(Ordering::Relaxed));
-        let plural = if done == 1 { "" } else { "s" };
-        let mut msg = match (b.error(), b.what) {
-            (Some(e), what) => format!("{}: {e}", if what.is_empty() { "previews" } else { what }),
-            (None, "") => crate::i18n::tr_format!("Previews ready for {done} photo{plural}", done = done, plural = plural),
-            (None, what) => {
-                crate::i18n::tr_format!("Done ({what}): {done} photo{plural}", done = done, plural = plural, what = crate::i18n::tr(what))
-            }
-        };
-        if failed > 0 {
-            msg.push_str(&crate::i18n::tr_format!(" · {failed} couldn't be rendered", failed = failed));
-        }
-        if failed > 0 || b.error().is_some() {
-            self.toast_error(ctx, msg);
-        } else {
-            self.toast(ctx, msg);
         }
     }
 
@@ -2621,8 +2592,6 @@ impl LightcraftApp {
         self.backup_schedule(ctx);
         self.backup_status(ctx);
         panels::notices::quit_after_backup(self);
-        // a task waiting in line whose lane freed while nothing was asked starts now (commands start them too)
-        self.session.start_waiting();
         self.save_status(ctx);
         self.ai_mask_detail(ctx, now);
         self.place_names_outcome(ctx);
