@@ -19,8 +19,8 @@ use serde_json::{Value, json};
 use std::sync::atomic::Ordering;
 
 use crate::LightcraftApp;
-use crate::menu_item::MenuItem;
 use crate::import_queue::{self, Remembered, Transfer};
+use crate::menu_item::MenuItem;
 use crate::render::Slot;
 use crate::theme::Tokens;
 use crate::widgets::register;

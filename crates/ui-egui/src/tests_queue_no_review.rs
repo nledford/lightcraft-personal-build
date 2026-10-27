@@ -183,7 +183,11 @@ fn a_long_destination_never_pushes_review_out_of_the_row() {
 fn a_full_line_leaves_the_scan_running() {
     let mut h = demo();
     let lane = busy(&h);
-    let request = lightcraft_engine::activity::Request { command: crate::import::IMPORT_REQUEST.into(), params: json!({"paths": ["/x"]}), ..Default::default() };
+    let request = lightcraft_engine::activity::Request {
+        command: crate::import::IMPORT_REQUEST.into(),
+        params: json!({"paths": ["/x"]}),
+        ..Default::default()
+    };
     while h.app.session.activity.enqueue("import", "Importing", request.clone()).is_ok() {}
     let _scan = crate::import::stall_scan_in(&mut h.app, vec!["/nowhere/trip".into()], false);
     let r = crate::import::queue_scan(&mut h.app);
@@ -238,7 +242,11 @@ fn another_library_does_not_inherit_how_the_last_review_brought_files_in() {
 fn a_review_the_full_line_refused_is_not_remembered() {
     let mut h = demo();
     let _lane = busy(&h);
-    let request = lightcraft_engine::activity::Request { command: crate::import::IMPORT_REQUEST.into(), params: json!({"paths": ["/x"]}), ..Default::default() };
+    let request = lightcraft_engine::activity::Request {
+        command: crate::import::IMPORT_REQUEST.into(),
+        params: json!({"paths": ["/x"]}),
+        ..Default::default()
+    };
     while h.app.session.activity.enqueue("import", "Importing", request.clone()).is_ok() {}
     let mut d = ImportDialog::new(vec![ImportCandidate { path: "/nowhere/a.jpg".into(), ..Default::default() }]);
     d.copy = true;

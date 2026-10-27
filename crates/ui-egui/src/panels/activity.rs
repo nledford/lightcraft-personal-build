@@ -268,7 +268,16 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
             act = list(
                 ui,
                 t,
-                &Rows { tasks: &all, waiting: &waiting, finished: &finished, opened, reveal, ready: ready.as_ref(), queue_scan, unreviewed: &unreviewed },
+                &Rows {
+                    tasks: &all,
+                    waiting: &waiting,
+                    finished: &finished,
+                    opened,
+                    reveal,
+                    ready: ready.as_ref(),
+                    queue_scan,
+                    unreviewed: &unreviewed,
+                },
             );
         });
     app.activity_open = is_open(&ctx);
@@ -551,7 +560,7 @@ fn list(ui: &mut egui::Ui, t: &Tokens, rows: &Rows) -> Option<Act> {
                     if row(ui, t, task, width) {
                         act = Some(Act::Cancel(task.id));
                     }
-                    if rows.queue_scan == Some(task.id) && link(ui, t, &tr("Queue without review"), "activity:queueScan") {
+                    if rows.queue_scan == Some(task.id) && link(ui, t, tr("Queue without review"), "activity:queueScan") {
                         act = Some(Act::QueueScan);
                     }
                 }
@@ -856,7 +865,7 @@ fn waiting_line(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) {
 fn review_line(ui: &mut egui::Ui, t: &Tokens, how: &str, id: u64, width: f32) -> Option<u64> {
     let mut asked = None;
     ui.allocate_ui_with_layout(vec2(width, 16.0), Layout::right_to_left(Align::Center), |ui| {
-        if link(ui, t, &tr("Review…"), format!("activity:review:{id}")) {
+        if link(ui, t, tr("Review…"), format!("activity:review:{id}")) {
             asked = Some(id);
         }
         let room = ui.available_width();
