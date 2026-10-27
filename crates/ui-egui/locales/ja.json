@@ -2607,5 +2607,8 @@
   "Queued: it starts when the task ahead of it ends": "キューに追加: 前のタスクが終わると開始します",
   "1 task waiting in line won't run.": "待機中の 1 件は実行されません。",
   "This album is in a loop, so it shows nothing": "このアルバムは循環しているため、何も表示されません",
-  "It tests itself: change its rules (Edit Smart Album…)": "自分自身を条件にしています。条件を変更してください（スマートアルバムを編集…）"
+  "It tests itself: change its rules (Edit Smart Album…)": "自分自身を条件にしています。条件を変更してください（スマートアルバムを編集…）",
+  "Rename a clashing photo, or choose another folder, to move it too.": "名前が重複している写真の名前を変えるか、別のフォルダを選ぶと移動できます。",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "ディスクを接続し直すか、ファイル → 見つからない写真を検索… を使ってからもう一度お試しください。",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "ファイルのない写真は移動できません。ローカルの写真は、マイフォトに追加すると移動できます。"
 }

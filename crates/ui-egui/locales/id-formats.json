@@ -388,5 +388,12 @@
   "Starts after {n} more": "Dimulai setelah {n} lagi",
   "Queued: it starts after {n} more": "Dalam antrean: dimulai setelah {n} lagi",
   "{n} tasks waiting in line won't run.": "{n} tugas yang menunggu dalam antrean tidak akan dijalankan.",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Album ini kembali ke dirinya sendiri melalui album “{}”: ubah aturan salah satu album dalam perulangan (Edit album pintar…)"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Album ini kembali ke dirinya sendiri melalui album “{}”: ubah aturan salah satu album dalam perulangan (Edit album pintar…)",
+  "These can't be moved to “{}”:": "Tidak dapat dipindahkan ke “{0}”:",
+  "{} is already in “{}”": "{0} sudah ada di “{1}”",
+  "{} is missing or offline": "{0} hilang atau offline",
+  "Move {n}, skip {m}": "Pindahkan {n}, lewati {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} foto dipindahkan ke “{1}”{0:.0}, {skipped} dilewati. Pilih Edit → Urungkan untuk mengembalikannya.",
+  "{} can't be moved": "{0} tidak dapat dipindahkan",
+  "{} has the same name as another photo being moved": "{0} memiliki nama yang sama dengan foto lain yang dipindahkan"
 }

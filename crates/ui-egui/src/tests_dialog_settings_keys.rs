@@ -95,23 +95,18 @@ fn tab_stops_once_at_the_tabs_and_once_at_each_row_of_choices() {
     // When Tab is pressed, it goes to the tab that is open
     key(&mut h, "Tab");
     assert_eq!(focused(&h), "button:settingsTab-general");
-    // And again: to the language that is chosen, past the other seven tabs
+    // And again: to the language that is chosen, past the other tabs
     key(&mut h, "Tab");
     assert_eq!(focused(&h), "button:settingsLanguage-0");
-    // And again: to the Lightroom catalog question, past the other twelve languages
-    key(&mut h, "Tab");
-    assert_eq!(focused(&h), "button:settingsLightroomImport-0");
-    // And again: to Open in
+    // And again: to Open in, past the other twelve languages
     key(&mut h, "Tab");
     assert_eq!(focused(&h), "button:settingsStartup-0");
-    // And the fifth press reaches the first checkbox of General
+    // And the next press reaches the first checkbox of General
     key(&mut h, "Tab");
     assert_eq!(focused(&h), "check:settings.autoAdvance");
     // And Shift+Tab goes back the same way, one stop a row
     back_tab(&mut h);
     assert_eq!(focused(&h), "button:settingsStartup-0");
-    back_tab(&mut h);
-    assert_eq!(focused(&h), "button:settingsLightroomImport-0");
     back_tab(&mut h);
     assert_eq!(focused(&h), "button:settingsLanguage-0");
     back_tab(&mut h);
@@ -124,7 +119,7 @@ fn the_stop_of_a_row_is_the_choice_that_holds() {
     // Given LightCraft set to open in Detail (the third choice) and Interface open (the fifth tab)
     h.app.ui.settings.startup_view = crate::state::StartupView::Detail;
     show(&mut h, "general");
-    for _ in 0..4 {
+    for _ in 0..3 {
         key(&mut h, "Tab");
     }
     assert_eq!(focused(&h), "button:settingsStartup-2");
@@ -143,11 +138,11 @@ fn the_arrow_keys_move_inside_the_tabs_and_do_not_leave_them() {
     key(&mut h, "Tab");
     // → and ↓ go to the next tab, ← and ↑ to the one before; nothing opens by that
     key(&mut h, "ArrowRight");
-    assert_eq!(focused(&h), "button:settingsTab-import");
+    assert_eq!(focused(&h), "button:settingsTab-library");
     key(&mut h, "ArrowDown");
-    assert_eq!(focused(&h), "button:settingsTab-performance");
-    key(&mut h, "ArrowUp");
     assert_eq!(focused(&h), "button:settingsTab-import");
+    key(&mut h, "ArrowUp");
+    assert_eq!(focused(&h), "button:settingsTab-library");
     key(&mut h, "ArrowLeft");
     assert_eq!(focused(&h), "button:settingsTab-general");
     assert_eq!(h.app.ui.dialog, Some(Dialog::Settings { tab: "general".into() }));
@@ -163,18 +158,18 @@ fn the_arrow_keys_move_inside_the_tabs_and_do_not_leave_them() {
     // Space opens the tab the focus is on, which keeps the focus and is the bar's stop from then on
     key(&mut h, "ArrowRight");
     key(&mut h, "Space");
-    assert_eq!(h.app.ui.dialog, Some(Dialog::Settings { tab: "import".into() }));
-    assert_eq!(focused(&h), "button:settingsTab-import");
+    assert_eq!(h.app.ui.dialog, Some(Dialog::Settings { tab: "library".into() }));
+    assert_eq!(focused(&h), "button:settingsTab-library");
     key(&mut h, "Tab");
     back_tab(&mut h);
-    assert_eq!(focused(&h), "button:settingsTab-import");
+    assert_eq!(focused(&h), "button:settingsTab-library");
 }
 
 #[test]
 fn the_arrow_keys_move_inside_a_row_of_choices_and_space_chooses() {
     let mut h = demo();
     show(&mut h, "general");
-    for _ in 0..4 {
+    for _ in 0..3 {
         key(&mut h, "Tab");
     }
     assert_eq!(focused(&h), "button:settingsStartup-0");
@@ -199,7 +194,7 @@ fn an_arrow_key_held_with_a_modifier_is_not_the_rows() {
     for modifier in ["cmd", "shift", "alt", "ctrl"] {
         let mut h = demo();
         show(&mut h, "general");
-        for _ in 0..4 {
+        for _ in 0..3 {
             key(&mut h, "Tab");
         }
         assert_eq!(focused(&h), "button:settingsStartup-0");
@@ -328,7 +323,7 @@ fn a_text_box_in_use_shows_the_focus_by_a_ring_in_the_text_colour() {
         let mut h = demo();
         run(&mut h, "view.theme", json!({"theme": kind.id()}));
         let t = Tokens::for_kind(kind);
-        show(&mut h, "general");
+        show(&mut h, "files");
         let at = rect(&h, "field:photocraftPath");
         let before = band(&h.paint(), at, t.text);
         // When Tab is pressed until the PhotoCraft box has the focus

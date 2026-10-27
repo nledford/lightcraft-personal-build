@@ -2451,5 +2451,8 @@
   "Queued: it starts when the task ahead of it ends": "已加入队列：前一个任务结束后开始",
   "1 task waiting in line won't run.": "队列中等待的 1 个任务不会运行。",
   "This album is in a loop, so it shows nothing": "此相册处于循环中，因此不显示任何内容",
-  "It tests itself: change its rules (Edit Smart Album…)": "它引用了自身：请更改其规则（编辑智能相册…）"
+  "It tests itself: change its rules (Edit Smart Album…)": "它引用了自身：请更改其规则（编辑智能相册…）",
+  "Rename a clashing photo, or choose another folder, to move it too.": "请重命名重名的照片，或选择其他文件夹，才能移动。",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "请重新连接磁盘，或使用 文件 → 查找丢失的照片…，然后重试。",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "没有文件的照片无法移动。本地照片在使用“添加到我的照片”后即可移动。"
 }

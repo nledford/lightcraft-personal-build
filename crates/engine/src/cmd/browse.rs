@@ -305,9 +305,18 @@ pub fn specs() -> Vec<CommandSpec> {
             "Move to Folder",
             [],
             None,
-            "{folder, ids?} — move the photos' files (default: the selection) with their XMP sidecars into `folder` on disk and relink them; virtual copies follow their master; across volumes the file is copied, verified and only then removed; never overwrites (a name taken in `folder` refuses the whole move); missing/offline and Local photos are refused; one undo step (undo moves them back); a record in the library lets the next open follow a move cut short (a force-quit). In the desktop app `background: true` moves the files on a worker thread (`activity.list` kind `move`, `activity.cancel` stops it after the file in hand; `ui.inspect` → `move`) → {moved, of, folder, stopped}",
+            "{folder, ids?, skip?} — move the photos' files (default: the selection) with their XMP sidecars into `folder` on disk and relink them; virtual copies follow their master; across volumes the file is copied, verified and only then removed; never overwrites (a name taken in `folder`, or a file that is missing or offline, refuses the whole move unless that photo's id is in `skip`: skipped photos stay put and the rest move); Local photos (and ones with no file) are refused unless skipped; one undo step (undo moves them back); a record in the library lets the next open follow a move cut short (a force-quit). In the desktop app `background: true` moves the files on a worker thread (`activity.list` kind `move`, `activity.cancel` stops it after the file in hand; `ui.inspect` → `move`) → {moved, of, folder, stopped, skipped: [{id, name, kind: clash|missing|asked}]}",
             always,
             move_to_folder
+        ),
+        cmd!(query
+            "photo.checkMove",
+            "Check Move to Folder",
+            [],
+            None,
+            "{folder, ids?} — how `photo.moveToFolder` would go for the photos (default: the selection), without moving anything → {folder, photos, movable, here, problems: [{id, name, kind: clash|missing|unmovable, twin?}]}; photos count as the person sees them (a virtual copy is one, though it moves with its master's file); `here`: already in the folder; a name taken in `folder`, a file that is missing or offline, or a photo that can't move as it is (Local, or no file) or a library photo of the same file as such a photo in the batch, since skipping is by file (`unmovable`) is a problem (pass those ids as `skip` to move the rest); `twin: true` marks a `clash` with another photo of the same move rather than with a file in the folder",
+            always,
+            |s, p| crate::move_check::check_command(s, p)
         ),
         cmd!(
             "library.browse",
@@ -611,11 +620,13 @@ fn create_folder(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// `photo.moveToFolder`: move the photos' files (with their sidecars) into `folder` and relink
 /// them, as one undo step. Virtual copies follow their master's file. Never overwrites: a name
-/// already taken in `folder` refuses the whole move. Here it waits for the files; the app runs
-/// the same job on a worker thread ([`crate::move_job`]).
+/// already taken in `folder`, or a file that is missing or offline, refuses the whole move,
+/// unless the photo is in `skip`: those stay where they are and the rest move. Refusals are plain
+/// sentences for the person (`photo.checkMove` finds the same problems beforehand). Here it waits
+/// for the files; the app runs the same job on a worker thread ([`crate::move_job`]).
 fn move_to_folder(s: &mut Session, p: &Value) -> Result<Value> {
     let Some((work, finish)) = crate::move_job::start(s, p, false)? else {
-        return Ok(json!({"moved": 0, "of": 0, "folder": folder_param(p, "folder"), "stopped": false}));
+        return Ok(json!({"moved": 0, "of": 0, "folder": folder_param(p, "folder"), "stopped": false, "skipped": []}));
     };
     let out = work.run();
     finish.finish(s, out)

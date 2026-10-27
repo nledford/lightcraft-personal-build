@@ -388,5 +388,12 @@
   "Starts after {n} more": "Startet nach {n} weiteren",
   "Queued: it starts after {n} more": "In der Warteschlange: startet nach {n} weiteren",
   "{n} tasks waiting in line won't run.": "{n} Aufgaben in der Warteschlange werden nicht ausgeführt.",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Es führt über das Album „{}“ zu sich selbst zurück: Ändere die Regeln eines Albums im Kreis (Smart-Album bearbeiten…)"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Es führt über das Album „{}“ zu sich selbst zurück: Ändere die Regeln eines Albums im Kreis (Smart-Album bearbeiten…)",
+  "These can't be moved to “{}”:": "Diese lassen sich nicht nach „{0}“ verschieben:",
+  "{} is already in “{}”": "{0} ist bereits in „{1}“",
+  "{} is missing or offline": "{0} fehlt oder ist offline",
+  "Move {n}, skip {m}": "{n} verschieben, {m} überspringen",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} Foto{0} nach „{1}“ verschoben, {skipped} übersprungen. Bearbeiten → Rückgängig holt sie zurück.",
+  "{} can't be moved": "{0} lässt sich nicht verschieben",
+  "{} has the same name as another photo being moved": "{0} hat denselben Namen wie ein anderes Foto, das verschoben wird"
 }

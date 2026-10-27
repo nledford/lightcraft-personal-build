@@ -125,6 +125,13 @@ fn unreadable(h: &Headless, t: &Tokens, within: Option<Rect>) -> Vec<String> {
         if within.is_some_and(|within| !within.contains_rect(rect)) {
             continue;
         }
+        // (nor what the app drew under the window itself: its clip is that of the app's view, which neither holds the
+        // window nor lies inside it, as the window's own texts' clips do. A label under a button's text by
+        // chance, such as a filmstrip's "JPEG", would be taken for the button's text by `inked` once Settings'
+        // tab bar (#2522) moved the page down)
+        if within.is_some_and(|within| !within.contains_rect(clip) && !clip.contains_rect(within)) {
+            continue;
+        }
         // (a row cut by the edge of what scrolls: too little of it is left to say what it is on)
         let whole = text.visual_bounding_rect();
         if rect.width() < 2.0 || rect.height() < 2.0 || rect.area() < 0.6 * whole.area() {

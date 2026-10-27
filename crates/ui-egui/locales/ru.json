@@ -2600,5 +2600,8 @@
   "Queued: it starts when the task ahead of it ends": "В очереди: начнётся, когда закончится задача перед ней",
   "1 task waiting in line won't run.": "1 задача в очереди не будет запущена.",
   "This album is in a loop, so it shows nothing": "Этот альбом попал в цикл, поэтому ничего не показывает",
-  "It tests itself: change its rules (Edit Smart Album…)": "Он проверяет сам себя: измените его условия (Изменить смарт-альбом…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "Он проверяет сам себя: измените его условия (Изменить смарт-альбом…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Переименуйте фото с таким же именем или выберите другую папку, чтобы переместить его.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Подключите диск снова или выберите Файл → Найти отсутствующие фото…, затем повторите.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Фото без файла нельзя переместить. Локальное фото можно переместить после команды Добавить в «Мои фото»."
 }

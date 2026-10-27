@@ -6,7 +6,7 @@ use serde_json::json;
 
 use crate::LightcraftApp;
 use crate::menu_item::MenuItem;
-use crate::state::Dialog;
+use crate::state::{Dialog, MoveProblemKind};
 use crate::theme::Tokens;
 
 /// Rows the Rename dialog previews.
@@ -1322,6 +1322,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                     ui.label(crate::i18n::tr_format!("Move {what} to Recently Deleted?", what = what));
                     ui.label(egui::RichText::new(crate::i18n::tr("They can be restored from Recently Deleted until it is emptied.")).color(t.text_dim));
                 }
+                Dialog::MovePhotos { name, problems, .. } if !problems.is_empty() => move_problems_body(ui, name, problems, &t),
                 Dialog::MovePhotos { files, name, dont_ask, .. } => {
                     let n = *files;
                     ui.label(crate::i18n::tr_format!("Move {n} file{} to “{}”?", if n == 1 { "" } else { "s" }, name, n = n));
@@ -1479,6 +1480,12 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                     Dialog::CopySettings { .. } => "Copy",
                     Dialog::PasteSettings { .. } => "Paste",
                     Dialog::TextPrompt { command, .. } => prompt_verb(command),
+                    // nothing that can go: only Cancel; some can: Move those, skip the others
+                    Dialog::MovePhotos { problems, movable, .. } if !problems.is_empty() && *movable == 0 => "",
+                    Dialog::MovePhotos { problems, movable, .. } if !problems.is_empty() => {
+                        add_label = crate::i18n::tr_format!("Move {n}, skip {m}", n = movable, m = problems.len());
+                        add_label.as_str()
+                    }
                     Dialog::MovePhotos { .. } | Dialog::MoveFolder { .. } => "Move",
                     // (not "Merge": that is photo merging, HDR / panorama, in some languages)
                     Dialog::MoveKeyword { .. } | Dialog::MergeKeywords { .. } => "Merge Keywords",
@@ -1780,6 +1787,42 @@ const DIALOG_MIN_BODY: f32 = 80.0;
 
 /// A list that scrolls on its own never gets shorter than this to make its dialog fit.
 const DIALOG_MIN_LIST: f32 = 120.0;
+
+/// How many problem photos a question lists by name.
+const MOVE_PROBLEMS_SHOWN: usize = 5;
+
+/// What the Move Photos question says about one photo that can't go into the folder `name`.
+pub(crate) fn move_problem_line(p: &crate::state::MoveProblem, name: &str) -> String {
+    match p.kind {
+        MoveProblemKind::Clash => crate::i18n::tr_format!("{} is already in “{}”", p.name, name),
+        MoveProblemKind::Twin => crate::i18n::tr_format!("{} has the same name as another photo being moved", p.name),
+        MoveProblemKind::Missing => crate::i18n::tr_format!("{} is missing or offline", p.name),
+        MoveProblemKind::Unmovable => crate::i18n::tr_format!("{} can't be moved", p.name),
+    }
+}
+
+/// The Move Photos question when some photos can't go into the folder `name`: each one named with
+/// its problem, and what to do about it.
+fn move_problems_body(ui: &mut egui::Ui, name: &str, problems: &[crate::state::MoveProblem], t: &Tokens) {
+    ui.label(crate::i18n::tr_format!("These can't be moved to “{}”:", name));
+    for p in problems.iter().take(MOVE_PROBLEMS_SHOWN) {
+        ui.label(egui::RichText::new(move_problem_line(p, name)).color(t.text_dim));
+    }
+    if problems.len() > MOVE_PROBLEMS_SHOWN {
+        ui.label(egui::RichText::new(crate::i18n::tr_format!("and {n} more", n = problems.len() - MOVE_PROBLEMS_SHOWN)).color(t.text_dim));
+    }
+    ui.add_space(4.0);
+    let any = |kinds: &[MoveProblemKind]| problems.iter().any(|p| kinds.contains(&p.kind));
+    if any(&[MoveProblemKind::Clash, MoveProblemKind::Twin]) {
+        ui.label(crate::i18n::tr("Rename a clashing photo, or choose another folder, to move it too."));
+    }
+    if any(&[MoveProblemKind::Missing]) {
+        ui.label(crate::i18n::tr("Reconnect the disk or use File → Find Missing Photos…, then try again."));
+    }
+    if any(&[MoveProblemKind::Unmovable]) {
+        ui.label(crate::i18n::tr("A photo with no file can't be moved. A Local photo can, once you use Add to My Photos."));
+    }
+}
 
 fn list_shrink_id() -> egui::Id {
     egui::Id::unique("dialog-list-shrink")
@@ -2245,15 +2288,20 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
             }
             Ok(moved)
         }
-        Dialog::MovePhotos { ids, folder, dont_ask, library, .. } => {
+        Dialog::MovePhotos { ids, folder, dont_ask, library, problems, .. } => {
             // another library opened meanwhile (from the menu bar, an agent): these numbers are
             // other photos there
             if *library != app.session.library_generation() {
                 return Err(crate::i18n::tr("Another library was opened since the photos were dropped: nothing was moved").to_string());
             }
             let ctx = app.tasks.repaint.clone().unwrap_or_default();
+            let mut params = json!({"ids": ids, "folder": folder});
+            // the photos found to have a problem stay where they are, the rest move
+            if !problems.is_empty() {
+                params["skip"] = json!(problems.iter().map(|p| p.id).collect::<Vec<u64>>());
+            }
             // (the question is turned off by the move itself, once a photo has moved: see `move_task::start_asked`)
-            crate::move_task::start_asked(app, &ctx, &json!({"ids": ids, "folder": folder}), *dont_ask)
+            crate::move_task::start_asked(app, &ctx, &params, *dont_ask)
         }
         Dialog::TrashFiles(ask) => super::trash_files::run(app, ask),
         // the catalog found: no file dialog; none: File ▸ Import Lightroom Catalog… asks for it

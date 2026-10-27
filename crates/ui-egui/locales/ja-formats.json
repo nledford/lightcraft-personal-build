@@ -388,5 +388,12 @@
   "Starts after {n} more": "あと {n} 件の後に開始",
   "Queued: it starts after {n} more": "キューに追加: あと {n} 件の後に開始します",
   "{n} tasks waiting in line won't run.": "待機中の {n} 件は実行されません。",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "アルバム「{}」を通じて自分自身に戻っています。循環しているアルバムのどれかの条件を変更してください（スマートアルバムを編集…）"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "アルバム「{}」を通じて自分自身に戻っています。循環しているアルバムのどれかの条件を変更してください（スマートアルバムを編集…）",
+  "These can't be moved to “{}”:": "「{0}」に移動できない写真:",
+  "{} is already in “{}”": "{0} はすでに「{1}」にあります",
+  "{} is missing or offline": "{0} が見つからないか、オフラインです",
+  "Move {n}, skip {m}": "{n}枚を移動、{m}枚をスキップ",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n}枚を「{1}」に移動し、{skipped}枚をスキップしました。編集 → 取り消す で元に戻せます。{0:.0}",
+  "{} can't be moved": "{0} は移動できません",
+  "{} has the same name as another photo being moved": "{0} は、移動する別の写真と名前が同じです"
 }

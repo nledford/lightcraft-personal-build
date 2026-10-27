@@ -388,5 +388,12 @@
   "Starts after {n} more": "Parte dopo altre {n}",
   "Queued: it starts after {n} more": "In coda: parte dopo altre {n}",
   "{n} tasks waiting in line won't run.": "{n} attività in coda non verranno eseguite.",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Ritorna su se stesso attraverso l'album “{}”: modifica le regole di un album del ciclo (Modifica album smart…)"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Ritorna su se stesso attraverso l'album “{}”: modifica le regole di un album del ciclo (Modifica album smart…)",
+  "These can't be moved to “{}”:": "Queste non possono essere spostate in “{0}”:",
+  "{} is already in “{}”": "{0} è già in “{1}”",
+  "{} is missing or offline": "{0} manca o è offline",
+  "Move {n}, skip {m}": "Sposta {n}, salta {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Foto spostate in “{1}”: {n}{0:.0}, saltate: {skipped}. Modifica → Annulla le riporta indietro.",
+  "{} can't be moved": "{0} non può essere spostato",
+  "{} has the same name as another photo being moved": "{0} ha lo stesso nome di un’altra foto da spostare"
 }

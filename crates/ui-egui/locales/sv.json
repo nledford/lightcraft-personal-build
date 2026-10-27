@@ -2659,5 +2659,8 @@
   "Queued: it starts when the task ahead of it ends": "I kö: startar när uppgiften före är klar",
   "1 task waiting in line won't run.": "1 uppgift som väntar i kön kommer inte att köras.",
   "This album is in a loop, so it shows nothing": "Det här albumet ingår i en loop och visar därför ingenting",
-  "It tests itself: change its rules (Edit Smart Album…)": "Det testar sig självt: ändra dess regler (Redigera smart album…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "Det testar sig självt: ändra dess regler (Redigera smart album…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Byt namn på fotot med samma namn eller välj en annan mapp så kan det flyttas.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Anslut disken igen eller använd Fil → Sök efter saknade foton… och försök igen.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ett foto utan fil kan inte flyttas. Ett lokalt foto kan det, när du har använt Lägg till i Mina foton."
 }

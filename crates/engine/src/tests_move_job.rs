@@ -94,7 +94,7 @@ fn the_activity_row_shows_progress_and_the_move_is_one_undo_step() {
     // the library only follows when the session finishes the move
     assert_eq!(file_of(&s, a), dir.path("local/a.jpg"));
     let r = s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
-    assert_eq!(r, json!({"moved": 2, "of": 2, "folder": dir.path("share"), "stopped": false}));
+    assert_eq!(r, json!({"moved": 2, "of": 2, "folder": dir.path("share"), "stopped": false, "skipped": []}));
     assert_eq!(file_of(&s, a), dir.path("share/a.jpg"));
     assert_eq!(file_of(&s, b), dir.path("share/b.jpg"));
     assert!(Path::new(&dir.path("share/a.xmp")).is_file() && !Path::new(&dir.path("local/a.xmp")).exists(), "the sidecar goes along");
@@ -161,7 +161,7 @@ fn a_stopped_move_keeps_what_moved_and_one_undo_moves_it_back() {
     let activity = s.activity.clone();
     let out = work.run_with(&StopAfter { s: &activity, task: finish.task_id(), after: Cell::new(2) });
     let r = s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
-    assert_eq!(r, json!({"moved": 2, "of": 3, "folder": dir.path("share"), "stopped": true}));
+    assert_eq!(r, json!({"moved": 2, "of": 3, "folder": dir.path("share"), "stopped": true, "skipped": []}));
     // the two that moved point at the share, with a's sidecar; c never left
     assert_eq!(file_of(&s, a), dir.path("share/a.jpg"));
     assert_eq!(file_of(&s, b), dir.path("share/b.jpg"));
@@ -192,7 +192,7 @@ fn a_move_stopped_before_the_first_file_moves_nothing_and_adds_no_undo_step() {
     s.activity.cancel(finish.task_id()).unwrap();
     let out = work.run();
     let r = s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
-    assert_eq!(r, json!({"moved": 0, "of": 2, "folder": dir.path("share"), "stopped": true}));
+    assert_eq!(r, json!({"moved": 0, "of": 2, "folder": dir.path("share"), "stopped": true, "skipped": []}));
     assert_eq!(file_of(&s, a), dir.path("local/a.jpg"));
     assert!(Path::new(&dir.path("local/b.jpg")).is_file() && !Path::new(&dir.path("share/b.jpg")).exists());
     assert_eq!(s.undo.len(), steps, "nothing moved, nothing to undo");
@@ -478,7 +478,8 @@ fn checks_that_read_the_disk_refuse_on_the_worker_before_anything_moves() {
     std::fs::write(dir.path("share/b.jpg"), "someone else's").unwrap();
     let out = work.run();
     let e = s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap_err().to_string();
-    assert!(e.contains("b.jpg already in") && e.contains("nothing was moved"), "{e}");
+    // (#2721's plain refusal, sorted on the worker: the photo named, and what to do)
+    assert!(e.contains("b.jpg is already in") && e.contains("Nothing was moved"), "{e}");
     assert_eq!(file_of(&s, a), dir.path("local/a.jpg"));
     assert!(Path::new(&dir.path("local/a.jpg")).is_file() && !Path::new(&dir.path("share/a.jpg")).exists());
     assert_eq!(std::fs::read_to_string(dir.path("share/b.jpg")).unwrap(), "someone else's");

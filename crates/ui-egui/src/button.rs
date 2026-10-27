@@ -485,7 +485,7 @@ impl<'a> Button<'a> {
         // drawn outside the button (the painter above leaves room for it) because a button has its own
         // fill and border to keep whole; the plainer widget buttons draw theirs inside their rect.
         if resp.has_focus() {
-            p.rect_stroke(rect.expand(2.0), radius + 2.0, crate::widgets::focus_stroke(&t), StrokeKind::Outside);
+            p.rect_stroke(rect.expand(2.0), radius + 2.0, crate::widgets::focus_stroke(ui.ctx(), &t), StrokeKind::Outside);
         }
         let galley = self.galley(ui);
         let icon_s = self.size.icon();

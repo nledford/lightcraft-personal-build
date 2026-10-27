@@ -2466,5 +2466,8 @@
   "Queued: it starts when the task ahead of it ends": "Trong hàng đợi: bắt đầu khi tác vụ trước nó kết thúc",
   "1 task waiting in line won't run.": "1 tác vụ đang chờ trong hàng đợi sẽ không chạy.",
   "This album is in a loop, so it shows nothing": "Album này nằm trong một vòng lặp nên không hiển thị gì",
-  "It tests itself: change its rules (Edit Smart Album…)": "Album này tự kiểm tra chính nó: hãy đổi quy tắc của nó (Chỉnh sửa album thông minh…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "Album này tự kiểm tra chính nó: hãy đổi quy tắc của nó (Chỉnh sửa album thông minh…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Đổi tên ảnh bị trùng tên hoặc chọn thư mục khác để chuyển được.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Kết nối lại ổ đĩa hoặc dùng Tệp → Tìm ảnh bị thiếu… rồi thử lại.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ảnh không có tệp thì không thể chuyển. Ảnh cục bộ thì được, sau khi dùng Thêm vào Ảnh của tôi."
 }

@@ -296,8 +296,13 @@ fn row(ui: &mut Ui, spec: Spec) -> (Response, bool) {
         }
     }
     if resp.has_focus() {
-        let ring = crate::widgets::focus_stroke(&t);
+        let ring = crate::widgets::focus_stroke(ui.ctx(), &t);
+        // (in the Settings window, where the focus has one look whatever the control, the whole row is ringed, label
+        // and all, as it is round a button or a text box; elsewhere the ring is round the box alone)
         match shape {
+            _ if crate::widgets::focus_is_in_text_colour(ui.ctx()) => {
+                p.rect_stroke(rect.expand(2.0), 5.0, ring, StrokeKind::Outside);
+            }
             Form::Box => {
                 p.rect_stroke(b.expand(2.0), 5.0, ring, StrokeKind::Outside);
             }

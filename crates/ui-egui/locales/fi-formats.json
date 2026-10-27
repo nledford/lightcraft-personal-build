@@ -388,5 +388,12 @@
   "Starts after {n} more": "Alkaa {n} muun jälkeen",
   "Queued: it starts after {n} more": "Jonossa: alkaa {n} muun jälkeen",
   "{n} tasks waiting in line won't run.": "{n} jonossa odottavaa tehtävää ei suoriteta.",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Se johtaa takaisin itseensä albumin ”{}” kautta: muuta jonkin silmukan albumin sääntöjä (Muokkaa älyalbumia…)"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Se johtaa takaisin itseensä albumin ”{}” kautta: muuta jonkin silmukan albumin sääntöjä (Muokkaa älyalbumia…)",
+  "These can't be moved to “{}”:": "Näitä ei voi siirtää kohteeseen ”{0}”:",
+  "{} is already in “{}”": "{0} on jo kohteessa ”{1}”",
+  "{} is missing or offline": "{0} puuttuu tai on offline-tilassa",
+  "Move {n}, skip {m}": "Siirrä {n}, ohita {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Siirretty kuvia kohteeseen ”{1}”: {n}{0:.0}, ohitettu: {skipped}. Muokkaa → Kumoa siirtää ne takaisin.",
+  "{} can't be moved": "Kohdetta {0} ei voi siirtää",
+  "{} has the same name as another photo being moved": "{0} on samanniminen kuin toinen siirrettävä kuva"
 }

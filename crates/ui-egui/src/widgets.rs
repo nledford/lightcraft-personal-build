@@ -151,12 +151,23 @@ pub fn register_geometry(ctx: &egui::Context, id: impl Into<String>, rect: Rect)
 /// as focused whether it is idle, hovered or selected. It is drawn inside `rect`, so it survives a
 /// painter clipped to the control. [`crate::check`] draws the same stroke around its box.
 pub fn focus_ring(p: &egui::Painter, rect: Rect, t: &Tokens) {
-    p.rect_stroke(rect, CornerRadius::same(4), focus_stroke(t), StrokeKind::Inside);
+    p.rect_stroke(rect, CornerRadius::same(4), focus_stroke(p.ctx(), t), StrokeKind::Inside);
 }
 
-/// The stroke of every focus ring: 2 px in the accent colour.
-pub fn focus_stroke(t: &Tokens) -> Stroke {
-    Stroke::new(2.0, t.accent)
+/// The stroke of every focus ring: 2 px in the accent colour, or in the text colour while
+/// [`focus_in_text_colour`] is on (the Settings window draws its one look for the focus that way).
+pub fn focus_stroke(ctx: &egui::Context, t: &Tokens) -> Stroke {
+    Stroke::new(2.0, if focus_is_in_text_colour(ctx) { t.text } else { t.accent })
+}
+
+/// Whether the focus rings drawn from now on are in the text colour ([`focus_stroke`]): on for
+/// the length of a window that has one look for the focus, which turns it off again after.
+pub fn focus_in_text_colour(ctx: &egui::Context, on: bool) {
+    ctx.data_mut(|d| d.insert_temp(egui::Id::unique("lc-focus-in-text-colour"), on));
+}
+
+pub(crate) fn focus_is_in_text_colour(ctx: &egui::Context) -> bool {
+    ctx.data(|d| d.get_temp::<bool>(egui::Id::unique("lc-focus-in-text-colour"))).unwrap_or(false)
 }
 
 /// Esc was handled this frame by something nested (an open popup closed on it): containers such
@@ -986,14 +997,19 @@ fn chip(ui: &mut Ui, id: &str, label: &str, active: bool, choice: bool, row: Opt
     resp
 }
 
-/// The ring a button drawn here shows while it has the keyboard focus (Tab, the arrow keys): 2 pt
-/// in the text colour with a 1 pt line of the surface's colour inside it, both within its rect so
-/// that a neighbour or the edge of a scrolled list never cuts them. The inner line sets the ring
-/// off from the button's fill, and makes it a double line: a chosen [`choice_button_in`] has a
-/// single thin one, so "has the focus" and "is chosen" are told apart by shape, not thickness.
+/// The ring a button drawn here shows while it has the keyboard focus (Tab, the arrow keys): in the
+/// Settings window ([`focus_in_text_colour`]) 2 pt in the text colour with a 1 pt line of the
+/// surface's colour inside it, everywhere else the app's accent ring ([`focus_ring`]), both within
+/// its rect so that a neighbour or the edge of a scrolled list never cuts them. The inner line sets
+/// the ring off from the button's fill, and makes it a double line: a chosen [`choice_button_in`]
+/// has a single thin one, so "has the focus" and "is chosen" are told apart by shape, not thickness.
 pub(crate) fn ring_on_focus(ui: &Ui, t: &Tokens, resp: &Response, r: Rect) {
     if resp.has_focus() {
         let p = ui.painter();
+        if !focus_is_in_text_colour(ui.ctx()) {
+            focus_ring(p, r, t);
+            return;
+        }
         p.rect_stroke(r, CornerRadius::same(4), Stroke::new(2.0, t.text), StrokeKind::Inside);
         p.rect_stroke(r.shrink(2.0), CornerRadius::same(2), Stroke::new(1.0, t.chrome), StrokeKind::Inside);
     }

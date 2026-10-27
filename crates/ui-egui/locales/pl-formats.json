@@ -388,5 +388,12 @@
   "Starts after {n} more": "Rozpocznie się po {n} kolejnych",
   "Queued: it starts after {n} more": "W kolejce: rozpocznie się po {n} kolejnych",
   "{n} tasks waiting in line won't run.": "Oczekujące w kolejce zadania ({n}) nie zostaną uruchomione.",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Wraca do siebie przez album „{}”: zmień reguły jednego z albumów w pętli (Edytuj album inteligentny…)"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Wraca do siebie przez album „{}”: zmień reguły jednego z albumów w pętli (Edytuj album inteligentny…)",
+  "These can't be moved to “{}”:": "Nie można ich przenieść do „{0}”:",
+  "{} is already in “{}”": "{0} jest już w „{1}”",
+  "{} is missing or offline": "Brakuje {0} lub jest niedostępny",
+  "Move {n}, skip {m}": "Przenieś: {n}, pomiń: {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Przeniesiono do „{1}” — zdjęcia: {n}{0:.0}, pominięto: {skipped}. Edytuj → Cofnij przywróci je.",
+  "{} can't be moved": "{0} nie można przenieść",
+  "{} has the same name as another photo being moved": "{0} ma tę samą nazwę co inne przenoszone zdjęcie"
 }

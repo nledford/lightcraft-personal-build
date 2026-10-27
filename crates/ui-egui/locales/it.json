@@ -2591,5 +2591,8 @@
   "Queued: it starts when the task ahead of it ends": "In coda: parte quando finisce l'attività precedente",
   "1 task waiting in line won't run.": "1 attività in coda non verrà eseguita.",
   "This album is in a loop, so it shows nothing": "Questo album è in un ciclo, quindi non mostra nulla",
-  "It tests itself: change its rules (Edit Smart Album…)": "Verifica se stesso: modifica le sue regole (Modifica album smart…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "Verifica se stesso: modifica le sue regole (Modifica album smart…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Rinomina la foto in conflitto o scegli un'altra cartella per spostarla.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Ricollega il disco o usa File → Trova foto mancanti…, poi riprova.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Una foto senza file non può essere spostata. Una foto locale sì, dopo aver usato Aggiungi a Le mie foto."
 }

@@ -108,6 +108,14 @@ const PINNED_PAGE_MIN_HEIGHT: f32 = 100.0;
 /// On Slideshow the slide preview is pinned between the tab bar and the page (where the room
 /// allows), and comes off that page's room.
 pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_height: f32) {
+    // (one look for the focus in this window, whichever control: the text colour, not the accent
+    // the rest of the app rings a focused control in; see [`focus_style`])
+    crate::widgets::focus_in_text_colour(ui.ctx(), true);
+    window_page(app, ui, tab, max_height);
+    crate::widgets::focus_in_text_colour(ui.ctx(), false);
+}
+
+fn window_page(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_height: f32) {
     ui.set_width((ui.ctx().content_rect().width() - 64.0).clamp(240.0, PAGE_SIZE.x));
     let top = ui.cursor().top();
     // What says where a control is, and what a text box says while it is empty, are made legible

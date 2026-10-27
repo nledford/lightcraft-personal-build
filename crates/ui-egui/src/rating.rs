@@ -157,7 +157,7 @@ impl Rating {
                 ui.memory_mut(|m| {
                     m.set_focus_lock_filter(resp.id, egui::EventFilter { horizontal_arrows: true, ..Default::default() });
                 });
-                ui.painter().rect_stroke(r.expand(1.0), 6.0, crate::widgets::focus_stroke(&t), egui::StrokeKind::Outside);
+                ui.painter().rect_stroke(r.expand(1.0), 6.0, crate::widgets::focus_stroke(ui.ctx(), &t), egui::StrokeKind::Outside);
             }
             *slot = r;
         }
@@ -209,7 +209,7 @@ pub fn favorite_button(ui: &mut Ui, widget: String, favorite: bool, name: &str) 
         ui.painter().rect_filled(r, 4.0, t.hover.gamma_multiply(0.7));
     }
     if resp.has_focus() {
-        ui.painter().rect_stroke(r.expand(1.0), 6.0, crate::widgets::focus_stroke(&t), egui::StrokeKind::Outside);
+        ui.painter().rect_stroke(r.expand(1.0), 6.0, crate::widgets::focus_stroke(ui.ctx(), &t), egui::StrokeKind::Outside);
     }
     let icon = RatingSize::Medium.icon();
     paint_star(ui.painter(), Rect::from_center_size(r.center(), vec2(icon, icon)), favorite, if favorite { t.star } else { t.icon });

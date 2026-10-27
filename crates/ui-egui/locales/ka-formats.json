@@ -388,5 +388,12 @@
   "Starts after {n} more": "დაიწყება კიდევ {n}-ის შემდეგ",
   "Queued: it starts after {n} more": "რიგშია: დაიწყება კიდევ {n}-ის შემდეგ",
   "{n} tasks waiting in line won't run.": "რიგში მყოფი {n} ამოცანა არ გაეშვება.",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "ის საკუთარ თავს უბრუნდება ალბომის „{}“ გავლით: შეცვალეთ ციკლში მყოფი ერთ-ერთი ალბომის წესები (სმარტ-ალბომის რედაქტირება…)"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "ის საკუთარ თავს უბრუნდება ალბომის „{}“ გავლით: შეცვალეთ ციკლში მყოფი ერთ-ერთი ალბომის წესები (სმარტ-ალბომის რედაქტირება…)",
+  "These can't be moved to “{}”:": "„{0}“-ში ვერ გადაიტანება:",
+  "{} is already in “{}”": "{0} უკვე არის „{1}“-ში",
+  "{} is missing or offline": "{0} არ არის ან ოფლაინშია",
+  "Move {n}, skip {m}": "გადატანა: {n}, გამოტოვება: {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "„{1}“-ში გადატანილია ფოტო: {n}{0:.0}, გამოტოვებულია: {skipped}. რედაქტირება → დაბრუნება დააბრუნებს მათ.",
+  "{} can't be moved": "{0} ვერ გადაიტანება",
+  "{} has the same name as another photo being moved": "{0}-ს იგივე სახელი აქვს, რაც გადასატან სხვა ფოტოს"
 }

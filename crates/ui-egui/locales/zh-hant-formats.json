@@ -388,5 +388,12 @@
   "Starts after {n} more": "再過 {n} 個後開始",
   "Queued: it starts after {n} more": "已加入佇列：再過 {n} 個後開始",
   "{n} tasks waiting in line won't run.": "佇列中等待的 {n} 個工作不會執行。",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "它透過相簿「{}」回到自身：請變更循環中某個相簿的規則（編輯智慧型相簿…）"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "它透過相簿「{}」回到自身：請變更循環中某個相簿的規則（編輯智慧型相簿…）",
+  "These can't be moved to “{}”:": "以下照片無法移到「{0}」：",
+  "{} is already in “{}”": "{0} 已在「{1}」中",
+  "{} is missing or offline": "{0} 遺失或處於離線狀態",
+  "Move {n}, skip {m}": "移動 {n} 張，略過 {m} 張",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "已將 {n} 張照片移到「{1}」{0:.0}，略過 {skipped} 張。編輯 → 復原 可移回。",
+  "{} can't be moved": "{0} 無法移動",
+  "{} has the same name as another photo being moved": "{0} 與另一張要移動的照片同名"
 }

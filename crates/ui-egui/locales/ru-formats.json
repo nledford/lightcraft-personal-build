@@ -388,5 +388,12 @@
   "Starts after {n} more": "Начнётся после ещё {n}",
   "Queued: it starts after {n} more": "В очереди: начнётся после ещё {n}",
   "{n} tasks waiting in line won't run.": "Задачи в очереди ({n}) не будут запущены.",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Он возвращается к себе через альбом «{}»: измените условия одного из альбомов в цикле (Изменить смарт-альбом…)"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Он возвращается к себе через альбом «{}»: измените условия одного из альбомов в цикле (Изменить смарт-альбом…)",
+  "These can't be moved to “{}”:": "Эти фото нельзя переместить в «{0}»:",
+  "{} is already in “{}”": "{0} уже в «{1}»",
+  "{} is missing or offline": "{0} отсутствует или недоступен",
+  "Move {n}, skip {m}": "Переместить {n}, пропустить {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "В «{1}» перемещено фото: {n}{0:.0}, пропущено: {skipped}. Правка → Отменить вернёт их.",
+  "{} can't be moved": "{0} нельзя переместить",
+  "{} has the same name as another photo being moved": "{0} имеет то же имя, что и другое перемещаемое фото"
 }

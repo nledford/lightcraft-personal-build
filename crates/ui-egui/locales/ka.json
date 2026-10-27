@@ -2965,5 +2965,8 @@
   "Queued: it starts when the task ahead of it ends": "რიგშია: დაიწყება, როცა წინა ამოცანა დასრულდება",
   "1 task waiting in line won't run.": "რიგში მყოფი 1 ამოცანა არ გაეშვება.",
   "This album is in a loop, so it shows nothing": "ეს ალბომი ციკლშია, ამიტომ არაფერს აჩვენებს",
-  "It tests itself: change its rules (Edit Smart Album…)": "ის საკუთარ თავს ამოწმებს: შეცვალეთ მისი წესები (სმარტ-ალბომის რედაქტირება…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "ის საკუთარ თავს ამოწმებს: შეცვალეთ მისი წესები (სმარტ-ალბომის რედაქტირება…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "გადაარქვით სახელი დუბლირებულ ფოტოს ან აირჩიეთ სხვა საქაღალდე, რომ გადავიდეს.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "ხელახლა შეაერთეთ დისკი ან გამოიყენეთ ფაილი → დაკარგული ფოტოების მოძებნა… და სცადეთ თავიდან.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "ფაილის გარეშე ფოტო ვერ გადაიტანება. ლოკალური ფოტო გადაიტანება, თუ გამოიყენებთ: ჩემს ფოტოებში დამატება."
 }
