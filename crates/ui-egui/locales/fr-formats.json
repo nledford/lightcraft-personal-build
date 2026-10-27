@@ -175,7 +175,7 @@
   "{pid} (missing)": "{pid} (manquant)",
   "{sel_n} selected · {counted}": "{sel_n} sélectionné(s) · {counted}",
   "{stage}… {:.0}%": "{stage}… {:.0} %",
-  "{verb} {n} Photo{}": "{verb} {n} photo{}",
+  "{verb} {n} Photo{}": "{verb} : {n} photo{}",
   "{weekday}, {day}": "{weekday} {day}",
   "{weekday}, {day} {month} {year}": "{weekday} {day} {month} {year}",
   "{what} merge added": "Fusion de {what} ajoutée",
@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "Déplacer {n}, ignorer {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} photo{0} déplacée(s) vers « {1} », {skipped} ignorée(s). Modifier → Annuler les remet en place.",
   "{} can't be moved": "{0} ne peut pas être déplacé",
-  "{} has the same name as another photo being moved": "{0} porte le même nom qu’une autre photo à déplacer"
+  "{} has the same name as another photo being moved": "{0} porte le même nom qu’une autre photo à déplacer",
+  "Left alone: {n} (synchronize again to review them)": "Laissés tels quels : {n} (synchronisez à nouveau pour les examiner)",
+  "Remove from Queue: {label}": "Retirer de la file : {label}",
+  "Starts after: {what}": "Démarre après : {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "1 tâche attend en file : {names}. Changer de bibliothèque l'abandonne.",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} tâches attendent en file : {names}. Changer de bibliothèque les abandonne.",
+  "Waiting tasks dropped: {n}": "Tâches en attente abandonnées : {n}",
+  "Too many tasks are waiting ({n}): wait for some to finish": "Trop de tâches attendent ({n}) : patientez jusqu'à ce que certaines se terminent"
 }

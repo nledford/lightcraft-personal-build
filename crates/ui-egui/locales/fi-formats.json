@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "Siirrä {n}, ohita {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Siirretty kuvia kohteeseen ”{1}”: {n}{0:.0}, ohitettu: {skipped}. Muokkaa → Kumoa siirtää ne takaisin.",
   "{} can't be moved": "Kohdetta {0} ei voi siirtää",
-  "{} has the same name as another photo being moved": "{0} on samanniminen kuin toinen siirrettävä kuva"
+  "{} has the same name as another photo being moved": "{0} on samanniminen kuin toinen siirrettävä kuva",
+  "Left alone: {n} (synchronize again to review them)": "Jätetty ennalleen: {n} (synkronoi uudelleen tarkistaaksesi)",
+  "Remove from Queue: {label}": "Poista jonosta: {label}",
+  "Starts after: {what}": "Alkaa tämän jälkeen: {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "1 tehtävä odottaa jonossa: {names}. Kirjaston vaihtaminen hylkää sen.",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "Jonossa odottavia tehtäviä: {n}: {names}. Kirjaston vaihtaminen hylkää ne.",
+  "Waiting tasks dropped: {n}": "Hylättyjä odottavia tehtäviä: {n}",
+  "Too many tasks are waiting ({n}): wait for some to finish": "Liian monta tehtävää odottaa: {n}. Odota, että osa valmistuu"
 }

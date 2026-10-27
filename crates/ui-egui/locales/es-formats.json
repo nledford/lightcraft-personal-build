@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "Mover {n}, omitir {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} foto{0} movida{0} a “{1}”; omitidas: {skipped}. Editar → Deshacer las devuelve.",
   "{} can't be moved": "{0} no se puede mover",
-  "{} has the same name as another photo being moved": "{0} tiene el mismo nombre que otra foto que se está moviendo"
+  "{} has the same name as another photo being moved": "{0} tiene el mismo nombre que otra foto que se está moviendo",
+  "Left alone: {n} (synchronize again to review them)": "Sin tocar: {n} (sincroniza de nuevo para revisarlos)",
+  "Remove from Queue: {label}": "Quitar de la cola: {label}",
+  "Starts after: {what}": "Empieza tras: {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "1 tarea espera en la cola: {names}. Cambiar de biblioteca la descarta.",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} tareas esperan en la cola: {names}. Cambiar de biblioteca las descarta.",
+  "Waiting tasks dropped: {n}": "Tareas en espera descartadas: {n}",
+  "Too many tasks are waiting ({n}): wait for some to finish": "Hay demasiadas tareas en espera ({n}): espera a que terminen algunas"
 }

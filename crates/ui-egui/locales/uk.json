@@ -2159,7 +2159,6 @@
   "Skipped: files that can't be read": "Пропущено: файли, які не вдається прочитати",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "Цієї теки немає: її переміщено чи перейменовано, або її диск не під’єднано.",
   "Relink photos whose file was renamed or moved": "Перезв’язати фото, файл яких перейменовано чи переміщено",
-  "A folder is already being synchronized": "Тека вже синхронізується",
   "Synchronizing…": "Синхронізація…",
   "Relinked": "Перезв’язано",
   "Removed": "Прибрано",
@@ -2622,5 +2621,14 @@
   "Add to My Photos…": "Додати до моїх фото…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Показує фото цієї теки для перевірки, потім додає їх до бібліотеки на місці; жоден файл не змінюється",
   "Copy Path": "Копіювати шлях",
-  "Path copied": "Шлях скопійовано"
+  "Path copied": "Шлях скопійовано",
+  "Another library was opened: nothing was done": "Відкрито іншу бібліотеку: нічого не зроблено",
+  "Queue": "У чергу",
+  "Queue Move": "У чергу: переміщення",
+  "Queue Synchronize": "У чергу: синхронізація",
+  "A folder is still being scanned for the import review: drop photos when it has finished": "Теку ще скануємо для перевірки імпорту. Перетягніть фото, коли це завершиться",
+  "A folder is still being read for the Local view: drop photos when it has finished": "Тека ще читається для подання «Локальні». Перетягніть фото, коли це завершиться",
+  "An import review is waiting to open: drop photos when it is closed": "Перевірка імпорту чекає на відкриття. Перетягніть фото, коли її закриють",
+  "Switch library while tasks are waiting?": "Змінити бібліотеку, поки завдання чекають у черзі?",
+  "Switch Library": "Змінити бібліотеку"
 }

@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "{n}枚を移動、{m}枚をスキップ",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n}枚を「{1}」に移動し、{skipped}枚をスキップしました。編集 → 取り消す で元に戻せます。{0:.0}",
   "{} can't be moved": "{0} は移動できません",
-  "{} has the same name as another photo being moved": "{0} は、移動する別の写真と名前が同じです"
+  "{} has the same name as another photo being moved": "{0} は、移動する別の写真と名前が同じです",
+  "Left alone: {n} (synchronize again to review them)": "そのまま: {n} 件（再度同期して確認してください）",
+  "Remove from Queue: {label}": "キューから削除: {label}",
+  "Starts after: {what}": "次の後に開始: {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "1件のタスクが待機中です：{names}。ライブラリを切り替えると破棄されます。",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n}件のタスクが待機中です：{names}。ライブラリを切り替えると破棄されます。",
+  "Waiting tasks dropped: {n}": "破棄した待機中のタスク：{n}件",
+  "Too many tasks are waiting ({n}): wait for some to finish": "待機中のタスクが多すぎます（{n}件）：いくつか完了するまでお待ちください"
 }

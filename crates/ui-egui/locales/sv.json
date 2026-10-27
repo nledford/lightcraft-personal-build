@@ -32,7 +32,6 @@
   "A change that can't be saved to disk (full or unplugged drive) is no longer silent: the command reports": "En ändring som inte kan sparas till disk (full eller urkopplad enhet) är inte längre tyst: kommandot rapporterar",
   "A dark slate backdrop with the exposure, ISO and focal length, then the camera and lens, under each photo.": "En mörk skifferbakgrund med exponering, ISO och brännvidd, sedan kamera och objektiv, under varje foto.",
   "A filter is hiding this view's photos: change it, or clear it (View → Clear Filters)": "Ett filter döljer den här vyns foton: ändra det eller rensa det (Visa → Rensa filter)",
-  "A folder is already being synchronized": "En mapp synkroniseras redan",
   "A folder is being synchronized": "En mapp synkroniseras",
   "a full drive) no longer counts as built and Build Smart Previews replaces it.": "en full enhet) räknas inte längre som byggd och Bygg smarta förhandsgranskningar ersätter den.",
   "A keyword set needs a name": "En nyckelordsuppsättning behöver ett namn",
@@ -2413,8 +2412,6 @@
   "Mask Overlay": "Masköverlägg",
   "Mask Pins": "Masknålar",
   "Photo Counts": "Antal foton",
-  "An import is running": "En import pågår",
-  "An import is running. Drop photos when it has finished": "En import pågår. Släpp fotona när den är klar",
   "Close the open dialog to drop files here": "Stäng den öppna dialogrutan för att släppa filer här",
   "Close the open dialog, then drop the files again": "Stäng den öppna dialogrutan och släpp sedan filerna igen",
   "Drop to import": "Släpp för att importera",
@@ -2676,5 +2673,14 @@
   "Add to My Photos…": "Lägg till i Mina foton…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Granskar fotona i den här mappen och lägger sedan till dem i biblioteket där de ligger; ingen fil rörs",
   "Copy Path": "Kopiera sökväg",
-  "Path copied": "Sökväg kopierad"
+  "Path copied": "Sökväg kopierad",
+  "Another library was opened: nothing was done": "Ett annat bibliotek öppnades: ingenting gjordes",
+  "Queue": "Köa",
+  "Queue Move": "Köa flytt",
+  "Queue Synchronize": "Köa synkronisering",
+  "A folder is still being scanned for the import review: drop photos when it has finished": "En mapp läses fortfarande för importgranskningen. Släpp fotona när den är klar",
+  "A folder is still being read for the Local view: drop photos when it has finished": "En mapp läses fortfarande för vyn Lokalt. Släpp fotona när den är klar",
+  "An import review is waiting to open: drop photos when it is closed": "Importgranskningen väntar på att öppnas. Släpp fotona när den är stängd",
+  "Switch library while tasks are waiting?": "Byta bibliotek medan uppgifter väntar i kön?",
+  "Switch Library": "Byt bibliotek"
 }

@@ -2126,7 +2126,6 @@
   "Skipped: files that can't be read": "Übersprungen: Dateien, die nicht gelesen werden können",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "Dieser Ordner ist nicht vorhanden: Er wurde verschoben oder umbenannt, oder sein Datenträger ist nicht verbunden.",
   "Relink photos whose file was renamed or moved": "Fotos neu verknüpfen, deren Datei umbenannt oder verschoben wurde",
-  "A folder is already being synchronized": "Es wird bereits ein Ordner synchronisiert",
   "Synchronizing…": "Wird synchronisiert…",
   "Relinked": "Neu verknüpft",
   "Removed": "Entfernt",
@@ -3687,5 +3686,14 @@
   "Add to My Photos…": "Zu „Meine Fotos“ hinzufügen…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Zeigt die Fotos dieses Ordners zur Überprüfung und fügt sie dann der Bibliothek hinzu, wo sie liegen; keine Datei wird angefasst",
   "Copy Path": "Pfad kopieren",
-  "Path copied": "Pfad kopiert"
+  "Path copied": "Pfad kopiert",
+  "Another library was opened: nothing was done": "Eine andere Bibliothek wurde geöffnet: es wurde nichts getan",
+  "Queue": "Einreihen",
+  "Queue Move": "Verschieben einreihen",
+  "Queue Synchronize": "Synchronisieren einreihen",
+  "A folder is still being scanned for the import review: drop photos when it has finished": "Ein Ordner wird noch für die Importprüfung durchsucht. Lege die Fotos ab, wenn das fertig ist",
+  "A folder is still being read for the Local view: drop photos when it has finished": "Ein Ordner wird noch für die Ansicht „Lokal“ gelesen. Lege die Fotos ab, wenn das fertig ist",
+  "An import review is waiting to open: drop photos when it is closed": "Die Importprüfung wartet darauf, geöffnet zu werden. Lege die Fotos ab, wenn sie geschlossen ist",
+  "Switch library while tasks are waiting?": "Bibliothek wechseln, während Aufgaben warten?",
+  "Switch Library": "Bibliothek wechseln"
 }

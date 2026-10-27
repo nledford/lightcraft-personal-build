@@ -799,9 +799,6 @@ pub struct UiState {
     pub docking_version: u32,
     #[serde(default = "crate::i18n::default_language")]
     pub language: crate::i18n::Locale,
-    /// The Build Previews run last announced (its identity, finished?).
-    #[serde(skip)]
-    pub preview_build_seen: Option<(usize, bool)>,
     /// The library backup whose end was announced (see `backup_status`): an address, only good
     /// for this run.
     #[serde(skip)]
@@ -1661,7 +1658,6 @@ impl Default for UiState {
             docking: None,
             docking_version: crate::docking::DOCKING_VERSION,
             language: crate::i18n::default_language(),
-            preview_build_seen: None,
             backup_seen: None,
             restore_seen: None,
             unsaved_seen: false,

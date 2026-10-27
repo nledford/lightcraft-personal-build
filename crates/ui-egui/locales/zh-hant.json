@@ -1975,7 +1975,6 @@
   "Skipped: files that can't be read": "已略過：無法讀取的檔案",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "此資料夾不存在：它已被移動或重新命名，或其磁碟未連接。",
   "Relink photos whose file was renamed or moved": "重新連結檔案被重新命名或移動的照片",
-  "A folder is already being synchronized": "已有資料夾正在同步",
   "Synchronizing…": "正在同步…",
   "Relinked": "已重新連結",
   "Removed": "已移除",
@@ -2426,5 +2425,14 @@
   "Add to My Photos…": "加入我的照片…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "審閱此資料夾中的照片，然後就地加入照片庫；不會更動任何檔案",
   "Copy Path": "複製路徑",
-  "Path copied": "已複製路徑"
+  "Path copied": "已複製路徑",
+  "Another library was opened: nothing was done": "已開啟另一個圖庫：未執行任何操作",
+  "Queue": "加入佇列",
+  "Queue Move": "加入佇列（移動）",
+  "Queue Synchronize": "加入佇列（同步）",
+  "A folder is still being scanned for the import review: drop photos when it has finished": "正在掃描資料夾以供匯入預覽。掃描完成後再拖放照片",
+  "A folder is still being read for the Local view: drop photos when it has finished": "正在讀取資料夾以供「本機」檢視使用。讀取完成後再拖放照片",
+  "An import review is waiting to open: drop photos when it is closed": "匯入預覽正等待開啟。關閉後再拖放照片",
+  "Switch library while tasks are waiting?": "要在有工作排隊等待時切換照片庫嗎？",
+  "Switch Library": "切換照片庫"
 }

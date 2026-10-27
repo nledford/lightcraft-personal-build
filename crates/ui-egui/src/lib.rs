@@ -247,6 +247,8 @@ mod tests_profiles_layout;
 #[cfg(test)]
 mod tests_progress;
 #[cfg(test)]
+mod tests_queue_ux;
+#[cfg(test)]
 mod tests_quit_unsaved;
 #[cfg(test)]
 mod tests_rating;
@@ -622,6 +624,17 @@ impl QuitPrompt {
     }
 }
 
+/// A library switch that stopped to ask first, because tasks wait in line that the other library would drop
+/// (`panels::notices`). `create`: the folder is made when it is confirmed (a New Library).
+#[derive(Clone, Debug, PartialEq)]
+pub struct SwitchPrompt {
+    pub path: String,
+    pub create: bool,
+    pub text: String,
+    /// The library that was open when it was asked (`Session::library_generation`).
+    pub generation: u64,
+}
+
 pub struct LightcraftApp {
     pub(crate) model_setup: model_setup::Pending,
     /// Per-catalog-revision caches of library-wide results the panels show every frame
@@ -667,6 +680,8 @@ pub struct LightcraftApp {
     pub quit_prompt: Option<QuitPrompt>,
     /// Keyboard/focus/input state for the prompt above, including its one-frame creation barrier.
     pub(crate) notice_input: panels::notices::PromptInput,
+    /// Switching libraries was stopped to ask first: tasks waiting in line would not run in the other one.
+    pub switch_prompt: Option<SwitchPrompt>,
     /// Quit Anyway was chosen: the window may close with unsaved changes.
     pub quit_confirmed: bool,
     /// How far the backup the library has when LightCraft quits has got in this quit (see
@@ -833,6 +848,8 @@ pub struct LightcraftApp {
     /// How the latest locating of a folder went (`ui.inspect` → `relocate.last`, see
     /// [`relocate::status`]).
     pub relocate_last: Option<Value>,
+    /// A Synchronize Folder that waited in line, scanning its folder again before it runs.
+    pub sync_queued: Option<sync::SyncRescan>,
     /// A Lightroom catalog inspect/import in progress.
     pub lightroom: Option<lightroom_import::LightroomTask>,
     /// Last terminal Lightroom result, exposed by the command's status/wait response.
@@ -943,6 +960,7 @@ impl LightcraftApp {
             move_notice: None,
             quit_prompt: None,
             notice_input: Default::default(),
+            switch_prompt: None,
             quit_confirmed: false,
             quit_backup: QuitBackup::default(),
             quit_cuts_move: false,
@@ -1018,6 +1036,7 @@ impl LightcraftApp {
             relocate_asked: None,
             relocate_library: 0,
             relocate_last: None,
+            sync_queued: None,
             lightroom: None,
             lightroom_last: None,
             lightroom_result: None,
@@ -1363,9 +1382,57 @@ impl LightcraftApp {
                     self.follow_renamed_person(from, &to);
                 }
             }
+            // (`place` tells a task put in line from the older `queued` counts of AI Denoise and Read Focus Points)
+            Ok(v) if v.get("queued").and_then(Value::as_u64).is_some() && v.get("place").and_then(Value::as_u64).is_some() => {
+                // a task asked for while one of its lane runs waits in line: say so, or nothing seems to happen
+                let place = v.get("place").and_then(Value::as_u64).unwrap_or(1);
+                self.queued_toast(place);
+            }
             Ok(_) => {}
         }
         r
+    }
+
+    /// Say that a task waits in line at `place` of its lane: without it, asking for it seems to do nothing.
+    pub(crate) fn queued_toast(&mut self, place: u64) {
+        // (counted as its row counts: the waiting tasks ahead of it, after the running one)
+        let text = if place <= 1 {
+            i18n::tr("Queued: it starts when the task ahead of it ends").to_string()
+        } else {
+            i18n::tr_format!("Queued: it starts after {n} more", n = place - 1)
+        };
+        self.say(text, TOAST_SECONDS);
+    }
+
+    /// Start the tasks waiting in line whose lane is free: the engine's ([`lightcraft_engine::Session::start_waiting`])
+    /// and the app's own (`app:import`, `app:synchronize`), each the way it was asked. One that can't start says why
+    /// in a toast; the next in line goes on.
+    fn start_waiting(&mut self, ctx: &egui::Context) {
+        self.session.start_waiting();
+        // The app's own wait while its slots are taken, row or no row yet: an import set this frame (Auto Import, its
+        // row comes at the next tick), a synchronize, or a Local folder being read (it becomes an import when read).
+        let held = self.lightroom.is_some()
+            || self.import.is_some()
+            || self.sync_run.is_some()
+            || self.sync_queued.is_some()
+            || self.scan.as_ref().is_some_and(|t| t.browse);
+        if held {
+            return;
+        }
+        // (bounded: each turn takes one task out of a line that is at most this long)
+        for _ in 0..lightcraft_engine::activity::MAX_WAITING {
+            let Some(w) = self.session.activity.take_ready_if(|r| r.command.starts_with("app:")) else { break };
+            let r = match w.request.command.as_str() {
+                import::IMPORT_REQUEST => import::start_request(self, ctx, &w.request),
+                sync::SYNC_REQUEST => sync::start_request(self, ctx, &w.request),
+                other => Err(format!("unknown request {other}")),
+            };
+            self.session.activity.started();
+            if let Err(e) = r {
+                log::warn!("{}: a task that waited could not start: {e}", w.request.command);
+                self.toast_error(ctx, e);
+            }
+        }
     }
 
     /// The remembered ratio belongs to the tool until the user starts editing the crop.
@@ -1543,36 +1610,53 @@ impl LightcraftApp {
         }
     }
 
-    /// Announce the end of a Build Previews run.
+    /// A task waiting in line whose lane freed while nothing was asked starts now (commands start them too); then the
+    /// run in progress is looked at, so that one started here is polled for its end from this frame on.
+    fn tick_preview_builds(&mut self, ctx: &egui::Context) {
+        self.start_waiting(ctx);
+        self.preview_build_status(ctx);
+    }
+
+    /// Announce the end of a Build Previews run, and of those a build waiting in line replaced before it was announced
+    /// (in one toast, oldest first). A build is announced once: its `reported` flag says so, not where it lives.
     fn preview_build_status(&mut self, ctx: &egui::Context) {
         use std::sync::atomic::Ordering;
-        let Some(b) = self.session.preview_build.clone() else { return };
-        let key = std::sync::Arc::as_ptr(&b) as usize;
-        if b.finished.load(Ordering::Relaxed) {
-            if self.ui.preview_build_seen != Some((key, true)) {
-                self.ui.preview_build_seen = Some((key, true));
-                let (done, failed) = (b.done.load(Ordering::Relaxed), b.failed.load(Ordering::Relaxed));
-                let plural = if done == 1 { "" } else { "s" };
-                let mut msg = match (b.error(), b.what) {
-                    (Some(e), what) => format!("{}: {e}", if what.is_empty() { "previews" } else { what }),
-                    (None, "") => crate::i18n::tr_format!("Previews ready for {done} photo{plural}", done = done, plural = plural),
-                    (None, what) => {
-                        crate::i18n::tr_format!("Done ({what}): {done} photo{plural}", done = done, plural = plural, what = crate::i18n::tr(what))
-                    }
-                };
-                if failed > 0 {
-                    msg.push_str(&crate::i18n::tr_format!(" · {failed} couldn't be rendered", failed = failed));
-                }
-                if failed > 0 || b.error().is_some() {
-                    self.toast_error(ctx, msg);
-                } else {
-                    self.toast(ctx, msg);
-                }
+        let mut ended = self.session.take_unreported_builds();
+        match self.session.preview_build.clone() {
+            Some(b) if b.finished.load(Ordering::Acquire) => ended.push(b),
+            Some(_) => {
+                // The activity stack shows the run while it works; poll for the end.
+                ctx.request_repaint_after(std::time::Duration::from_millis(250));
             }
-        } else {
-            // The activity stack shows the run while it works; poll for the end.
-            ctx.request_repaint_after(std::time::Duration::from_millis(250));
+            None => {}
         }
+        let news: Vec<_> = ended.iter().filter(|b| !b.reported.swap(true, Ordering::Relaxed)).collect();
+        if !news.is_empty() {
+            let msg = news.iter().map(|b| Self::build_message(b)).collect::<Vec<_>>().join("; ");
+            if news.iter().any(|b| b.failed.load(Ordering::Relaxed) > 0 || b.error().is_some()) {
+                self.toast_error(ctx, msg);
+            } else {
+                self.toast(ctx, msg);
+            }
+        }
+    }
+
+    /// How a finished Build Previews run ended, as the toast words it.
+    fn build_message(b: &lightcraft_engine::cmd::previews::PreviewBuild) -> String {
+        use std::sync::atomic::Ordering;
+        let (done, failed) = (b.done.load(Ordering::Relaxed), b.failed.load(Ordering::Relaxed));
+        let plural = if done == 1 { "" } else { "s" };
+        let mut msg = match (b.error(), b.what) {
+            (Some(e), what) => format!("{}: {e}", if what.is_empty() { "previews" } else { what }),
+            (None, "") => crate::i18n::tr_format!("Previews ready for {done} photo{plural}", done = done, plural = plural),
+            (None, what) => {
+                crate::i18n::tr_format!("Done ({what}): {done} photo{plural}", done = done, plural = plural, what = crate::i18n::tr(what))
+            }
+        };
+        if failed > 0 {
+            msg.push_str(&crate::i18n::tr_format!(" · {failed} couldn't be rendered", failed = failed));
+        }
+        msg
     }
 
     /// Announce when saving the library starts failing (changes then live only in memory and are
@@ -2574,6 +2658,7 @@ impl LightcraftApp {
         merge::poll(self, ctx);
         import::poll_scan(self, ctx);
         sync::poll(self, ctx);
+        sync::poll_rescan(self, ctx);
         sync::poll_run(self, ctx);
         move_task::poll(self, ctx);
         relocate::poll(self, ctx);
@@ -2588,7 +2673,7 @@ impl LightcraftApp {
         recheck::tick(self);
         tasks::poll(self, ctx);
         updates_ui::tick(self, ctx);
-        self.preview_build_status(ctx);
+        self.tick_preview_builds(ctx);
         self.backup_schedule(ctx);
         self.backup_status(ctx);
         panels::notices::quit_after_backup(self);
@@ -2605,34 +2690,17 @@ impl LightcraftApp {
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(folder) = self.session.import_defaults.auto_folder.clone() {
             const LABEL: &str = "Auto Import";
-            if now - self.ui.auto_import_at >= 3.0
-                && self.import.is_none()
-                && self.sync_run.is_none()
-                && self.lightroom.is_none()
-                && !self.tasks.is_running(LABEL)
-            {
+            // (it waits for the whole library lane: what runs, rescans or waits there goes first)
+            if now - self.ui.auto_import_at >= 3.0 && !import::library_busy(self) && self.lightroom.is_none() && !self.tasks.is_running(LABEL) {
                 self.ui.auto_import_at = now;
                 let watched = folder.clone();
                 let work = move || lightcraft_engine::cmd::library::list_auto_import_folder(&folder);
                 let done = move |app: &mut LightcraftApp, _ctx: &egui::Context, listing: Result<Vec<(String, u64)>, String>| {
-                    let listing = match listing {
-                        Ok(l) => l,
-                        Err(e) => return log::debug!("auto import: {e}"),
-                    };
-                    let p = serde_json::json!({"listing": listing, "start": false});
-                    let Ok(r) = app.session.execute("library.autoImportScan", &p) else { return };
-                    let Some(mut params) = r.get("import").cloned().filter(|_| app.import.is_none()) else { return };
-                    let paths: Vec<String> =
-                        params["paths"].as_array().into_iter().flatten().filter_map(|v| v.as_str().map(str::to_string)).collect();
-                    if let Some(o) = params.as_object_mut() {
-                        o.remove("paths");
+                    match listing {
+                        Ok(listing) => import::auto_import_listed(app, listing, vec![watched]),
+                        Err(e) => log::debug!("auto import: {e}"),
                     }
-                    let undo0 = app.session.undo.len();
-                    app.import = Some(import::ImportTask::new(paths, params, undo0, false).named_below(vec![watched]).auto());
-                };
-                // listed every few seconds: quiet, no row in the activity stack (so nothing to say of how it ended)
-                let done = move |app: &mut LightcraftApp, ctx: &egui::Context, listing| {
-                    done(app, ctx, listing);
+                    // listed every few seconds: quiet, no row in the activity stack (so nothing to say of how it ended)
                     lightcraft_engine::activity::Outcome::default()
                 };
                 if let Err(e) = tasks::spawn(self, LABEL, None, work, done) {
@@ -2817,8 +2885,8 @@ impl LightcraftApp {
             self.toast_error(ctx, crate::i18n::tr("Finish Lightroom catalog import before adding photos"));
             return;
         }
-        if import::running(self) {
-            self.toast_error(ctx, crate::i18n::tr("An import is running"));
+        if let Some(why) = import::drop_refusal(self) {
+            self.toast_error(ctx, why);
             return;
         }
         let started = if self.ui.settings.import_dropped_directly {

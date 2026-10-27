@@ -180,6 +180,13 @@ pub const ABOUT_TABS: &[(&str, &str)] = &[("about", "About"), ("contributors", "
 /// Help ▸ What's New (docs/whats-new.md).
 pub const WHATS_NEW: &str = include_str!("../../../../docs/whats-new.md");
 
+/// The import review's button: its verb (Import, Move, Queue, Queue Move) and how many photos it takes. The catalogs
+/// word it as a label with its count where a verb phrase can end in a noun (for example French, Italian,
+/// Brazilian Portuguese, Indonesian and Swedish).
+pub(crate) fn photo_count_label(verb: &str, n: usize) -> String {
+    crate::i18n::tr_format!("{verb} {n} Photo{}", if n == 1 { "" } else { "s" }, verb = crate::i18n::tr(verb), n = n)
+}
+
 /// The import review and Settings keep window ids of their own, so the size each is given
 /// doesn't carry over to the other dialogs.
 fn window_id(dialog: &Dialog) -> egui::Id {
@@ -1447,12 +1454,25 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                     Dialog::LightroomResult { .. } => "Close",
                     _ => "Cancel",
                 };
+                // an import or a synchronize asked for while the library lane is busy waits in line: say so on its
+                // button, and after what
+                let waits = match &dlg {
+                    Dialog::Import { .. } => true,
+                    Dialog::SynchronizeFolder { counts: Some(c), .. } => !c.up_to_date(),
+                    _ => false,
+                };
+                let ahead = if waits { crate::import::lane_ahead_text(app) } else { None };
                 let add_label;
                 let ok = match &dlg {
                     Dialog::Import { opts } => {
                         let n = opts.selected_paths().len();
-                        let verb = if opts.copy && opts.move_files { "Move" } else { "Import" };
-                        add_label = crate::i18n::tr_format!("{verb} {n} Photo{}", if n == 1 { "" } else { "s" }, verb = crate::i18n::tr(verb), n = n);
+                        let verb = match (ahead.is_some(), opts.copy && opts.move_files) {
+                            (true, true) => "Queue Move",
+                            (true, false) => "Queue",
+                            (false, true) => "Move",
+                            (false, false) => "Import",
+                        };
+                        add_label = photo_count_label(verb, n);
                         add_label.as_str()
                     }
                     Dialog::Export { .. } => {
@@ -1502,6 +1522,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                     Dialog::SynchronizeFolder { counts: None, .. } => "Continue in Background",
                     // a folder that isn't there can't be synchronized, only located (#1112)
                     Dialog::SynchronizeFolder { counts: Some(c), .. } if c.offline => "Locate Missing Folder…",
+                    Dialog::SynchronizeFolder { .. } if ahead.is_some() => "Queue Synchronize",
                     Dialog::SynchronizeFolder { .. } => "Synchronize",
                     Dialog::LocateFolder { .. } => "Locate Anyway",
                     Dialog::SamModel { then: Some(_), .. } if sam_installed => "Continue",
@@ -1575,7 +1596,18 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
                 if !ok.is_empty() {
                     buttons_w += ok_button.desired_size(ui).x;
                 }
-                ui.add_space((ui.available_width() - buttons_w).max(0.0));
+                if let Some(what) = &ahead {
+                    // what the line waits for, in the room the buttons leave
+                    let room = (ui.available_width() - buttons_w - gap).max(0.0);
+                    let line = crate::i18n::tr_format!("Starts after: {what}", what = what);
+                    ui.allocate_ui_with_layout(egui::vec2(room, row_h), egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                        ui.set_width(room);
+                        let r = ui.add(egui::Label::new(egui::RichText::new(line).size(11.0).color(t.text_dim)).truncate());
+                        crate::widgets::register(ui, "dialog:startsAfter", r.rect);
+                    });
+                } else {
+                    ui.add_space((ui.available_width() - buttons_w).max(0.0));
+                }
                 if !informational && cancel_button.show(ui).clicked() {
                     close = true;
                 }

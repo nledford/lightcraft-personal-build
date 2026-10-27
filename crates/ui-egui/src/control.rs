@@ -162,7 +162,7 @@ pub fn inspect(app: &LightcraftApp, ctx: &egui::Context) -> Value {
         "tasks": app.tasks.labels(),
         // photos being moved to another folder (`photo.moveToFolder {background: true}`), and how the last move ended
         "move": {"running": app.move_run.as_ref().map(crate::move_task::MoveRun::status), "last": app.last_move},
-        // every long-running task in flight, as the activity stack shows them (`activity.list`)
+        // every long-running task in flight and every task waiting in line (`activity.list`); the stack draws the running ones
         "activity": app.session.activity.list(),
         // the list of them under the top bar's bell is open (`view.tasks`)
         "activityOpen": app.activity_open,

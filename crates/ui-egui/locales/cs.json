@@ -16,7 +16,6 @@
   "=  exactly": "=  přesně",
   "A blank template keeps the original names.": "Prázdná šablona zachová původní názvy.",
   "A filter is hiding this view's photos: change it, or clear it (View → Clear Filters)": "Fotografie v tomto zobrazení skrývá filtr: změňte jej nebo jej zrušte (Zobrazení → Zrušit filtry)",
-  "A folder is already being synchronized": "Již probíhá synchronizace složky",
   "A folder is being synchronized": "Probíhá synchronizace složky",
   "A keyword set needs a name": "Sada klíčových slov musí mít název",
   "A one-time download of about": "Jednorázové stažení přibližně",
@@ -2654,5 +2653,14 @@
   "Add to My Photos…": "Přidat do mých fotografií…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Prohlédne fotografie v této složce a pak je přidá do knihovny tam, kde jsou; žádný soubor se nemění",
   "Copy Path": "Kopírovat cestu",
-  "Path copied": "Cesta zkopírována"
+  "Path copied": "Cesta zkopírována",
+  "Another library was opened: nothing was done": "Byla otevřena jiná knihovna: nic se neprovedlo",
+  "Queue": "Zařadit do fronty",
+  "Queue Move": "Zařadit přesun do fronty",
+  "Queue Synchronize": "Zařadit synchronizaci do fronty",
+  "A folder is still being scanned for the import review: drop photos when it has finished": "Složka se ještě prohledává pro kontrolu importu. Fotky přetáhněte, až skončí",
+  "A folder is still being read for the Local view: drop photos when it has finished": "Složka se ještě načítá pro zobrazení Místní soubory. Fotky přetáhněte, až skončí",
+  "An import review is waiting to open: drop photos when it is closed": "Kontrola importu čeká na otevření. Fotky přetáhněte, až ji zavřete",
+  "Switch library while tasks are waiting?": "Přepnout knihovnu, když úlohy čekají ve frontě?",
+  "Switch Library": "Přepnout knihovnu"
 }

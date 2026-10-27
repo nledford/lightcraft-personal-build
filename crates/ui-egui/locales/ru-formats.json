@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "Переместить {n}, пропустить {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "В «{1}» перемещено фото: {n}{0:.0}, пропущено: {skipped}. Правка → Отменить вернёт их.",
   "{} can't be moved": "{0} нельзя переместить",
-  "{} has the same name as another photo being moved": "{0} имеет то же имя, что и другое перемещаемое фото"
+  "{} has the same name as another photo being moved": "{0} имеет то же имя, что и другое перемещаемое фото",
+  "Left alone: {n} (synchronize again to review them)": "Оставлено без изменений: {n} (синхронизируйте снова, чтобы проверить)",
+  "Remove from Queue: {label}": "Убрать из очереди: {label}",
+  "Starts after: {what}": "Начнётся после: {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "В очереди ждёт задача: {names}. При смене библиотеки она будет отброшена.",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "В очереди ждёт задач: {n} — {names}. При смене библиотеки они будут отброшены.",
+  "Waiting tasks dropped: {n}": "Отброшено задач из очереди: {n}",
+  "Too many tasks are waiting ({n}): wait for some to finish": "В очереди слишком много задач: {n}. Подождите, пока часть завершится"
 }

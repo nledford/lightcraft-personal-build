@@ -134,7 +134,7 @@
   "{n} selected photo{} · {pages} page{}": "{n} foto{0} selecionada{0} · {pages} página{1}",
   "{sel_n} selected · {counted}": "{sel_n} selecionadas · {counted}",
   "{stage}… {:.0}%": "{stage}… {:.0}%",
-  "{verb} {n} Photo{}": "{verb} {n} foto{}",
+  "{verb} {n} Photo{}": "{verb}: {n} foto{}",
   "{weekday}, {day}": "{weekday}, {day}",
   "{weekday}, {day} {month} {year}": "{weekday}, {day}/{month}/{year}",
   "{what} merge added": "{what} mesclagem adicionada",
@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "Mover {n}, ignorar {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} foto{0} movida{0} para “{1}”, {skipped} ignorada(s). Editar → Desfazer as traz de volta.",
   "{} can't be moved": "{0} não pode ser movido",
-  "{} has the same name as another photo being moved": "{0} tem o mesmo nome de outra foto que está sendo movida"
+  "{} has the same name as another photo being moved": "{0} tem o mesmo nome de outra foto que está sendo movida",
+  "Left alone: {n} (synchronize again to review them)": "Deixados como estavam: {n} (sincronize de novo para revisá-los)",
+  "Remove from Queue: {label}": "Remover da fila: {label}",
+  "Starts after: {what}": "Começa depois de: {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "1 tarefa espera na fila: {names}. Trocar de biblioteca a descarta.",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} tarefas esperam na fila: {names}. Trocar de biblioteca as descarta.",
+  "Waiting tasks dropped: {n}": "Tarefas na fila descartadas: {n}",
+  "Too many tasks are waiting ({n}): wait for some to finish": "Há tarefas demais na fila ({n}): espere algumas terminarem"
 }

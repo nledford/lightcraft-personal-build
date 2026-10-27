@@ -137,7 +137,7 @@
   "Updated “{name}”": "“{name}” diperbarui",
   "{month}": "{month:02}",
   "{month} {year}": "{month:02}/{year}",
-  "{verb} {n} Photo{}": "{verb} {n} foto{:.0}",
+  "{verb} {n} Photo{}": "{verb}: {n} foto{:.0}",
   "{weekday}, {day}": "{weekday}, {day}",
   "{weekday}, {day} {month} {year}": "{weekday}, {day:02}/{month:02}/{year}",
   "{year}": "{year}",
@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "Pindahkan {n}, lewati {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} foto dipindahkan ke “{1}”{0:.0}, {skipped} dilewati. Pilih Edit → Urungkan untuk mengembalikannya.",
   "{} can't be moved": "{0} tidak dapat dipindahkan",
-  "{} has the same name as another photo being moved": "{0} memiliki nama yang sama dengan foto lain yang dipindahkan"
+  "{} has the same name as another photo being moved": "{0} memiliki nama yang sama dengan foto lain yang dipindahkan",
+  "Left alone: {n} (synchronize again to review them)": "Dibiarkan: {n} (sinkronkan lagi untuk meninjau)",
+  "Remove from Queue: {label}": "Hapus dari antrean: {label}",
+  "Starts after: {what}": "Dimulai setelah: {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "1 tugas mengantre: {names}. Jika pustaka diganti, tugas ini akan dibuang.",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} tugas mengantre: {names}. Jika pustaka diganti, semua tugas ini akan dibuang.",
+  "Waiting tasks dropped: {n}": "Tugas antrean yang dibuang: {n}",
+  "Too many tasks are waiting ({n}): wait for some to finish": "Terlalu banyak tugas mengantre ({n}): tunggu sampai sebagian selesai"
 }

@@ -1687,7 +1687,6 @@
   "Skipped: files that can't be read": "Пропущено: файлы, которые не удаётся прочитать",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "Этой папки нет: её переместили или переименовали, либо её диск не подключён.",
   "Relink photos whose file was renamed or moved": "Повторно связать фото, файл которых переименован или перемещён",
-  "A folder is already being synchronized": "Папка уже синхронизируется",
   "Synchronizing…": "Синхронизация…",
   "Imported": "Импортированные",
   "Relinked": "Связано повторно",
@@ -2617,5 +2616,14 @@
   "Add to My Photos…": "Добавить в «Мои фото»…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Показывает фото этой папки для проверки, затем добавляет их в библиотеку на месте; ни один файл не затрагивается",
   "Copy Path": "Копировать путь",
-  "Path copied": "Путь скопирован"
+  "Path copied": "Путь скопирован",
+  "Another library was opened: nothing was done": "Открыта другая библиотека: ничего не сделано",
+  "Queue": "В очередь",
+  "Queue Move": "В очередь: переместить",
+  "Queue Synchronize": "В очередь: синхронизировать",
+  "A folder is still being scanned for the import review: drop photos when it has finished": "Папка ещё сканируется для проверки импорта. Перетащите фото, когда это закончится",
+  "A folder is still being read for the Local view: drop photos when it has finished": "Папка ещё читается для вида «Локальное». Перетащите фото, когда это закончится",
+  "An import review is waiting to open: drop photos when it is closed": "Проверка импорта ждёт открытия. Перетащите фото, когда она будет закрыта",
+  "Switch library while tasks are waiting?": "Сменить библиотеку, пока задачи ждут в очереди?",
+  "Switch Library": "Сменить библиотеку"
 }

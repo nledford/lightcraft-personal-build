@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "Chuyển {n}, bỏ qua {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Đã chuyển vào “{1}” — ảnh: {n}{0:.0}, bỏ qua: {skipped}. Chỉnh sửa → Hoàn tác sẽ chuyển chúng lại.",
   "{} can't be moved": "{0} không thể được chuyển",
-  "{} has the same name as another photo being moved": "{0} trùng tên với một ảnh khác đang được chuyển"
+  "{} has the same name as another photo being moved": "{0} trùng tên với một ảnh khác đang được chuyển",
+  "Left alone: {n} (synchronize again to review them)": "Để nguyên: {n} (đồng bộ lại để xem xét)",
+  "Remove from Queue: {label}": "Xóa khỏi hàng đợi: {label}",
+  "Starts after: {what}": "Bắt đầu sau: {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "Có 1 tác vụ đang chờ trong hàng đợi: {names}. Chuyển thư viện sẽ bỏ tác vụ này.",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "Có {n} tác vụ đang chờ trong hàng đợi: {names}. Chuyển thư viện sẽ bỏ các tác vụ này.",
+  "Waiting tasks dropped: {n}": "Tác vụ chờ đã bị bỏ: {n}",
+  "Too many tasks are waiting ({n}): wait for some to finish": "Có quá nhiều tác vụ đang chờ ({n}): hãy đợi một số tác vụ hoàn tất"
 }

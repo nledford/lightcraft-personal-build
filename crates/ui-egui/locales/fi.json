@@ -21,7 +21,6 @@
   "A dark slate backdrop with the exposure, ISO and focal length, then the camera and lens, under each photo.": "Tumma liuskekivitausta, jossa kunkin kuvan alla valotus, ISO ja polttoväli sekä kamera ja objektiivi.",
   "A face model uses the GPU only when a check shows it gives the same results faster.": "Kasvomalli käyttää GPU:ta vain, jos tarkistus osoittaa sen antavan samat tulokset nopeammin.",
   "A filter is hiding this view's photos: change it, or clear it (View → Clear Filters)": "Suodatin piilottaa tämän näkymän kuvat: muuta sitä tai tyhjennä se (Näytä → Tyhjennä suodattimet)",
-  "A folder is already being synchronized": "Kansio on jo synkronoitumassa",
   "A folder is being synchronized": "Kansiota synkronoidaan",
   "A keyword set needs a name": "Avainsanajoukolle täytyy antaa nimi",
   "A light grey wall with a white mat and a soft shadow; the caption and the rating under the photo.": "Vaaleanharmaa seinä, valkoinen paspis ja pehmeä varjo; kuvateksti ja luokitus kuvan alla.",
@@ -2329,8 +2328,6 @@
   "Layout Image": "Asettelukuva",
   "Mask Pins": "Maskin nastat",
   "Photo Counts": "Kuvamäärät",
-  "An import is running": "Tuonti on käynnissä",
-  "An import is running. Drop photos when it has finished": "Tuonti on käynnissä. Pudota kuvat, kun se on valmis",
   "Close the open dialog to drop files here": "Sulje avoin valintaikkuna pudottaaksesi tiedostot tähän",
   "Close the open dialog, then drop the files again": "Sulje avoin valintaikkuna ja pudota tiedostot sitten uudelleen",
   "Drop to import": "Pudota tuodaksesi",
@@ -2573,5 +2570,14 @@
   "Add to My Photos…": "Lisää Omiin kuviin…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Näyttää tämän kansion kuvat tarkistettavaksi ja lisää ne sitten kirjastoon paikoilleen; tiedostoihin ei kosketa",
   "Copy Path": "Kopioi polku",
-  "Path copied": "Polku kopioitu"
+  "Path copied": "Polku kopioitu",
+  "Another library was opened: nothing was done": "Toinen kirjasto avattiin: mitään ei tehty",
+  "Queue": "Lisää jonoon",
+  "Queue Move": "Lisää siirto jonoon",
+  "Queue Synchronize": "Lisää synkronointi jonoon",
+  "A folder is still being scanned for the import review: drop photos when it has finished": "Kansiota luetaan vielä tuonnin tarkistusta varten. Pudota kuvat, kun se on valmis",
+  "A folder is still being read for the Local view: drop photos when it has finished": "Kansiota luetaan vielä Paikallinen-näkymää varten. Pudota kuvat, kun se on valmis",
+  "An import review is waiting to open: drop photos when it is closed": "Tuonnin tarkistus odottaa avautumista. Pudota kuvat, kun se on suljettu",
+  "Switch library while tasks are waiting?": "Vaihdetaanko kirjastoa, vaikka tehtäviä odottaa jonossa?",
+  "Switch Library": "Vaihda kirjastoa"
 }

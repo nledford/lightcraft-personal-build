@@ -167,7 +167,7 @@
   "{pid} (missing)": "{pid} (mancante)",
   "{sel_n} selected · {counted}": "Selezionate: {sel_n} · {counted}",
   "{stage}… {:.0}%": "{stage}… {:.0}%",
-  "{verb} {n} Photo{}": "{verb} {n} foto{:.0}",
+  "{verb} {n} Photo{}": "{verb}: {n} foto{:.0}",
   "{weekday}, {day}": "{weekday} {day}",
   "{weekday}, {day} {month} {year}": "{weekday} {day}/{month:02}/{year}",
   "{what} merge added": "Unione {what} aggiunta",
@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "Sposta {n}, salta {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Foto spostate in “{1}”: {n}{0:.0}, saltate: {skipped}. Modifica → Annulla le riporta indietro.",
   "{} can't be moved": "{0} non può essere spostato",
-  "{} has the same name as another photo being moved": "{0} ha lo stesso nome di un’altra foto da spostare"
+  "{} has the same name as another photo being moved": "{0} ha lo stesso nome di un’altra foto da spostare",
+  "Left alone: {n} (synchronize again to review them)": "Lasciati invariati: {n} (sincronizza di nuovo per rivederli)",
+  "Remove from Queue: {label}": "Rimuovi dalla coda: {label}",
+  "Starts after: {what}": "Parte dopo: {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "1 attività è in coda: {names}. Cambiando libreria viene scartata.",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} attività sono in coda: {names}. Cambiando libreria vengono scartate.",
+  "Waiting tasks dropped: {n}": "Attività in coda scartate: {n}",
+  "Too many tasks are waiting ({n}): wait for some to finish": "Troppe attività in coda ({n}): attendi che alcune finiscano"
 }

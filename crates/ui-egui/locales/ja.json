@@ -1977,7 +1977,6 @@
   "Skipped: files that can't be read": "スキップ: 読み込めないファイル",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "このフォルダが見つかりません。移動または名前の変更がされたか、ディスクが接続されていません。",
   "Relink photos whose file was renamed or moved": "ファイル名の変更や移動があった写真をリンクし直す",
-  "A folder is already being synchronized": "すでにフォルダを同期中です",
   "Synchronizing…": "同期中…",
   "Relinked": "リンクし直し",
   "Removed": "除去",
@@ -2624,5 +2623,14 @@
   "Add to My Photos…": "マイフォトに追加…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "このフォルダの写真をレビューしてから、そのままの場所でライブラリに追加します。ファイルには触れません",
   "Copy Path": "パスをコピー",
-  "Path copied": "パスをコピーしました"
+  "Path copied": "パスをコピーしました",
+  "Another library was opened: nothing was done": "別のライブラリが開かれました: 何も行われていません",
+  "Queue": "キューに追加",
+  "Queue Move": "キューに追加（移動）",
+  "Queue Synchronize": "キューに追加（同期）",
+  "A folder is still being scanned for the import review: drop photos when it has finished": "読み込み確認のためにフォルダーをスキャン中です。完了してから写真をドロップしてください",
+  "A folder is still being read for the Local view: drop photos when it has finished": "ローカル表示のためにフォルダーを読み取り中です。完了してから写真をドロップしてください",
+  "An import review is waiting to open: drop photos when it is closed": "読み込み確認が開くのを待っています。閉じてから写真をドロップしてください",
+  "Switch library while tasks are waiting?": "待機中のタスクがありますが、ライブラリを切り替えますか？",
+  "Switch Library": "ライブラリを切り替える"
 }

@@ -248,7 +248,7 @@
   "{size} GB": "{size} GB",
   "{stage}… {:.0}%": "{stage}… {:.0} %",
   "{s} s of AV1 video": "{s} s AV1-video",
-  "{verb} {n} Photo{}": "{verb} {n} foto{}",
+  "{verb} {n} Photo{}": "{verb} foton: {n}{:.0}",
   "{weekday}, {day}": "{weekday} {day}",
   "{weekday}, {day} {month} {year}": "{weekday} {day} {month} {year}",
   "{what} merge added": "{what}-sammanfogning tillagd",
@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "Flytta {n}, hoppa över {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Flyttade till ”{1}”: {n}{0:.0}, överhoppade: {skipped}. Redigera → Ångra flyttar tillbaka dem.",
   "{} can't be moved": "{0} kan inte flyttas",
-  "{} has the same name as another photo being moved": "{0} har samma namn som ett annat foto som flyttas"
+  "{} has the same name as another photo being moved": "{0} har samma namn som ett annat foto som flyttas",
+  "Left alone: {n} (synchronize again to review them)": "Lämnade orörda: {n} (synkronisera igen för att granska dem)",
+  "Remove from Queue: {label}": "Ta bort från kön: {label}",
+  "Starts after: {what}": "Startar efter: {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "1 uppgift väntar i kön: {names}. Om du byter bibliotek tas den bort.",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} uppgifter väntar i kön: {names}. Om du byter bibliotek tas de bort.",
+  "Waiting tasks dropped: {n}": "Väntande uppgifter som togs bort: {n}",
+  "Too many tasks are waiting ({n}): wait for some to finish": "För många uppgifter väntar ({n}): vänta tills några är klara"
 }

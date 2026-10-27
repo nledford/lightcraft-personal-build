@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "გადატანა: {n}, გამოტოვება: {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "„{1}“-ში გადატანილია ფოტო: {n}{0:.0}, გამოტოვებულია: {skipped}. რედაქტირება → დაბრუნება დააბრუნებს მათ.",
   "{} can't be moved": "{0} ვერ გადაიტანება",
-  "{} has the same name as another photo being moved": "{0}-ს იგივე სახელი აქვს, რაც გადასატან სხვა ფოტოს"
+  "{} has the same name as another photo being moved": "{0}-ს იგივე სახელი აქვს, რაც გადასატან სხვა ფოტოს",
+  "Left alone: {n} (synchronize again to review them)": "უცვლელი დარჩა: {n} (გადასახედად თავიდან დაასინქრონეთ)",
+  "Remove from Queue: {label}": "რიგიდან ამოღება: {label}",
+  "Starts after: {what}": "დაიწყება ამის შემდეგ: {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "რიგში ელოდება 1 ამოცანა: {names}. ბიბლიოთეკის შეცვლა მას გააუქმებს.",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "რიგში ელოდება ამოცანები ({n}): {names}. ბიბლიოთეკის შეცვლა მათ გააუქმებს.",
+  "Waiting tasks dropped: {n}": "გაუქმებული მოლოდინის ამოცანები: {n}",
+  "Too many tasks are waiting ({n}): wait for some to finish": "ძალიან ბევრი ამოცანა ელოდება ({n}): დაელოდეთ, სანამ ზოგი დასრულდება"
 }

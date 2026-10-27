@@ -395,5 +395,12 @@
   "Move {n}, skip {m}": "{n} verschieben, {m} überspringen",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} Foto{0} nach „{1}“ verschoben, {skipped} übersprungen. Bearbeiten → Rückgängig holt sie zurück.",
   "{} can't be moved": "{0} lässt sich nicht verschieben",
-  "{} has the same name as another photo being moved": "{0} hat denselben Namen wie ein anderes Foto, das verschoben wird"
+  "{} has the same name as another photo being moved": "{0} hat denselben Namen wie ein anderes Foto, das verschoben wird",
+  "Left alone: {n} (synchronize again to review them)": "Unangetastet: {n} (zum Prüfen erneut synchronisieren)",
+  "Remove from Queue: {label}": "Aus der Warteschlange entfernen: {label}",
+  "Starts after: {what}": "Startet nach: {what}",
+  "1 task is waiting in line: {names}. Switching libraries drops it.": "1 Aufgabe wartet in der Warteschlange: {names}. Beim Wechseln der Bibliothek wird sie verworfen.",
+  "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} Aufgaben warten in der Warteschlange: {names}. Beim Wechseln der Bibliothek werden sie verworfen.",
+  "Waiting tasks dropped: {n}": "Verworfene wartende Aufgaben: {n}",
+  "Too many tasks are waiting ({n}): wait for some to finish": "Zu viele Aufgaben warten ({n}): Warte, bis einige fertig sind"
 }
