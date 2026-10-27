@@ -129,6 +129,8 @@ mod tests_dialog_settings_keys;
 #[cfg(test)]
 mod tests_dialog_settings_tabs;
 #[cfg(test)]
+mod tests_dialog_settings_text;
+#[cfg(test)]
 mod tests_dialog_tab;
 #[cfg(test)]
 mod tests_dialogs;

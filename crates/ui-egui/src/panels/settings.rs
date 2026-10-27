@@ -173,16 +173,21 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
     let mut lines: Vec<f32> = Vec::new();
     // (the bar is one stop for Tab, at the open tab; the arrow keys go along it)
     let mut bar = crate::widgets::Roving::new(ui, "settingsTabs", TABS.iter().position(|(id, _)| *id == tab.as_str()));
+    // The page drawn is the one that was open when the frame began: a tab clicked now opens on
+    // the next frame, so a text box on the page being left is drawn once more and saves what was
+    // typed in it (the click took the focus from it).
+    let shown = tab.clone();
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = egui::vec2(4.0, 5.0);
         for (id, label) in TABS {
-            let r = crate::widgets::tab_button_in(ui, &mut bar, &format!("settingsTab-{id}"), tab_label(id, label), tab == id && !filtering);
+            let r = crate::widgets::tab_button_in(ui, &mut bar, &format!("settingsTab-{id}"), tab_label(id, label), shown == *id && !filtering);
             let bottom = egui::emath::GuiRounding::round_to_pixels(r.rect.bottom(), ui.pixels_per_point());
             if !lines.iter().any(|line| (line - bottom).abs() < 0.5) {
                 lines.push(bottom);
             }
             if r.clicked() {
                 *tab = id.to_string();
+                ui.ctx().request_repaint();
                 // (a tab opened is its page asked for: the filter gives way)
                 filter.text.clear();
             }
@@ -210,7 +215,7 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
     // page, it scrolls with the page instead (as in the short window above). What was found
     // is drawn in its place while the filter has something typed.
     let mut pinned = false;
-    if tab == "slideshow" && found.is_none() && room >= PAGE_MIN_HEIGHT {
+    if shown == "slideshow" && found.is_none() && room >= PAGE_MIN_HEIGHT {
         // (the filter row is taken off the page, not off the preview: the slide is as large as it was)
         let slide_h = ((room + filter_row).min(PAGE_SIZE.y) * PINNED_PREVIEW_SHARE - PREVIEW_CHROME).max(super::slide_layout::PREVIEW_MIN_H);
         if height - (slide_h + PREVIEW_CHROME_DRAWN) >= PINNED_PAGE_MIN_HEIGHT {
@@ -228,14 +233,14 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
             // (a section chosen that starts its tab, with no heading of its own: the page goes to its top)
             if ui
                 .data(|d| d.get_temp::<(&'static str, String)>(egui::Id::unique(GOTO)))
-                .is_some_and(|(to, section)| to == tab.as_str() && section.is_empty())
+                .is_some_and(|(to, section)| to == shown.as_str() && section.is_empty())
             {
                 ui.scroll_to_cursor(Some(egui::Align::TOP));
             }
             if pinned {
                 slideshow_tab(app, ui, &Tokens::get(ui.ctx()), false);
             } else {
-                body(app, ui, tab.as_str());
+                body(app, ui, shown.as_str());
             }
             // (what the page took: wider than the room for it would mean a control is cut off)
             register(ui, "settings:page", ui.min_rect());
@@ -247,7 +252,7 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
         // A page that goes on below shows its scroll handle all the time: without it, a page a
         // line or two too long looks cut off, not scrollable.
         ui.spacing_mut().scroll.dormant_handle_opacity = 0.6;
-        let salt = if found.is_some() { "found" } else { tab.as_str() };
+        let salt = if found.is_some() { "found" } else { shown.as_str() };
         let area = egui::ScrollArea::vertical()
             .id_salt(("settings-page", salt))
             .max_height(height)
@@ -826,6 +831,16 @@ pub(super) fn focus_style(ui: &mut egui::Ui, t: &Tokens) {
     visuals.selection.stroke = egui::Stroke::new(2.0, t.text);
 }
 
+/// A text box of the Settings window, shown: Esc in it gives its text back and is used up by
+/// that, so Settings stays open (a second Esc, with nothing being edited, closes it).
+fn field(ui: &mut egui::Ui, field: crate::text_field::TextField<'_>) -> crate::text_field::TextFieldResponse {
+    let shown = field.show(ui);
+    if shown.cancelled() {
+        crate::widgets::take_escape(ui.ctx());
+    }
+    shown
+}
+
 pub(super) fn heading(ui: &mut egui::Ui, t: &Tokens, text: &str) {
     ui.add_space(4.0);
     // `text` is the heading's English name (its message key). It is shown translated and
@@ -1031,10 +1046,12 @@ fn startup_and_culling(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 fn external_editing(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     heading(ui, t, "External Editing");
     row(ui, t, crate::i18n::tr("PhotoCraft"), |ui| {
-        crate::text_field::TextField::singleline("field:photocraftPath", &mut app.ui.settings.photocraft_path)
-            .hint(crate::i18n::tr("Found automatically"))
-            .width(220.0)
-            .show(ui);
+        field(
+            ui,
+            crate::text_field::TextField::singleline("field:photocraftPath", &mut app.ui.settings.photocraft_path)
+                .hint(crate::i18n::tr("Found automatically"))
+                .width(220.0),
+        );
     });
     edit_file_rows(ui, t, "photocraftFile", &mut app.ui.settings.photocraft_file);
     hint(
@@ -1045,10 +1062,12 @@ fn external_editing(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         ),
     );
     row(ui, t, crate::i18n::tr("Other editor"), |ui| {
-        crate::text_field::TextField::singleline("field:externalEditor", &mut app.ui.settings.external_editor)
-            .hint(crate::i18n::tr("System default"))
-            .width(220.0)
-            .show(ui);
+        field(
+            ui,
+            crate::text_field::TextField::singleline("field:externalEditor", &mut app.ui.settings.external_editor)
+                .hint(crate::i18n::tr("System default"))
+                .width(220.0),
+        );
     });
     edit_file_rows(ui, t, "externalFile", &mut app.ui.settings.external_file);
     hint(ui, t, crate::i18n::tr("Edit in Other Editor (⌥⌘E) opens the copy in this application (an app name on macOS, a program path elsewhere)."));
@@ -1409,12 +1428,14 @@ fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         row(ui, t, label, |ui| {
             let id = egui::Id::unique(("settingsMeta", key));
             let mut text: String = ui.data(|m| m.get_temp(id)).unwrap_or(value.clone());
-            let r = ui.add(egui::TextEdit::singleline(&mut text).hint_text(hint_text).desired_width(240.0));
-            register(ui, format!("field:settings.{key}"), r.rect);
-            if r.lost_focus() && text.trim() != value {
+            // (the project's text field: Esc gives the text back and stays in Settings, and with
+            // the text back the line below has nothing to save)
+            let widget = format!("field:settings.{key}");
+            let shown = field(ui, crate::text_field::TextField::singleline(&widget, &mut text).hint(hint_text).width(240.0));
+            if shown.committed() && text.trim() != value {
                 app.act("library.preferences", json!({"import": {key: text.trim()}}));
             }
-            if r.has_focus() {
+            if shown.editing {
                 ui.data_mut(|m| m.insert_temp(id, text));
             } else {
                 ui.data_mut(|m| m.remove::<String>(id));
@@ -1524,10 +1545,14 @@ fn auto_import(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
                 }
             });
             row(ui, t, crate::i18n::tr("Album"), |ui| {
-                let id = egui::Id::unique("auto-album");
+                // (per library: a name left here by one library is not another's)
+                let id = egui::Id::unique(("auto-album", app.session.library.as_ref().map(|l| l.dir.clone())));
                 let mut name = ui.data(|m| m.get_temp::<String>(id)).unwrap_or_else(|| d.auto_album.clone().unwrap_or_default());
-                let r = ui.add(egui::TextEdit::singleline(&mut name).hint_text(crate::i18n::tr("None")).desired_width(180.0));
-                if r.lost_focus() {
+                let shown = field(
+                    ui,
+                    crate::text_field::TextField::singleline("field:settingsAutoAlbum", &mut name).hint(crate::i18n::tr("None")).width(180.0),
+                );
+                if shown.committed() {
                     app.act("library.autoImport", json!({"album": name.trim()}));
                 }
                 ui.data_mut(|m| m.insert_temp(id, name));
