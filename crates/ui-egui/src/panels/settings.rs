@@ -110,10 +110,11 @@ const PINNED_PAGE_MIN_HEIGHT: f32 = 100.0;
 pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_height: f32) {
     ui.set_width((ui.ctx().content_rect().width() - 64.0).clamp(240.0, PAGE_SIZE.x));
     let top = ui.cursor().top();
-    let t = Tokens::get(ui.ctx());
     // What says where a control is, and what a text box says while it is empty, are made legible
-    // here for everything in the window: a theme's border is 1.6 to 1.7:1 against the window and
-    // its weak text under 4.3:1 in a box (the tokens keep their values for the rest of the app).
+    // here for everything in the window, the filter too (the tab bar draws its own, and its line is
+    // made legible below): a theme's border is 1.6 to 1.7:1 against the window and its weak text
+    // under 4.3:1 in a box (the tokens keep their values for the rest of the app).
+    let t = Tokens::get(ui.ctx());
     legible_controls(ui, &t);
     focus_style(ui, &t);
     // The filter, above the tabs it looks through. What is typed is kept from one frame of the
@@ -194,7 +195,7 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
         }
     });
     bar.end(ui);
-    let divider = t.divider;
+    let divider = t.legible(t.divider, t.chrome, 3.0);
     for bottom in lines {
         let line = egui::Rect::from_min_max(egui::pos2(ui.min_rect().left(), bottom), egui::pos2(ui.min_rect().right(), bottom + 1.0));
         ui.painter().rect_filled(line, egui::CornerRadius::ZERO, divider);
@@ -780,6 +781,7 @@ pub(super) fn ask_first(t: &Tokens, id: &str, button: egui::Response, question: 
     let mut ids = None;
     egui::Popup::from_toggle_button_response(&button).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
         ui.set_max_width(280.0);
+        legible_controls(ui, t);
         ui.add(egui::Label::new(RichText::new(crate::i18n::tr(question)).color(t.text_label)).wrap());
         ui.horizontal(|ui| {
             let r = ui.button(crate::i18n::tr(yes));
@@ -864,7 +866,7 @@ pub(super) fn heading(ui: &mut egui::Ui, t: &Tokens, text: &str) {
         if left > 0.0 {
             let strength = (left * 2.0).min(1.0);
             let around = r.rect.expand2(egui::vec2(6.0, 2.0));
-            let outline = egui::Stroke::new(1.0, t.accent.gamma_multiply(strength));
+            let outline = egui::Stroke::new(1.0, t.legible(t.accent, t.chrome, 3.0).gamma_multiply(strength));
             ui.painter().set(behind, egui::Shape::rect_filled(around, egui::CornerRadius::same(4), t.hover.gamma_multiply(strength)));
             ui.painter().rect_stroke(around, egui::CornerRadius::same(4), outline, egui::StrokeKind::Inside);
             register_geometry(ui.ctx(), format!("settingsLanded:{name}"), around);
@@ -1775,7 +1777,7 @@ fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
                 "Photos whose originals are not connected are shown and edited from their smart previews; new ones can only be made from originals that are connected."
             ),
         );
-        ui.add(egui::Label::new(RichText::new(question).color(t.caution)).wrap());
+        ui.add(egui::Label::new(RichText::new(question).color(t.legible(t.caution, t.chrome, 4.5))).wrap());
         ui.horizontal(|ui| {
             let r = ui.button(crate::i18n::tr("Delete and Change Folder"));
             register(ui, "button:settingsSmartDelete", r.rect);
