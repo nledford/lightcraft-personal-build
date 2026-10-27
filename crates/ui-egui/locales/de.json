@@ -3673,5 +3673,9 @@
   "It tests itself: change its rules (Edit Smart Album…)": "Es prüft sich selbst: Ändere seine Regeln (Smart-Album bearbeiten…)",
   "Rename a clashing photo, or choose another folder, to move it too.": "Benenne das Foto mit dem gleichen Namen um oder wähle einen anderen Ordner, dann kann es mitkommen.",
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Verbinde den Datenträger wieder oder nutze Datei → Fehlende Fotos suchen… und versuche es dann erneut.",
-  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ein Foto ohne Datei lässt sich nicht verschieben. Ein lokales Foto schon, sobald du Zu „Meine Fotos“ hinzufügen verwendest."
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ein Foto ohne Datei lässt sich nicht verschieben. Ein lokales Foto schon, sobald du Zu „Meine Fotos“ hinzufügen verwendest.",
+  "No photo in this folder is in the library yet": "Kein Foto in diesem Ordner ist bisher in der Bibliothek",
+  "Select the photos to move in the grid first": "Wähle zuerst im Raster die Fotos aus, die du verschieben willst",
+  "This place is kept in Local already": "Dieser Ort wird bereits in „Lokal“ behalten",
+  "Only a place at the top of Local can be removed from it": "Nur ein Ort ganz oben in „Lokal“ kann daraus entfernt werden"
 }

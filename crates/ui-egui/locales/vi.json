@@ -2469,5 +2469,9 @@
   "It tests itself: change its rules (Edit Smart Album…)": "Album này tự kiểm tra chính nó: hãy đổi quy tắc của nó (Chỉnh sửa album thông minh…)",
   "Rename a clashing photo, or choose another folder, to move it too.": "Đổi tên ảnh bị trùng tên hoặc chọn thư mục khác để chuyển được.",
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Kết nối lại ổ đĩa hoặc dùng Tệp → Tìm ảnh bị thiếu… rồi thử lại.",
-  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ảnh không có tệp thì không thể chuyển. Ảnh cục bộ thì được, sau khi dùng Thêm vào Ảnh của tôi."
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ảnh không có tệp thì không thể chuyển. Ảnh cục bộ thì được, sau khi dùng Thêm vào Ảnh của tôi.",
+  "No photo in this folder is in the library yet": "Chưa có ảnh nào trong thư mục này nằm trong thư viện",
+  "Select the photos to move in the grid first": "Trước tiên hãy chọn trên lưới các ảnh cần di chuyển",
+  "This place is kept in Local already": "Nơi này đã được giữ trong Cục bộ",
+  "Only a place at the top of Local can be removed from it": "Chỉ có thể gỡ khỏi Cục bộ một nơi ở cấp trên cùng của Cục bộ"
 }

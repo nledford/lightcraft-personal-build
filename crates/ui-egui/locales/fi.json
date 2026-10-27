@@ -2559,5 +2559,9 @@
   "It tests itself: change its rules (Edit Smart Album…)": "Se testaa itseään: muuta sen sääntöjä (Muokkaa älyalbumia…)",
   "Rename a clashing photo, or choose another folder, to move it too.": "Nimeä samannimisen kuvan uudelleen tai valitse toinen kansio, jotta se voidaan siirtää.",
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Yhdistä levy uudelleen tai käytä toimintoa Tiedosto → Etsi puuttuvat kuvat… ja yritä uudelleen.",
-  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Kuvaa ilman tiedostoa ei voi siirtää. Paikallisen kuvan voi, kun käytät toimintoa Lisää Omiin kuviin."
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Kuvaa ilman tiedostoa ei voi siirtää. Paikallisen kuvan voi, kun käytät toimintoa Lisää Omiin kuviin.",
+  "No photo in this folder is in the library yet": "Tämän kansion kuvia ei ole vielä kirjastossa",
+  "Select the photos to move in the grid first": "Valitse ensin siirrettävät kuvat ruudukosta",
+  "This place is kept in Local already": "Tämä paikka on jo säilytetty Paikallisessa",
+  "Only a place at the top of Local can be removed from it": "Paikallisesta voi poistaa vain sen ylimmän tason paikan"
 }

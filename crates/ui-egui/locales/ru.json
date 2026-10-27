@@ -2603,5 +2603,9 @@
   "It tests itself: change its rules (Edit Smart Album…)": "Он проверяет сам себя: измените его условия (Изменить смарт-альбом…)",
   "Rename a clashing photo, or choose another folder, to move it too.": "Переименуйте фото с таким же именем или выберите другую папку, чтобы переместить его.",
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Подключите диск снова или выберите Файл → Найти отсутствующие фото…, затем повторите.",
-  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Фото без файла нельзя переместить. Локальное фото можно переместить после команды Добавить в «Мои фото»."
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Фото без файла нельзя переместить. Локальное фото можно переместить после команды Добавить в «Мои фото».",
+  "No photo in this folder is in the library yet": "Ни одного фото из этой папки пока нет в библиотеке",
+  "Select the photos to move in the grid first": "Сначала выберите в сетке фото, которые нужно переместить",
+  "This place is kept in Local already": "Это место уже оставлено в «Локальном»",
+  "Only a place at the top of Local can be removed from it": "Убрать из «Локального» можно только место верхнего уровня"
 }

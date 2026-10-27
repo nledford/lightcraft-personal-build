@@ -2454,5 +2454,9 @@
   "It tests itself: change its rules (Edit Smart Album…)": "它引用了自身：请更改其规则（编辑智能相册…）",
   "Rename a clashing photo, or choose another folder, to move it too.": "请重命名重名的照片，或选择其他文件夹，才能移动。",
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "请重新连接磁盘，或使用 文件 → 查找丢失的照片…，然后重试。",
-  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "没有文件的照片无法移动。本地照片在使用“添加到我的照片”后即可移动。"
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "没有文件的照片无法移动。本地照片在使用“添加到我的照片”后即可移动。",
+  "No photo in this folder is in the library yet": "此文件夹中还没有照片在图库中",
+  "Select the photos to move in the grid first": "请先在网格视图中选择要移动的照片",
+  "This place is kept in Local already": "此位置已保留在本地",
+  "Only a place at the top of Local can be removed from it": "只有本地最上层的位置才能从本地移除"
 }

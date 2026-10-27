@@ -2610,5 +2610,9 @@
   "It tests itself: change its rules (Edit Smart Album…)": "自分自身を条件にしています。条件を変更してください（スマートアルバムを編集…）",
   "Rename a clashing photo, or choose another folder, to move it too.": "名前が重複している写真の名前を変えるか、別のフォルダを選ぶと移動できます。",
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "ディスクを接続し直すか、ファイル → 見つからない写真を検索… を使ってからもう一度お試しください。",
-  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "ファイルのない写真は移動できません。ローカルの写真は、マイフォトに追加すると移動できます。"
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "ファイルのない写真は移動できません。ローカルの写真は、マイフォトに追加すると移動できます。",
+  "No photo in this folder is in the library yet": "このフォルダの写真はまだライブラリにありません",
+  "Select the photos to move in the grid first": "先にグリッドで移動する写真を選択してください",
+  "This place is kept in Local already": "この場所はすでにローカルに残されています",
+  "Only a place at the top of Local can be removed from it": "ローカルから除けるのは、ローカルの最上位にある場所だけです"
 }

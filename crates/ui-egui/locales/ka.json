@@ -2968,5 +2968,9 @@
   "It tests itself: change its rules (Edit Smart Album…)": "ის საკუთარ თავს ამოწმებს: შეცვალეთ მისი წესები (სმარტ-ალბომის რედაქტირება…)",
   "Rename a clashing photo, or choose another folder, to move it too.": "გადაარქვით სახელი დუბლირებულ ფოტოს ან აირჩიეთ სხვა საქაღალდე, რომ გადავიდეს.",
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "ხელახლა შეაერთეთ დისკი ან გამოიყენეთ ფაილი → დაკარგული ფოტოების მოძებნა… და სცადეთ თავიდან.",
-  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "ფაილის გარეშე ფოტო ვერ გადაიტანება. ლოკალური ფოტო გადაიტანება, თუ გამოიყენებთ: ჩემს ფოტოებში დამატება."
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "ფაილის გარეშე ფოტო ვერ გადაიტანება. ლოკალური ფოტო გადაიტანება, თუ გამოიყენებთ: ჩემს ფოტოებში დამატება.",
+  "No photo in this folder is in the library yet": "ამ საქაღალდის არცერთი ფოტო ჯერ ბიბლიოთეკაში არ არის",
+  "Select the photos to move in the grid first": "ჯერ ბადეში მონიშნეთ გადასატანი ფოტოები",
+  "This place is kept in Local already": "ეს ადგილი უკვე დატოვებულია ლოკალურში",
+  "Only a place at the top of Local can be removed from it": "ლოკალურიდან ამოშლა მხოლოდ მის ზედა დონეზე მყოფ ადგილს შეუძლია"
 }

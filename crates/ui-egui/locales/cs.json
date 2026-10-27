@@ -2640,5 +2640,9 @@
   "It tests itself: change its rules (Edit Smart Album…)": "Testuje samo sebe: změňte jeho pravidla (Upravit inteligentní album…)",
   "Rename a clashing photo, or choose another folder, to move it too.": "Kolidující fotografii přejmenujte nebo zvolte jinou složku, a půjde přesunout.",
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Znovu připojte disk nebo použijte Soubor → Najít chybějící fotografie… a zkuste to znovu.",
-  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Fotografii bez souboru nelze přesunout. Místní fotografii lze, jakmile použijete Přidat do mých fotografií."
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Fotografii bez souboru nelze přesunout. Místní fotografii lze, jakmile použijete Přidat do mých fotografií.",
+  "No photo in this folder is in the library yet": "V této složce zatím není žádná fotografie z knihovny",
+  "Select the photos to move in the grid first": "Nejprve v mřížce vyberte fotografie, které chcete přesunout",
+  "This place is kept in Local already": "Toto místo už je v místních souborech ponecháno",
+  "Only a place at the top of Local can be removed from it": "Z místních souborů lze odebrat jen místo na jejich nejvyšší úrovni"
 }
