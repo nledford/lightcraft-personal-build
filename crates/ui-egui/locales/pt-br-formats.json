@@ -387,5 +387,6 @@
   "{n} waiting": "{n} aguardando",
   "Starts after {n} more": "Começa depois de mais {n}",
   "Queued: it starts after {n} more": "Na fila: começa depois de mais {n}",
-  "{n} tasks waiting in line won't run.": "{n} tarefas na fila não serão executadas."
+  "{n} tasks waiting in line won't run.": "{n} tarefas na fila não serão executadas.",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Ele volta para si mesmo pelo álbum “{}”: mude as regras de um álbum do ciclo (Editar álbum inteligente…)"
 }

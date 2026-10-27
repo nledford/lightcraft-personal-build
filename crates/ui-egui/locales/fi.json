@@ -2554,5 +2554,7 @@
   "Remove from Queue": "Poista jonosta",
   "Retry": "Yritä uudelleen",
   "Queued: it starts when the task ahead of it ends": "Jonossa: alkaa, kun sen edellä oleva tehtävä päättyy",
-  "1 task waiting in line won't run.": "1 jonossa odottava tehtävä ei suoriteta."
+  "1 task waiting in line won't run.": "1 jonossa odottava tehtävä ei suoriteta.",
+  "This album is in a loop, so it shows nothing": "Tämä albumi on silmukassa, joten se ei näytä mitään",
+  "It tests itself: change its rules (Edit Smart Album…)": "Se testaa itseään: muuta sen sääntöjä (Muokkaa älyalbumia…)"
 }

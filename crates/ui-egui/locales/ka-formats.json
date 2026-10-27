@@ -387,5 +387,6 @@
   "{n} waiting": "{n} ელოდება",
   "Starts after {n} more": "დაიწყება კიდევ {n}-ის შემდეგ",
   "Queued: it starts after {n} more": "რიგშია: დაიწყება კიდევ {n}-ის შემდეგ",
-  "{n} tasks waiting in line won't run.": "რიგში მყოფი {n} ამოცანა არ გაეშვება."
+  "{n} tasks waiting in line won't run.": "რიგში მყოფი {n} ამოცანა არ გაეშვება.",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "ის საკუთარ თავს უბრუნდება ალბომის „{}“ გავლით: შეცვალეთ ციკლში მყოფი ერთ-ერთი ალბომის წესები (სმარტ-ალბომის რედაქტირება…)"
 }

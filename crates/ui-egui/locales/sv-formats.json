@@ -387,5 +387,6 @@
   "{n} waiting": "{n} väntar",
   "Starts after {n} more": "Startar efter {n} till",
   "Queued: it starts after {n} more": "I kö: startar efter {n} till",
-  "{n} tasks waiting in line won't run.": "{n} uppgifter som väntar i kön kommer inte att köras."
+  "{n} tasks waiting in line won't run.": "{n} uppgifter som väntar i kön kommer inte att köras.",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Det leder tillbaka till sig självt via albumet ”{}”: ändra reglerna för ett av albumen i loopen (Redigera smart album…)"
 }

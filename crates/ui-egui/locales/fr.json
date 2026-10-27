@@ -2639,5 +2639,7 @@
   "Remove from Queue": "Retirer de la file",
   "Retry": "Réessayer",
   "Queued: it starts when the task ahead of it ends": "En file : démarre à la fin de la tâche précédente",
-  "1 task waiting in line won't run.": "1 tâche en file d’attente ne sera pas lancée."
+  "1 task waiting in line won't run.": "1 tâche en file d’attente ne sera pas lancée.",
+  "This album is in a loop, so it shows nothing": "Cet album est pris dans une boucle : il n'affiche rien",
+  "It tests itself: change its rules (Edit Smart Album…)": "Il se teste lui-même : modifiez ses règles (Modifier l'album intelligent…)"
 }

@@ -2451,5 +2451,7 @@
   "Remove from Queue": "Remover da fila",
   "Retry": "Tentar novamente",
   "Queued: it starts when the task ahead of it ends": "Na fila: começa quando a tarefa anterior terminar",
-  "1 task waiting in line won't run.": "1 tarefa na fila não será executada."
+  "1 task waiting in line won't run.": "1 tarefa na fila não será executada.",
+  "This album is in a loop, so it shows nothing": "Este álbum está em um ciclo, então não mostra nada",
+  "It tests itself: change its rules (Edit Smart Album…)": "Ele testa a si mesmo: mude as regras dele (Editar álbum inteligente…)"
 }

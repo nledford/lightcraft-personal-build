@@ -3668,5 +3668,7 @@
   "Remove from Queue": "Aus der Warteschlange entfernen",
   "Retry": "Erneut versuchen",
   "Queued: it starts when the task ahead of it ends": "In der Warteschlange: startet, wenn die Aufgabe davor endet",
-  "1 task waiting in line won't run.": "1 Aufgabe in der Warteschlange wird nicht ausgeführt."
+  "1 task waiting in line won't run.": "1 Aufgabe in der Warteschlange wird nicht ausgeführt.",
+  "This album is in a loop, so it shows nothing": "Dieses Album ist in einem Kreis und zeigt deshalb nichts",
+  "It tests itself: change its rules (Edit Smart Album…)": "Es prüft sich selbst: Ändere seine Regeln (Smart-Album bearbeiten…)"
 }

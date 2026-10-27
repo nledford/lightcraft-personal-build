@@ -2530,5 +2530,7 @@
   "Remove from Queue": "Usuń z kolejki",
   "Retry": "Ponów",
   "Queued: it starts when the task ahead of it ends": "W kolejce: rozpocznie się po zakończeniu poprzedniego zadania",
-  "1 task waiting in line won't run.": "1 zadanie oczekujące w kolejce nie zostanie uruchomione."
+  "1 task waiting in line won't run.": "1 zadanie oczekujące w kolejce nie zostanie uruchomione.",
+  "This album is in a loop, so it shows nothing": "Ten album jest w pętli, więc niczego nie pokazuje",
+  "It tests itself: change its rules (Edit Smart Album…)": "Sprawdza samego siebie: zmień jego reguły (Edytuj album inteligentny…)"
 }

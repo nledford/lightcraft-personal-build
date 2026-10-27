@@ -2598,5 +2598,7 @@
   "Remove from Queue": "Убрать из очереди",
   "Retry": "Повторить",
   "Queued: it starts when the task ahead of it ends": "В очереди: начнётся, когда закончится задача перед ней",
-  "1 task waiting in line won't run.": "1 задача в очереди не будет запущена."
+  "1 task waiting in line won't run.": "1 задача в очереди не будет запущена.",
+  "This album is in a loop, so it shows nothing": "Этот альбом попал в цикл, поэтому ничего не показывает",
+  "It tests itself: change its rules (Edit Smart Album…)": "Он проверяет сам себя: измените его условия (Изменить смарт-альбом…)"
 }

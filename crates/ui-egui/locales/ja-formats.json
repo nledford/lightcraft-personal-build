@@ -387,5 +387,6 @@
   "{n} waiting": "待機中 {n} 件",
   "Starts after {n} more": "あと {n} 件の後に開始",
   "Queued: it starts after {n} more": "キューに追加: あと {n} 件の後に開始します",
-  "{n} tasks waiting in line won't run.": "待機中の {n} 件は実行されません。"
+  "{n} tasks waiting in line won't run.": "待機中の {n} 件は実行されません。",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "アルバム「{}」を通じて自分自身に戻っています。循環しているアルバムのどれかの条件を変更してください（スマートアルバムを編集…）"
 }

@@ -2570,5 +2570,7 @@
   "Remove from Queue": "Hapus dari antrean",
   "Retry": "Coba lagi",
   "Queued: it starts when the task ahead of it ends": "Dalam antrean: dimulai saat tugas di depannya selesai",
-  "1 task waiting in line won't run.": "1 tugas yang menunggu dalam antrean tidak akan dijalankan."
+  "1 task waiting in line won't run.": "1 tugas yang menunggu dalam antrean tidak akan dijalankan.",
+  "This album is in a loop, so it shows nothing": "Album ini berada dalam perulangan, jadi tidak menampilkan apa pun",
+  "It tests itself: change its rules (Edit Smart Album…)": "Album ini menjadikan dirinya sendiri syarat: ubah aturannya (Edit album pintar…)"
 }

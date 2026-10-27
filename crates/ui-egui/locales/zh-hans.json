@@ -2449,5 +2449,7 @@
   "Remove from Queue": "从队列中移除",
   "Retry": "重试",
   "Queued: it starts when the task ahead of it ends": "已加入队列：前一个任务结束后开始",
-  "1 task waiting in line won't run.": "队列中等待的 1 个任务不会运行。"
+  "1 task waiting in line won't run.": "队列中等待的 1 个任务不会运行。",
+  "This album is in a loop, so it shows nothing": "此相册处于循环中，因此不显示任何内容",
+  "It tests itself: change its rules (Edit Smart Album…)": "它引用了自身：请更改其规则（编辑智能相册…）"
 }

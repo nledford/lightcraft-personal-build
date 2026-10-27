@@ -2605,5 +2605,7 @@
   "Remove from Queue": "キューから削除",
   "Retry": "再試行",
   "Queued: it starts when the task ahead of it ends": "キューに追加: 前のタスクが終わると開始します",
-  "1 task waiting in line won't run.": "待機中の 1 件は実行されません。"
+  "1 task waiting in line won't run.": "待機中の 1 件は実行されません。",
+  "This album is in a loop, so it shows nothing": "このアルバムは循環しているため、何も表示されません",
+  "It tests itself: change its rules (Edit Smart Album…)": "自分自身を条件にしています。条件を変更してください（スマートアルバムを編集…）"
 }

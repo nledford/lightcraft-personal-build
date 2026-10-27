@@ -387,5 +387,6 @@
   "{n} waiting": "{n} 個等待中",
   "Starts after {n} more": "再過 {n} 個後開始",
   "Queued: it starts after {n} more": "已加入佇列：再過 {n} 個後開始",
-  "{n} tasks waiting in line won't run.": "佇列中等待的 {n} 個工作不會執行。"
+  "{n} tasks waiting in line won't run.": "佇列中等待的 {n} 個工作不會執行。",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "它透過相簿「{}」回到自身：請變更循環中某個相簿的規則（編輯智慧型相簿…）"
 }

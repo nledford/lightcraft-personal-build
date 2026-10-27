@@ -2589,5 +2589,7 @@
   "Remove from Queue": "Rimuovi dalla coda",
   "Retry": "Riprova",
   "Queued: it starts when the task ahead of it ends": "In coda: parte quando finisce l'attività precedente",
-  "1 task waiting in line won't run.": "1 attività in coda non verrà eseguita."
+  "1 task waiting in line won't run.": "1 attività in coda non verrà eseguita.",
+  "This album is in a loop, so it shows nothing": "Questo album è in un ciclo, quindi non mostra nulla",
+  "It tests itself: change its rules (Edit Smart Album…)": "Verifica se stesso: modifica le sue regole (Modifica album smart…)"
 }

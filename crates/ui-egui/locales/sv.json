@@ -2657,5 +2657,7 @@
   "Remove from Queue": "Ta bort från kön",
   "Retry": "Försök igen",
   "Queued: it starts when the task ahead of it ends": "I kö: startar när uppgiften före är klar",
-  "1 task waiting in line won't run.": "1 uppgift som väntar i kön kommer inte att köras."
+  "1 task waiting in line won't run.": "1 uppgift som väntar i kön kommer inte att köras.",
+  "This album is in a loop, so it shows nothing": "Det här albumet ingår i en loop och visar därför ingenting",
+  "It tests itself: change its rules (Edit Smart Album…)": "Det testar sig självt: ändra dess regler (Redigera smart album…)"
 }

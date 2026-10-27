@@ -387,5 +387,6 @@
   "{n} waiting": "{n} đang chờ",
   "Starts after {n} more": "Bắt đầu sau {n} tác vụ nữa",
   "Queued: it starts after {n} more": "Trong hàng đợi: bắt đầu sau {n} tác vụ nữa",
-  "{n} tasks waiting in line won't run.": "{n} tác vụ đang chờ trong hàng đợi sẽ không chạy."
+  "{n} tasks waiting in line won't run.": "{n} tác vụ đang chờ trong hàng đợi sẽ không chạy.",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Album này quay lại chính nó qua album «{}»: hãy đổi quy tắc của một album trong vòng lặp (Chỉnh sửa album thông minh…)"
 }

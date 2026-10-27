@@ -2963,5 +2963,7 @@
   "Remove from Queue": "რიგიდან ამოღება",
   "Retry": "ხელახლა ცდა",
   "Queued: it starts when the task ahead of it ends": "რიგშია: დაიწყება, როცა წინა ამოცანა დასრულდება",
-  "1 task waiting in line won't run.": "რიგში მყოფი 1 ამოცანა არ გაეშვება."
+  "1 task waiting in line won't run.": "რიგში მყოფი 1 ამოცანა არ გაეშვება.",
+  "This album is in a loop, so it shows nothing": "ეს ალბომი ციკლშია, ამიტომ არაფერს აჩვენებს",
+  "It tests itself: change its rules (Edit Smart Album…)": "ის საკუთარ თავს ამოწმებს: შეცვალეთ მისი წესები (სმარტ-ალბომის რედაქტირება…)"
 }

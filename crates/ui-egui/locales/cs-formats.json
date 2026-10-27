@@ -387,5 +387,6 @@
   "{n} waiting": "{n} čeká",
   "Starts after {n} more": "Začne po {n} dalších",
   "Queued: it starts after {n} more": "Ve frontě: začne po {n} dalších",
-  "{n} tasks waiting in line won't run.": "Úlohy čekající ve frontě ({n}) se nespustí."
+  "{n} tasks waiting in line won't run.": "Úlohy čekající ve frontě ({n}) se nespustí.",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Vede zpět samo na sebe přes album „{}“: změňte pravidla jednoho alba ve smyčce (Upravit inteligentní album…)"
 }

@@ -2464,5 +2464,7 @@
   "Remove from Queue": "Xóa khỏi hàng đợi",
   "Retry": "Thử lại",
   "Queued: it starts when the task ahead of it ends": "Trong hàng đợi: bắt đầu khi tác vụ trước nó kết thúc",
-  "1 task waiting in line won't run.": "1 tác vụ đang chờ trong hàng đợi sẽ không chạy."
+  "1 task waiting in line won't run.": "1 tác vụ đang chờ trong hàng đợi sẽ không chạy.",
+  "This album is in a loop, so it shows nothing": "Album này nằm trong một vòng lặp nên không hiển thị gì",
+  "It tests itself: change its rules (Edit Smart Album…)": "Album này tự kiểm tra chính nó: hãy đổi quy tắc của nó (Chỉnh sửa album thông minh…)"
 }
