@@ -23,6 +23,7 @@ pub mod lightroom_import;
 pub mod links;
 pub mod menus;
 mod model_setup;
+pub mod multi_select;
 pub mod panels;
 pub mod pick;
 pub mod recheck;
