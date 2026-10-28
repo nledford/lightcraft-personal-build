@@ -724,7 +724,7 @@ fn fine_drag_value(ui: &mut Ui, g: &SliderLayout) -> f64 {
 }
 
 /// A screen reader's increment / decrement (VoiceOver: Ctrl-Option-Up / Down) as `(increment, decrement)`.
-fn accessibility_nudge(ui: &Ui, resp: &Response) -> (bool, bool) {
+pub(crate) fn accessibility_nudge(ui: &Ui, resp: &Response) -> (bool, bool) {
     ui.input(|i| {
         i.events.iter().fold((false, false), |(inc, dec), e| match e {
             egui::Event::AccessKitActionRequest(r) if r.target_node == resp.id.accesskit_id() => {
