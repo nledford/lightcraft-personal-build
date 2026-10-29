@@ -148,6 +148,16 @@ pub(crate) fn services(cc: &eframe::CreationContext<'_>, log_file: Option<&std::
         system_reduce_motion: Some(Box::new(reduce_motion::system)),
         #[cfg(not(target_os = "macos"))]
         system_reduce_motion: None,
+        // Follow System Settings ▸ Accessibility ▸ Display ▸ Increase contrast until the user chooses
+        #[cfg(target_os = "macos")]
+        system_increase_contrast: Some(Box::new(increase_contrast::system)),
+        #[cfg(not(target_os = "macos"))]
+        system_increase_contrast: None,
+        // Follow System Settings ▸ Accessibility ▸ Display ▸ Reduce transparency until the user chooses
+        #[cfg(target_os = "macos")]
+        system_reduce_transparency: Some(Box::new(reduce_transparency::system)),
+        #[cfg(not(target_os = "macos"))]
+        system_reduce_transparency: None,
         // Linux: the profile the desktop assigns in colord, read off the UI thread
         #[cfg(target_os = "linux")]
         screen_profile: Some(colord::service()),
@@ -300,7 +310,8 @@ fn open_library_session(in_memory: bool, dir: Option<std::path::PathBuf>, seed_d
     };
     let t0 = std::time::Instant::now();
     let mut s = Session::new().with_fs().with_default_denoise_models().with_system_clock();
-    match s.open_library(&dir, seed_demo) {
+    // a new library starts empty: its first screen asks how to begin (sample photos are one way)
+    match s.open_library(&dir, false) {
         Ok(r) => {
             let (replayed, torn) = (r.replayed, r.torn_bytes);
             log::info!(

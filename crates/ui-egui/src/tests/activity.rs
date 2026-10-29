@@ -1065,7 +1065,8 @@ fn demo_on_disk() -> Headless {
     h
 }
 
-/// A folder with a valid PNG and, in a subfolder, a JPEG cut short before its end-of-image marker (the real reason).
+/// A folder with a valid PNG and, in a subfolder, a JPEG cut short before any image data (the real reason). One cut short with data to show
+/// imports from what is present and counts as damaged, not as unreadable (#2705).
 fn folder_with_a_truncated_jpeg(tag: &str) -> std::path::PathBuf {
     use lightcraft_codecs::{ChromaSubsampling, EncodeImage, EncodeMeta};
     let dir = std::env::temp_dir().join(format!("lc-activity-unreadable-{tag}-{}", std::process::id()));
@@ -1075,7 +1076,8 @@ fn folder_with_a_truncated_jpeg(tag: &str) -> std::path::PathBuf {
     let png = lightcraft_codecs::encode_png(&EncodeImage::rgba8(&img), &EncodeMeta::default()).unwrap();
     std::fs::write(dir.join("good.png"), png).unwrap();
     let mut jpeg = lightcraft_codecs::encode_jpeg(&EncodeImage::rgba8(&img), 90, ChromaSubsampling::S444, &EncodeMeta::default()).unwrap();
-    jpeg.truncate(jpeg.len() - 2);
+    let scan = jpeg.windows(2).position(|w| w == [0xFF, 0xDA]).expect("a scan");
+    jpeg.truncate(scan);
     std::fs::write(dir.join("trip").join("bad.jpg"), jpeg).unwrap();
     dir
 }
@@ -1602,4 +1604,27 @@ fn notifications_are_on_for_settings_saved_before_they_existed() {
     let old: crate::state::AppSettings = serde_json::from_value(json!({"libraryPath": "/somewhere"})).unwrap();
     assert!(old.notify_when_done);
     assert_eq!(serde_json::to_value(&old).unwrap()["notifyWhenDone"], true);
+}
+
+/// An import that brought in JPEGs cut short says how many in its message, and the photos carry
+/// the mark.
+#[test]
+fn import_message_counts_the_jpegs_cut_short() {
+    let (mut h, dir) = slow_import("damaged", 3);
+    h.app.session.media.file_probe = Some(std::sync::Arc::new(|p: &str| {
+        Ok(lightcraft_engine::media::ProbeInfo {
+            width: 60,
+            height: 40,
+            format: "JPEG".into(),
+            content_hash: Some(p.to_string()),
+            truncated: p.ends_with("IMG_001.jpg"),
+            ..Default::default()
+        })
+    }));
+    crate::import::start_paths(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.import.is_none()));
+    assert_eq!(h.app.session.catalog.len(), 3);
+    assert_eq!(h.app.session.catalog.photos().filter(|p| p.truncated).count(), 1);
+    assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some("Imported 3 photos · 1 damaged"));
+    let _ = std::fs::remove_dir_all(&dir);
 }

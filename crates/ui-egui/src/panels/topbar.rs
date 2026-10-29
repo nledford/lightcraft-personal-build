@@ -7,7 +7,7 @@ use crate::LightcraftApp;
 use crate::icons::{Icon, paint};
 use crate::menu_item::MenuItem;
 use crate::theme::Tokens;
-use crate::widgets::{icon_button, register};
+use crate::widgets::{icon_button, icon_command, register};
 
 /// The bar doubles as the window's title bar: dragging its empty space moves the window and a
 /// double-click acts as the system setting says. Made before the bar's widgets so they win the click.
@@ -33,6 +33,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         .exact_size(t.top_bar_h)
         .frame(egui::Frame::NONE.fill(t.chrome).inner_margin(egui::Margin { left, right: 12, top: 0, bottom: 0 }))
         .show(ui, |ui| {
+            crate::widgets::announce_region(ui, egui::accesskit::Role::Toolbar, crate::i18n::tr("Top bar"));
             let full = ui.max_rect();
             // The whole bar, its margins included. The search field is centred on this and not on
             // `full`, which is only what the margins leave: on macOS the left margin holds the
@@ -74,10 +75,10 @@ fn nav_buttons(app: &mut LightcraftApp, ui: &mut egui::Ui, search_left: f32) {
             app.act("view.leftPanel", json!({}));
         }
         ui.add_space(8.0);
-        if icon_button(ui, "back", Icon::Back, vec2(30.0, 30.0), false, true, crate::i18n::tr("Back")).clicked() {
+        if icon_command(ui, "back", Icon::Back, vec2(30.0, 30.0), true, crate::i18n::tr("Back")).clicked() {
             app.act("view.back", json!({}));
         }
-        icon_button(ui, "forward", Icon::Forward, vec2(30.0, 30.0), false, false, crate::i18n::tr("Forward"));
+        icon_command(ui, "forward", Icon::Forward, vec2(30.0, 30.0), false, crate::i18n::tr("Forward"));
         if !app.native_menu {
             // no native menu bar (web, Windows, Linux): menus in the top bar
             ui.add_space(10.0);
@@ -184,6 +185,11 @@ fn right_icons(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, full: Rec
         // (the tooltip names the key the command has now; screen readers hear the name alone)
         crate::widgets::announce(&resp, crate::i18n::tr(tip));
         let resp = crate::kbd::tooltip_with_shortcut(resp, crate::i18n::tr(tip), cmd, &app.ui.settings.keymap, mac);
+        // (a screen reader hears the label as the name and, after a pause, the key alone as the description, not the whole tooltip)
+        if let Some(sc) = crate::shortcuts::shortcut_of(&app.ui.settings.keymap, cmd) {
+            let key = crate::menubar::shortcut_text(sc, mac);
+            resp.ctx.accesskit_node_builder(resp.id, |node| node.set_description(key));
+        }
         register(ui, format!("icon:{id}"), r);
         let warn = id == "cloud" && unsaved.is_some();
         let colour = if warn {

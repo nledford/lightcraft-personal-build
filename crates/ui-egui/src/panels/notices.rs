@@ -665,7 +665,7 @@ fn window(ctx: &egui::Context, id: &str, title: &str, text: &str, buttons: &[(&s
             ctx.request_discard("notice dim: settle the modal hit area before input");
         }
         ui.allocate_rect(screen, egui::Sense::click_and_drag());
-        ui.painter().rect_filled(screen, 0.0, egui::Color32::from_black_alpha(140));
+        ui.painter().rect_filled(screen, 0.0, crate::transparency::scrim(ui.ctx(), 140));
     });
     // The dim (with its full-screen hit area) is the modal scope; the prompt window below is moved
     // above it. Everything below the dim, including a Middle-order Settings dialog, is then
@@ -710,6 +710,8 @@ fn window(ctx: &egui::Context, id: &str, title: &str, text: &str, buttons: &[(&s
         });
     // A backdrop press can raise its area; keep the prompt buttons above it.
     if let Some(window) = shown {
+        crate::widgets::announce_dialog(ctx, &window.response, crate::widgets::Modal::Alert);
+        crate::widgets::describe_dialog(ctx, &window.response, text);
         ctx.move_to_top(window.response.layer_id);
     }
     input.button_ids = seen;

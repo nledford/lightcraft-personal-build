@@ -45,7 +45,7 @@ impl MenuNode {
 
 /// User-defined names in parameterized menus are data, not message keys.
 pub fn display_item_label<'a>(id: &str, params: &Value, label: &'a str) -> &'a str {
-    if matches!(id, "metadata.applyPreset" | "album.addPhotos" | "label.applySet")
+    if matches!(id, "metadata.applyPreset" | "album.addPhotos" | "label.applySet" | "preset.apply")
         || (id == "app.export" && params.get("preset").is_some())
         || (id == "app.openLibrary" && params.get("path").is_some())
         || (id == "app.recentLibraries" && params.get("remove").is_some())
@@ -117,12 +117,44 @@ pub fn native_menu_structure(bar: &[(String, Vec<MenuNode>)], keymap: &crate::sh
     s
 }
 
+/// The rows macOS puts in the application menu, in order (About LightCraft, then Check for
+/// Updates…). The in-window bar (Windows, Linux, web) keeps them at the end of Help.
+const APP_MENU_ROWS: &[&str] = &["app.about", "app.checkForUpdates"];
+
+/// Rows the desktop host builds itself in the application menu (Settings…, Quit).
+const HOST_APP_MENU_ROWS: &[&str] = &["app.settings", "app.quit"];
+
+/// The macOS split of the bar: the application menu's rows from [`APP_MENU_ROWS`] in that order,
+/// and the other menus without them and without the host's own rows.
+pub fn native_menu_split(bar: Vec<(String, Vec<MenuNode>)>) -> (Vec<MenuNode>, Vec<(String, Vec<MenuNode>)>) {
+    let mut app_rows: Vec<MenuNode> = Vec::new();
+    let menus = bar
+        .into_iter()
+        .map(|(title, nodes)| {
+            let mut rest = Vec::with_capacity(nodes.len());
+            for node in nodes {
+                match &node {
+                    MenuNode::Item { id, .. } if APP_MENU_ROWS.contains(&id.as_str()) => app_rows.push(node),
+                    MenuNode::Item { id, .. } if HOST_APP_MENU_ROWS.contains(&id.as_str()) => {}
+                    _ => rest.push(node),
+                }
+            }
+            (title, rest)
+        })
+        .collect();
+    app_rows.sort_by_key(|n| match n {
+        MenuNode::Item { id, .. } => APP_MENU_ROWS.iter().position(|r| r == id),
+        _ => None,
+    });
+    (app_rows, menus)
+}
+
 /// Top-level menus in order (the macOS app menu is added by the host).
 pub const MENUS: &[&str] = &["File", "Edit", "View", "Photo", "Window", "Help"];
 
-/// Order and grouping per menu: command ids, `---` separators and `@Submenu` placeholders.
-/// Entries with a menu path that aren't listed are appended at the end of their menu, before any
-/// [`LAST`] item.
+/// Order and grouping per menu: command ids, `---` separators and `@Submenu` placeholders. Every
+/// command with a menu path has a slot here, or its submenu does (a test checks it); an entry left
+/// out would still be appended at the end of its menu, before any [`LAST`] item.
 const LAYOUT: &[(&str, &[&str])] = &[
     (
         "File",
@@ -130,6 +162,7 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "file.addPhotos",
             "file.addFolder",
             "@Import from Device",
+            "file.importLightroom",
             "---",
             "app.newLibrary",
             "app.openLibrary",
@@ -138,6 +171,8 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "file.restoreLibrary",
             "library.backup",
             "library.restore",
+            "file.findMissing",
+            "library.compact",
             "---",
             "dialog.newAlbum",
             "dialog.newFolder",
@@ -152,6 +187,9 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "dialog.export",
             "app.exportPrevious",
             "@Export with Preset",
+            "---",
+            "dialog.print",
+            "dialog.contactSheet",
             "---",
             "library.toggleAutoWriteXmp",
             "@Previews",
@@ -169,16 +207,19 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "dialog.copySettings",
             "develop.paste",
             "dialog.pasteSettings",
+            "develop.pastePrevious",
             "develop.sync",
             "develop.autoSync",
             "---",
             "library.selectAll",
             "library.selectNone",
+            "library.selectOnlyActive",
             "@Select by",
             "---",
             "view.focusSearch",
             "---",
             "app.settings",
+            "@Language",
         ],
     ),
     (
@@ -186,36 +227,20 @@ const LAYOUT: &[(&str, &[&str])] = &[
         &[
             "view.photoGrid",
             "view.squareGrid",
-            "@Grid Info",
-            "view.thumbSizeUp",
-            "view.thumbSizeDown",
             "view.detail",
             "view.compare",
             "view.survey",
+            "view.reference",
             "view.people",
             "---",
-            "view.leftPanel",
-            "@Sidebar Sections",
-            "view.sidebarKeys",
-            "view.photoCounts",
-            "view.faceBoxes",
-            "view.focusPoint",
-            "view.zoomToFocus",
-            "view.filmstrip",
-            "view.histogram",
-            "view.navigator",
-            "view.infoOverlay",
-            "@Loupe Overlay",
-            "@Appearance",
-            "---",
-            "view.fullScreenPreview",
-            "view.lightsOut",
-            "view.enterFullScreen",
-            "---",
-            "view.showOriginal",
-            "view.beforeAfter",
-            "view.beforeAfterSplit",
-            "@Before/After Settings",
+            "@Grid Info",
+            "view.thumbSizeUp",
+            "view.thumbSizeDown",
+            "@Sort",
+            "@Stacks",
+            "view.filterBar",
+            "library.toggleFilters",
+            "library.clearFilter",
             "---",
             "view.zoomIn",
             "view.zoomOut",
@@ -226,38 +251,39 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "view.clipping",
             "view.visualizeHdr",
             "view.softProof",
-            "view.maskOverlay",
-            "view.maskOverlayAll",
-            "view.maskOverlayMode",
-            "view.maskOverlayColor",
-            "view.maskPins",
-            "@Tool Overlay",
-            "view.cropOverlay",
+            "view.visualizeSpots",
             "---",
-            "@Sort",
-            "@Stacks",
-            "view.filterBar",
-            "library.toggleFilters",
-            "library.clearFilter",
-            "library.refresh",
-            "library.holdView",
+            "@Loupe Overlay",
+            "@Before/After",
+            "@Mask Overlay",
+            "@Tool Overlay",
+            "@Crop Overlay",
             "---",
             "compare.swap",
             "compare.makeSelect",
             "---",
-            "view.viewOptions",
+            "view.fullScreenPreview",
+            "view.lightsOut",
+            "view.enterFullScreen",
+            "@Slideshow",
+            "---",
+            "@Appearance",
         ],
     ),
     (
         "Photo",
         &[
+            "@Edit In",
+            "---",
             "@Add to Album",
+            "photo.addToLibrary",
             "---",
             "@Set Rating",
             "@Set Flag",
             "@Set Color Label",
-            "@Metadata Preset",
             "view.autoAdvance",
+            "dialog.cull",
+            "library.findSimilar",
             "---",
             "photo.rotateLeft",
             "photo.rotateRight",
@@ -266,36 +292,38 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "---",
             "version.create",
             "photo.virtualCopy",
+            "photo.duplicate",
             "@Stack",
             "@Photo Merge",
+            "photo.convertToDng",
             "---",
             "develop.auto",
             "develop.treatment",
             "develop.reset",
+            "develop.matchExposure",
             "develop.updateProcess",
             "dialog.createPreset",
             "---",
-            "photo.saveMetadataToFile",
-            "photo.readMetadataFromFile",
-            "photo.reload",
-            "photo.readFocusPoints",
+            "@Metadata",
+            "---",
             "app.showInFinder",
             "app.showInFolders",
             "dialog.rename",
-            "dialog.captureTime",
-            "photo.tagFromTracklog",
+            "photo.reload",
             "---",
             "album.removePhotos",
             "photo.delete",
             "photo.restore",
             "photo.deletePermanently",
             "dialog.trashFiles",
+            "library.emptyRecentlyDeleted",
         ],
     ),
     (
         "Window",
         &[
             "panel.edit",
+            "panel.profiles",
             "panel.crop",
             "panel.remove",
             "panel.masking",
@@ -310,22 +338,41 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "---",
             "@Edit Sections",
             "@Tools",
+            "---",
+            "view.leftPanel",
+            "view.rightPanel",
+            "@Sidebar Sections",
+            "view.sidebarKeys",
+            "view.photoCounts",
+            "view.filmstrip",
+            "view.histogram",
+            "view.navigator",
+            "---",
+            "view.secondWindow",
+            "ui.dock.reset",
         ],
     ),
     (
         "Help",
         &[
-            "app.discord",
+            "app.help",
+            "---",
+            "app.whatsNew",
+            "app.shortcuts",
+            "---",
             "app.feedback",
+            "app.discord",
             "---",
             "app.website",
             "app.github",
             "app.artcraft",
             "---",
-            "app.whatsNew",
-            "app.shortcuts",
             "app.systemInfo",
             "app.openLogFolder",
+            "@Debug",
+            "---",
+            "library.addSamples",
+            "library.removeSamples",
             "---",
             "app.checkForUpdates",
             "app.about",
@@ -333,12 +380,58 @@ const LAYOUT: &[(&str, &[&str])] = &[
     ),
 ];
 
-/// Items that always end their menu in their own separator group, after the entries appended
-/// because the layout doesn't list them (Quit is the last item of the in-window File menu).
+/// Order and grouping inside submenus: (menu, submenu, slots). Slots are as in [`LAYOUT`] (ids of
+/// entries with that submenu path, `---`, `@Nested` submenus), plus `*` for the parameterized
+/// items [`expanded`] builds. A submenu without a row here lists those first, then its entries.
+const SUBMENUS: &[(&str, &str, &[&str])] = &[
+    ("View", "Sort", &["*", "---", "library.refresh", "library.holdView"]),
+    ("View", "Loupe Overlay", &["view.infoOverlay", "view.viewOptions", "view.focusPoint", "view.zoomToFocus", "view.faceBoxes", "---", "*"]),
+    (
+        "View",
+        "Before/After",
+        &[
+            "view.showOriginal",
+            "view.beforeAfter",
+            "view.beforeAfterSplit",
+            "view.beforeAfterTopBottom",
+            "view.beforeAfterSplitTopBottom",
+            "---",
+            "beforeAfter.copyAfterToBefore",
+            "beforeAfter.copyBeforeToAfter",
+            "beforeAfter.swap",
+            "beforeAfter.resetBefore",
+        ],
+    ),
+    ("View", "Mask Overlay", &["view.maskOverlay", "view.maskOverlayAll", "view.maskPins", "---", "*"]),
+    (
+        "Photo",
+        "Metadata",
+        &[
+            "dialog.allMetadata",
+            "photo.copyMetadata",
+            "photo.pasteMetadata",
+            "@Metadata Preset",
+            "---",
+            "photo.saveMetadataToFile",
+            "photo.readMetadataFromFile",
+            "photo.readFocusPoints",
+            "---",
+            "dialog.captureTime",
+            "photo.tagFromTracklog",
+            "metadata.reverseGeocode",
+            "metadata.downloadPlaceNames",
+            "---",
+            "faces.detect",
+        ],
+    ),
+];
+
+/// Items that always end their menu in their own separator group (Quit is the last item of the
+/// in-window File menu).
 const LAST: &[&str] = &["app.quit"];
 
-/// Registry entries that are reached another way (parameterized commands are expanded into
-/// submenus below; others duplicate a dialog command).
+/// Registry entries that are reached another way: parameterized commands and the items of
+/// hand-built submenus are made by [`expanded`]; the others duplicate a dialog command.
 const HIDDEN: &[&str] = &[
     "photo.rate",
     "photo.flag",
@@ -348,10 +441,19 @@ const HIDDEN: &[&str] = &[
     "photo.label",
     "library.sort",
     "library.shuffle",
+    "library.previousShuffle",
     "album.addPhotos",
     "album.create",
     "library.import",
     "preset.create",
+    // File ▸ Previews ▸ Discard Preview Cache
+    "library.clearPreviews",
+    // View ▸ Loupe Overlay
+    "view.chooseLayoutImage",
+    "view.layoutImage",
+    // View ▸ Mask Overlay (each mode and colour, then the cycle item)
+    "view.maskOverlayMode",
+    "view.maskOverlayColor",
 ];
 
 /// The selection includes a photo in Recently Deleted.
@@ -392,7 +494,7 @@ pub(crate) fn in_normal_album(app: &LightcraftApp) -> bool {
     }
 }
 
-fn item(id: &str, params: Value, label: impl Into<String>, shortcut: Option<&str>, enabled: bool, checked: Option<bool>) -> MenuNode {
+pub(crate) fn item(id: &str, params: Value, label: impl Into<String>, shortcut: Option<&str>, enabled: bool, checked: Option<bool>) -> MenuNode {
     MenuNode::Item { id: id.into(), params, label: label.into(), shortcut: shortcut.map(str::to_string), enabled, checked }
 }
 
@@ -401,10 +503,6 @@ pub fn checked(app: &LightcraftApp, id: &str) -> Option<bool> {
     let u = &app.ui;
     let panel = |p: RightPanel| Some(u.right == p);
     match id {
-        // Every language's command is checked when it is the active one (none while syncing with the system).
-        _ if crate::menus::language_from_command(id).is_some() => {
-            Some(!u.follow_system_language && crate::menus::language_from_command(id) == Some(u.language))
-        }
         "develop.autoSync" => Some(app.session.auto_sync),
         "view.photoCounts" => Some(u.show_counts),
         "view.sidebarKeys" => Some(u.sidebar_keys),
@@ -442,7 +540,8 @@ pub fn checked(app: &LightcraftApp, id: &str) -> Option<bool> {
         "view.tasks" => Some(app.activity_open),
         "view.fullScreenPreview" => Some(u.fullscreen),
         "view.lightsOut" => Some(u.lights_out != crate::state::LightsOut::On),
-        "view.enterFullScreen" => Some(app.window_is_fullscreen),
+        // macOS says it in the label instead (`live_label`), as AppKit's own row does
+        "view.enterFullScreen" => (!cfg!(target_os = "macos")).then_some(app.window_is_fullscreen),
         "panel.edit" => panel(RightPanel::Edit),
         "panel.profiles" => panel(RightPanel::Profiles),
         "panel.crop" => panel(RightPanel::Crop),
@@ -473,6 +572,7 @@ fn live_label(app: &LightcraftApp, id: &str, label: &str) -> String {
         "photo.virtualCopy" if n > 1 => crate::i18n::tr_format!("Create {n} Virtual Copies", n = n),
         "dialog.rename" if n > 1 => crate::i18n::tr_format!("Rename {n} Photos…", n = n),
         "app.showInFinder" => crate::i18n::tr(crate::menus::reveal_label()).to_string(),
+        "view.enterFullScreen" if cfg!(target_os = "macos") && app.window_is_fullscreen => "Exit Full Screen".into(),
         _ => label.to_string(),
     }
 }
@@ -523,7 +623,14 @@ pub(crate) fn expanded(app: &LightcraftApp, name: &str) -> Option<Vec<MenuNode>>
                     None,
                 ),
                 MenuNode::Separator,
-                item("library.clearPreviews", Value::Null, "Discard Preview Cache", None, true, None),
+                item(
+                    "library.clearPreviews",
+                    Value::Null,
+                    "Discard Preview Cache",
+                    crate::shortcuts::shortcut_of(&app.ui.settings.keymap, "library.clearPreviews"),
+                    true,
+                    None,
+                ),
             ]
         }
         "Set Rating" => (0..=5u8)
@@ -649,6 +756,39 @@ pub(crate) fn expanded(app: &LightcraftApp, name: &str) -> Option<Vec<MenuNode>>
             }
             v
         }
+        "Mask Overlay" => {
+            // each mode and colour of the Masking panel's overlay, then the item that steps on
+            use lightcraft_engine::pipeline::MaskView;
+            let mode = MaskView::parse(&app.ui.mask_overlay_mode).unwrap_or_default();
+            let mut v: Vec<MenuNode> = MaskView::ALL
+                .into_iter()
+                .map(|m| item("view.maskOverlayMode", json!({"mode": m.name()}), m.label(), None, true, Some(m == mode)))
+                .collect();
+            let keymap = &app.ui.settings.keymap;
+            v.push(item(
+                "view.maskOverlayMode",
+                Value::Null,
+                "Cycle Mask Overlay Mode",
+                crate::shortcuts::shortcut_of(keymap, "view.maskOverlayMode"),
+                true,
+                None,
+            ));
+            v.push(MenuNode::Separator);
+            let colors = crate::panels::masking::OVERLAY_COLORS.into_iter().zip(crate::panels::masking::OVERLAY_COLOR_NAMES);
+            v.extend(colors.map(|(c, name)| {
+                let hex = format!("#{:02x}{:02x}{:02x}", c[0], c[1], c[2]);
+                item("view.maskOverlayColor", json!({"color": hex}), name, None, true, Some(app.ui.mask_overlay_color == c))
+            }));
+            v.push(item(
+                "view.maskOverlayColor",
+                Value::Null,
+                "Cycle Mask Overlay Color",
+                crate::shortcuts::shortcut_of(keymap, "view.maskOverlayColor"),
+                true,
+                None,
+            ));
+            v
+        }
         "Tool Overlay" => {
             // when the spot and mask pins show; the last item steps to the next mode (Shift+H)
             use crate::state::ToolOverlay;
@@ -667,40 +807,36 @@ pub(crate) fn expanded(app: &LightcraftApp, name: &str) -> Option<Vec<MenuNode>>
             .map(|(k, label)| item("view.gridInfo", json!({"info": k}), label, None, true, Some(app.ui.grid_info == k)))
             .collect(),
         "Sort" => {
+            use crate::menus::sort_menu::SortMenu;
             use lightcraft_catalog::SortKey::*;
-            let cur = app.session.sort;
-            let mut v: Vec<MenuNode> = [
-                ("Capture Date", CaptureDate, "captureDate"),
-                ("Import Date", ImportDate, "importDate"),
-                ("Modified Date", EditDate, "editDate"),
-                ("File Name", FileName, "fileName"),
-                ("Rating", Rating, "rating"),
-                ("File Size", FileSize, "fileSize"),
-                ("Random", Random, "random"),
-            ]
-            .into_iter()
-            .map(|(label, key, k)| item("library.sort", json!({"key": k}), label, None, true, Some(cur.key == key)))
-            .collect();
-            v.push(item("library.shuffle", json!({}), "Reshuffle", None, cur.key == Random, None));
+            // what is on, checked and why not comes from one model shared with the bottom bar's popup
+            let m = SortMenu::of(&app.session);
+            let note = |n: Option<crate::menus::sort_menu::SortNote>| n.map(|n| item("library.sort", Value::Null, n.text(), None, false, None));
+            let mut v: Vec<MenuNode> = note(m.keys_note()).into_iter().collect();
+            v.extend(
+                [
+                    ("Capture Date", CaptureDate, "captureDate"),
+                    ("Import Date", ImportDate, "importDate"),
+                    ("Modified Date", EditDate, "editDate"),
+                    ("File Name", FileName, "fileName"),
+                    ("Rating", Rating, "rating"),
+                    ("File Size", FileSize, "fileSize"),
+                    ("Random", Random, "random"),
+                ]
+                .into_iter()
+                .map(|(label, key, k)| item("library.sort", json!({"key": k}), label, None, m.keys_enabled(), Some(m.key_checked(key)))),
+            );
             v.push(MenuNode::Separator);
-            // a shuffle has no direction worth choosing
-            v.push(item(
-                "library.sort",
-                json!({"ascending": true}),
-                "Ascending",
-                None,
-                cur.key != Random,
-                (cur.key != Random).then_some(cur.ascending),
-            ));
-            v.push(item(
-                "library.sort",
-                json!({"ascending": false}),
-                "Descending",
-                None,
-                cur.key != Random,
-                (cur.key != Random).then_some(!cur.ascending),
-            ));
+            let keys = &app.ui.settings.keymap;
+            let shuffle = crate::shortcuts::shortcut_of(keys, "library.shuffle");
+            v.push(item("library.shuffle", json!({}), "Reshuffle", shuffle, m.reshuffle_enabled(), None));
+            let previous = crate::shortcuts::shortcut_of(keys, "library.previousShuffle");
+            v.push(item("library.previousShuffle", Value::Null, "Previous Shuffle", previous, m.previous_enabled(), None));
             v.push(MenuNode::Separator);
+            v.push(item("library.sort", json!({"ascending": true}), "Ascending", None, m.direction_enabled(), m.direction_checked(true)));
+            v.push(item("library.sort", json!({"ascending": false}), "Descending", None, m.direction_enabled(), m.direction_checked(false)));
+            v.push(MenuNode::Separator);
+            v.extend(note(m.groups_note()));
             use lightcraft_catalog::GroupBy;
             let groups = [
                 ("Group by Date: Automatic", GroupBy::Auto, "auto"),
@@ -709,7 +845,11 @@ pub(crate) fn expanded(app: &LightcraftApp, name: &str) -> Option<Vec<MenuNode>>
                 ("Group by Year", GroupBy::Year, "year"),
                 ("No Date Groups", GroupBy::None, "none"),
             ];
-            v.extend(groups.into_iter().map(|(label, g, k)| item("library.sort", json!({"group": k}), label, None, true, Some(cur.group == g))));
+            v.extend(
+                groups
+                    .into_iter()
+                    .map(|(label, g, k)| item("library.sort", json!({"group": k}), label, None, m.groups_enabled(), Some(m.group_checked(g)))),
+            );
             v
         }
         "Open Recent Library" => {
@@ -826,7 +966,7 @@ pub(crate) fn expanded(app: &LightcraftApp, name: &str) -> Option<Vec<MenuNode>>
 }
 
 /// Resolve a live menu row, including contextual keys and borrowed grid-cycle hints.
-fn node(app: &LightcraftApp, e: &MenuEntry) -> MenuNode {
+pub(crate) fn node(app: &LightcraftApp, e: &MenuEntry) -> MenuNode {
     // Shift+P picks and advances in Library; don't advertise it on Presets in those views.
     let shortcut = if e.id == "panel.presets" && crate::shortcuts::library_grid(app) { None } else { e.shortcut.as_deref() };
     // in an album the Delete key removes from the album (issue #1805): the menu says so
@@ -841,7 +981,7 @@ fn node(app: &LightcraftApp, e: &MenuEntry) -> MenuNode {
 }
 
 /// Drop leading, trailing and doubled separators (also inside submenus) and empty submenus.
-fn tidy(v: Vec<MenuNode>) -> Vec<MenuNode> {
+pub(crate) fn tidy(v: Vec<MenuNode>) -> Vec<MenuNode> {
     let mut out: Vec<MenuNode> = Vec::with_capacity(v.len());
     for n in v {
         let n = match n {
@@ -865,6 +1005,48 @@ fn tidy(v: Vec<MenuNode>) -> Vec<MenuNode> {
     out
 }
 
+/// How deep `@Nested` submenus in [`SUBMENUS`] may go (a slot naming its own submenu stops here).
+const MAX_SUBMENU_DEPTH: usize = 3;
+
+/// The items of submenu `name` in menu `title`: its [`SUBMENUS`] slots when it has a row there
+/// (else the parameterized items of [`expanded`]), then the entries with this submenu path that
+/// no slot names, the ones opening a dialog last after a separator.
+fn submenu_items(app: &LightcraftApp, entries: &[MenuEntry], used: &mut [bool], title: &str, name: &str, depth: usize) -> Vec<MenuNode> {
+    let here = |e: &MenuEntry| e.menu.len() == 2 && e.menu[0] == title && e.menu[1] == name;
+    let slots = SUBMENUS.iter().find(|(t, s, _)| *t == title && *s == name).map_or(&["*"][..], |(_, _, l)| *l);
+    let mut children = Vec::new();
+    for slot in slots {
+        if *slot == "---" {
+            children.push(MenuNode::Separator);
+        } else if *slot == "*" {
+            children.extend(expanded(app, name).unwrap_or_default());
+        } else if let Some(nested) = slot.strip_prefix('@') {
+            if depth < MAX_SUBMENU_DEPTH {
+                let items = submenu_items(app, entries, used, title, nested, depth + 1);
+                children.push(MenuNode::Submenu { label: nested.to_string(), children: items });
+            }
+        } else if let Some(i) = entries.iter().position(|e| e.id == *slot && here(e)) {
+            if let Some(u) = used.get_mut(i) {
+                *u = true;
+            }
+            children.push(node(app, &entries[i]));
+        }
+    }
+    let mut dialogs = Vec::new();
+    for (e, u) in entries.iter().zip(used.iter_mut()) {
+        if !*u && here(e) {
+            *u = true;
+            // commands that open a dialog go last, after a separator
+            if e.label.ends_with('…') { dialogs.push(node(app, e)) } else { children.push(node(app, e)) }
+        }
+    }
+    if !dialogs.is_empty() {
+        children.push(MenuNode::Separator);
+        children.extend(dialogs);
+    }
+    children
+}
+
 /// The whole menu bar: (title, items) per menu in [`MENUS`] order.
 pub fn menu_bar(app: &LightcraftApp) -> Vec<(String, Vec<MenuNode>)> {
     let entries: Vec<MenuEntry> =
@@ -875,34 +1057,18 @@ pub fn menu_bar(app: &LightcraftApp) -> Vec<(String, Vec<MenuNode>)> {
         let layout = LAYOUT.iter().find(|(t, _)| t == title).map(|(_, l)| *l).unwrap_or(&[]);
         let mut items = Vec::new();
         let mut last = Vec::new();
-        let sub = |name: &str, used: &mut [bool]| -> Vec<MenuNode> {
-            let mut children = expanded(app, name).unwrap_or_default();
-            let mut dialogs = Vec::new();
-            for (i, e) in entries.iter().enumerate() {
-                if !used[i] && e.menu.len() == 2 && e.menu[0] == *title && e.menu[1] == name {
-                    used[i] = true;
-                    // commands that open a dialog go last, after a separator
-                    if e.label.ends_with('…') { dialogs.push(node(app, e)) } else { children.push(node(app, e)) }
-                }
-            }
-            if !dialogs.is_empty() {
-                children.push(MenuNode::Separator);
-                children.extend(dialogs);
-            }
-            children
-        };
         for slot in layout {
             if *slot == "---" {
                 items.push(MenuNode::Separator);
             } else if let Some(name) = slot.strip_prefix('@') {
-                let children = sub(name, &mut used);
+                let children = submenu_items(app, &entries, &mut used, title, name, 1);
                 items.push(MenuNode::Submenu { label: name.to_string(), children });
             } else if let Some(i) = entries.iter().position(|e| e.id == *slot && e.menu.first().map(String::as_str) == Some(title)) {
                 used[i] = true;
                 if LAST.contains(slot) { last.push(node(app, &entries[i])) } else { items.push(node(app, &entries[i])) }
             }
         }
-        // everything else that names this menu
+        // anything the layout doesn't place yet (a test keeps this empty)
         items.push(MenuNode::Separator);
         let mut extra_subs: Vec<String> = Vec::new();
         for (i, e) in entries.iter().enumerate() {
@@ -917,7 +1083,7 @@ pub fn menu_bar(app: &LightcraftApp) -> Vec<(String, Vec<MenuNode>)> {
             }
         }
         for name in extra_subs {
-            let children = sub(&name, &mut used);
+            let children = submenu_items(app, &entries, &mut used, title, &name, 1);
             items.push(MenuNode::Submenu { label: name, children });
         }
         if !last.is_empty() {
@@ -942,7 +1108,8 @@ pub(crate) fn menu_defaults(id: &str, params: &mut Value) {
 }
 
 /// Run a menu item. Rating, flag and label items behave like their keys (the active photo only in
-/// Compare/Survey; Auto Advance moves on).
+/// Compare/Survey; Auto Advance moves on), except that one aimed by `ids` at a single photo other
+/// than the active one leaves the active photo where it is.
 pub fn run_item(app: &mut LightcraftApp, id: &str, params: Value) -> Result<Value, String> {
     clicked_item(app, id, params, LightcraftApp::run, Result::is_ok).unwrap_or(Ok(Value::Null))
 }
@@ -983,8 +1150,12 @@ fn clicked_item<R>(
         return None;
     }
     let was = app.session.active();
+    // a row aimed at one other photo (a script's `ids`, or the photo menu's in Compare or Survey
+    // for a filmstrip photo the panes or tiles don't show) leaves the active one
+    let elsewhere =
+        params.get("ids").and_then(Value::as_array).is_some_and(|ids| ids.len() == 1 && ids.first().and_then(Value::as_u64) != was.map(|p| p.0));
     let r = run(app, id, params);
-    if culling_cmd && went(&r) && app.ui.auto_advance {
+    if culling_cmd && went(&r) && app.ui.auto_advance && !elsewhere {
         crate::panels::compare::advance(app, was);
     }
     Some(r)
@@ -1038,20 +1209,22 @@ pub fn run_native_command(app: &mut LightcraftApp, id: &str, params: Value) -> N
     policy
 }
 
-/// Human-readable shortcut text for menus: `Cmd+Shift+Z` → `⌘⇧Z` on macOS, `Ctrl+Shift+Z` elsewhere.
+/// Human-readable shortcut text for menus: `Cmd+Shift+Z` → `⇧⌘Z` on macOS, `Ctrl+Shift+Z` elsewhere.
+/// On macOS the modifiers come in AppKit's and Apple's HIG order, ⌃⌥⇧⌘, however the binding spells them.
 pub fn shortcut_text(sc: &str, mac: bool) -> String {
     if mac {
-        let mut mods = String::new();
+        let (mut ctrl, mut alt, mut shift, mut cmd) = (false, false, false, false);
         let mut key = "";
         for part in sc.split('+') {
             match part {
-                "Ctrl" => mods.push('⌃'),
-                "Alt" => mods.push('⌥'),
-                "Shift" => mods.push('⇧'),
-                "Cmd" => mods.push('⌘'),
+                "Ctrl" => ctrl = true,
+                "Alt" => alt = true,
+                "Shift" => shift = true,
+                "Cmd" => cmd = true,
                 k => key = k,
             }
         }
+        let mods: String = [(ctrl, '⌃'), (alt, '⌥'), (shift, '⇧'), (cmd, '⌘')].into_iter().filter_map(|(on, glyph)| on.then_some(glyph)).collect();
         let key = match key {
             "Delete" => "⌫",
             "Escape" => "⎋",
@@ -1118,7 +1291,7 @@ pub fn show_in_window(app: &mut LightcraftApp, ui: &mut egui::Ui, max_width: f32
             egui::Popup::menu(r)
                 .close_behavior(close)
                 .open_memory(None)
-                .show(|ui| crate::menu_level::level(ui, 1, bar_bottom, |ui| nodes_ui(ui, items, &mut clicked, 1, bar_bottom)));
+                .show(|ui| crate::menu_level::level(ui, 1, bar_bottom, |ui| nodes_ui(ui, items, &mut clicked, 1, bar_bottom, &BAR_ROWS)));
         }
         ui.spacing_mut().item_spacing.x = saved;
     } else {
@@ -1127,7 +1300,8 @@ pub fn show_in_window(app: &mut LightcraftApp, ui: &mut egui::Ui, max_width: f32
         egui::Popup::menu(&r).show(|ui| {
             crate::menu_level::level(ui, 1, bar_bottom, |ui| {
                 for (title, items) in &bar {
-                    submenu(ui, title, false, 1, bar_bottom, |ui| nodes_ui(ui, items, &mut clicked, 2, bar_bottom));
+                    let row = SubRow { label: title, text: crate::i18n::tr(title), gutter: false, alias: None };
+                    submenu(ui, row, 1, bar_bottom, &BAR_ROWS, |ui| nodes_ui(ui, items, &mut clicked, 2, bar_bottom, &BAR_ROWS));
                 }
             });
         });
@@ -1180,45 +1354,161 @@ fn switch_open_title(ctx: &egui::Context, titles: &[egui::Response]) -> Option<e
     confirmed
 }
 
-/// A submenu row showing `text` at `depth`, whose rows `children` draws one level deeper,
-/// bounded like every level. The row is registered as `menusub:<label>` (the untranslated
-/// label), and while its submenu is open it is the anchor the next frame's room is measured from.
-fn submenu(ui: &mut egui::Ui, label: &str, gutter: bool, depth: usize, bar_bottom: Option<f32>, children: impl FnOnce(&mut egui::Ui)) {
-    let text = crate::i18n::tr(label);
-    let r = crate::menu_item::MenuItem::new(text).check_slot(gutter).submenu(ui, |ui| crate::menu_level::level(ui, depth + 1, bar_bottom, children));
-    crate::widgets::register(ui, format!("menusub:{label}"), r.response.rect);
+/// How a menu's rows are named for the control channel and tests, and what more a row says.
+pub(crate) struct Rows<'a> {
+    /// Item rows are registered as `<item>:<command id>` (`<item>:<id|params>` when `keyed`) …
+    pub item: &'static str,
+    /// … and submenu rows as `<sub>:<untranslated label>` (a preset group's: as shown, since its
+    /// name is the user's or already in the UI language).
+    pub sub: &'static str,
+    pub keyed: bool,
+    /// A row's second id (older names kept for scripts), and why it is off when it is.
+    pub extra: Option<&'a dyn Fn(&MenuNode) -> (Option<String>, Option<String>)>,
+    /// The rows of a submenu kept elsewhere (borrowed, not copied every frame), asked with the
+    /// submenu: the photo menu's Apply Preset, which can hold 10 000+ presets.
+    pub children: Option<&'a dyn Fn(&MenuNode) -> Option<&'a [MenuNode]>>,
+    /// Which build of the borrowed rows this is (the photo menu's preset cache numbers each
+    /// one): what is measured from a long list is kept per build.
+    pub epoch: u64,
+}
+
+/// The menu bar's rows: `menuitem:<id>` and `menusub:<label>`.
+const BAR_ROWS: Rows<'static> = Rows { item: "menuitem", sub: "menusub", keyed: false, extra: None, children: None, epoch: 0 };
+
+/// What a submenu row of [`submenu`] shows and is called.
+struct SubRow<'a> {
+    /// The untranslated label, which names the row for scripts and tests.
+    label: &'a str,
+    /// What the row shows (a preset group's name is already in the UI language, or the user's own).
+    text: &'a str,
+    /// A slot for check marks reserved before the text, like the rows beside it.
+    gutter: bool,
+    /// A second name the row is registered under (older names kept for scripts).
+    alias: Option<String>,
+}
+
+/// A submenu row at `depth`, whose rows `children` draws one level deeper, bounded like every
+/// level. The row is registered as `<rows.sub>:<label>` and as `row.alias`, and while its submenu
+/// is open it is the anchor the next frame's room is measured from.
+fn submenu(ui: &mut egui::Ui, row: SubRow, depth: usize, bar_bottom: Option<f32>, rows: &Rows, children: impl FnOnce(&mut egui::Ui)) {
+    let r = crate::menu_item::MenuItem::new(row.text)
+        .check_slot(row.gutter)
+        .submenu(ui, |ui| crate::menu_level::level(ui, depth + 1, bar_bottom, children));
+    crate::widgets::register(ui, format!("{}:{}", rows.sub, row.label), r.response.rect);
+    if let Some(alias) = row.alias {
+        crate::widgets::register(ui, alias, r.response.rect);
+    }
     if r.inner.is_some() {
         crate::menu_level::set_anchor(ui.ctx(), depth + 1, r.response.rect);
     }
 }
 
+/// The rows of a menu opened elsewhere (a context menu), drawn like the menu bar's: a bounded
+/// level that scrolls when it doesn't fit, submenus, check marks and shortcuts. Returns the item
+/// clicked.
+pub(crate) fn show_rows(ui: &mut egui::Ui, nodes: &[MenuNode], rows: &Rows) -> Option<(String, Value)> {
+    let mut clicked = None;
+    crate::menu_level::level(ui, 1, None, |ui| nodes_ui(ui, nodes, &mut clicked, 1, None, rows));
+    clicked
+}
+
+/// How wide a long list of item rows is: its widest label with room for the check slot, the
+/// padding and a shortcut-less row's margins.
+fn widest_label(ui: &egui::Ui, nodes: &[MenuNode]) -> f32 {
+    let font = egui::TextStyle::Button.resolve(ui.style());
+    let widest = nodes
+        .iter()
+        .filter_map(|n| match n {
+            MenuNode::Item { id, params, label, .. } => Some(display_item_label(id, params, label)),
+            _ => None,
+        })
+        .map(|t| ui.painter().layout_no_wrap(t.to_string(), font.clone(), egui::Color32::WHITE).size().x)
+        .fold(0.0_f32, f32::max);
+    widest + 2.0 * ui.spacing().button_padding.x + 40.0
+}
+
 /// `depth` is 1 for a top-level menu's rows; `bar_bottom` is where the menu bar ends.
-fn nodes_ui(ui: &mut egui::Ui, nodes: &[MenuNode], clicked: &mut Option<(String, Value)>, depth: usize, bar_bottom: Option<f32>) {
+fn nodes_ui(ui: &mut egui::Ui, nodes: &[MenuNode], clicked: &mut Option<(String, Value)>, depth: usize, bar_bottom: Option<f32>, rows: &Rows) {
     ui.set_min_width(220.0);
+    // A long list of rows (a preset group can hold thousands) draws only the rows in view; the
+    // rest only take their place, measured from the first row. Its rows stay on one line, so
+    // every row has that height, and the menu is as wide as its widest row from the start. That
+    // width is measured once per list: a long list is borrowed from storage that stays put
+    // (`rows.children`), and its rows have no shortcut or color swatch (the width leaves them
+    // out); a list built anew each frame would be measured each frame.
+    let long = nodes.len() > 100 && nodes.iter().all(|n| matches!(n, MenuNode::Item { .. }));
+    if long {
+        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+        // (keyed by the build of the rows and the list within it, not by the menu it opens in:
+        // the same group opened from another photo's menu keeps its width)
+        let key = egui::Id::unique(("menu-long-rows", rows.epoch, nodes.as_ptr() as usize, nodes.len()));
+        let widest = ui.data(|d| d.get_temp::<f32>(key)).unwrap_or_else(|| {
+            let w = widest_label(ui, nodes);
+            ui.data_mut(|d| d.insert_temp(key, w));
+            w
+        });
+        ui.set_min_width(widest);
+    }
+    let mut row_h: Option<f32> = None;
     for n in nodes {
+        let top = ui.cursor().top();
+        if long && let Some(h) = row_h {
+            let clip = ui.clip_rect();
+            if top + h < clip.top() || top > clip.bottom() {
+                // the row's place and the auto ids a drawn row uses, so the rows after it keep theirs
+                ui.add_space(h);
+                ui.skip_ahead_auto_ids(crate::menu_item::MenuItem::AUTO_IDS);
+                continue;
+            }
+        }
+        let (alias, reason) = rows.extra.map(|f| f(n)).unwrap_or_default();
         match n {
             MenuNode::Separator => {
                 ui.separator();
             }
             MenuNode::Submenu { label, children } => {
-                submenu(ui, label, true, depth, bar_bottom, |ui| nodes_ui(ui, children, clicked, depth + 1, bar_bottom));
+                let children: &[MenuNode] = rows.children.and_then(|f| f(n)).unwrap_or(children);
+                // a preset group's name is already in the UI language, or the user's own
+                let text = if matches!(children.first(), Some(MenuNode::Item { id, .. }) if id == "preset.apply") {
+                    label.as_str()
+                } else {
+                    crate::i18n::tr(label)
+                };
+                let row = SubRow { label, text, gutter: true, alias };
+                submenu(ui, row, depth, bar_bottom, rows, |ui| nodes_ui(ui, children, clicked, depth + 1, bar_bottom, rows));
             }
             MenuNode::Item { id, params, label, shortcut, enabled, checked } => {
-                // the check slot is reserved on every row, like native menus
+                // the check slot is reserved on every row, like native menus; a colour label's row also shows its colour
+                let key = if rows.keyed { MenuNode::key(id, params) } else { id.clone() };
                 let mut item = crate::menu_item::MenuItem::new(display_item_label(id, params, label))
                     .check_slot(true)
                     .enabled(*enabled)
-                    .widget(format!("menuitem:{id}"));
+                    .widget(format!("{}:{key}", rows.item));
+                if id == "photo.label"
+                    && let Some(l) = params["label"].as_str().and_then(lightcraft_catalog::ColorLabel::parse)
+                {
+                    let color = crate::theme::label_color(l);
+                    item = item.swatch(if *enabled { color } else { color.gamma_multiply(0.4) });
+                }
                 if let Some(on) = checked {
                     item = item.checked(*on);
                 }
                 if let Some(sc) = shortcut {
                     item = item.shortcut(sc);
                 }
-                let r = item.show(ui);
+                let mut r = item.show(ui);
+                if let Some(alias) = alias {
+                    crate::widgets::register(ui, alias, r.rect);
+                }
+                if let Some(why) = reason.filter(|_| !*enabled) {
+                    r = r.on_disabled_hover_text(why);
+                }
                 if r.clicked() {
                     *clicked = Some((id.clone(), params.clone()));
                     ui.close();
+                }
+                if long && row_h.is_none() {
+                    row_h = Some(ui.cursor().top() - top);
                 }
             }
         }

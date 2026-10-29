@@ -103,7 +103,8 @@ pub(crate) fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
             Action::Close => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
             Action::None => {}
         }
-        // The window answers Help ▸ Check for Updates, so it follows the updater's status.
+        // The window answers Check for Updates (Help, or the LightCraft menu on macOS), so it follows the
+        // updater's status.
         let rt = &mut app.updates_rt;
         (rt.manual_window_open, rt.status_message) = match rt.updater.status() {
             Status::Idle => (false, None),
@@ -121,7 +122,7 @@ pub(crate) fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
 
     if app.updates_rt.manual_window_open {
         let mut open = true;
-        egui::Window::new(crate::i18n::tr("LightCraft Updates"))
+        let shown = egui::Window::new(crate::i18n::tr("LightCraft Updates"))
             .open(&mut open)
             .collapsible(false)
             .resizable(false)
@@ -136,6 +137,9 @@ pub(crate) fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
                     app.updates_rt.manual_window_open = false;
                 }
             });
+        if let Some(w) = &shown {
+            crate::widgets::announce_dialog(ctx, &w.response, crate::widgets::Modal::Window);
+        }
         if !open {
             app.updates_rt.manual_window_open = false;
         }

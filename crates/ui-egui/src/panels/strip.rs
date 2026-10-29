@@ -7,7 +7,7 @@ use crate::LightcraftApp;
 use crate::icons::Icon;
 use crate::state::RightPanel;
 use crate::theme::Tokens;
-use crate::widgets::icon_button;
+use crate::widgets::{icon_button, icon_command};
 
 /// Height of one tool button.
 const BUTTON_H: f32 = 40.0;
@@ -26,6 +26,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 .stroke(egui::Stroke::new(1.0, t.divider)),
         )
         .show(ui, |ui| {
+            crate::widgets::announce_region(ui, egui::accesskit::Role::Toolbar, crate::i18n::tr("Tool strip"));
             let has_photo = app.session.active().is_some();
             let mac = crate::kbd::is_mac(ui.ctx());
             // each tooltip names the key its command has now, remapped ones included
@@ -77,7 +78,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 {
                     app.act("panel.activity", json!({}));
                 }
-                if icon_button(ui, "more", Icon::More, sz, false, true, "More").clicked() {
+                if icon_command(ui, "more", Icon::More, sz, true, "More").clicked() {
                     app.ui.dialog = Some(crate::state::Dialog::About);
                 }
             });
@@ -121,7 +122,7 @@ fn tip(app: &LightcraftApp, mac: bool, base: &str, cmd: &str) -> String {
 
 fn separator(ui: &mut egui::Ui, t: &Tokens) {
     let (r, _) = ui.allocate_exact_size(vec2(t.strip_w - 16.0, 1.0), egui::Sense::hover());
-    ui.painter().rect_filled(r, 0.0, t.button_border.gamma_multiply(0.7));
+    ui.painter().rect_filled(r, 0.0, crate::transparency::fade(ui.ctx(), t.button_border, 0.7));
 }
 
 #[cfg(test)]

@@ -14,7 +14,7 @@ use serde_json::json;
 use crate::icons::{Icon, paint};
 use crate::menu_item::MenuItem;
 use crate::theme::Tokens;
-use crate::widgets::{divider, icon_button, register, slider};
+use crate::widgets::{divider, icon_command, register, slider};
 use crate::{HoverPreview, LightcraftApp};
 
 /// Long edge of preset thumbnails (px).
@@ -49,6 +49,13 @@ impl AppliedPreset {
                 .last()
                 .is_some_and(|entry| session.presets.iter().any(|preset| preset.id == self.id && entry.label == format!("Preset: {}", preset.name))))
     }
+}
+
+/// After `preset.apply` of `preset` at `amount` succeeded (here or from a photo's menu): the
+/// panel marks the preset on the photos it changed and offers its Amount slider.
+pub(crate) fn note_applied(ctx: &egui::Context, session: &lightcraft_engine::Session, preset: &str, amount: f64) {
+    AppliedByPhoto::remember(ctx, session, preset);
+    ctx.data_mut(|d| d.insert_temp(egui::Id::unique("preset-amount"), AppliedPreset::new(session, preset.to_string(), amount)));
 }
 
 /// The preset each photo was given, with its settings right after: the panel marks it while the
@@ -96,20 +103,12 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 .max_rect(Rect::from_min_max(pos2(hr.right() - 80.0, hr.top()), hr.right_bottom()))
                 .layout(egui::Layout::right_to_left(egui::Align::Center)),
         );
-        if icon_button(
-            &mut hdr,
-            "presetCreate",
-            Icon::Plus,
-            vec2(28.0, 28.0),
-            false,
-            app.session.active().is_some(),
-            crate::i18n::tr("Create Preset…"),
-        )
-        .clicked()
+        if icon_command(&mut hdr, "presetCreate", Icon::Plus, vec2(28.0, 28.0), app.session.active().is_some(), crate::i18n::tr("Create Preset…"))
+            .clicked()
         {
             app.ui.dialog = Some(crate::state::Dialog::create_preset());
         }
-        let more = icon_button(&mut hdr, "presetMore", Icon::More, vec2(28.0, 28.0), false, true, crate::i18n::tr("More preset options"));
+        let more = icon_command(&mut hdr, "presetMore", Icon::More, vec2(28.0, 28.0), true, crate::i18n::tr("More preset options"));
         egui::Popup::menu(&more).show(|ui| {
             let thumbs_on = app.ui.preset_thumbs;
             if MenuItem::new(crate::i18n::tr("Show Thumbnails")).checked(thumbs_on).widget("presetMenu:thumbnails").show(ui).clicked() {
@@ -147,8 +146,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             {
                 // Only replace the most recent preset; never undo intervening edits.
                 if app.act("preset.apply", json!({"id": &last.id, "amount": v})).is_some() {
-                    AppliedByPhoto::remember(ui.ctx(), &app.session, &last.id);
-                    ui.data_mut(|d| d.insert_temp(amt_id, AppliedPreset::new(&app.session, last.id, v)));
+                    note_applied(ui.ctx(), &app.session, &last.id, v);
                 } else {
                     // (quiet: it puts back the step just undone; `act` already said why the preset was refused)
                     app.quiet("edit.redo", json!({}));
@@ -258,8 +256,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                     }
                     // only when it went through: refused (nothing selected…), `act` said why
                     if resp.clicked() && app.act("preset.apply", json!({"id": pid, "amount": 100})).is_some() {
-                        AppliedByPhoto::remember(ui.ctx(), &app.session, &pid);
-                        ui.data_mut(|d| d.insert_temp(amt_id, AppliedPreset::new(&app.session, pid.clone(), 100.0)));
+                        note_applied(ui.ctx(), &app.session, &pid, 100.0);
                         ui.data_mut(|d| d.remove::<(lightcraft_catalog::PhotoId, Preset, String)>(egui::Id::unique("last-preset-hover")));
                         app.toast(ui.ctx(), crate::i18n::tr_format!("Preset: {name}", name = name));
                     }

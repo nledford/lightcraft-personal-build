@@ -2,6 +2,82 @@
 
 ## 2026-10-28
 
+### A shuffled grid says so, and Reshuffle is one click away
+- When the photos are sorted at random, the grid's header now shows "Shuffled" beside the photo count with a Reshuffle
+  button (bordered, so it reads as an action beside the state): one click gives a new order, with the Sort menu's
+  Reshuffle unchanged. Recently Added keeps its own order
+  (newest import first), so it shows no chip. In a narrow window the button stands alone, and when even it would
+  leave the title no room (a very narrow window or a very long count) the chip is left out, so the count always stays in view.
+- The sort button's tooltip and its name for screen readers now say which sort is chosen ("Sort: Capture
+  Date, Descending", "Sort: Random") instead of just "Sort".
+
+### A new sort order or a reshuffle keeps your place
+- Choosing another sort, flipping its direction, pressing Reshuffle or changing the date grouping no longer leaves the
+  grid scrolled to where the photos used to be. If the active photo was on screen, the grid scrolls to wherever it
+  landed (the filmstrip follows it too); if you had scrolled away from it, the grid starts at the top of the new
+  arrangement. Rating or editing a photo under a sort it affects still never moves the scroll position.
+
+### The Sort menus offer only what the view uses
+- In Recently Added, which always shows the newest imports first, the sort keys, Ascending / Descending and Reshuffle in
+  the bottom bar's Sort popup and in View ▸ Sort are now off and nothing is checked as the order shown; a dim line says
+  "Recently Added always shows the newest imports first." Before, they checked the saved sort (and, under Random, offered
+  a Reshuffle that changed nothing). Outside Recently Added, the Group by Date choices are off too where the grid draws no date headers —
+  under Random, File Name, Rating and File Size, and in Recently Deleted — and your choice is kept for when you pick a
+  date sort again or leave Recently Deleted, as the direction already was for Random. Reshuffle is always listed, in both menus, under its own
+  separator below the sort keys, and is on only while you sort at random.
+
+### Previous Shuffle brings back the order a Reshuffle replaced
+- Both Sort menus (the bottom bar's popup and View ▸ Sort) have a new Previous Shuffle row under Reshuffle. It goes back to
+  the exact random order the last Reshuffle replaced, and again for the one before, up to 32 steps in this session. It is
+  on only while you sort at random and a Reshuffle has replaced something; the steps are forgotten when you leave Random
+  or open another library, and are never saved with it. Reshuffle is now ⌘⌥⇧R (Ctrl+Alt+Shift+R) and Previous Shuffle ⌘⌥⇧P
+  (Ctrl+Alt+Shift+P); both rows show their keys.
+
+### The window's parts are named for screen readers
+- The top bar, the tool strip and the bottom bar are now announced as toolbars (Top bar, Tool strip, Bottom bar), and the
+  sidebar (Library), the photos, the Tools panel (or Presets) and the filmstrip as landmarks, so a screen reader can list
+  them and jump to one instead of walking every control. Nothing on screen changes. Not yet tried with a real VoiceOver session.
+
+### The grid's thumbnail size slider is a slider to screen readers
+- With VoiceOver, the Thumbnail size control at the right of the grid's bottom bar is now announced as a slider with its
+  value and range, instead of a button with no value. Increment and Decrement (VoiceOver's Control-Option-Up and Down) and,
+  while it has the keyboard focus, the Up and Down arrow keys change it by one step, as the `=` and `-` keys do.
+
+### Screen readers read photo thumbnails as selectable items, not check boxes
+- On macOS, VoiceOver said "checked" or "unchecked" for a photo's thumbnail in the grid, as it does for a check box, and
+  the filmstrip's thumbnails, which began saying whether they are selected on 2026-10-27 ("Screen readers name filmstrip thumbnails like the grid's"), were read the same way.
+  A thumbnail in either place is now a selectable item: VoiceOver says "selected" for the photos you have picked, and
+  says nothing about a state for the others. The name is the same as before (file name, rating, flag, color label).
+
+### The photo in Detail is named with its file for screen readers
+- With VoiceOver, the photo in Detail view is now announced with its file name, rating, flag and colour label ("Photo:
+  IMG_0042.JPG, rating 4 of 5, picked") instead of only "Photo", as the grid names the same photo.
+
+### Dialogs are exposed to screen readers as dialogs
+- Export, Settings and the other dialogs, the library chooser and the prompts that stop the window (the quit question, a
+  library that could not be opened, a settings file problem) are now exposed to screen readers as dialogs: modal ones, so the
+  rest of the window is marked as blocked while one is open, and an alert dialog for the prompts. The answer to Check for
+  Updates is a dialog too, but not a modal one. Before, each was a plain group that only carried the dialog's title.
+
+### Screen readers tell buttons, switches and choices apart
+- With VoiceOver, a button that does something (Reset, Auto, Choose…, Create Album, Back) is now a button, not a check box that is "unchecked". A button that is on or off (B&W, HDR) says whether it is on, and one of several choices (Format, Color space, Sharpen, a language, the view buttons: Photo Grid, Square Grid, Detail, Compare, Survey and People) is a radio button that says which one is chosen.
+
+### Screen readers no longer read the shortcut with every button name
+- Icon-only buttons (the tool strip, the view buttons and Before/After and Filmstrip in the bottom bar, the top bar's
+  Import Photos…, the mask overlay and White Balance Selector buttons, the slideshow controls) are now announced by
+  their label alone ("Edit", "Presets", "Photo Grid"), and the shortcut is the button's description ("E", "Shift+P",
+  "G"), which VoiceOver reads after a pause or on request. Before, it read "Edit (E)" every time it landed on the
+  button. This holds in every language, including Japanese and Traditional Chinese, which write the shortcut in
+  full-width brackets. The tooltip you see on hover is unchanged.
+
+### The empty photo grid names Import Photos' shortcut as it is bound
+- When a view is empty and the way in is File ▸ Import Photos…, the message under "No photos" used a fixed "Cmd+Shift+I" (or a translation's fixed copy of it) whatever the platform or the binding. It now shows the key as the menu bar writes it (on a Mac its glyphs, elsewhere Ctrl+Shift+I) on its own line under the sentence, follows a remapped key, and names no key when Import Photos has none. The sentence now wraps in a narrow window instead of running off its edge.
+
+### The grid's title, count and empty messages are read by screen readers
+- VoiceOver and other screen readers now read the photo grid's heading (for example "All Photos") and its photo count ("0 of 24 photos"), and the messages an empty view shows: "No photos match the active filters" with its reason, "No photos in this folder", and the same for the compare, survey, detail and people views.
+
+### A stack badge's tooltip names the stack key as it is bound
+- Hovering a stack's badge in the grid said "(S)" even after you had remapped the key that expands and collapses stacks. It now shows the key you set for Expand/Collapse Stack, written as the menu bar writes it. With that unbound, it shows Soft Proofing's key (which a grid reads as the stack toggle) unless the native menu takes that key, and then no key. In the filmstrip, where S is Soft Proofing, the tooltip names a key only when Expand/Collapse Stack has one of its own.
 ### Local's standard places can't be renamed by mistake
 - The Pictures, Desktop, Downloads and Home rows of Local no longer offer Rename Folder… or Move Folder To…. Before,
   the Rename prompt began with the row's translated label rather than the folder's name, so in German pressing OK
@@ -28,6 +104,79 @@
   and choosing any language turns it off.
 
 ## 2026-10-27
+
+### The Edit menu groups Select Only Active Photo and Paste Settings from Previous with their kin
+- Select Only Active Photo now sits under Deselect All, and Paste Settings from Previous under Paste Selected Settings…, instead of both after Settings…, near the end of the Edit menu. On macOS, where Settings… lives in the application menu, the Edit menu no longer shows two separator lines in a row.
+
+### One Enter Full Screen row in the macOS View menu
+- On macOS the View menu showed two "Enter Full Screen" rows: LightCraft's and the one macOS adds itself (not with
+  LightCraft in German). Now there is one, LightCraft's. It reads "Exit Full Screen" while the window is full screen
+  and uses the system's key, ⌃⌘F, instead of ⇧⌘F. Windows and Linux are unchanged (⇧Ctrl+F). (A `--memory` session
+  doesn't change the setting that switches macOS's row off, so on a Mac where LightCraft only ever ran that way,
+  macOS's row stays.)
+
+### One feedback row in the macOS Help menu
+- On macOS the Help menu showed macOS's own "Send LightCraft Feedback" row above LightCraft's Send Feedback…. Only
+  LightCraft's row is left; it opens a new issue on the project's GitHub. (A `--memory` session doesn't change that
+  setting, so on a Mac where LightCraft only ever ran that way macOS's row stays.)
+
+### Screen readers name filmstrip thumbnails like the grid's
+- A thumbnail in the filmstrip is now named as the grid's cell for the same photo is: the file name, then its rating,
+  flag and color label ("LC01207.JPG, 3 stars, picked"), and it says whether it is selected. It was named with the
+  file name only, so VoiceOver told you less in Detail than in the grid.
+
+### Screen readers name a slider's value field "value"
+- The number beside a slider is now named "Exposure value" (the slider's name and "value"), and "Click to type a value,
+  drag to change it" is its description. It was named "Exposure: Click to type a value, drag to change it", so
+  VoiceOver read the whole sentence each time it reached the field, once for every slider in the Edit panel.
+
+### Screen readers and Voice Control name the grid's date headers as they read
+- A date header in the photo grid is now named with the text it shows ("Sunday, 20 September 2026 · 1 photo"), where
+  it was named with the bare date key ("2026-09-20"). VoiceOver reads what a sighted person reads, and Voice Control's
+  "click Sunday" finds the header.
+
+### Increase contrast
+- **Settings ▸ Interface ▸ Increase contrast** (`view.increaseContrast` for scripts and agents) makes borders,
+  separators and text stand out more in every theme: text reads at least 7:1 on the surfaces it is written on (panels,
+  fields, buttons, and rows and buttons that are hovered or pressed, and selected grid cells), icons 4.5:1, and the borders of fields
+  and buttons, the separators between panels and the Develop sliders' plain tracks and thumbs 3:1 against what they part. The
+  outlines of the interface's standard controls and windows are drawn a half point thicker, also while hovered or
+  pressed. The open drop-down's outline and the standard disabled controls are strengthened too. Text on a photo, on a
+  cell tinted by a color label and on a filled primary button keeps its own colors, and so does text written in the
+  accent, caution or error color ("In Use" on a theme card, warnings). A selected row in a list or a drop-down keeps its fill and its text. The panel frames and LightCraft's own buttons keep their line weight and disabled look (their colors follow
+  the stronger tokens), and the color-gradient slider tracks (Temp, Tint, Hue) keep theirs. The surfaces keep their colors. On macOS it
+  follows System Settings ▸ Accessibility ▸ Display ▸ Increase contrast until you change it in Settings; **Use the
+  system setting** beside the tick box hands the choice back. On Windows, Linux and the web version it is manual for
+  now (off by default).
+
+### Reduce transparency
+- **Settings ▸ Interface ▸ Reduce transparency** (`view.reduceTransparency` for scripts and agents) draws the
+  see-through badges, labels and backdrops solid: the rating, flag and label bars on grid and filmstrip thumbnails, the
+  badges on them (virtual copy, stack, preview only), the labels and pills over the photo in Detail, the Navigator's
+  frame, the survey's and the people views' small buttons and pills, the toasts, the slideshow's control bar, and the
+  dimmed backdrop behind a dialog, a notice or a file dragged over the window (a plain backdrop in the theme's own
+  color instead). What the photo itself shows stays as it is: crop shading, mask overlays, the histogram's zones,
+  Lights Out's dimming, the dimming of rejected photos, and fades that tell you something changed. A few small
+  overlays are not covered yet: the print layout's caption pills, the slide layout preview's band, the import review's
+  thumbnail badges and the frame-rate overlay. On macOS it follows System Settings ▸
+  Accessibility ▸ Display ▸ Reduce transparency until you change it in Settings; **Use the system setting** beside the
+  tick box hands the choice back. On Windows, Linux and the web version it is manual for now (off by default).
+
+### Screen readers name the sidebar's disclosure triangles
+- Each triangle in the left sidebar (album folders, local folders, By Date, imported folders, keywords) and in the
+  keyword list now says which row it opens or closes: "Expand Travel", "Collapse 2026". They were all named just
+  "Expand" or "Collapse", so VoiceOver read a list of identical buttons.
+
+### macOS: the traffic lights are centred on the top bar
+- The red, yellow and green window buttons now sit in the middle of the top bar's height, in line with its buttons and search field. Before, they kept macOS's own title-bar position and sat about 4 points higher. They stay centred when the window is resized, leaves full screen or changes appearance.
+
+### macOS: the Window menu lists the open windows
+- The Window menu now shows a row for each open window (the main window, and the second one from Window ▸ Second Window while it is open), below Bring All to Front. Before, the menu ended at Bring All to Front and listed no window. macOS also adds its own window items there: Fill, Center, Move & Resize and Full Screen Tile on macOS 15 and later, and Minimize All, Zoom All and Arrange in Front while Option is held.
+
+### The app and Help menus follow the Mac's order
+- On macOS, Check for Updates… is in the LightCraft menu right under About LightCraft, as in other Mac apps. It stays in Help on Windows, Linux and the web.
+- Help opens with LightCraft Help, then What's New and Keyboard Shortcuts, then Send Feedback… and the ArtCraft Discord, the websites, and System Info, Open Log Folder and Debug. Join the ArtCraft Discord… no longer leads the menu, and LightCraft Help is no longer the last row.
+- LightCraft Help is ⇧⌘? on macOS, where F1 needs the fn key. Windows, Linux and the web keep F1.
 
 ### Reading a photo from a network share asks the server less
 - Checking a photo (before an import, and for Reload, Recheck, Relink and Convert) asked for the file's size, then
@@ -125,11 +274,23 @@
   languages that LightCraft has a catalog for (Russian for `ru-SK`, German for `de-AT`), as the web build follows the
   browser's languages. Before, it opened in English unless `LIGHTCRAFT_LANGUAGE` was set. A language chosen in
   Settings ▸ General ▸ Language is kept as before.
+### The macOS menu bar shows every row
+- File ▸ Export… no longer reads “Custom…”, File ▸ Export with Preset keeps its Custom… row, and Photo ▸ Add to Album keeps New Album…. When two menu rows ran the same command, the menu bar left the second one out and gave the first one its label; now each row is its own item and a click on either one runs the command. The View menu now also lists its second Layout Image row (without a key), as the in-window menu does.
+
+### Shortcuts read the same way everywhere on macOS
+- Wherever LightCraft shows a shortcut (the menu bar's labels, a button's tooltip, the empty-library hint, the
+  line under "No photos" in an empty album, the Keyboard Shortcuts dialog and its search) it lists the modifiers in
+  the order macOS menus use, Control, Option, Shift, Command: `⇧⌘I` where it used to say `⌘⇧I`. The line under
+  "No photos" also shows the shortcut as it is bound now, and as Ctrl+Shift+I on Windows and Linux, where it
+  always said Cmd+Shift+I. Windows and Linux otherwise keep the order a shortcut is written in.
+
+### The Edit menu loses its Language submenu
+- Choose the interface language in Settings ▸ General ▸ Language, which already lists every language. Edit no longer carries 18 more rows for it, on any platform.
 
 ## 2026-10-26
 
 ### The sidebar from the keyboard
-- **View ▸ Keyboard in Sidebar** (Cmd+Alt+B) gives the keys to the left sidebar: a ring shows the row they are
+- **Window ▸ Keyboard in Sidebar** (Cmd+Alt+B) gives the keys to the left sidebar: a ring shows the row they are
   on, starting at what the grid shows. ↑ ↓ move (Home, End, Page Up, Page Down too), → unfolds a folder or
   section or steps into it, ← folds it or steps out, Enter or Space chooses the row as a click does, typing goes
   to the next row that starts so (the same letter again: the one after), and F2 renames an album, a keyword or
@@ -289,6 +450,27 @@
   path on the clipboard, as your system spells it, and a toast says so.
 - A disk's row now offers Show in Finder and New Folder on Disk…, and a folder in Local offers New Folder on Disk…,
   whose new folder is listed in Local.
+### A photo's right-click menu offers what the Photo menu does, grouped by task
+- Right-clicking a photo in the grid, the filmstrip, the loupe, Compare or Survey opens one menu, built like the menu
+  bar's Photo menu: the same names ("Delete 3 Photos"), keyboard shortcuts, check marks on the photo's rating, flag and
+  color label (with the label's color), and the same rows grayed out. Its rows are grouped by what they do: open the
+  photo; rate, flag, label and describe it (Add Keywords, and a Metadata submenu with Copy / Paste Metadata, metadata
+  presets, Edit Capture Time…, Fill Location from GPS, Save / Read Metadata and more); organize it (Add to Target Album,
+  Add to Album, Stack, Find Similar Photos); edit it (an Edit Settings submenu with copy, paste, Sync Settings, Auto
+  Settings and Apply Preset by group, then virtual copy, version, Photo Merge and a Rotate & Flip submenu); its file
+  (Rename Photos…, Move to Folder…, Duplicate, Convert to DNG, Reload from Disk); where it is (Locate Missing File… for
+  an original that is gone, Show in Finder / Folders and a new Copy File Path); export; and Delete on its own at the
+  end.
+- Rows that don't apply where the menu opened are left out: there is no Open in Detail in Detail, Open in Compare and
+  Open in Survey appear only once several photos are chosen, and Remove from Album and Set as Album Cover only inside an
+  album. Right-clicking one of several selected photos makes it the active photo and keeps the selection, so the rows
+  that act on one photo (Open in Detail, Copy Edit Settings, Create Version…) act on the photo right-clicked; in Compare
+  and Survey a filmstrip photo that the panes or tiles don't show stays as it is, so the active photo stays on screen.
+  The loupe's Zoom rows and Compare's Swap Compare Photos and Make Candidate the Select sit at the top of the same menu.
+  A grayed-out row says why when the pointer rests on it ("Select 2 or more photos"), and a row whose action can't run
+  says why instead of doing nothing. Rating, flagging or labeling from it moves on to the next photo when Auto Advance
+  is on, as the keys do. A preset applied from it gets the Presets panel's mark and Amount slider, as after a click
+  there.
 
 ## 2026-10-24
 
@@ -586,6 +768,10 @@
   (so an Album rule set to "isn't" that album matches every photo). Change the rules of one album on the loop and its albums hold
   their photos again.
 - A library that already holds such a loop opens as before; only what the albums on it show changes.
+### Damaged JPEGs are marked, and can be found
+- A JPEG that was cut short now says so. Info shows "Damaged file: cut short, shown from the data present"; the
+  import review puts a "Damaged" badge on it; the message after an import counts them ("· 2 damaged"); and a
+  smart album can collect them with the rule File → Damaged File.
 
 ## 2026-10-23
 
@@ -650,6 +836,10 @@
   the text back and stays in Settings; in the first three it used to save what was typed, and in all of them it
   closed the window. Those three now have the Cut / Copy / Paste menu too, and what is typed in Copyright or
   Creator is saved when another tab is clicked, where it used to be dropped.
+### The filmstrip rings the selected photos before their thumbnails load
+- A selected photo's cell in the filmstrip shows its ring (the heavier ring for the active photo, the lighter one for the others) on the
+  placeholder while its thumbnail is still loading, as the grid already did. Before, the active photo's cell looked
+  like the other selected cells until the thumbnails arrived.
 
 ### Tab leaves the name field in New Album, New Smart Album and the name prompts
 - In New Album, New Smart Album, Save Metadata Preset and the other dialogs with one name field, the field has the
@@ -711,6 +901,13 @@
   program that has the library open, stayed behind after Quit and the window's close button, pointing at a process
   that no longer existed. The library's lock is now released as soon as everything is saved, as it already was on
   the other systems.
+### JPEGs that were cut short now import
+- A JPEG that stops before its end (an interrupted download or copy) used to be refused as "not readable". It now
+  imports and shows what is there: a progressive JPEG from the scans that arrived (blurry, then sharper the more
+  of it came), a baseline JPEG from the rows that arrived, the rest flat grey. The original file is never changed.
+  Still refused: a file with no picture data yet, a cut JPEG of a kind only the slower decoder reads (CMYK, 12-bit,
+  lossless, separate scans per colour), arithmetic-coded JPEGs, and cut files of other formats. The catalog
+  remembers that such a photo was cut short; Reload clears that once the file is whole.
 
 ### Choose where a Lightroom catalog goes
 - File ▸ Import Lightroom Catalog… now asks first: merge the catalog's photos, collections and edits into the
@@ -1260,6 +1457,82 @@
   photos is the same as before.
   Photos added or removed (an import, an undone import) go into or out of that order, even after more changes than
   LightCraft remembers one by one, instead of sorting the whole library again.
+### Sample photos, when you want them
+- Help ▸ Add Sample Photos adds 24 procedural sample photos with their keywords and their albums, to try LightCraft on.
+  The albums come in one folder, "Sample Photos" (named in the interface's language), apart from the ones you make, and
+  a message says how many photos came and where to look. It is one undo step, and it is refused while samples are
+  already in the library, Recently Deleted included.
+- Help ▸ Remove Sample Photos takes out every sample photo (virtual copies and those in Recently Deleted too), the albums
+  only they filled and the folders left empty, in one undo step. An album that also holds a photo of yours stays, with
+  that photo. `library.addSamples` (with an optional `folder` name) and `library.removeSamples` do the same for agents.
+
+### A new library asks how to begin
+- A new library made by the desktop app now starts empty instead of quietly filling with the 24 procedural demo
+  photos. Its first screen, "Welcome to LightCraft", offers Import Photos…, Import Lightroom Catalog… and Try Sample
+  Photos (which does what Help ▸ Add Sample Photos does). `--memory` still starts with the demo photos (`--no-demo` for
+  none), as do `lightcraft-cli --demo` and the web build.
+- While sample photos are in a library, a tinted banner under the top bar says so and offers Import Photos… and Remove
+  Sample Photos; once photos of your own are in, it offers Remove Sample Photos or Keep Them. Hide and Keep Them close it
+  until samples are added again. After a removal from the banner a message says how many photos went and that Edit →
+  Undo brings them back. Screen readers read out the banner's words, and every message (toast) as it appears.
+- A ghost button (the banner's Hide and Keep Them) shows an edge while it is pointed at or pressed.
+
+### The welcome has the window
+- While the library is empty, the welcome is the one thing asking for attention: the Tools panel steps aside (it comes
+  back as it was once photos of your own arrive, an editing tool such as Crop as the Edit panel, and the sample
+  photos open the Edit panel; opening it meanwhile keeps it open), and the bottom bar's rating, flags and Copy Edit Settings wait until there is a photo to use them on. The grid's
+  photo count, the bottom bar and Detail's empty filmstrip are not drawn, and the sidebar's empty Albums, By Date,
+  Folders and Keywords sections fold into one line ("Albums, dates, folders and keywords appear here as photos
+  arrive"). The welcome is centred below the grid's header and its Filter Bar.
+- The welcome's message reads as a short paragraph: its title in the brightest text, its words at most 540 points wide
+  and wrapped evenly, not one long line over a short one. The other empty states keep their one line, with the brighter title.
+- Under the welcome's buttons, a row of up to five sample photos (all of them unedited; three or four in a narrow
+  window), with "Or explore LightCraft with 24 sample photos" over them: click one to add the samples and open it in
+  Detail, ready to edit (with the Edit panel). Where the row doesn't fit, and in the web build, Try Sample
+  Photos is a button as before. A session whose library couldn't be opened offers no Try Sample Photos there (Help ▸ Add
+  Sample Photos still adds them).
+- The welcome's buttons are drawn by the button component: Import Photos… is primary, the others secondary.
+
+### The welcome reads for everyone
+- Screen readers now hear the empty library's welcome, not only its buttons: the title (as a heading), what it says,
+  the hint and the sample row's caption, and the right panel's note beside it.
+- A new library's welcome puts the keyboard on Import Photos…, so Enter or Space starts; the welcome's buttons show an
+  accent ring where the keyboard is. On the welcome's buttons, the sample photos and the samples banner, a focused
+  button no longer takes the keyboard from shortcuts such as Import Photos…'s own: it keeps only Enter, Space, Tab, Esc
+  and the arrows. Holding Alt as the window opens, to choose a library, takes the keyboard from the welcome's button.
+- Whether the row of sample photos fits the window is measured from the message instead of guessed, so a shorter window
+  than before still shows it.
+- The welcome also says that a folder can be looked through without importing it, under Local in the sidebar (the
+  desktop app).
+
+### Every way to the samples leads to the editor
+- However the sample photos come into an empty library (a thumbnail, the welcome's Try Sample Photos button, Help ▸
+  Add Sample Photos, an agent), they open on a sample in Detail with the Edit panel, ready to edit; a thumbnail opens
+  the one clicked. A library that already has photos stays where it was.
+- The banner then walks the first edit through: "Drag any slider: the original never changes. Press Y to compare before
+  and after." (the key Before/After Side by Side is bound to); once a slider is dragged, "That's your first edit. Press Y
+  to see it beside the original."; while a Before / After layout shows it, "The original beside your edit: the file
+  itself never changes."; then the usual message. A rating or a keyword is not an edit; another unedited sample, or an
+  undo back to the start, is invited again.
+
+### Selection rings you can see in the light themes
+- The active photo's white outline vanished on Silver and Paper's light grid, and told the active photo from the other
+  selected ones by lightness alone. Now the active photo has a heavier ring (3 pt, with a thin line against the photo so
+  it also shows on a white one) and the other selected photos a lighter one (1.5 pt), in colours each theme picks to
+  stand out from its grid. The filmstrip rings its photos the same way, and so do Compare, Reference and Survey (where
+  the ring is the only sign of the active photo) and the People view's chosen person.
+
+### Menus that fit the screen
+- The View menu is down from 63 rows to 36, so it opens without scrolling on a laptop's menu bar. Its overlays,
+  before/after and slideshow items sit in submenus: Loupe Overlay, Before/After, Mask Overlay (every overlay mode and
+  colour, with the current one checked), Crop Overlay and Slideshow.
+- The panel toggles (My Photos Panel, Right Panel, Sidebar Sections, Photo Counts, Filmstrip, Histogram, Navigator) moved to
+  the Window menu. Photo ▸ Metadata gathers the metadata commands, including Metadata Preset, Save Metadata to File
+  and Detect Faces.
+- File no longer lists Discard Preview Cache twice (it is one command), View no longer lists
+  Choose and Layout Image twice, and every command has a fixed place instead of sitting in a pile at the end of
+  its menu.
+- Keyboard shortcuts are unchanged.
 
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a

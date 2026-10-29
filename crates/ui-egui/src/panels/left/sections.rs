@@ -1,7 +1,7 @@
 use super::albums::top_level_drop_target;
 use super::local::folder_label;
 use super::rows::{MAX_ELIDE_CHARS, ROW_HEIGHT, current_mark, elide_end, note_width};
-use super::{Align2, Icon, LibrarySource, LightcraftApp, Rect, Sense, SidebarSection, Tokens, icon_button, json, paint, pos2, register, vec2};
+use super::{Align2, Icon, LibrarySource, LightcraftApp, Rect, Sense, SidebarSection, Tokens, icon_command, json, paint, pos2, register, vec2};
 use crate::menu_item::MenuItem;
 
 /// Space above a section's header.
@@ -94,6 +94,20 @@ fn empty_hint(ui: &mut egui::Ui, section: SidebarSection) {
     let galley = ui.painter().layout_no_wrap(text.to_string(), t.label(), t.text_dim);
     note_width(ui, 42.0 + galley.size().x + 18.0);
     ui.painter().galley(pos2(r.left() + 42.0, r.center().y - galley.size().y / 2.0), galley, t.text_dim);
+}
+
+/// Under the welcome, in place of the empty sections that fill as photos arrive (widget
+/// `sidebarEmpty:welcome`): one quiet line saying they will.
+pub(super) fn welcome_note(ui: &mut egui::Ui) {
+    let t = Tokens::get(ui.ctx());
+    ui.add_space(SECTION_GAP + 6.0);
+    let width = (ui.available_width().min(visible_right(ui) - ui.cursor().left()) - 36.0).max(80.0);
+    let text = crate::i18n::tr("Albums, dates, folders and keywords appear here as photos arrive");
+    let galley = ui.painter().layout(text.to_string(), t.font(12.5), t.text_dim, width);
+    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), galley.size().y), Sense::hover());
+    register(ui, "sidebarEmpty:welcome", r);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, text));
+    ui.painter().galley(pos2(r.left() + 18.0, r.top()), galley, t.text_dim);
 }
 
 /// Where a section was laid out this frame (screen y): from its header's top to the end of its rows.
@@ -209,7 +223,7 @@ pub(crate) fn shown_in(app: &LightcraftApp, section: SidebarSection) -> Option<S
 /// A section's header in `r`: a disclosure chevron in the gutter (where tree rows have their
 /// chevron), then the bold title; a click folds or unfolds the section (kept in the UI state, so
 /// it survives restarts), and what the section adds to its header (its button, see `header_button`) sits at
-/// the visible edge. A folded section says how many rows it holds (`rows`, with View ▸ Show Photo
+/// the visible edge. A folded section says how many rows it holds (`rows`, with Window ▸ Show Photo
 /// Counts). `pinned`: this is the copy kept at the top of the sidebar (see `pinned_header`).
 fn section_header(app: &mut LightcraftApp, ui: &mut egui::Ui, section: SidebarSection, r: Rect, rows: usize, pinned: bool) -> HeaderOutcome {
     let t = Tokens::get(ui.ctx());
@@ -350,7 +364,7 @@ fn header_button_rect(ui: &egui::Ui, header: Rect) -> Rect {
 fn show_header_button(app: &mut LightcraftApp, ui: &mut egui::Ui, header: Rect, button: &HeaderButton) {
     let mut hdr =
         ui.new_child(egui::UiBuilder::new().max_rect(header_button_rect(ui, header)).layout(egui::Layout::right_to_left(egui::Align::Center)));
-    let resp = icon_button(&mut hdr, button.id, button.icon, vec2(HEADER_BUTTON, HEADER_BUTTON), false, true, button.tooltip);
+    let resp = icon_command(&mut hdr, button.id, button.icon, vec2(HEADER_BUTTON, HEADER_BUTTON), true, button.tooltip);
     match button.action {
         HeaderAction::Run(run) => {
             if resp.clicked() {

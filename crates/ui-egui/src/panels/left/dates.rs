@@ -30,7 +30,18 @@ fn date_row(app: &mut LightcraftApp, ui: &mut egui::Ui, key: &str, label: &str, 
     if key.len() < 10 {
         // (a year's months open and fold with it; a month's days have nothing to open)
         let inside = if key.len() < 7 { Inside::OpensAndFolds } else { Inside::Alone };
-        tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, &branch, &mut open, format!("dateToggle:{key}"), inside);
+        // (the name carries the year, so two Marches in different years differ in a screen reader's list of triangles)
+        tree_toggle(
+            ui,
+            &mut app.ui.sidebar_trees,
+            &resp,
+            indent,
+            &branch,
+            &mut open,
+            format!("dateToggle:{key}"),
+            inside,
+            &crate::i18n::date_group_label(key, false),
+        );
     }
     if super::side_keys::chosen(ui, &resp) {
         crate::panels::side_select::date_clicked(app, ui, key);

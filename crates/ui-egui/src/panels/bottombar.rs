@@ -7,9 +7,10 @@ use serde_json::json;
 use crate::LightcraftApp;
 use crate::icons::{Icon, paint};
 use crate::menu_item::MenuItem;
+use crate::menus::sort_menu::{SortMenu, SortNote};
 use crate::state::{ViewMode, Zoom};
 use crate::theme::Tokens;
-use crate::widgets::{icon_button, register};
+use crate::widgets::{icon_button, icon_choice, icon_command, register};
 
 const VIEW_MODES: &[(&str, Icon, ViewMode, &str)] = &[
     ("photoGrid", Icon::GridPhoto, ViewMode::PhotoGrid, "Photo Grid"),
@@ -36,6 +37,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         .exact_size(t.bottom_bar_h)
         .frame(egui::Frame::NONE.fill(t.chrome).inner_margin(egui::Margin { left: 12, right: 12, top: 0, bottom: 0 }))
         .show(ui, |ui| {
+            crate::widgets::announce_region(ui, egui::accesskit::Role::Toolbar, crate::i18n::tr("Bottom bar"));
             let full = ui.max_rect();
             let compact_zoom = full.width() < 360.0;
             let right_start = right_side(app, ui, full, compact_zoom);
@@ -53,7 +55,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                                 &app.ui.settings.keymap,
                                 crate::kbd::is_mac(ui.ctx()),
                             );
-                            if icon_button(ui, id, icon, vec2(32.0, 32.0), app.ui.view == mode, true, &tip).clicked() {
+                            if icon_choice(ui, id, icon, vec2(32.0, 32.0), app.ui.view == mode, true, &tip).clicked() {
                                 app.act(&format!("view.{id}"), json!({}));
                             }
                         }
@@ -61,11 +63,12 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                         let (sep, _) = ui.allocate_exact_size(vec2(1.0, 22.0), Sense::hover());
                         ui.painter().rect_filled(sep, 0.0, t.button_border);
                         ui.add_space(10.0);
-                        let sort = icon_button(ui, "sort", Icon::Sort, vec2(30.0, 30.0), false, true, "Sort");
+                        let name = sort_summary(&app.session.sort);
+                        let sort = icon_command(ui, "sort", Icon::Sort, vec2(30.0, 30.0), true, &name);
                         egui::Popup::menu(&sort).show(|ui| sort_menu(app, ui));
                     } else {
                         let current_icon = VIEW_MODES.iter().find(|(_, _, mode, _)| *mode == app.ui.view).map_or(Icon::More, |(_, icon, _, _)| *icon);
-                        let more = icon_button(ui, "viewOptions", current_icon, vec2(40.0, 32.0), true, true, "View");
+                        let more = crate::widgets::icon_menu(ui, "viewOptions", current_icon, vec2(40.0, 32.0), true, "View");
                         paint(
                             ui.painter(),
                             Rect::from_center_size(more.rect.right_bottom() - vec2(5.0, 5.0), vec2(7.0, 7.0)),
@@ -108,6 +111,10 @@ const PILL_W: f32 = 208.0;
 /// The rating/flag pill and copy/paste settings, between `from` and `to` (the side groups): the
 /// copy buttons go first when there is no room (they are in the Edit menu too), then the pill.
 fn centre(app: &mut LightcraftApp, ui: &mut egui::Ui, full: Rect, from: f32, to: f32) {
+    // nothing to rate, flag or copy settings from until the library has photos
+    if super::empty_library::shown(&app.session) {
+        return;
+    }
     let t = Tokens::get(ui.ctx());
     let has_clip = app.session.clipboard.is_some();
     let label = crate::i18n::tr(if has_clip { "Paste Edit Settings" } else { "Copy Edit Settings" });
@@ -137,14 +144,15 @@ fn centre(app: &mut LightcraftApp, ui: &mut egui::Ui, full: Rect, from: f32, to:
     let flag = active.as_ref().map(|p| p.flag).unwrap_or_default();
     for (id, icon, f) in [("unflag", Icon::Circle, Flag::None), ("pick", Icon::FlagPick, Flag::Pick), ("reject", Icon::FlagReject, Flag::Reject)] {
         let (r, resp) = pill_ui.allocate_exact_size(vec2(22.0, 22.0), Sense::click());
-        crate::widgets::announce_selected(
+        crate::widgets::announce_button(
             &resp,
+            resp.enabled(),
             crate::i18n::tr(match f {
                 Flag::None => "Unflagged",
                 Flag::Pick => "Pick",
                 Flag::Reject => "Reject",
             }),
-            flag == f,
+            crate::widgets::Press::Choice(flag == f),
         );
         register(&pill_ui, format!("flag:{id}"), r);
         let on = flag == f && f != Flag::None;
@@ -266,12 +274,45 @@ fn right_side(app: &mut LightcraftApp, ui: &mut egui::Ui, full: Rect, compact_zo
     } else {
         // thumbnail size slider
         let (r, resp) = child.allocate_exact_size(vec2(110.0, 20.0), Sense::click_and_drag());
-        crate::widgets::announce(&resp, crate::i18n::tr("Thumbnail size"));
+        let (min, max) = (crate::state::THUMB_SIZE_MIN, crate::state::THUMB_SIZE_MAX);
+        // screen readers: a slider with its value and range, which Increment / Decrement (VoiceOver's
+        // Ctrl-Option-Up / Down) and the arrow keys move one step, as the Edit panel's sliders do
+        resp.widget_info(|| egui::WidgetInfo::slider(true, f64::from(app.ui.thumb_size), crate::i18n::tr("Thumbnail size")));
+        child.ctx().accesskit_node_builder(resp.id, |node| {
+            node.set_min_numeric_value(f64::from(min));
+            node.set_max_numeric_value(f64::from(max));
+            node.set_numeric_value_step(f64::from(crate::state::THUMB_SIZE_STEP));
+            node.add_action(egui::accesskit::Action::Increment);
+            node.add_action(egui::accesskit::Action::Decrement);
+        });
         register(&child, "slider:thumbSize", r);
+        let (inc, dec) = crate::widgets::accessibility_nudge(&child, &resp);
+        let (up, down) = if resp.has_focus() {
+            // ↑ and ↓ step the size instead of moving the focus to the thumbnail above
+            child.memory_mut(|m| m.set_focus_lock_filter(resp.id, egui::EventFilter { vertical_arrows: true, ..Default::default() }));
+            let keys = child.input_mut(|i| {
+                (i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowUp), i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown))
+            });
+            if keys.0 || keys.1 {
+                // egui picked the neighbour to focus from this same key before the lock above could apply (the
+                // first arrow after Tab): cancel that move
+                child.memory_mut(|m| m.move_focus(egui::FocusDirection::None));
+            }
+            keys
+        } else {
+            (false, false)
+        };
+        if inc || up {
+            app.ui.thumb_size = (app.ui.thumb_size + crate::state::THUMB_SIZE_STEP).min(max);
+        } else if dec || down {
+            app.ui.thumb_size = (app.ui.thumb_size - crate::state::THUMB_SIZE_STEP).max(min);
+        }
         let p = child.painter();
         let y = r.center().y;
         p.line_segment([pos2(r.left(), y), pos2(r.right(), y)], egui::Stroke::new(2.0, t.track));
-        let (min, max) = (crate::state::THUMB_SIZE_MIN, crate::state::THUMB_SIZE_MAX);
+        if resp.has_focus() {
+            crate::widgets::focus_ring(p, r, &t);
+        }
         let f = (app.ui.thumb_size - min) / (max - min);
         let x = r.left() + f * r.width();
         p.rect_filled(Rect::from_center_size(pos2(x, y), vec2(3.0, 14.0)), 1.0, t.thumb_hover);
@@ -292,11 +333,38 @@ fn click_zoom_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     }
 }
 
+/// One row of the Sort popup, registered as `sortMenu:{id}`: a check row where `checked` is `Some`, a plain
+/// row (with its key, when it has one) where it is `None`; a row that is off can't be clicked.
+fn sort_row(ui: &mut egui::Ui, id: &str, label: &str, enabled: bool, checked: Option<bool>, hint: Option<String>) -> bool {
+    let mut item = MenuItem::new(crate::i18n::tr(label)).enabled(enabled).widget(format!("sortMenu:{id}"));
+    if let Some(on) = checked {
+        item = item.selected(on);
+    }
+    if let Some(hint) = hint.as_deref() {
+        item = item.shortcut(hint);
+    }
+    item.show(ui).clicked()
+}
+
+/// The dim line saying why part of the menu is off.
+fn sort_note(ui: &mut egui::Ui, note: Option<SortNote>) {
+    let Some(note) = note else { return };
+    let r = ui
+        .scope(|ui| {
+            ui.set_max_width(200.0);
+            ui.add(egui::Label::new(egui::RichText::new(crate::i18n::tr(note.text())).weak().small()).wrap())
+        })
+        .inner;
+    register(ui, "sortMenu:note", r.rect);
+}
+
 fn sort_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     use lightcraft_catalog::GroupBy;
     use lightcraft_catalog::SortKey::*;
-    let cur = app.session.sort;
+    // what is on, checked and why not comes from one model shared with View ▸ Sort
+    let m = SortMenu::of(&app.session);
     ui.label(egui::RichText::new(crate::i18n::tr("Sort by")).weak());
+    sort_note(ui, m.keys_note());
     for (label, key, k) in [
         ("Capture Date", CaptureDate, "captureDate"),
         ("Import Date", ImportDate, "importDate"),
@@ -306,12 +374,19 @@ fn sort_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         ("File Size", FileSize, "fileSize"),
         ("Random", Random, "random"),
     ] {
-        if MenuItem::new(crate::i18n::tr(label)).selected(cur.key == key).show(ui).clicked() {
+        if sort_row(ui, &format!("key:{k}"), label, m.keys_enabled(), Some(m.key_checked(key)), None) {
             app.act("library.sort", json!({"key": k}));
         }
     }
-    if cur.key == Random && MenuItem::new(crate::i18n::tr("Reshuffle")).show(ui).clicked() {
+    ui.separator();
+    let mac = ui.ctx().os() == egui::os::OperatingSystem::Mac;
+    let hint = |id: &str| crate::shortcuts::shortcut_of(&app.ui.settings.keymap, id).map(|sc| crate::menubar::shortcut_text(sc, mac));
+    let (shuffle_hint, previous_hint) = (hint("library.shuffle"), hint("library.previousShuffle"));
+    if sort_row(ui, "reshuffle", "Reshuffle", m.reshuffle_enabled(), None, shuffle_hint) {
         app.act("library.shuffle", json!({}));
+    }
+    if sort_row(ui, "previous", "Previous Shuffle", m.previous_enabled(), None, previous_hint) {
+        app.act("library.previousShuffle", json!({}));
     }
     // a view that holds its photos shows what matches now when asked to
     if app.session.hold_view {
@@ -321,17 +396,15 @@ fn sort_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         }
     }
     ui.separator();
-    // a shuffle has no direction worth choosing
-    ui.add_enabled_ui(cur.key != Random, |ui| {
-        if MenuItem::new(crate::i18n::tr("Ascending")).selected(cur.key != Random && cur.ascending).show(ui).clicked() {
-            app.act("library.sort", json!({"ascending": true}));
+    for (label, id, ascending) in [("Ascending", "ascending", true), ("Descending", "descending", false)] {
+        let checked = m.direction_checked(ascending).unwrap_or(false);
+        if sort_row(ui, id, label, m.direction_enabled(), Some(checked), None) {
+            app.act("library.sort", json!({"ascending": ascending}));
         }
-        if MenuItem::new(crate::i18n::tr("Descending")).selected(cur.key != Random && !cur.ascending).show(ui).clicked() {
-            app.act("library.sort", json!({"ascending": false}));
-        }
-    });
+    }
     ui.separator();
     ui.label(egui::RichText::new(crate::i18n::tr("Group by date")).weak());
+    sort_note(ui, m.groups_note());
     for (label, g, k) in [
         ("Automatic", GroupBy::Auto, "auto"),
         ("Day", GroupBy::Day, "day"),
@@ -339,10 +412,27 @@ fn sort_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         ("Year", GroupBy::Year, "year"),
         ("None", GroupBy::None, "none"),
     ] {
-        if MenuItem::new(crate::i18n::tr(label)).selected(cur.group == g).show(ui).clicked() {
+        if sort_row(ui, &format!("group:{k}"), label, m.groups_enabled(), Some(m.group_checked(g)), None) {
             app.act("library.sort", json!({"group": k}));
         }
     }
+}
+
+/// What the sort button's tooltip and screen-reader name say: "Sort: Capture Date, Descending", or
+/// "Sort: Random" (a shuffle has no direction), worded as the Sort menu words them.
+fn sort_summary(sort: &lightcraft_catalog::Sort) -> String {
+    use lightcraft_catalog::SortKey::*;
+    let key = crate::i18n::tr(match sort.key {
+        CaptureDate => "Capture Date",
+        ImportDate => "Import Date",
+        EditDate => "Modified Date",
+        FileName => "File Name",
+        Rating => "Rating",
+        FileSize => "File Size",
+        Random => return crate::i18n::tr_format!("Sort: {key}", key = crate::i18n::tr("Random")),
+    });
+    let direction = crate::i18n::tr(if sort.ascending { "Ascending" } else { "Descending" });
+    crate::i18n::tr_format!("Sort: {key}, {direction}", key = key, direction = direction)
 }
 
 #[cfg(test)]
@@ -370,7 +460,7 @@ mod visual_regressions {
                 ViewMode::People,
             ] {
                 for scale in [1.0, 1.5, 2.0] {
-                    let mut app = LightcraftApp::new(lightcraft_engine::Session::new(), Default::default());
+                    let mut app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Default::default());
                     app.ui.view = view;
                     let mut ready = false;
                     let mut harness =
@@ -428,7 +518,7 @@ mod visual_regressions {
                     let ctx = egui::Context::default();
                     crate::theme::install_fonts(&ctx);
                     crate::theme::apply(&ctx);
-                    let mut app = LightcraftApp::new(lightcraft_engine::Session::new(), Default::default());
+                    let mut app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Default::default());
                     app.ui.view = view;
                     let mut output = ctx.run_ui(scaled_input(vec2(width, 100.0), scale), |ui| show(&mut app, ui));
                     output.textures_delta.clear();
@@ -509,7 +599,8 @@ mod tests {
     fn rating_and_flag_buttons_keep_padding_inside_the_pill() {
         for scale in [1.0, 2.0] {
             for room in [240.0, 500.0] {
-                let mut app = LightcraftApp::new(lightcraft_engine::Session::new(), Services::default());
+                // photos to rate: an empty library has no pill (the welcome has the window)
+                let mut app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services::default());
                 let mut view = HeadlessView::new();
                 for frame in 0..3 {
                     let raw = HeadlessView::raw_input(vec2(700.0, 40.0), scale, frame as f64 / 60.0, vec![]);

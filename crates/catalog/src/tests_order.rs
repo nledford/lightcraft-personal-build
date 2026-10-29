@@ -63,6 +63,7 @@ fn op(kind: u8, n: u64, v: u8) -> Op {
             content_hash: None,
             preview_only: None,
             preview_checked: String::new(),
+            truncated: false,
         },
         7 => Op::SetDevelop {
             id,

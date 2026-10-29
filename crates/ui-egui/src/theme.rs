@@ -107,6 +107,15 @@ pub struct Tokens {
     /// A thumbnail's place while its picture is still being made: static, apart from the grid, the
     /// cells and the canvas in every theme.
     pub skeleton: Color32,
+    /// The ring round the active photo (outer line, 3 pt): 3:1 or more against the grid and the
+    /// square grid's cells. The photo itself is parted from it by [`Tokens::ring_inner`].
+    pub ring_active: Color32,
+    /// The thin line (1 pt) between the active photo and its ring: the ring's opposite, so the ring
+    /// reads on a photo of any brightness.
+    pub ring_inner: Color32,
+    /// The ring round the other selected photos (1.5 pt, against the active one's 3 pt): 3:1 or
+    /// more against the grid.
+    pub ring_selected: Color32,
     pub divider: Color32,
     pub inset: Color32,
     pub field: Color32,
@@ -209,6 +218,9 @@ impl Default for Tokens {
             cell: Color32::from_rgb(0x1c, 0x1c, 0x1c),
             cell_selected: Color32::from_rgb(0x2d, 0x2d, 0x2d),
             skeleton: Color32::from_rgb(0x25, 0x25, 0x25),
+            ring_active: Color32::from_rgb(0xff, 0xff, 0xff),
+            ring_inner: Color32::from_rgb(0x00, 0x00, 0x00),
+            ring_selected: Color32::from_rgb(0xc0, 0xc0, 0xc0),
             divider: Color32::from_rgb(0x1c, 0x1c, 0x1c),
             inset: Color32::from_rgb(0x23, 0x23, 0x23),
             field: Color32::from_rgb(0x22, 0x22, 0x22),
@@ -269,6 +281,9 @@ impl Tokens {
                 ..base
             },
             ThemeKind::Silver => Tokens {
+                ring_active: rgb(0x141414),
+                ring_inner: rgb(0xffffff),
+                ring_selected: rgb(0x4a4a4a),
                 chrome: rgb(0xe6e6e6),
                 canvas: rgb(0xcfcfcf),
                 grid_bg: rgb(0xd9d9d9),
@@ -300,6 +315,9 @@ impl Tokens {
                 ..base
             },
             ThemeKind::Paper => Tokens {
+                ring_active: rgb(0x141414),
+                ring_inner: rgb(0xffffff),
+                ring_selected: rgb(0x4a4a4a),
                 chrome: rgb(0xfafafa),
                 canvas: rgb(0xececec),
                 grid_bg: rgb(0xf2f2f2),
@@ -687,7 +705,8 @@ pub fn apply_kind(ctx: &egui::Context, kind: ThemeKind) {
         o.input_options.line_scroll_speed = WHEEL_LINE_POINTS;
         o.input_options.scroll_zoom_speed = WHEEL_ZOOM_PER_POINT;
     });
-    let t = Tokens::for_kind(kind);
+    let increased = crate::increase_contrast::increased(ctx);
+    let t = Tokens::for_kind_with(kind, increased);
     ctx.data_mut(|d| {
         d.insert_temp(egui::Id::NULL, t);
         d.insert_temp(theme_id(), kind);
@@ -698,11 +717,13 @@ pub fn apply_kind(ctx: &egui::Context, kind: ThemeKind) {
     v.window_fill = t.chrome;
     v.extreme_bg_color = t.field;
     v.faint_bg_color = t.inset;
-    v.window_stroke = Stroke::new(1.0, t.button_border);
+    let line = crate::increase_contrast::line_width(increased);
+    v.window_stroke = Stroke::new(line, t.button_border);
     v.window_corner_radius = CornerRadius::same(6);
     v.menu_corner_radius = CornerRadius::same(6);
     v.selection.bg_fill = t.selection_fill();
-    v.selection.stroke = Stroke::new(1.0, t.accent);
+    v.selection.stroke = Stroke::new(line, t.accent);
+    v.disabled_alpha = crate::increase_contrast::disabled_alpha(increased);
     v.override_text_color = Some(t.text_label);
     // (egui's own: the label colour at 60 %, under 4.1:1 in every theme, and a bright blue)
     v.weak_text_color = Some(t.text_dim);
@@ -719,8 +740,16 @@ pub fn apply_kind(ctx: &egui::Context, kind: ThemeKind) {
     // (what is marked strong is in the text colour: egui takes it from here, and as the label
     // colour it was no different from plain text; so are the icons of a control being pressed)
     w.active.fg_stroke = Stroke::new(1.0, t.text);
-    w.noninteractive.bg_stroke = Stroke::new(1.0, t.divider);
-    w.inactive.bg_stroke = Stroke::new(1.0, t.button_border);
+    w.noninteractive.bg_stroke = Stroke::new(line, t.divider);
+    w.inactive.bg_stroke = Stroke::new(line, t.button_border);
+    // (a control keeps its outline's weight while it is hovered, pressed or open)
+    for state in [&mut w.hovered, &mut w.active, &mut w.open] {
+        state.bg_stroke.width = line;
+    }
+    if increased {
+        // (an open drop-down's outline is egui's own gray, 1.2 to 2.5:1 on the panel)
+        w.open.bg_stroke.color = t.button_border;
+    }
     ctx.set_visuals_of(egui::Theme::Dark, v.clone());
     ctx.set_visuals_of(egui::Theme::Light, v);
     ctx.set_theme(if dark { egui::Theme::Dark } else { egui::Theme::Light });
@@ -743,7 +772,35 @@ mod contrast;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::button::contrast;
     use crate::i18n::{Locale, set_language};
+
+    /// The selection ring is a mark on the grid: 3:1 or more against what it is drawn over, in
+    /// every theme. The active photo's ring reads on the grid and on a selected or unselected
+    /// square-grid cell; the other selected photos' ring on the grid.
+    #[test]
+    fn selection_rings_stand_out_from_the_grid_in_every_theme() {
+        for kind in ThemeKind::ALL {
+            let t = Tokens::for_kind(kind);
+            for (what, surface) in [("grid", t.grid_bg), ("cell", t.cell), ("selected cell", t.cell_selected)] {
+                assert!(contrast(t.ring_active, surface) >= 3.0, "{kind:?}: active ring on the {what}: {:.2}", contrast(t.ring_active, surface));
+            }
+            // the selected ring also sits on a selected cell (square grid, filmstrip), label-tinted or not
+            let mut selected_cells = vec![("grid", t.grid_bg), ("selected cell", t.cell_selected)];
+            for label in lightcraft_catalog::ColorLabel::ALL {
+                selected_cells.push(("labelled selected cell", label_background(t.cell_selected, Some(label), true)));
+            }
+            for (what, surface) in selected_cells {
+                assert!(
+                    contrast(t.ring_selected, surface) >= 3.0,
+                    "{kind:?}: selected ring on the {what}: {:.2}",
+                    contrast(t.ring_selected, surface)
+                );
+            }
+            // the thin inner line of the active ring is the ring's opposite: it parts the ring from the photo's edge
+            assert!(contrast(t.ring_inner, t.ring_active) >= 3.0, "{kind:?}: inner line against the active ring");
+        }
+    }
 
     /// Every theme scrolls 100 points a wheel notch, and a zoom notch stays egui's stock ~1.22x
     /// (`exp(40 / 200)`) instead of growing with the longer scroll.

@@ -59,7 +59,7 @@ pub(super) fn folder_tree(
         // at the tree's own indent, as in Albums and Folders: the triangle sits in the gutter and the
         // icon lines up with the rows above
         let resp = Row::new(&format!("local:{path}"), Icon::Folder, name).selected(sel).indent(indent).show(app, ui).on_hover_text(path);
-        let tr = tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, &branch, &mut open, format!("folderToggle:{path}"), Inside::Folds);
+        let tr = tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, &branch, &mut open, format!("folderToggle:{path}"), Inside::Folds, name);
         if !tr.clicked()
             && super::side_keys::chosen(ui, &resp)
             && let Err(e) = app.run("library.browse", json!({"path": path}))
@@ -536,8 +536,17 @@ fn folder_row(
     crate::panels::side_select::outline(app, ui, crate::panels::side_select::SideList::Folders, sel, resp.rect, 8.0);
     let mut toggled = false;
     if !n.children.is_empty() {
-        let tr =
-            tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, branch, open, format!("libraryFolderToggle:{}", n.path), Inside::OpensAndFolds);
+        let tr = tree_toggle(
+            ui,
+            &mut app.ui.sidebar_trees,
+            &resp,
+            indent,
+            branch,
+            open,
+            format!("libraryFolderToggle:{}", n.path),
+            Inside::OpensAndFolds,
+            name,
+        );
         toggled = tr.clicked();
         // the triangle sits on the row and takes its clicks: the menu opens from it too
         row_menu(app, &tr, n, parents);

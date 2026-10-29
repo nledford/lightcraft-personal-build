@@ -55,6 +55,7 @@ mod process;
 mod recheck;
 mod relocate;
 mod restore;
+mod samples;
 mod segment;
 mod selection_facts;
 mod settings_files;

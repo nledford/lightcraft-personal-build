@@ -6,10 +6,11 @@
 //! `$LIGHTCRAFT_LIBRARY`, else — with Settings ▸ General ▸ At launch set to *Ask me*, or Alt/Option
 //! held as the window appears — the one chosen in a list of the recent libraries, else the library
 //! last opened, else `~/Pictures/LightCraft Library`
-//! ([`lightcraft_ui_egui::panels::library_problem::launch_plan`]); a new library starts with the
-//! procedural demo photos unless `--no-demo` or files are given. Files and folders on the command
-//! line are imported (duplicates are skipped). `--memory` runs an in-memory session that writes
-//! nothing (demo photos unless files are given; used by the README showcase scripts). A library
+//! ([`lightcraft_ui_egui::panels::library_problem::launch_plan`]); a new library starts empty, and
+//! its first screen offers to import photos, a Lightroom catalog, or the procedural sample photos
+//! (`library.addSamples`). Files and folders on the command line are imported (duplicates are
+//! skipped). `--memory` runs an in-memory session that writes nothing (demo photos unless
+//! `--no-demo` or files are given; used by the README showcase scripts). A library
 //! that can't be opened is never replaced silently: the window says why and asks what to do
 //! (`lightcraft_ui_egui::panels::library_problem`).
 //!
@@ -26,6 +27,8 @@
 
 mod alloc_release;
 mod appearance;
+#[cfg(target_os = "macos")]
+mod appkit_defaults;
 #[cfg(target_os = "linux")]
 mod colord;
 mod control_server;
@@ -34,6 +37,8 @@ mod dialog_filter;
 mod dock_badge;
 mod editors;
 mod hdr_display;
+#[cfg(target_os = "macos")]
+mod increase_contrast;
 #[cfg(target_os = "macos")]
 mod keep_awake;
 mod logging;
@@ -44,7 +49,11 @@ mod notify;
 #[cfg(target_os = "macos")]
 mod reduce_motion;
 #[cfg(target_os = "macos")]
+mod reduce_transparency;
+#[cfg(target_os = "macos")]
 mod screen_profile;
+#[cfg(target_os = "macos")]
+mod traffic_lights;
 mod window_gpu;
 
 use dialog_filter::FileDialogExt as _;
@@ -93,7 +102,7 @@ impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         #[cfg(target_os = "macos")]
         if let Some(m) = self.2.as_mut()
-            && m.update(&mut self.0, ctx)
+            && m.update(&mut self.0)
             && self.0.may_close_after_saving_edits(ctx)
         {
             // Quit from the menu bar: save exactly what closing the window saves (settings and
@@ -103,6 +112,16 @@ impl eframe::App for App {
             std::process::exit(0);
         }
         self.0.logic(ctx);
+        // AppKit lays the traffic lights out for its own 28 pt title bar and resets that on resize,
+        // full screen and appearance changes: keep them centred on our taller top bar, at the
+        // height it was drawn at last frame (egui points; AppKit's are `zoom_factor` times as many).
+        // No bar drawn (the full-screen photo preview): leave them where they are.
+        #[cfg(target_os = "macos")]
+        if self.0.integrated_titlebar
+            && let Some((_, bar)) = self.0.widgets.iter().find(|(id, _)| id == "region:titlebar")
+        {
+            traffic_lights::centre_on_bar(bar.height() * ctx.zoom_factor());
+        }
         self.1.tick(&mut self.0, ctx);
     }
     /// Forwards the host's raw-input pass to the app's hook before egui processes it, keeping
@@ -201,6 +220,12 @@ fn main() -> eframe::Result {
             },
             None => logger.no_file(),
         }
+    }
+    // before the menu bar exists, after the arguments: AppKit reads these defaults when it builds
+    // its menus, and `--version` / `--help` / a --memory session (issue #164) write nothing
+    #[cfg(target_os = "macos")]
+    if !in_memory {
+        appkit_defaults::install();
     }
     // what the arguments name, resolved now: an empty or relative argument never becomes a drive
     // root, and a whole drive or home folder is not walked (issue #374)

@@ -108,7 +108,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
     // The backdrop is an area below the dialog window (a bare `Middle` layer painter would be
     // painted after every area — i.e. over the dialog too).
     egui::Area::new(egui::Id::unique("dialog-dim")).order(egui::Order::Middle).fixed_pos(screen.min).interactable(false).show(ctx, |ui| {
-        ui.painter().rect_filled(screen, 0.0, egui::Color32::from_black_alpha(140));
+        ui.painter().rect_filled(screen, 0.0, crate::transparency::scrim(ui.ctx(), 140));
     });
     let mut close = false;
     let mut confirm = false;
@@ -215,6 +215,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
         }
     }
     if let Some(w) = shown {
+        crate::widgets::announce_dialog(ctx, &w.response, crate::widgets::Modal::Dialog);
         ctx.memory_mut(|m| m.set_modal_layer(w.response.layer_id));
         if let Some(body_h) = body_h {
             let measured = (w.response.rect.height() - body_h).max(0.0);
@@ -973,7 +974,7 @@ fn capture_time_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg
     field(ui, "Change", |ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
         for (i, (label, m)) in [("Set date & time", "set"), ("Shift by", "shift"), ("Time zone", "zone")].iter().enumerate() {
-            if crate::widgets::text_button(ui, &format!("captureMode-{i}"), label, mode == m).clicked() {
+            if crate::widgets::choice_button(ui, &format!("captureMode-{i}"), label, mode == m).clicked() {
                 *mode = m.to_string();
             }
         }
@@ -1097,7 +1098,7 @@ fn rename_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut
         for (i, (label, tpl)) in
             [("Name", "{name}"), ("Date–Name", "{date}_{name}"), ("Title–Seq", "{title}-{seq:3}"), ("Custom–Seq", "Photo-{seq:3}")].iter().enumerate()
         {
-            if crate::widgets::text_button(ui, &format!("renamePreset-{i}"), label, template == tpl).clicked() {
+            if crate::widgets::choice_button(ui, &format!("renamePreset-{i}"), label, template == tpl).clicked() {
                 *template = tpl.to_string();
             }
         }
@@ -1931,7 +1932,7 @@ fn about_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut 
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
         for (i, (id, label)) in ABOUT_TABS.iter().enumerate() {
-            if crate::widgets::text_button(ui, &format!("aboutTab-{id}"), label, usize::from(tab) == i).clicked() {
+            if crate::widgets::choice_button(ui, &format!("aboutTab-{id}"), label, usize::from(tab) == i).clicked() {
                 tab = u8::try_from(i).unwrap_or(0);
             }
         }

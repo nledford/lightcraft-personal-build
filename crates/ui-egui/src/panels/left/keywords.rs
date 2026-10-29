@@ -48,7 +48,7 @@ fn keyword_row(
     crate::panels::side_select::outline(app, ui, crate::panels::side_select::SideList::Keywords, sel, resp.rect, 8.0);
     if let Some(branch) = branch {
         let inside = if n.children.iter().any(|c| !c.children.is_empty()) { Inside::OpensAndFolds } else { Inside::Alone };
-        tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, branch, open, format!("keywordToggle:{}", n.path), inside);
+        tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, branch, open, format!("keywordToggle:{}", n.path), inside, &n.name);
     }
     let resp = resp.on_hover_text(if n.children.is_empty() { n.path.clone() } else { format!("{} (includes the keywords below it)", n.path) });
     if super::side_keys::chosen(ui, &resp) {

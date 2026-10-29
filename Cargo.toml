@@ -108,8 +108,8 @@ rfd = "0.17"
 muda = { version = "0.21", default-features = false } # native menu bar (macOS: objc2/AppKit, pure Rust; no GTK)
 # macOS: the profile of the screen showing the window (safe AppKit bindings; muda and wgpu use the same)
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
-objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSAccessibility", "NSColorSpace", "NSDockTile", "NSResponder", "NSScreen", "NSWindow", "NSWorkspace"] }
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "NSArray", "NSBundle", "NSData", "NSError", "NSProcessInfo", "NSString"] }
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSAccessibility", "NSButton", "NSColorSpace", "NSControl", "NSDockTile", "NSPanel", "NSResponder", "NSScreen", "NSView", "NSWindow", "NSWorkspace"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "NSArray", "NSBundle", "NSData", "NSError", "NSGeometry", "NSProcessInfo", "NSString", "NSUserDefaults"] }
 # macOS: the block `NSProcessInfo` runs while a job holds the Mac awake (the version objc2-foundation already uses)
 block2 = { version = "0.6", default-features = false, features = ["std"] }
 # macOS: system notifications when a job ends in the background (the same objc2 generation as objc2-app-kit)

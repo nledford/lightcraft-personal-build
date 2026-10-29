@@ -231,7 +231,7 @@ fn audit<S>(h: &Harness<'_, S>) -> (usize, Vec<Problem>) {
         let n = node.accesskit_node();
         let role = n.role();
         // a window is not a control, but its title is what a screen reader says on entering it
-        if role == Role::Window {
+        if is_window(role) {
             if !n.label().is_some_and(|l| is_name(&l)) {
                 add(&mut keys, format!("Window without a title in {}", context(&n)), &n);
             }
@@ -344,9 +344,14 @@ fn failure_message(report: &Report, places: &BTreeMap<(String, String), String>)
     out
 }
 
+/// Whether `role` is a window of the app: the main one, or a dialog, a notice (a dialog the app announces as one).
+fn is_window(role: Role) -> bool {
+    matches!(role, Role::Window | Role::Dialog | Role::AlertDialog)
+}
+
 /// The dialog windows in the tree.
 fn windows<S>(h: &Harness<'_, S>) -> usize {
-    h.root().children_recursive().filter(|n| n.accesskit_node().role() == Role::Window).count()
+    h.root().children_recursive().filter(|n| is_window(n.accesskit_node().role())).count()
 }
 
 /// Every name in the tree, sorted.
@@ -642,7 +647,7 @@ fn controls<S>(h: &Harness<'_, S>) -> Vec<Control> {
     for node in h.root().children_recursive() {
         let n = node.accesskit_node();
         let role = n.role();
-        if role == Role::Window || role == Role::ScrollBar || n.data().is_disabled() || !actionable(&n) {
+        if is_window(role) || role == Role::ScrollBar || n.data().is_disabled() || !actionable(&n) {
             continue;
         }
         // text egui lets the pointer select is a click target to AccessKit, not a control
@@ -1058,7 +1063,7 @@ fn tab_walks_the_right_panels_top_to_bottom() {
             .root()
             .children_recursive()
             .map(|n| n.accesskit_node())
-            .find(|n| n.label().as_deref() == Some("Edit (E)"))
+            .find(|n| n.label().as_deref() == Some("Edit") && n.description().as_deref() == Some("E"))
             .and_then(|n| n.bounding_box())
             .map(|b| b.x0 as f32)
             .unwrap_or(f32::INFINITY);
@@ -1096,7 +1101,7 @@ fn the_settings_filter_reads_the_tabs_without_touching_the_tree() {
     h.state_mut().run("app.settings", serde_json::json!({"tab": "general"})).unwrap();
     h.run_steps(8);
     let windows =
-        |h: &Harness<'_, LightcraftApp>| h.root().children_recursive().map(|n| n.accesskit_node()).filter(|n| n.role() == Role::Window).count();
+        |h: &Harness<'_, LightcraftApp>| h.root().children_recursive().map(|n| n.accesskit_node()).filter(|n| is_window(n.role())).count();
     let before = windows(&h);
     // (what Settings leaves unnamed of its own is not this test's: the filter adds none to it)
     let unnamed = |h: &Harness<'_, LightcraftApp>| audit(h).1.len();
@@ -1174,4 +1179,102 @@ fn the_settings_tab_strip_is_a_tab_list_of_tabs_that_control_their_page() {
         with_ancestors.iter().filter(|(n, chain)| n.role() == Role::CheckBox && chain.iter().any(|(id, _)| *id == panel[0].id())).count() > 0,
         "the page's own controls are in the panel"
     );
+}
+
+/// Given a filter that hides every photo of All Photos, when the grid is read by a screen reader,
+/// then the painted title is a heading and the count and the empty-state message are text nodes.
+#[test]
+fn the_grid_title_count_and_empty_message_are_read_when_a_filter_hides_every_photo() {
+    let mut app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services { png: None, ..Default::default() });
+    app.ui.view = ViewMode::PhotoGrid;
+    app.run("library.filter", serde_json::json!({"text": "no photo is called this"})).unwrap();
+    let mut h = Harness::builder().with_size(vec2(1500.0, 950.0)).build_ui_state(
+        |ui, app: &mut LightcraftApp| {
+            app.logic(&ui.ctx().clone());
+            app.ui(ui);
+        },
+        app,
+    );
+    h.run_steps(10);
+    let nodes: Vec<(Role, String)> = h
+        .root()
+        .children_recursive()
+        .map(|n| n.accesskit_node())
+        .map(|n| (n.role(), n.label().or_else(|| n.value()).unwrap_or_default()))
+        .filter(|(_, text)| !text.is_empty())
+        .collect();
+    let has = |role: Role, text: &str| nodes.iter().any(|(r, t)| *r == role && t == text);
+    assert!(has(Role::Heading, "All Photos"), "the title is a heading: {nodes:?}");
+    assert!(has(Role::Label, "0 of 24 photos"), "the count is text: {nodes:?}");
+    assert!(has(Role::Label, "No photos match the active filters"), "the message is text: {nodes:?}");
+    assert!(has(Role::Label, "24 photos in All Photos are hidden by the filters above"), "the reason is text: {nodes:?}");
+}
+
+/// A slider's value field is "<slider> value" (the instruction to click, type or drag is its
+/// description, not part of the name VoiceOver reads on every visit).
+#[test]
+fn a_slider_value_field_is_named_value_and_describes_how_to_use_it() {
+    const INSTRUCTION: &str = "Click to type a value, drag to change it";
+    let h = harness(ViewMode::Detail, RightPanel::Edit);
+    let buttons: Vec<_> = h.root().children_recursive().filter(|n| n.accesskit_node().role() == Role::Button).collect();
+    let names: Vec<String> = buttons.iter().filter_map(|n| n.accesskit_node().label()).collect();
+    let field = buttons
+        .iter()
+        .find(|n| n.accesskit_node().label().as_deref() == Some("Exposure value"))
+        .unwrap_or_else(|| panic!("a value field named \"Exposure value\": {names:?}"));
+    assert_eq!(field.accesskit_node().description().as_deref(), Some(INSTRUCTION), "the instruction is its description");
+    assert!(!names.iter().any(|n| n.contains(INSTRUCTION)), "no name carries the instruction: {names:?}");
+}
+
+/// Whether a button named `name` has `help` as its accessible description (the menu bar has an
+/// "Edit" menu too, so the name alone doesn't pick the tool-strip button).
+fn button_described(h: &Harness<'_, LightcraftApp>, name: &str, help: &str) -> bool {
+    h.root().children_recursive().map(|n| n.accesskit_node()).any(|n| {
+        matches!(n.role(), Role::Button | Role::RadioButton) && n.label().as_deref() == Some(name) && n.description().as_deref() == Some(help)
+    })
+}
+
+/// A screen reader reads a control's name every time it lands on it: the shortcut belongs in the
+/// description (macOS AXHelp, read after a pause), not in the name.
+#[test]
+fn tool_strip_and_toolbar_buttons_are_named_by_label_with_the_shortcut_as_description() {
+    let h = harness(ViewMode::Detail, RightPanel::Edit);
+    for (name, help) in [
+        ("Presets", "Shift+P"),
+        ("Edit", "E"),
+        ("Crop & Rotate", "C"),
+        ("Masking", "M"),
+        ("Versions", "Shift+V"),
+        // (History & Activity has no key: nothing to describe)
+        ("Keywords", "K"),
+        ("Info", "I"),
+        ("Photo Grid", "G"),
+        ("Square Grid", "G"),
+        ("Detail", "D"),
+        ("Compare", "Shift+C"),
+        ("Survey", "N"),
+        ("Before/After", "Y"),
+        ("Filmstrip", "/"),
+    ] {
+        assert!(button_described(&h, name, help), "a button named {name:?} describing {help:?}");
+    }
+    let leaked: Vec<String> = h
+        .root()
+        .children_recursive()
+        .map(|n| n.accesskit_node())
+        .filter(|n| matches!(n.role(), Role::Button | Role::RadioButton))
+        .filter_map(|n| n.label())
+        .filter(|l| ["Edit (E)", "Presets (Shift+P)", "Photo Grid (G)", "Filmstrip (/)"].contains(&l.as_str()))
+        .collect();
+    assert!(leaked.is_empty(), "shortcuts left in names: {leaked:?}");
+}
+
+/// The top bar's Import button carries the key it is bound to now, written for this platform.
+#[test]
+fn import_button_describes_its_shortcut_as_this_platform_writes_it() {
+    let h = harness(ViewMode::PhotoGrid, RightPanel::Edit);
+    let mac = h.ctx.os() == egui::os::OperatingSystem::Mac;
+    let sc = lightcraft_ui_egui::shortcuts::shortcut_of(&h.state().ui.settings.keymap, "file.addPhotos").expect("Import Photos… has a shortcut");
+    let help = lightcraft_ui_egui::menubar::shortcut_text(sc, mac);
+    assert!(button_described(&h, "Import Photos…", &help), "a button named \"Import Photos…\" describing {help:?}");
 }

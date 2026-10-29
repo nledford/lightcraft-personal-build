@@ -115,7 +115,7 @@ fn an_empty_states_long_label_stays_inside_a_narrow_view() {
         let raw = egui::RawInput { screen_rect: Some(view), ..Default::default() };
         let mut out = ctx.run_ui(raw, |ui| {
             let action = crate::panels::EmptyAction { command: "x", label, widget: "button:emptyX" };
-            crate::panels::empty_state(ui, view, "Nothing here", "Add some photos.", &[action], None);
+            crate::panels::empty_state(ui, view, "Nothing here", "Add some photos.", &[action], None, Default::default());
         });
         out.textures_delta.clear();
         widest = 0.0;

@@ -108,7 +108,7 @@ fn anchor_grid(ui: &mut egui::Ui, id: &str, value: &mut Anchor) -> bool {
                 for c in 0..3 {
                     let i = r * 3 + c;
                     let (Some(a), Some(g)) = (ANCHORS.get(i), GLYPHS.get(i)) else { continue };
-                    if crate::widgets::text_button(ui, &format!("{id}-{i}"), g, *value == *a).clicked() && *value != *a {
+                    if crate::widgets::choice_button(ui, &format!("{id}-{i}"), g, *value == *a).clicked() && *value != *a {
                         *value = *a;
                         changed = true;
                     }

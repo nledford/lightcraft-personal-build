@@ -10,7 +10,7 @@ use crate::button::Button;
 use crate::icons::{Icon, paint};
 use crate::state::RightPanel;
 use crate::theme::Tokens;
-use crate::widgets::{divider, register, slider, text_button};
+use crate::widgets::{choice_button, divider, register, slider, text_button};
 
 mod crop;
 mod history;
@@ -55,7 +55,8 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             let r = ui.max_rect();
             // every tab (Edit, Info, Versions…) says it: nothing to show until photos come in
             if super::empty_library::shown(&app.session) {
-                super::empty_message(ui, r, "No photos yet", "Import photos to get started");
+                // one quiet line: the welcome beside it is the headline
+                super::empty_note(ui, r, "Import photos to get started");
             } else {
                 super::empty_message(ui, r, "No photo selected", "Select a photo to edit");
             }

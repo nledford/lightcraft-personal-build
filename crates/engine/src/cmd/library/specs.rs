@@ -7,7 +7,8 @@ use super::selection::{
 };
 use super::{
     Album, AlbumId, ColorLabel, CommandSpec, CopyrightStatus, Filter, Flag, GroupBy, LibrarySource, Op, PhotoId, Result, Selection, Session, Sort,
-    SortKey, SourceOwned, Value, always, bad, bool_or, cmd, has_active, has_library_selection, has_selection, json, ok, str_param,
+    SortKey, SourceOwned, Value, always, bad, bool_or, cmd, has_active, has_library_selection, has_samples, has_selection, json, no_samples, ok,
+    str_param,
 };
 
 /// Seeds stay exactly representable as a JSON double, so web and agent clients read back what they wrote.
@@ -21,11 +22,11 @@ fn seed_param(p: &Value, cmd: &str, default: u64) -> Result<u64> {
     }
 }
 
-/// The seed after `prev` at time `now`: a mix of `prev` and the clock text, so repeated reshuffles
+/// The seed after `prev` at time `now`, with `count` shuffles made before: a mix of the three, so repeated reshuffles
 /// within one clock tick still differ (barring a 2^-53 collision). Kept below 2^53 so JSON
 /// clients that read numbers as doubles (web, MCP agents) get the same seed back.
-fn next_seed(prev: u64, now: &str) -> u64 {
-    let t = now.bytes().fold(0u64, |h, b| lightcraft_catalog::mix64(h ^ u64::from(b)));
+fn next_seed(prev: u64, now: &str, count: u64) -> u64 {
+    let t = now.bytes().fold(count, |h, b| lightcraft_catalog::mix64(h ^ u64::from(b)));
     (lightcraft_catalog::mix64(prev.wrapping_add(1)) ^ t) & (MAX_SEED - 1)
 }
 
@@ -260,6 +261,45 @@ fn source_folders_check(s: &Session, paths: &[String]) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// How many replaced shuffles `library.previousShuffle` can step back through.
+const MAX_SHUFFLE_HISTORY: usize = 32;
+
+/// Change the sort. While shuffling, a different seed replaces the order shown, so the seed it replaces is kept for
+/// `library.previousShuffle` (the oldest is dropped past [`MAX_SHUFFLE_HISTORY`]); leaving Random forgets them all, as
+/// they would restore an order nobody sees any more.
+fn set_sort(s: &mut crate::Session, new: Sort) {
+    let old = s.sort;
+    if new.key == SortKey::Random && old.key == SortKey::Random {
+        if new.seed != old.seed {
+            if s.shuffle_history.len() >= MAX_SHUFFLE_HISTORY {
+                s.shuffle_history.remove(0);
+            }
+            s.shuffle_history.push(old.seed);
+        }
+    } else {
+        s.shuffle_history.clear();
+    }
+    s.sort = new;
+}
+
+/// `library.previousShuffle` is on while sorting at random with a replaced shuffle to go back to.
+fn can_go_back(s: &crate::Session) -> std::result::Result<(), String> {
+    if s.sort.key != SortKey::Random {
+        Err("the view is not sorted at random".into())
+    } else if s.shuffle_history.is_empty() {
+        Err("no earlier shuffle".into())
+    } else {
+        Ok(())
+    }
+}
+
+/// A new shuffle after `prev`. The clock only ticks in seconds, and Previous Shuffle can return to a seed whose successor
+/// was already made, so the count of shuffles made this session goes in too: a Reshuffle is never the order just left.
+fn fresh_seed(s: &mut crate::Session, prev: u64) -> u64 {
+    s.shuffle_count += 1;
+    next_seed(prev, &(s.clock)(), s.shuffle_count)
 }
 
 pub fn specs() -> Vec<CommandSpec> {
@@ -517,7 +557,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Sort",
             ["View", "Sort"],
             None,
-            "{key?: captureDate|importDate|editDate|fileName|rating|fileSize|random, ascending?: bool, group?: auto|none|day|month|year, seed?: u64 (the shuffle `random` gives)}",
+            "{key?: captureDate|importDate|editDate|fileName|rating|fileSize|random, ascending?: bool, group?: auto|none|day|month|year, seed?: u64 (the shuffle `random` gives)} — the sort is kept as asked in every view, but Recently Added is always newest import first whatever it says (its menus turn the keys and the direction off; it still groups by import date, at the chosen grouping). Elsewhere only the date keys (captureDate, importDate, editDate) draw date headers, so `group` is kept but unused for the other keys, and Recently Deleted draws none",
             always,
             |s, p| {
                 let key: SortKey = match p.get("key") {
@@ -532,16 +572,17 @@ pub fn specs() -> Vec<CommandSpec> {
                 let explicit = p.get("seed").is_some_and(|v| !v.is_null());
                 if key == SortKey::Random && s.sort.key != SortKey::Random && !explicit {
                     // switching to Random is a fresh shuffle, not whatever seed was left behind
-                    seed = next_seed(seed, &(s.clock)());
+                    seed = fresh_seed(s, seed);
                 }
-                s.sort = Sort { key, ascending: bool_or(p, "ascending", s.sort.ascending), group, seed };
+                let sort = Sort { key, ascending: bool_or(p, "ascending", s.sort.ascending), group, seed };
+                set_sort(s, sort);
                 ok()
             }
         ),
         cmd!(
             "library.refresh",
             "Refresh View",
-            ["View"],
+            ["View", "Sort"],
             None,
             "{} — show what matches now: a view that holds its photos (`library.holdView`) lets go of the ones that stopped matching a smart album's rules, Picks or the filter bar since it was opened, sorted or last refreshed",
             always,
@@ -553,7 +594,7 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(
             "library.holdView",
             "Hold View Until Refreshed",
-            ["View"],
+            ["View", "Sort"],
             None,
             "{on?: bool (toggles when omitted)} → {hold} — when on, an edit that makes a photo stop matching the view (a keyword given in a smart album of photos without keywords, a flag taken off in Picks, a rating under the filter bar's) keeps it in the view until `library.refresh`, Reshuffle, or another source, filter or sort; photos that start matching still appear at once, and deleting a photo or taking it out of the album or folder shown still takes it out of the view. Changing a smart album's rules is another view too. Off (the default): the view follows every edit. Kept with the library's preferences; asking for the state it already has changes nothing",
             always,
@@ -580,17 +621,31 @@ pub fn specs() -> Vec<CommandSpec> {
             "library.shuffle",
             "Reshuffle",
             ["View", "Sort"],
-            None,
-            "{seed?: 0..2^53-1} — sort at random; without `seed` a new shuffle each time",
+            Some("Cmd+Alt+Shift+R"),
+            "{seed?: 0..2^53-1} — sort at random; without `seed` a new shuffle each time (the one it replaces can come back with `library.previousShuffle`). Recently Added ignores the sort and stays newest import first, so a reshuffle there only switches the stored sort to Random with a new seed and changes no order on screen (it still ends a held view, like any sort change; the menus keep Reshuffle off in that view)",
             always,
             |s, p| {
                 let seed = match seed_param(p, "library.shuffle", s.sort.seed)? {
                     given if p.get("seed").is_some_and(|v| !v.is_null()) => given,
                     // derived from the previous seed and the session clock: reproducible under a test
                     // clock, and no RNG needed
-                    prev => next_seed(prev, &(s.clock)()),
+                    prev => fresh_seed(s, prev),
                 };
-                s.sort = Sort { key: SortKey::Random, seed, ..s.sort };
+                let sort = Sort { key: SortKey::Random, seed, ..s.sort };
+                set_sort(s, sort);
+                ok()
+            }
+        ),
+        cmd!(
+            "library.previousShuffle",
+            "Previous Shuffle",
+            ["View", "Sort"],
+            Some("Cmd+Alt+Shift+P"),
+            "{} — go back to the shuffle a Reshuffle (or a new `seed` given while sorting at random) replaced: the same seed, so the exact earlier order. Steps back through up to 32 of them, newest first; going back is not itself kept, so a Reshuffle after it is a new shuffle. Only while sorting at random with an earlier shuffle; the list lives in the session only (never saved with the view) and is forgotten when the sort leaves Random or another library opens",
+            can_go_back,
+            |s, _| {
+                let seed = s.shuffle_history.pop().ok_or_else(|| bad("library.previousShuffle", "no earlier shuffle"))?;
+                s.sort = Sort { seed, ..s.sort };
                 ok()
             }
         ),
@@ -666,7 +721,7 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(query "library.devices", "Cameras and Cards", [], None, "{} → [{name, path (its DCIM folder), root}] — mounted volumes with a DCIM folder", always, |_, _| {
             Ok(serde_json::to_value(crate::devices::devices_now()).unwrap_or_default())
         }),
-        cmd!(query "photo.copyMetadata", "Copy Metadata", ["Photo"], Some("Cmd+Alt+Shift+C"), "{} — title, caption, copyright (notice, status, usage terms, info URL), creator, location and keywords of the active photo", has_active, |s, _| {
+        cmd!(query "photo.copyMetadata", "Copy Metadata", ["Photo", "Metadata"], Some("Cmd+Alt+Shift+C"), "{} — title, caption, copyright (notice, status, usage terms, info URL), creator, location and keywords of the active photo", has_active, |s, _| {
             let id = s.active().ok_or_else(|| bad("photo.copyMetadata", "no active photo"))?;
             let m = &s.catalog.photo(id).ok_or_else(|| bad("photo.copyMetadata", "no photo"))?.meta;
             let v = json!({"title": m.title, "caption": m.caption, "altText": m.alt_text, "extendedDescription": m.extended_description,
@@ -679,7 +734,7 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(
             "photo.pasteMetadata",
             "Paste Metadata",
-            ["Photo"],
+            ["Photo", "Metadata"],
             Some("Cmd+Alt+Shift+V"),
             "{ids?, fields?: [title|caption|copyright|copyrightStatus|usageTerms|copyrightUrl|creator|location|keywords] (default: all copied)}",
             has_selection,
@@ -973,6 +1028,82 @@ pub fn specs() -> Vec<CommandSpec> {
                 s.commit("Empty Recently Deleted", op)?;
                 s.selection = Selection::default();
                 Ok(json!({"deleted": ids.len()}))
+            }
+        ),
+        cmd!(
+            "library.addSamples",
+            "Add Sample Photos",
+            ["Help"],
+            None,
+            "{folder?: name of the folder their albums go in (default \"Sample Photos\"; the interface names it in its language)} → {added, albums, folder} — adds the procedural sample photos, their keywords and their albums (in one folder) to the library, to try LightCraft on (one undo step)",
+            no_samples,
+            |s, p| {
+                let folder = match p.get("folder") {
+                    None | Some(Value::Null) => crate::demo::SAMPLES_FOLDER.to_string(),
+                    Some(Value::String(name))
+                        if !name.trim().is_empty() && name.trim().chars().count() <= 200 && !name.trim().chars().any(char::is_control) =>
+                    {
+                        name.trim().to_string()
+                    }
+                    Some(_) => return Err(bad("library.addSamples", "`folder` must be a name of 1 to 200 characters, without control characters")),
+                };
+                let ops = crate::demo::ops_in_folder(s, &folder);
+                let added = ops.iter().filter(|o| matches!(o, Op::AddPhoto { .. })).count();
+                let albums = ops.iter().filter(|o| matches!(o, Op::AddAlbum { album } if !album.folder)).count();
+                let added_ids: std::collections::HashSet<PhotoId> = ops
+                    .iter()
+                    .filter_map(|o| match o {
+                        Op::AddPhoto { photo } => Some(photo.id),
+                        _ => None,
+                    })
+                    .collect();
+                s.commit("Add Sample Photos", Op::Batch { ops })?;
+                // (a selection the person made stays, and so does an active photo set without one)
+                if s.selection.ids.is_empty() && s.selection.active.is_none() {
+                    crate::demo::select_first_of(s, &added_ids);
+                }
+                Ok(json!({"added": added, "albums": albums, "folder": folder}))
+            }
+        ),
+        cmd!(
+            "library.removeSamples",
+            "Remove Sample Photos",
+            ["Help"],
+            None,
+            "{} → {removed, albums} — removes every sample photo and the albums only they filled; photos of your own and their albums stay (one undo step)",
+            has_samples,
+            |s, _| {
+                // an open drag ends first, as its own undo step (as `photo.deletePermanently`)
+                s.end_interaction()?;
+                let before = s.visible_cloned();
+                let (op, removed, albums) = crate::demo::remove_ops(&s.catalog);
+                // as `added` counts them: albums, not the folders that held them
+                let album_count = albums.iter().filter(|id| s.catalog.album(**id).is_some_and(|a| !a.folder)).count();
+                s.commit("Remove Sample Photos", op)?;
+                // an album that went can't stay on screen (as `album.delete`)
+                if matches!(s.source, LibrarySource::Album(a) if albums.contains(&a)) {
+                    s.source = LibrarySource::All;
+                }
+                // nor can a filter (or the one put aside) on it: the filter bar has no album chip, so it would narrow the view unseen
+                s.filters.follow(|f| {
+                    if f.album.is_some_and(|a| albums.contains(&a)) {
+                        f.album = None;
+                    }
+                });
+                // (an empty filter is not left put aside, as in `library.removeFolder`)
+                s.filters.drop_aside_if_empty();
+                // the person's own photos that were selected stay selected (as `photo.deletePermanently`)
+                let active_before = s.selection.active;
+                select_after_deletion(s, &before);
+                if s.selection.active.is_none() {
+                    crate::demo::select_first(s);
+                }
+                // a mask or spot chosen on the photo that went doesn't point into the next one
+                if s.selection.active != active_before {
+                    s.active_mask = None;
+                    s.active_spot = None;
+                }
+                Ok(json!({"removed": removed, "albums": album_count}))
             }
         ),
         cmd!("photo.deletePermanently", "Delete Permanently", ["Photo"], None, "{ids?}", has_selection, |s, p| {
@@ -1722,7 +1853,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Review Import",
             [],
             None,
-            "{paths: [file or folder (recursive)]} → {candidates: [{path, name, format, kind, width, height, fileSize, captured, duplicate?: path|content, existing?, error?, previewOnly?: why a raw can only be shown from its embedded preview}], duplicates, scanned} — nothing is added",
+            "{paths: [file or folder (recursive)]} → {candidates: [{path, name, format, kind, width, height, fileSize, captured, duplicate?: path|content, existing?, error?, previewOnly?: why a raw can only be shown from its embedded preview, truncated?: true for a JPEG cut short}], duplicates, scanned} — nothing is added",
             always,
             |s, p| {
                 let paths = strs(p, "paths");
@@ -1739,7 +1870,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Import Photos",
             ["File"],
             Some("Cmd+Shift+I"),
-            "{paths: [file or folder (recursive)], mode?: add|copy|move (add = reference the files in place; copy = into the library's Originals/YYYY/YYYY-MM-DD/; move = as copy, then each original and its XMP sidecars are removed from the source — only after the copy is verified (a hard link on the same volume, else copied, synced and compared byte for byte) and its catalog record is saved; failed, duplicate and unchecked files keep their sources; a taken name gets -1, -2…; undo removes the photos from the library but leaves the files at the destination), destination?: folder for copies / moves, organize?: date (YYYY/YYYY-MM-DD) | month (YYYY/YYYY-MM) | flat | a folder template, e.g. `{date:%Y}/{date:%Y%m%d}` → 2026/20260114 (the template's `/` make the folders, each level expanded with the rename tokens and made a safe folder name: never outside the destination; must be relative, no `..`; a level with missing metadata is `unknown`) — dated by capture time, else the import time, rename?: file-name template for copies, original extension added (tokens: {name} {num} {seq} {seq:N} {date} {date:%Y%m%d} {folder} {camera} {lens} {iso} {rating} {title} {creator} {ext}; photo.renameTokens explains each; blank = keep names), renameStart?: 1, metadataPreset?: name, read?: {keywords?, ratings?, descriptions?, location?, develop?: bool} (what is read from the photos themselves and their sidecars: keywords with named face regions; ratings, flags and labels; title, caption, creator, copyright and accessibility texts; GPS and place names; a sidecar's develop settings. A kind that is false is left in the files and not brought into the library (and stays the file's: a sidecar written for the photo later says nothing of that kind and keeps what it has of it); one left out goes by the library's choice, `library.preferences` → `import.read`, which reads everything until chosen otherwise. Which camera and lens, the exposure, the capture time and which way up are always read), dng?: bool (copy raws as DNG; copy only), local?: bool (browsing: the photos stay out of the library, like library.browse; not with move), album?: albumId, albumName?: new album, preset?: presetId, keywords?: [..], onDeleted?: restore|skip|fresh (a file that is in Recently Deleted: restore (default) = bring the photo back with its edits — relinked to the file when its own is gone, skip = leave it there and say so, fresh = delete the trashed record and import the file as new)} → {imported, duplicates: [{path, existing, reason, existingDeleted?}], restored?: [photoId], failed, warnings?: [{path, code: cameraProfile|uprightGeometry|unmappedXmp, profile?, mode?: off|auto|level|vertical|full|guided|unknown, fields?}], moved?: [{from, to, sidecars?}], kept?: [{path, reason}] (move: sources left in place and why), album?}",
+            "{paths: [file or folder (recursive)], mode?: add|copy|move (add = reference the files in place; copy = into the library's Originals/YYYY/YYYY-MM-DD/; move = as copy, then each original and its XMP sidecars are removed from the source — only after the copy is verified (a hard link on the same volume, else copied, synced and compared byte for byte) and its catalog record is saved; failed, duplicate and unchecked files keep their sources; a taken name gets -1, -2…; undo removes the photos from the library but leaves the files at the destination), destination?: folder for copies / moves, organize?: date (YYYY/YYYY-MM-DD) | month (YYYY/YYYY-MM) | flat | a folder template, e.g. `{date:%Y}/{date:%Y%m%d}` → 2026/20260114 (the template's `/` make the folders, each level expanded with the rename tokens and made a safe folder name: never outside the destination; must be relative, no `..`; a level with missing metadata is `unknown`) — dated by capture time, else the import time, rename?: file-name template for copies, original extension added (tokens: {name} {num} {seq} {seq:N} {date} {date:%Y%m%d} {folder} {camera} {lens} {iso} {rating} {title} {creator} {ext}; photo.renameTokens explains each; blank = keep names), renameStart?: 1, metadataPreset?: name, read?: {keywords?, ratings?, descriptions?, location?, develop?: bool} (what is read from the photos themselves and their sidecars: keywords with named face regions; ratings, flags and labels; title, caption, creator, copyright and accessibility texts; GPS and place names; a sidecar's develop settings. A kind that is false is left in the files and not brought into the library (and stays the file's: a sidecar written for the photo later says nothing of that kind and keeps what it has of it); one left out goes by the library's choice, `library.preferences` → `import.read`, which reads everything until chosen otherwise. Which camera and lens, the exposure, the capture time and which way up are always read), dng?: bool (copy raws as DNG; copy only), local?: bool (browsing: the photos stay out of the library, like library.browse; not with move), album?: albumId, albumName?: new album, preset?: presetId, keywords?: [..], onDeleted?: restore|skip|fresh (a file that is in Recently Deleted: restore (default) = bring the photo back with its edits — relinked to the file when its own is gone, skip = leave it there and say so, fresh = delete the trashed record and import the file as new)} → {imported, duplicates: [{path, existing, reason, existingDeleted?}], restored?: [photoId], failed, warnings?: [{path, code: cameraProfile|uprightGeometry|unmappedXmp, profile?, mode?: off|auto|level|vertical|full|guided|unknown, fields?}], moved?: [{from, to, sidecars?}], kept?: [{path, reason}] (move: sources left in place and why), truncated?: [path] (imported JPEGs that were cut short), album?}",
             always,
             |s, p| {
                 let req = import_params(s, p)?;

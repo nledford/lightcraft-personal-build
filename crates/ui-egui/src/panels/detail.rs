@@ -9,7 +9,6 @@ use lightcraft_pipeline::geometry::Frame;
 use serde_json::json;
 
 use crate::LightcraftApp;
-use crate::menu_item::MenuItem;
 use crate::render::Slot;
 use crate::state::{BeforeAfter, RightPanel, ToolOverlay, Zoom};
 use crate::theme::Tokens;
@@ -131,7 +130,8 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let full = ui.max_rect();
     let fullscreen = app.ui.fullscreen;
-    let show_film = app.ui.filmstrip && !fullscreen;
+    // (nothing in it under the welcome, and its button is in the bottom bar, which steps aside)
+    let show_film = app.ui.filmstrip && !fullscreen && !super::empty_library::in_view(app);
     let film_h = if show_film { t.film_h } else { 0.0 };
     let canvas = Rect::from_min_max(full.min, pos2(full.right(), full.bottom() - film_h));
     app.canvas_rect = Some(canvas);
@@ -165,7 +165,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     // tool's overlays need the frame's own geometry.
     let display_aspect = visible_texture_aspect.filter(|a| !crop_tool && (a / aspect - 1.0).abs() > 0.02).unwrap_or(aspect);
     let resp = ui.interact(canvas, egui::Id::unique("loupe"), Sense::click_and_drag());
-    crate::widgets::announce(&resp, crate::i18n::tr("Photo"));
+    announce_photo(app, &resp, &photo);
     let mut target_rect = fit_rect(main_area, display_aspect, app.ui.zoom, native, ppp, app.ui.pan);
     let mut img_rect = animated_rect(ui.ctx(), &mut app.ui.zoom_anim, target_rect);
     let in_pane = |pane: Rect, image: Rect| image.translate(pane.center() - main_area.center());
@@ -357,18 +357,18 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     loupe_context_menu(app, &resp, id);
 }
 
-/// The loupe's right-click menu: zoom commands and the grid's photo menu.
+/// Names the loupe for screen readers as the grid names the same photo (file, rating, flag, label), not
+/// just "Photo".
+fn announce_photo(app: &LightcraftApp, resp: &egui::Response, photo: &lightcraft_catalog::Photo) {
+    crate::widgets::announce(resp, crate::i18n::tr_format!("Photo: {name}", name = super::grid::photo_spoken(&app.session.catalog, photo)));
+}
+
+/// The loupe's right-click menu: zoom commands and the photo menu.
 fn loupe_context_menu(app: &mut LightcraftApp, resp: &egui::Response, id: PhotoId) {
+    // the loupe's own rows first, in the same bounded menu as the photo's
+    use crate::photo_menu::Lead;
     crate::widgets::context_menu(resp, |ui| {
-        MenuItem::new(crate::i18n::tr("Zoom")).submenu(ui, |ui| {
-            for (label, cmd) in [("Fit", "view.zoomFit"), ("100%", "view.zoom100"), ("Zoom In", "view.zoomIn"), ("Zoom Out", "view.zoomOut")] {
-                if MenuItem::new(crate::i18n::tr(label)).show(ui).clicked() {
-                    app.act(cmd, json!({}));
-                }
-            }
-        });
-        ui.separator();
-        super::grid::context_menu(app, ui, id);
+        crate::photo_menu::show(app, ui, id, Lead::Submenu("Zoom", &["view.zoomFit", "view.zoom100", "view.zoomIn", "view.zoomOut"]));
     });
 }
 
@@ -803,7 +803,7 @@ fn draw_hover(p: &egui::Painter, t: &Tokens, tex: &crate::render::Tex, label: &s
 
 /// A label on a dark pill.
 fn paint_badge(p: &egui::Painter, bg: Rect, g: std::sync::Arc<egui::Galley>) {
-    p.rect_filled(bg, 4.0, Tokens::photo_shade());
+    p.rect_filled(bg, 4.0, crate::transparency::hud(p.ctx(), 200));
     p.galley(bg.min + vec2(8.0, 4.0), g, Tokens::on_photo());
 }
 

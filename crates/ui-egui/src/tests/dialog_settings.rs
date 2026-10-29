@@ -431,5 +431,22 @@ fn the_language_row_can_go_back_to_the_system_s_language() {
     assert_eq!(crate::i18n::language(), crate::i18n::Locale::Ru);
     let saved = serde_json::to_string(&h.app.ui).unwrap();
     assert!(saved.contains(r#""followSystemLanguage":true"#), "{saved}");
+}
+
+/// Settings ▸ General ▸ Language is where the interface language is chosen (Edit has no Language
+/// menu): each choice switches the app at once (the first button is Sync with System).
+#[test]
+fn each_language_choice_in_general_switches_the_interface() {
+    let mut h = demo([1600.0, 1000.0]);
+    show(&mut h, "general");
+    let picker = crate::i18n::Locale::for_picker();
+    for (i, language) in picker.iter().enumerate() {
+        let r = h.request("ui.clickWidget", json!({"id": format!("button:settingsLanguage-{}", i + 1)}), T);
+        assert_eq!(r["ok"], true, "{language:?}: {r}");
+        h.step();
+        h.step();
+        assert_eq!(h.app.ui.language, *language, "choice {i}");
+        assert_eq!(crate::i18n::language(), *language, "choice {i} is applied at once");
+    }
     crate::i18n::set_language(crate::i18n::Locale::En);
 }

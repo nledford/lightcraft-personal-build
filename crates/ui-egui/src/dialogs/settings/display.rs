@@ -92,9 +92,49 @@ pub(super) fn interface_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Toke
         }));
         if has_system
             && app.ui.settings.reduce_motion.is_some()
-            && crate::widgets::text_button(ui, "settings.reduceMotionFollow", "Use the system setting", false).clicked()
+            && Button::new("Use the system setting").small().widget("button:settings.reduceMotionFollow").show(ui).clicked()
         {
             app.ui.settings.reduce_motion = None;
+        }
+    });
+    let mut increase = app.increase_contrast();
+    let has_system = app.system_increase_contrast_available();
+    ui.horizontal(|ui| {
+        let r = ui.checkbox(&mut increase, crate::i18n::tr("Increase contrast"));
+        register(ui, "check:settings.increaseContrast".to_string(), r.rect);
+        if r.changed() {
+            app.ui.settings.increase_contrast = Some(increase);
+        }
+        r.on_hover_text(crate::i18n::tr(if has_system {
+            "Makes borders, separators and text stand out more in every theme. Follows the system's Increase Contrast until you change it here."
+        } else {
+            "Makes borders, separators and text stand out more in every theme."
+        }));
+        if has_system
+            && app.ui.settings.increase_contrast.is_some()
+            && Button::new("Use the system setting").small().widget("button:settings.increaseContrastFollow").show(ui).clicked()
+        {
+            app.ui.settings.increase_contrast = None;
+        }
+    });
+    let mut solid = app.reduce_transparency();
+    let has_system = app.system_reduce_transparency_available();
+    ui.horizontal(|ui| {
+        let r = ui.checkbox(&mut solid, crate::i18n::tr("Reduce transparency"));
+        register(ui, "check:settings.reduceTransparency".to_string(), r.rect);
+        if r.changed() {
+            app.ui.settings.reduce_transparency = Some(solid);
+        }
+        r.on_hover_text(crate::i18n::tr(if has_system {
+            "Makes the see-through badges, labels and backdrops solid. Follows the system's Reduce Transparency until you change it here."
+        } else {
+            "Makes the see-through badges, labels and backdrops solid."
+        }));
+        if has_system
+            && app.ui.settings.reduce_transparency.is_some()
+            && Button::new("Use the system setting").small().widget("button:settings.reduceTransparencyFollow").show(ui).clicked()
+        {
+            app.ui.settings.reduce_transparency = None;
         }
     });
     heading(ui, t, "Filmstrip");
@@ -127,7 +167,7 @@ pub(super) fn interface_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Toke
         use crate::state::InfoOverlay as I;
         choices(ui, "settingsInfo", &[(I::Off, "Off"), (I::Basic, "Info 1"), (I::Exposure, "Info 2")], &mut app.ui.info_overlay);
     });
-    hint(ui, t, crate::i18n::tr("View → View Options chooses the lines Info 1 and Info 2 show."));
+    hint(ui, t, crate::i18n::tr("View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show."));
 }
 
 /// The rows of one Info line's list, one `MenuItem` per field; choosing one sets `line`. Each row
@@ -141,7 +181,7 @@ pub(crate) fn info_line_rows(ui: &mut egui::Ui, id: &str, line: &mut crate::stat
     }
 }
 
-/// View ▸ View Options (⌘J), Lightroom Classic's Loupe View tab: whether the info overlay shows and
+/// View ▸ Loupe Overlay ▸ View Options… (⌘J), Lightroom Classic's Loupe View tab: whether the info overlay shows and
 /// which, the three lines each of Info 1 and Info 2 shows, which of them shows briefly when the
 /// photo changes, and whether the loupe shows its loading and rendering message
 /// (`view.viewOptions`). Changes apply as they are made.

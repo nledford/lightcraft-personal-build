@@ -349,7 +349,7 @@ fn right_clicking_elsewhere_moves_the_context_menu() {
     let t = Duration::from_secs(10);
     h.settle(SETTLE);
     let thumbs: Vec<String> = h.app.widgets.iter().filter(|(w, _)| w.starts_with("thumb:")).map(|(w, _)| w.clone()).collect();
-    let (Some(a), Some(b)) = (thumbs.first().cloned(), thumbs.get(1).cloned()) else { panic!("two grid photos: {thumbs:?}") };
+    let Some(a) = thumbs.first().cloned() else { panic!("a grid photo: {thumbs:?}") };
     let popup = |w: &str| {
         let id: u64 = w.trim_start_matches("thumb:").parse().expect("a photo id");
         egui::Id::unique(("cell", id)).with("popup")
@@ -361,8 +361,27 @@ fn right_clicking_elsewhere_moves_the_context_menu() {
     assert!(egui::Popup::is_id_open(&h.view.ctx, popup(&a)), "the first photo's menu is open");
     // A real click: the press and the release reach the UI on different frames, with the
     // pointer resting on the photo in between (`ui.clickWidget` sends both on one frame).
-    let rect = h.app.widgets.iter().find(|(w, _)| *w == b).map(|(_, r)| *r).expect("the second photo on screen");
-    let at = egui::pos2(rect.left() + rect.width() * 0.9, rect.center().y);
+    // The clicks land on the photo where no open menu covers it: a click on a menu is a click
+    // on the menu, not on the photo under it, and a menu's size follows its rows, so no fixed
+    // spot on a photo is safe.
+    let window = egui::Rect::from_min_size(egui::Pos2::ZERO, h.size);
+    // (the menu's left edge follows the pointer: a spot at least 8 pt from where it is now,
+    // so "it moved" can't pass with the menu standing still, and with room for the menu to
+    // its right, so egui doesn't push it back left at the window's edge)
+    let uncovered = |r: egui::Rect, menu: egui::Rect| {
+        (1..10)
+            .flat_map(|y| (1..10).rev().map(move |x| (x, y)))
+            .map(|(x, y)| r.lerp_inside(egui::vec2(x as f32 / 10.0, y as f32 / 10.0)))
+            .find(|p| window.contains(*p) && !menu.contains(*p) && (p.x - menu.left()).abs() >= 8.0 && p.x + menu.width() <= window.right())
+    };
+    let menu = h.view.ctx.read_response(popup(&a)).map(|r| r.rect).expect("the first menu's area");
+    let (b, rect, at) = h
+        .app
+        .widgets
+        .iter()
+        .filter(|(w, _)| w.starts_with("thumb:") && *w != a)
+        .find_map(|(w, r)| uncovered(*r, menu).map(|p| (w.clone(), *r, p)))
+        .expect("a second photo on screen that the first menu doesn't cover");
     let button = egui::PointerButton::Secondary;
     let modifiers = egui::Modifiers::NONE;
     h.app.synthetic.push(egui::Event::PointerMoved(at));
@@ -385,7 +404,7 @@ fn right_clicking_elsewhere_moves_the_context_menu() {
     // The same photo again, elsewhere on it (the menu that is open belongs to this very
     // widget): the menu moves to the pointer and stays.
     let before = h.view.ctx.read_response(popup(&b)).map(|r| r.rect).expect("the menu's area");
-    let at = egui::pos2(rect.left() + rect.width() * 0.2, rect.center().y);
+    let at = uncovered(rect, before).expect("a spot on the photo that its menu doesn't cover");
     h.app.synthetic.push(egui::Event::PointerMoved(at));
     h.step();
     h.step();
@@ -721,7 +740,7 @@ fn adding_a_face_model_shows_its_terms_and_installs_only_once_accepted() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Photo > Detect Faces without the detector offers the download: the terms first, nothing fetched before they are
+/// Photo > Metadata > Detect Faces without the detector offers the download: the terms first, nothing fetched before they are
 /// accepted, and the model's row in Settings has its Download button.
 #[test]
 fn detect_faces_without_the_detector_offers_the_download_and_fetches_nothing_before_acceptance() {
@@ -2302,6 +2321,7 @@ fn preview_only_raw_shows_badge_and_notices() {
             content_hash: ph.content_hash.clone(),
             preview_only: Some("Nikon Huffman-compressed NEF (no clean-room description available)".into()),
             preview_checked: lightcraft_catalog::APP_VERSION.into(),
+            truncated: false,
         })
         .unwrap();
     h.settle(SETTLE);
@@ -2335,6 +2355,41 @@ fn preview_only_raw_shows_badge_and_notices() {
     h.app.ui.right = crate::state::RightPanel::Edit;
     h.settle(SETTLE);
     assert!(ids(&mut h, "notice:previewOnly:").is_empty());
+}
+
+/// A JPEG that was cut short says so in Info (and no other photo does).
+#[test]
+fn truncated_jpeg_shows_a_notice_in_info() {
+    let mut h = demo([1300.0, 900.0]);
+    let t = Duration::from_secs(10);
+    let vis = h.app.session.visible_cloned();
+    let (cut, other) = (vis[0], vis[1]);
+    let ph = h.app.session.catalog.photo(cut).unwrap().clone();
+    h.app
+        .session
+        .catalog
+        .apply(lightcraft_catalog::Op::SetContent {
+            id: cut,
+            width: ph.width,
+            height: ph.height,
+            file_size: ph.file_size,
+            content_hash: ph.content_hash.clone(),
+            preview_only: None,
+            preview_checked: String::new(),
+            truncated: true,
+        })
+        .unwrap();
+    let ids = |h: &mut Headless| -> Vec<String> {
+        let w = h.request("ui.widgets", json!({"filter": "notice:truncated:"}), t);
+        w["result"].as_array().unwrap_or_else(|| panic!("{w}")).iter().filter_map(|x| x["id"].as_str().map(str::to_string)).collect()
+    };
+    h.app.ui.right = crate::state::RightPanel::Info;
+    h.request("engine.execute", json!({"command": "library.select", "params": {"ids": [cut.0]}}), t);
+    h.settle(SETTLE);
+    assert_eq!(ids(&mut h), vec!["notice:truncated:info".to_string()]);
+    h.request("engine.execute", json!({"command": "library.select", "params": {"ids": [other.0]}}), t);
+    h.settle(SETTLE);
+    assert!(ids(&mut h).is_empty());
 }
 
 #[test]
@@ -4523,7 +4578,7 @@ fn settings_dialog_by_keyboard_and_clicks() {
 }
 
 /// F: full-screen preview (arrows step, I cycles the info overlay, Esc exits); ⌘I cycles the
-/// overlay in Detail; ⇧⌘F asks the host for window full screen.
+/// overlay in Detail; ⇧⌘F (⌃⌘F on macOS) asks the host for window full screen.
 #[test]
 fn full_screen_preview_and_info_overlay_by_keyboard() {
     use crate::state::InfoOverlay;
@@ -4554,9 +4609,11 @@ fn full_screen_preview_and_info_overlay_by_keyboard() {
     assert_eq!(h.app.ui.info_overlay, InfoOverlay::Exposure);
     h.request("ui.key", json!({"key": "i", "cmd": true}), t);
     assert_eq!(h.app.ui.info_overlay, InfoOverlay::Off);
-    h.request("ui.key", json!({"key": "f", "cmd": true, "shift": true}), t);
+    // ⌃⌘F on macOS (the system's key), ⇧⌘F elsewhere
+    let window_full_screen = json!({"key": "f", "cmd": true, "ctrl": cfg!(target_os = "macos"), "shift": !cfg!(target_os = "macos")});
+    h.request("ui.key", window_full_screen.clone(), t);
     assert!(h.app.window_is_fullscreen);
-    h.request("ui.key", json!({"key": "f", "cmd": true, "shift": true}), t);
+    h.request("ui.key", window_full_screen, t);
     assert!(!h.app.window_is_fullscreen);
     h.settle(SETTLE);
 }
@@ -4592,7 +4649,7 @@ fn info_overlay_toasts_are_painted_in_the_users_language() {
     }
 }
 
-/// ⌘J opens View ▸ View Options; its menus choose Info 1's and Info 2's lines, Use Defaults puts
+/// ⌘J opens View ▸ Loupe Overlay ▸ View Options…; its menus choose Info 1's and Info 2's lines, Use Defaults puts
 /// them back, and `view.viewOptions` sets them for an agent (refusing a line it doesn't know).
 #[test]
 fn view_options_choose_the_info_overlay_lines() {

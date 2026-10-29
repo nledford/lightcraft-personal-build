@@ -252,6 +252,33 @@ pub fn preview_only_notice(ui: &mut Ui, key: &str, reason: &str) -> bool {
     reload
 }
 
+/// A panel notice for a JPEG that was cut short ([`lightcraft_catalog::Photo::truncated`]): an
+/// amber info icon and one line, with what it means on hover. Registered as `notice:truncated:{key}`.
+pub fn truncated_notice(ui: &mut Ui, key: &str) {
+    let t = Tokens::get(ui.ctx());
+    let r = egui::Frame::NONE
+        .fill(t.canvas)
+        .stroke(Stroke::new(1.0, t.caution.gamma_multiply(0.45)))
+        .corner_radius(6.0)
+        .inner_margin(egui::Margin { left: 10, right: 10, top: 8, bottom: 8 })
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.horizontal_top(|ui| {
+                let (ir, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
+                paint(ui.painter(), ir, Icon::Info, t.caution);
+                ui.label(
+                    egui::RichText::new(crate::i18n::tr("Damaged file: cut short, shown from the data present")).font(t.label()).color(t.text_label),
+                );
+            });
+        })
+        .response;
+    let r = r.on_hover_text(crate::i18n::tr(
+        "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.",
+    ));
+    r.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, crate::i18n::tr("Damaged file: cut short, shown from the data present")));
+    register(ui, format!("notice:truncated:{key}"), r.rect);
+}
+
 // ------------------------------------------------------------------ colour helpers
 
 pub fn hex(s: &str) -> Color32 {
@@ -455,7 +482,8 @@ pub fn slider(ui: &mut Ui, spec: &ControlSpec, value: f64, enabled: bool, label_
     // the value: click it to type an exact one, drag it sideways to scrub (over the label, so it
     // takes the click)
     let value_resp = ui.interact(value_rect, id.with("value"), if enabled { Sense::click_and_drag() } else { Sense::hover() });
-    crate::widgets::announce(&value_resp, format!("{label_text}: {}", crate::i18n::tr("Click to type a value, drag to change it")));
+    // the name is short ("Exposure value"); how to use it is the description the hover text below gives
+    crate::widgets::announce(&value_resp, crate::i18n::tr_format!("{name} value", name = label_text.clone()));
     register(ui, format!("sliderValue:{}", spec.id), value_rect);
     // say that an exact value can be typed here (issue #534: an exact crop angle was hard to find)
     let value_resp = if enabled { value_resp.on_hover_text(crate::i18n::tr("Click to type a value, drag to change it")) } else { value_resp };
@@ -749,7 +777,7 @@ fn fine_drag_value(ui: &mut Ui, g: &SliderLayout) -> f64 {
 }
 
 /// A screen reader's increment / decrement (VoiceOver: Ctrl-Option-Up / Down) as `(increment, decrement)`.
-fn accessibility_nudge(ui: &Ui, resp: &Response) -> (bool, bool) {
+pub(crate) fn accessibility_nudge(ui: &Ui, resp: &Response) -> (bool, bool) {
     ui.input(|i| {
         i.events.iter().fold((false, false), |(inc, dec), e| match e {
             egui::Event::AccessKitActionRequest(r) if r.target_node == resp.id.accesskit_id() => {
@@ -934,10 +962,38 @@ fn text_button_size(label_w: f32) -> f32 {
     (label_w + 18.0).max(37.0)
 }
 
-/// A small bordered text button with an active state: the toggle and choice vocabulary (Auto, B&W,
-/// HDR, a segmented choice, a tab). An action that just does something is a [`crate::button::Button`].
+/// What pressing a button does, as a screen reader is told: it does something (Reset, Choose…),
+/// it turns something on or off (B&W), or it picks one of several (Format: JPEG, PNG…). AccessKit
+/// reports a button that carries an on / off state as a check box, so each of the three is given
+/// the role that says what it is: a button, a toggle button, a radio button.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Press {
+    Command,
+    /// Announced as a button, drawn pressed in: it opens something that stays open while it is shown
+    /// (the View menu of a narrow bar).
+    Opens,
+    Toggle(bool),
+    Choice(bool),
+}
+
+impl Press {
+    /// Drawn as the chosen one: pressed in.
+    fn on(self) -> bool {
+        matches!(self, Press::Opens | Press::Toggle(true) | Press::Choice(true))
+    }
+}
+
+/// A small bordered text button that is on or off (B&W, HDR…): a screen reader says whether it is on.
+/// A button that does something is a [`crate::button::Button`]; one of several choices is
+/// [`choice_button`].
 pub fn text_button(ui: &mut Ui, id: &str, label: &str, active: bool) -> Response {
-    chip(ui, id, label, active, false, None)
+    text_chip(ui, id, label, Press::Toggle(active), None)
+}
+
+/// A small bordered text button that is one of several choices, `chosen` for the one that holds
+/// (a row of Format, Color space or Sharpen buttons): a screen reader says "radio button".
+pub fn choice_button(ui: &mut Ui, id: &str, label: &str, chosen: bool) -> Response {
+    text_chip(ui, id, label, Press::Choice(chosen), None)
 }
 
 /// One of a row of choices of which exactly one holds (`button:{id}`) and that is one Tab stop
@@ -946,7 +1002,7 @@ pub fn text_button(ui: &mut Ui, id: &str, label: &str, active: bool) -> Response
 /// every theme. The border of one that is not chosen is made to stand 3:1 against the window as
 /// well. A screen reader is told it is a radio button.
 pub fn choice_button_in(ui: &mut Ui, row: &mut Roving, id: &str, label: &str, chosen: bool) -> Response {
-    chip(ui, id, label, chosen, true, Some(row))
+    text_chip(ui, id, label, Press::Choice(chosen), Some(row))
 }
 
 /// A row of buttons that is one stop for Tab, as a tab bar or a group of radio buttons is: Tab
@@ -1044,7 +1100,10 @@ pub fn roving_members(ctx: &egui::Context) -> std::collections::HashSet<u64> {
     ctx.data(|d| d.get_temp(egui::Id::unique("lc-roving-members"))).unwrap_or_default()
 }
 
-fn chip(ui: &mut Ui, id: &str, label: &str, active: bool, choice: bool, row: Option<&mut Roving>) -> Response {
+/// [`text_button`], [`choice_button`] and [`choice_button_in`]: `row` is the [`Roving`] row a choice is one stop of.
+fn text_chip(ui: &mut Ui, id: &str, label: &str, press: Press, row: Option<&mut Roving>) -> Response {
+    let active = press.on();
+    let choice = matches!(press, Press::Choice(_));
     let label = crate::i18n::tr(label);
     let t = Tokens::get(ui.ctx());
     let font = t.caption_strong();
@@ -1054,8 +1113,7 @@ fn chip(ui: &mut Ui, id: &str, label: &str, active: bool, choice: bool, row: Opt
     if let Some(row) = row {
         row.drawn(ui, &resp);
     }
-    let kind = if choice { egui::Role::RadioButton } else { egui::Role::Button };
-    resp.widget_info(|| egui::WidgetInfo::selected(kind, true, active, label));
+    announce_button(&resp, true, label, press);
     register(ui, format!("button:{id}"), r);
     let fill = if active {
         t.pressed
@@ -1230,7 +1288,7 @@ pub fn segmented(ui: &mut Ui, id: &str, items: &[(&str, &str)], active: Option<u
                 let label = crate::i18n::tr(label);
                 let i = row_i * per_row + j;
                 let (r, resp) = ui.allocate_exact_size(vec2(seg_w, 24.0), Sense::click());
-                crate::widgets::announce_selected(&resp, label.to_string(), active == Some(i));
+                announce_button(&resp, true, label, Press::Choice(active == Some(i)));
                 register(ui, format!("button:{id}-{key}"), r);
                 let fill = if active == Some(i) {
                     t.pressed
@@ -1256,12 +1314,62 @@ pub fn segmented(ui: &mut Ui, id: &str, items: &[(&str, &str)], active: Option<u
     clicked
 }
 
-/// An icon-only button. `active` draws the selected background (tool strip).
+/// Splits a tooltip that ends in its key hint ("Edit (E)", "Import Photos… (⌘⇧I)") into the label
+/// and the hint: `("Edit", Some("E"))`. A tooltip without one is all label. The Japanese and
+/// Traditional Chinese catalogs write the hint in full-width brackets without a space ("編集（E）").
+fn split_key_hint(tip: &str) -> (&str, Option<&str>) {
+    let split =
+        tip.strip_suffix(')').and_then(|body| body.rsplit_once(" (")).or_else(|| tip.strip_suffix('）').and_then(|body| body.rsplit_once('（')));
+    let Some((label, hint)) = split else { return (tip, None) };
+    let label = label.trim_end();
+    if label.is_empty() || hint.is_empty() { (tip, None) } else { (label, Some(hint)) }
+}
+
+/// The accessible name for an icon-only control whose tooltip is `tip`, and the one place the key
+/// hint leaves it. The name is the bare label, because a screen reader reads it every time it
+/// lands on the control; the hint goes into the description (macOS `AXHelp`, read after a pause).
+/// Sighted users keep the whole tooltip. Call it before `on_hover_text`, which would otherwise make
+/// the description the whole tooltip.
+pub(crate) fn accessible_label<'a>(resp: &egui::Response, tip: &'a str) -> &'a str {
+    let (label, hint) = split_key_hint(tip);
+    if let Some(hint) = hint {
+        resp.ctx.accesskit_node_builder(resp.id, |node| node.set_description(hint.to_string()));
+    }
+    label
+}
+
+/// An icon-only button that is on or off. `active` draws the selected background (tool strip) and a
+/// screen reader says whether it is on. One that does something when pressed is [`icon_command`].
 pub fn icon_button(ui: &mut Ui, id: &str, icon: Icon, size: egui::Vec2, active: bool, enabled: bool, tooltip: &str) -> Response {
+    icon_chip(ui, id, icon, size, Press::Toggle(active), enabled, tooltip)
+}
+
+/// An icon-only button that does something when pressed (Back, a menu, Delete): a screen reader
+/// says "button", with no on / off state.
+pub fn icon_command(ui: &mut Ui, id: &str, icon: Icon, size: egui::Vec2, enabled: bool, tooltip: &str) -> Response {
+    icon_chip(ui, id, icon, size, Press::Command, enabled, tooltip)
+}
+
+/// An icon-only button that opens a menu and is drawn pressed in (the View button of a narrow bar):
+/// a screen reader says "button", with no on / off state.
+pub fn icon_menu(ui: &mut Ui, id: &str, icon: Icon, size: egui::Vec2, enabled: bool, tooltip: &str) -> Response {
+    icon_chip(ui, id, icon, size, Press::Opens, enabled, tooltip)
+}
+
+/// An icon-only button that is one of several choices (the grid, detail, compare and survey
+/// views), `chosen` for the one that holds: a screen reader says "radio button".
+pub fn icon_choice(ui: &mut Ui, id: &str, icon: Icon, size: egui::Vec2, chosen: bool, enabled: bool, tooltip: &str) -> Response {
+    icon_chip(ui, id, icon, size, Press::Choice(chosen), enabled, tooltip)
+}
+
+/// [`icon_button`], [`icon_command`] and [`icon_choice`].
+fn icon_chip(ui: &mut Ui, id: &str, icon: Icon, size: egui::Vec2, press: Press, enabled: bool, tooltip: &str) -> Response {
+    let active = press.on();
     let tooltip = crate::i18n::tr(tooltip);
     let t = Tokens::get(ui.ctx());
     let (r, resp) = ui.allocate_exact_size(size, if enabled { Sense::click() } else { Sense::hover() });
-    resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, enabled, active, tooltip));
+    let name = accessible_label(&resp, tooltip);
+    announce_button(&resp, enabled, name, press);
     register(ui, format!("icon:{id}"), r);
     let p = ui.painter();
     let sq = Rect::from_center_size(r.center(), vec2(32.0f32.min(size.x), 32.0f32.min(size.y)));
@@ -1327,6 +1435,34 @@ mod tests {
         assert!(explanation.contains("DNG"), "{explanation}");
         assert!(!explanation.contains("yet"), "{explanation}");
         assert!(preview_only_explanation("unsupported CR3").contains("unsupported CR3"));
+    }
+
+    #[test]
+    fn a_trailing_key_hint_leaves_the_name() {
+        assert_eq!(split_key_hint("Edit (E)"), ("Edit", Some("E")));
+        assert_eq!(split_key_hint("Presets (Shift+P)"), ("Presets", Some("Shift+P")));
+        assert_eq!(split_key_hint("Import Photos… (⌘⇧I)"), ("Import Photos…", Some("⌘⇧I")));
+        assert_eq!(split_key_hint("Filmstrip (/)"), ("Filmstrip", Some("/")));
+        assert_eq!(split_key_hint("Square Grid (G toggles)"), ("Square Grid", Some("G toggles")));
+        // nothing to split: no hint, an empty hint, no label before it, the hint not at the end
+        for tip in ["Export", "Edit ()", "(E)", " (E)", "Edit (E) now", "Edit(E)", ""] {
+            assert_eq!(split_key_hint(tip), (tip, None), "{tip:?}");
+        }
+    }
+
+    /// Every language's tooltip for an icon-only button splits into the bare label and its hint,
+    /// whatever brackets the catalog writes it in (Japanese and Traditional Chinese use full-width ones).
+    #[test]
+    fn every_language_names_an_icon_button_by_its_label() {
+        assert_eq!(split_key_hint("編集（E）"), ("編集", Some("E")));
+        for locale in crate::i18n::Locale::ALL {
+            for tip in ["Edit (E)", "Presets (Shift+P)", "Photo Grid (G)", "Filmstrip (/)"] {
+                let translated = locale.tr(tip);
+                let (label, hint) = split_key_hint(translated);
+                assert!(hint.is_some_and(|h| !h.is_empty()), "{locale:?}: {translated:?} keeps its hint in the name");
+                assert!(!label.contains(['(', ')', '（', '）']), "{locale:?}: {label:?} is the bare label");
+            }
+        }
     }
 
     #[test]
@@ -1439,7 +1575,7 @@ mod access_tests {
                 let _ = slider(ui, spec, 0.5, true, None);
                 let _ = crate::button::Button::new("Auto").small().widget("button:auto").show(ui);
                 let _ = text_button(ui, "bw", "B&W", true);
-                let _ = icon_button(ui, "trash", Icon::Trash, vec2(24.0, 24.0), false, true, "Delete mask");
+                let _ = icon_command(ui, "trash", Icon::Trash, vec2(24.0, 24.0), true, "Delete mask");
             });
             let mut out = out;
             out.textures_delta.clear();
@@ -1467,10 +1603,55 @@ mod access_tests {
     }
 }
 
+/// The plain buttons drawn last pass and this one (the welcome's, its sample thumbnails): with the
+/// keyboard on one, only the keys that work it stay with it, and the rest reach shortcuts.
+#[derive(Clone, Default)]
+struct PlainButtons {
+    pass: u64,
+    ids: Vec<egui::Id>,
+    last: Vec<egui::Id>,
+}
+
+/// `id` is a plain button: focused, it keeps Enter, Space, Tab, Esc and the arrows, nothing else.
+pub(crate) fn plain_button(ctx: &egui::Context, id: egui::Id) {
+    let pass = ctx.cumulative_pass_nr();
+    ctx.data_mut(|d| {
+        let b = d.get_temp_mut_or_default::<PlainButtons>(egui::Id::unique("plain-buttons"));
+        if b.pass != pass {
+            b.last = std::mem::take(&mut b.ids);
+            b.pass = pass;
+        }
+        b.ids.push(id);
+    });
+}
+
+/// The keyboard is on a plain button ([`plain_button`]) drawn this pass or the one before: ids from
+/// passes longer ago (the welcome gone) say nothing about a widget that has one now.
+pub(crate) fn plain_button_has_focus(ctx: &egui::Context) -> bool {
+    let Some(focused) = ctx.memory(|m| m.focused()) else { return false };
+    let pass = ctx.cumulative_pass_nr();
+    ctx.data(|d| d.get_temp::<PlainButtons>(egui::Id::unique("plain-buttons")))
+        .is_some_and(|b| (b.pass.saturating_add(1) >= pass && b.ids.contains(&focused)) || (b.pass == pass && b.last.contains(&focused)))
+}
+
 /// Names a widget for screen readers (`name` replaces what egui gave it): for a plain egui field
 /// whose caption is a separate label beside it.
 pub(crate) fn screen_reader_name(ctx: &egui::Context, id: egui::Id, name: &str) {
     ctx.accesskit_node_builder(id, |node| node.set_label(name.to_string()));
+}
+
+/// Names the part of the window `ui` draws for screen readers: a toolbar, or a landmark (VoiceOver's
+/// rotor lists the landmarks and jumps to one). Set on the node the `Ui` already has, so nothing is
+/// laid out differently. The node gets the `Ui`'s area as its bounds, so a screen reader's cursor
+/// lands on the part and not on an empty spot.
+pub(crate) fn announce_region(ui: &Ui, role: egui::accesskit::Role, name: impl Into<String>) {
+    let name = name.into();
+    let r = ui.max_rect();
+    ui.ctx().accesskit_node_builder(ui.unique_id(), |node| {
+        node.set_role(role);
+        node.set_label(name);
+        node.set_bounds(egui::accesskit::Rect { x0: f64::from(r.min.x), y0: f64::from(r.min.y), x1: f64::from(r.max.x), y1: f64::from(r.max.y) });
+    });
 }
 
 /// A hand-drawn clickable area (an icon, a tile, a row) announced as a button named `name`.
@@ -1479,10 +1660,72 @@ pub(crate) fn announce(resp: &egui::Response, name: impl Into<String>) {
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, resp.enabled(), name.clone()));
 }
 
+/// What a window with its own title and buttons is, to a screen reader.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Modal {
+    /// A dialog with a task (Export, Settings, a name prompt) that stops the rest of the application.
+    Dialog,
+    /// One that interrupts to say something that needs an answer (the quit prompt, a library that
+    /// couldn't be opened) and stops the rest of the application: an alert dialog (AT-SPI and
+    /// Windows tell it from a dialog; macOS reads both alike).
+    Alert,
+    /// A dialog that leaves the rest of the application reachable (the update check's answer).
+    Window,
+}
+
+/// Announces the window `response` drew as a dialog (an alert dialog for [`Modal::Alert`]), and for
+/// [`Modal::Dialog`] and [`Modal::Alert`] as modal, instead of as a group that carries the title:
+/// the platform's accessibility layer then sees a dialog and that the rest of the application is
+/// blocked while it is open.
+pub(crate) fn announce_dialog(ctx: &egui::Context, response: &Response, kind: Modal) {
+    ctx.accesskit_node_builder(response.id, |node| {
+        node.set_role(if kind == Modal::Alert { egui::accesskit::Role::AlertDialog } else { egui::accesskit::Role::Dialog });
+        if kind != Modal::Window {
+            node.set_modal();
+        }
+    });
+}
+
+/// Gives the dialog `response` drew the words it says as its accessible description, for an alert
+/// whose content (the task names, the error) is drawn as separate labels: a screen reader then
+/// has what the alert is about when it announces the alert, not only its title.
+pub(crate) fn describe_dialog(ctx: &egui::Context, response: &Response, text: &str) {
+    ctx.accesskit_node_builder(response.id, |node| node.set_description(text));
+}
+
 /// The same for one that is on or off (a toggle, a selected row or swatch).
 pub(crate) fn announce_selected(resp: &egui::Response, name: impl Into<String>, selected: bool) {
     let name = name.into();
     resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, resp.enabled(), selected, name.clone()));
+}
+
+/// A button for screen readers, as a button, a toggle button or a radio button by what pressing it
+/// does ([`Press`]). A plain button must not carry an on / off state: AccessKit reports a button
+/// with one as a check box, so VoiceOver would say "Reset, checkbox, unchecked".
+pub(crate) fn announce_button(resp: &egui::Response, enabled: bool, name: impl Into<String>, press: Press) {
+    let name = name.into();
+    match press {
+        Press::Command | Press::Opens => resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, enabled, name.clone())),
+        Press::Toggle(on) => resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, enabled, on, name.clone())),
+        // (the caller sets the choice after drawing, so the frame of the click already says it is chosen; a click the
+        // app turns down, such as Compare with one photo, reads as chosen for that one frame)
+        Press::Choice(chosen) => {
+            let chosen = chosen || resp.clicked();
+            resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::RadioButton, enabled, chosen, name.clone()));
+        }
+    }
+}
+
+/// A photo's thumbnail (grid cell, filmstrip thumbnail) for screen readers: a selectable list
+/// item that is, or is not, selected.
+///
+/// egui's `WidgetInfo::selected` publishes AccessKit's `Toggled`, which macOS turns into a check box
+/// ("checked"). A list item with AccessKit's `selected` state is what macOS reads as "selected",
+/// and it keeps the click action, so one helper gives the grid and the filmstrip the same role.
+pub(crate) fn announce_cell(resp: &egui::Response, name: impl Into<String>, selected: bool) {
+    let name = name.into();
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ListItem, resp.enabled(), name.clone()));
+    resp.ctx.accesskit_node_builder(resp.id, |node| node.set_selected(selected));
 }
 
 /// `r`, named `name` for screen readers: a plain egui field or slider whose caption is drawn

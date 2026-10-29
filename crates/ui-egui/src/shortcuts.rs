@@ -193,8 +193,9 @@ pub fn format(m: Modifiers, k: Key) -> Option<String> {
     if m.command || m.mac_cmd {
         s.push_str("Cmd+");
     }
-    // off macOS Ctrl *is* Cmd; on macOS it is the separate Control key
-    if m.ctrl && (m.mac_cmd || !m.command) {
+    // off macOS Ctrl *is* Cmd; on macOS it is the separate Control key (⌃⌘F is both, `parse` makes it
+    // `command` without `mac_cmd`)
+    if m.ctrl && (m.mac_cmd || !m.command || cfg!(target_os = "macos")) {
         s.push_str("Ctrl+");
     }
     if m.alt {
@@ -302,8 +303,11 @@ fn matches(i: &egui::InputState, m: Modifiers, k: Key) -> bool {
         };
         // `Ctrl` is the physical Control key (on macOS distinct from Cmd; elsewhere Cmd = Ctrl);
         // "Delete" (⌫ = Backspace) also matches forward-delete
-        let ctrl_ok = if m.ctrl { modifiers.ctrl } else { !modifiers.ctrl || modifiers.command };
-        let cmd_ok = m.ctrl || modifiers.command == m.command;
+        // and a Ctrl+Cmd binding (⌃⌘F) wants both keys; on macOS ⌃⌘F is not ⌘F with Control held (there
+        // `mac_cmd` is ⌘, and Control held is no ⌘)
+        let ctrl_ok = if m.ctrl { modifiers.ctrl } else { !modifiers.ctrl || (modifiers.command && !modifiers.mac_cmd) };
+        // with ⌘ held on macOS (`mac_cmd`) a Control binding needs the ⌘ in it too; elsewhere Ctrl is Command
+        let cmd_ok = if m.ctrl && !modifiers.mac_cmd { !m.command || modifiers.command } else { modifiers.command == m.command };
         // winit can report shifted digits as punctuation (Shift+1 = `!`). Recognize the
         // physical number key for culling, without changing layout-aware letter shortcuts.
         let shifted_digit = m.shift
@@ -350,8 +354,9 @@ fn keyboard_owned(app: &LightcraftApp, ctx: &egui::Context) -> bool {
             [Key::ArrowLeft, Key::ArrowRight, Key::ArrowUp, Key::ArrowDown, Key::Enter, Key::Space].iter().any(|key| input.key_pressed(*key))
         });
     }
-    let chrome =
-        app.ui.docking.as_ref().is_some_and(|workspace| {
+    // a plain button (the welcome's) keeps what works it; the rest are shortcuts, as on dock chrome
+    let chrome = crate::widgets::plain_button_has_focus(ctx)
+        || app.ui.docking.as_ref().is_some_and(|workspace| {
             craft_ui::docking::DockArea::new(egui::Id::unique("lightcraft-docking")).chrome_has_focus(ctx, &workspace.layout)
         });
     if !chrome {
@@ -437,7 +442,7 @@ fn pressed_commands(app: &LightcraftApp, ctx: &egui::Context) -> (Vec<String>, V
     // which also closes dialogs) waits until nothing is open
     let popup_open = egui::Popup::is_any_open(ctx);
     // Esc that just took a text field's focus away (it gives back the field's text) does nothing else
-    let popup_open = popup_open || app.text_focus;
+    let popup_open = popup_open || app.text_focus || app.plain_button_focus;
     // a drag in progress: Esc gives it up (`LightcraftApp::end_drags`) and does nothing else, even when no
     // button is down any more (a hidden pass can take the release before `end_drags` sees it)
     let popup_open = popup_open || app.ui.drag_active();
@@ -588,6 +593,10 @@ fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fi
         up_down_key(app, ctx, f);
         return;
     }
+    // the Sort menus' rule for these two rows holds for the keys too (a native menu enforces it for its own keys)
+    if sort_row_off(app, f) {
+        return;
+    }
     // a command that can't run (an export with no folder, a view that can't be saved as a smart
     // album, nothing to undo…) says why instead of doing nothing; its success is said only when
     // it went through
@@ -602,6 +611,16 @@ fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fi
             "edit.redo" => app.toast_on(ctx, "history", crate::i18n::tr("Redo")),
             _ => {}
         }
+    }
+}
+
+/// Reshuffle and Previous Shuffle where the Sort menus turn them off.
+fn sort_row_off(app: &LightcraftApp, f: &str) -> bool {
+    let menu = crate::menus::sort_menu::SortMenu::of(&app.session);
+    match f {
+        "library.shuffle" => !menu.reshuffle_enabled(),
+        "library.previousShuffle" => !menu.previous_enabled(),
+        _ => false,
     }
 }
 
