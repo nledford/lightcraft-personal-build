@@ -256,7 +256,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Rename Folder",
             [],
             None,
-            "{path, name} — rename a folder on disk (its files and sidecars go along) and relink the photos in it; one undo step (undo renames it back, refused if the old name is taken); refused in plain words, with nothing changed, when the folder isn't there or its disk isn't connected, or the disk says no; refused for the home folder and its Pictures, Desktop and Downloads → {path, relinked}",
+            "{path, name} — rename a folder on disk (its files and sidecars go along) and relink the photos in it; one undo step (undo renames it back, refused if the old name is taken); refused in plain words, with nothing changed, when the folder isn't there or its disk isn't connected, or the disk says no; refused for the home folder and its Pictures, Desktop and Downloads → {path, relinked (every catalog photo with a file in the folder), inLibrary (of those, the library's photos: not Local-only, not in Recently Deleted, virtual copies not counted)}",
             always,
             |s, p| {
                 s.refuse_while_trashing("folder.rename")?;
@@ -269,7 +269,7 @@ pub fn specs() -> Vec<CommandSpec> {
                     .ok_or_else(|| bad("folder.rename", "give a folder name (no slashes)"))?;
                 let to = Path::new(&from).with_file_name(name).to_string_lossy().to_string();
                 let n = move_folder(s, &from, &to).map_err(crate::EngineError::Other)?;
-                Ok(json!({"path": to, "relinked": n}))
+                Ok(json!({"path": to, "relinked": n.relinked, "inLibrary": n.in_library}))
             }
         ),
         cmd!(
@@ -277,7 +277,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Move Folder",
             [],
             None,
-            "{path, into: destination folder} or {paths: [folders], into} — move a folder on disk into another and relink the photos in it; one undo step (undo moves it back, refused if the old place is taken); the destination folder must exist (it is never created) and be on the same disk (never copied and deleted); every refusal (a missing folder, a disk that isn't connected, no permission, another disk) is a plain sentence naming the folder, with nothing changed; refused for the home folder and its Pictures, Desktop and Downloads. With `paths` every folder moves into `into` as ONE undo step, or none does: refused as a whole when one can't move (into itself, the name is taken there, one lies inside another of them, two share a name; at most 200 folders) → {path, relinked}, or {paths: [new places], relinked: total}",
+            "{path, into: destination folder} or {paths: [folders], into} — move a folder on disk into another and relink the photos in it; one undo step (undo moves it back, refused if the old place is taken); the destination folder must exist (it is never created) and be on the same disk (never copied and deleted); every refusal (a missing folder, a disk that isn't connected, no permission, another disk) is a plain sentence naming the folder, with nothing changed; refused for the home folder and its Pictures, Desktop and Downloads. With `paths` every folder moves into `into` as ONE undo step, or none does: refused as a whole when one can't move (into itself, the name is taken there, one lies inside another of them, two share a name; at most 200 folders) → {path, relinked (every catalog photo with a file in the folder), inLibrary (of those, the library's photos: not Local-only, not in Recently Deleted, virtual copies not counted)}, or {paths: [new places], relinked: total, inLibrary: total}",
             always,
             |s, p| {
                 s.refuse_while_trashing("folder.move")?;
@@ -291,7 +291,7 @@ pub fn specs() -> Vec<CommandSpec> {
                 let name = Path::new(&from).file_name().ok_or_else(|| bad("folder.move", "bad path"))?;
                 let to = Path::new(into).join(name).to_string_lossy().to_string();
                 let n = move_folder(s, &from, &to).map_err(crate::EngineError::Other)?;
-                Ok(json!({"path": to, "relinked": n}))
+                Ok(json!({"path": to, "relinked": n.relinked, "inLibrary": n.in_library}))
             }
         ),
         cmd!(
@@ -749,11 +749,14 @@ fn move_folders(s: &mut Session, p: &Value) -> Result<Value> {
     s.repair_sidecars_with(&crate::rename::RealFs).map_err(|e| crate::EngineError::Other(e.to_string()))?;
     let saved_redo = std::mem::take(&mut s.redo);
     let mut places = Vec::new();
-    let mut relinked = 0;
+    let (mut relinked, mut in_library) = (0, 0);
     for from in &folders {
         let to = Path::new(into).join(Path::new(from).file_name().unwrap_or_default()).to_string_lossy().to_string();
         match move_folder(s, from, &to) {
-            Ok(n) => relinked += n,
+            Ok(n) => {
+                relinked += n.relinked;
+                in_library += n.in_library;
+            }
             Err(e) => {
                 let mut back = String::new();
                 for _ in &places {
@@ -772,7 +775,7 @@ fn move_folders(s: &mut Session, p: &Value) -> Result<Value> {
     if places.len() > 1 {
         s.merge_folder_moves(places.len(), &format!("Move {} Folders", places.len()));
     }
-    Ok(json!({"paths": places, "relinked": relinked}))
+    Ok(json!({"paths": places, "relinked": relinked, "inLibrary": in_library}))
 }
 
 /// After a folder moved from `from` to `to`: a browsed folder at or below it follows.
@@ -843,10 +846,18 @@ fn library_refusal(from: &str, src: &Path, library: &Path) -> String {
     }
 }
 
+/// What [`move_folder`] moved.
+pub(crate) struct Moved {
+    /// Every catalog photo whose file was in the folder, relinked (Local-only, deleted and virtual copies too).
+    pub relinked: usize,
+    /// Of those, the library's photos: not Local-only, not in Recently Deleted, virtual copies not counted again.
+    pub in_library: usize,
+}
+
 /// Rename or move a folder on disk (everything in it goes along, sidecars included) and relink
 /// the photos inside, as one undo step: undo renames the folder back and restores the photos'
 /// paths, redo repeats the move — each refused (and reported) when the destination is taken.
-pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result::Result<usize, String> {
+pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result::Result<Moved, String> {
     s.refuse_while_moving().map_err(|e| e.to_string())?;
     let (src, dst) = (Path::new(from), Path::new(to));
     check_places(from, to)?;
@@ -872,6 +883,21 @@ pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result:
     // photos are stored under the spelling they were added with: the folder as written, or as the disk has it
     // (a link in the path to the folder, or to its parent, resolved); each keeps the spelling it has
     let (real_src, real_dst) = (resolved(src), resolved(dst));
+    // (the photos of the library that went along: not browsed-only ones in Local, not the ones in Recently Deleted,
+    // and a virtual copy shares its original's file, so it is not another photo)
+    let in_library = s
+        .catalog
+        .photos()
+        .filter(|p| p.in_library() && p.copy_of.is_none())
+        .filter(|p| match &p.source {
+            lightcraft_catalog::Source::File { path } => {
+                let plain = lexical_path(path);
+                let plain = Path::new(&plain);
+                plain.starts_with(src) || plain.starts_with(&real_src)
+            }
+            _ => false,
+        })
+        .count();
     let mut ops: Vec<Op> = s
         .catalog
         .photos()
@@ -933,7 +959,7 @@ pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result:
         return Err(format!("{e}{back}"));
     }
     follow_folder(s, from, to);
-    Ok(n)
+    Ok(Moved { relinked: n, in_library })
 }
 
 /// Whether `path` is the user's home folder or one of its standard places (Pictures, Desktop,

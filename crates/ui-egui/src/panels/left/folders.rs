@@ -833,7 +833,7 @@ pub(crate) fn run_folder_move(app: &mut LightcraftApp, from: &str, into: &str) -
 
 /// What a finished folder move (`folder.move`'s result `r`) says.
 pub(crate) fn toast_folder_moved(app: &mut LightcraftApp, ctx: &egui::Context, path: &str, into: &str, r: &serde_json::Value) {
-    app.toast(ctx, folder_moved_text(&last_name(path), &last_name(into), r["relinked"].as_u64().unwrap_or(0)));
+    app.toast(ctx, folder_moved_text(&last_name(path), &last_name(into), r["inLibrary"].as_u64().unwrap_or(0)));
 }
 
 /// While a Folders row is dragged: its name at the pointer, or what the row under it says (where
@@ -966,7 +966,7 @@ fn last_name(path: &str) -> String {
 /// on disk (photos follow, one undo step) and say in a toast where it went.
 pub(crate) fn move_folder_to(app: &mut LightcraftApp, ctx: &egui::Context, path: &str, into: &str) {
     match app.run("folder.move", json!({"path": path, "into": into})) {
-        Ok(r) => app.toast(ctx, folder_moved_text(&last_name(path), &last_name(into), r["relinked"].as_u64().unwrap_or(0))),
+        Ok(r) => app.toast(ctx, folder_moved_text(&last_name(path), &last_name(into), r["inLibrary"].as_u64().unwrap_or(0))),
         Err(e) => app.toast_error(ctx, e),
     }
 }
