@@ -15,7 +15,7 @@ pub(super) fn navigator(app: &mut LightcraftApp, ui: &mut egui::Ui, canvas: Rect
     let (w, h) = if aspect >= 1.0 { (NAV_W, NAV_W / aspect) } else { (NAV_W * aspect, NAV_W) };
     let frame = Rect::from_min_size(pos2(canvas.right() - w - 16.0, canvas.bottom() - h - 16.0), vec2(w, h));
     let p = ui.painter_at(canvas);
-    p.rect_filled(frame.expand(5.0), 4.0, Color32::from_black_alpha(190));
+    p.rect_filled(frame.expand(5.0), 4.0, crate::transparency::hud(ui.ctx(), 190));
     match tex {
         Some(t) => p.image(t.tex.id(), frame, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE),
         None => p.rect_filled(frame, 0.0, Tokens::get(ui.ctx()).skeleton),

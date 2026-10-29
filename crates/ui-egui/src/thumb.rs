@@ -493,7 +493,7 @@ fn marks_row(ctx: &egui::Context, p: &Painter, t: &Tokens, m: &Metrics, th: &Thu
     let layout = bar_layout(rect.width(), marks, m, !th.surround);
     let bar = marks_extent(rect, marks, th.hot, only_label, !th.surround, m)?;
     if !only_label && (th.hot || m.band) {
-        p.rect_filled(bar, 0.0, Color32::from_black_alpha(120));
+        p.rect_filled(bar, 0.0, crate::transparency::hud(p.ctx(), 120));
     }
     let y = bar.center().y;
     let mut x = bar.left() + m.pad;
@@ -527,7 +527,7 @@ fn marks_row(ctx: &egui::Context, p: &Painter, t: &Tokens, m: &Metrics, th: &Thu
         x += m.flag;
     }
     let shade = |from: f32, to: f32| {
-        egui::Shape::rect_filled(Rect::from_min_max(pos2(from, bar.top() + 1.0), pos2(to, bar.bottom() - 1.0)), 3.0, Tokens::photo_shade())
+        egui::Shape::rect_filled(Rect::from_min_max(pos2(from, bar.top() + 1.0), pos2(to, bar.bottom() - 1.0)), 3.0, crate::transparency::hud(p.ctx(), 200))
     };
     if x > left_start + m.pad / 2.0 {
         p.set(left_shade, shade(left_start, (x + m.pad / 2.0).min(bar.right())));
@@ -572,7 +572,7 @@ fn stack_badge(app: &mut LightcraftApp, ui: &mut egui::Ui, th: &Thumb, t: &Token
     // a button to assistive technology, named as its tooltip (the click is handled by the caller)
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, stack_tip(collapsed)));
     register(ui, th.surface.widget(Mark::Stack, id), hit);
-    let fill = if resp.hovered() { Color32::from_black_alpha(220) } else { Color32::from_black_alpha(165) };
+    let fill = crate::transparency::hud(ui.ctx(), if resp.hovered() { 220 } else { 165 });
     p.rect_filled(br, m.badge / 2.0, fill);
     if pos == 0 && !collapsed {
         p.rect_stroke(br, m.badge / 2.0, Stroke::new(1.0, t.accent), egui::StrokeKind::Inside);
@@ -608,7 +608,7 @@ fn copy_tag(ui: &mut egui::Ui, th: &Thumb, t: &Tokens, name: &str, stack_w: Opti
         CopyTag::Hidden => return None,
     };
     let br = Rect::from_min_size(pos2(th.rect.right() - m.inset - w, th.rect.top() + m.inset), vec2(w, m.badge));
-    p.rect_filled(br, m.badge / 2.0, Color32::from_black_alpha(165));
+    p.rect_filled(br, m.badge / 2.0, crate::transparency::hud(p.ctx(), 165));
     let icon = m.badge * 0.55;
     let at = if mode == CopyTag::Full { pos2(br.left() + m.badge * 0.65, br.center().y) } else { br.center() };
     paint(&p, Rect::from_center_size(at, vec2(icon, icon)), Icon::VirtualCopy, Color32::WHITE);
@@ -632,7 +632,7 @@ fn preview_pill(ui: &mut egui::Ui, th: &Thumb, t: &Tokens, why: &str, stack: Opt
     let g = p.layout_no_wrap(crate::i18n::tr("Preview").into(), t.semibold(m.micro), Color32::WHITE);
     let place = preview_pill_place(th.rect, g.size().x, stack, hard, soft, &m);
     let (br, full, h) = (place.rect, place.full, place.rect.height());
-    p.rect_filled(br, h / 2.0, Color32::from_black_alpha(170));
+    p.rect_filled(br, h / 2.0, crate::transparency::hud(p.ctx(), 170));
     let icon = h - 4.0;
     let centre = if full { pos2(br.left() + h * 0.55, br.center().y) } else { br.center() };
     paint(&p, Rect::from_center_size(centre, vec2(icon, icon)), Icon::Info, t.caution);

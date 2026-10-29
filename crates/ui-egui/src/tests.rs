@@ -81,6 +81,7 @@ mod rating;
 mod recheck;
 mod reduce_motion;
 mod refusals;
+mod reduce_transparency;
 mod rename_person;
 mod restore_list;
 mod rules_editor;
