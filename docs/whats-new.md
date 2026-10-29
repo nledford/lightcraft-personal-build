@@ -5,7 +5,16 @@
 ### A library keeps a copy of itself before it is upgraded
 - Opening a library saved by an earlier version upgrades it, and earlier versions can't open it afterwards. The library
   as it was is now kept beside it (`catalog.snap.v<format>-<seq>`, `catalog.log.v<format>-<seq>`), and LightCraft says
-  where once: to go back, see `docs/catalog-persistence.md`. A library that can't be kept is not upgraded.
+  where once: to go back, see `docs/catalog-persistence.md`.
+
+### Large libraries
+- The catalog on disk is several times smaller: a photo's record states only what was set (no empty fields, no default
+  develop settings), about 0.2 kB for a photo with no metadata where it was 3.2 kB (a photo with camera metadata also
+  stores that, as before). Edits, history steps and versions are stored as what differs from the defaults.
+- Libraries are upgraded when first opened (catalog format 10) and can't be opened by earlier versions afterwards.
+  A library from before format 10 whose upgrade can't be written (a full disk, a folder that can't be written to) or
+  whose files can't be kept is not opened: LightCraft says why and leaves its catalog as it was, and it opens once
+  there is room. A new library that can't be created is refused in the same way.
 
 ### Relative-date filters and smart albums follow the clock
 - A current view or source count using “in the last” rules now refreshes when the session clock moves into a new
@@ -26,7 +35,7 @@
 
 ## 2026-10-23
 
-### Large libraries
+### Large libraries (#2968)
 - Saving follows what changed, not the size of the library: the catalog file is rewritten when the changes since the
   last rewrite have grown to a quarter of its size, where it used to be rewritten every 2000 changes. Importing 100,000
   photos rewrote it 50 times (9.4 GB written); it is now 15 times (2.1 GB). Quitting no longer rewrites a large
