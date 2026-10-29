@@ -725,7 +725,119 @@ fn log_from_the_start(log: Option<&[u8]>) -> bool {
     first.and_then(|l| std::str::from_utf8(l).ok()).and_then(|l| decode_record(l.trim_end_matches('\r'))).is_some_and(|(seq, _)| seq == 1)
 }
 
+/// Read the `catalog.snap` in `bytes`: the header first (a newer snapshot may not parse as this version's catalog),
+/// then the file. Returns it with its format version, whether it states what its records' missing develop settings read
+/// as, and the defaults its records are to be read over when those are not this build's.
+fn read_snapshot(bytes: &[u8], report: &mut LoadReport) -> Result<(SnapFile, u32, bool, Option<crate::stored::ReadingOver>)> {
+    let h: SnapHeader = serde_json::from_slice(bytes).map_err(|e| CatalogError::Corrupt(format!("{SNAPSHOT}: {e}")))?;
+    if h.format != FORMAT {
+        return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: not a LightCraft catalog (format {:?})", h.format)));
+    }
+    if h.version > VERSION {
+        return Err(newer(format!("{SNAPSHOT} is catalog format v{}", h.version)));
+    }
+    let states_defaults = h.defaults.is_some();
+    if h.defaults.as_ref().is_some_and(|theirs| !crate::stored::states_every_setting(theirs)) {
+        report.defaults_added = true;
+    }
+    let mut reading = None;
+    if let Some(theirs) = h.defaults.filter(|theirs| !crate::stored::reads_the_same(theirs)) {
+        log::info!("catalog: the library was written with other develop defaults; reading it over its own");
+        report.other_defaults = true;
+        reading = Some(crate::stored::reading_over(Some(std::sync::Arc::new(theirs))));
+    }
+    let s: SnapFile = serde_json::from_slice(bytes).map_err(|e| CatalogError::Corrupt(format!("{SNAPSHOT}: {e}")))?;
+    // a seq this high can't come from real use; the next record's seq would wrap
+    if s.seq > MAX_SEQ {
+        return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: seq {} is out of range", s.seq)));
+    }
+    Ok((s, h.version, states_defaults, reading))
+}
+
+/// Put the photos a snapshot lists into `catalog`: read from its segments, or none when `catalog` holds them itself
+/// (`inline_photos`). Returns the baseline the next snapshot is written against (empty for a one-file library, and
+/// where the segments were written with `other_defaults`). A segment list that doesn't add up to the `stated` count
+/// is not the one that was written.
+fn load_photos(
+    store: &mut dyn Store,
+    catalog: &mut Catalog,
+    listed: &[Segment],
+    inline_photos: bool,
+    stated: Option<u64>,
+    other_defaults: bool,
+) -> Result<Photos> {
+    let mut baseline = Photos::new();
+    if !listed.is_empty() {
+        if inline_photos {
+            return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: holds photos and lists segments")));
+        }
+        let readers = segments::readers(&*store, listed.len());
+        let photos = segments::load(store, readers, listed).map_err(|e| match e.kind() {
+            std::io::ErrorKind::InvalidData => CatalogError::Corrupt(e.to_string()),
+            _ => io(e),
+        })?;
+        if store.segmented() && !other_defaults {
+            // (shared with the catalog: pointers, not copies. Not where the segments were
+            // written with other defaults: none of them is what this build would write, so
+            // none is what the next snapshot may keep.)
+            baseline = photos.clone();
+        }
+        catalog.set_photos(photos);
+    }
+    if stated.is_some_and(|n| n != catalog.len() as u64) {
+        return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: its segments hold {} photos where it states {}", catalog.len(), stated.unwrap_or(0))));
+    }
+    Ok(baseline)
+}
+
+/// Whether a good record is among `rest`, the log after a bad one (then the bad one is damage, not a torn tail).
+/// Fails on a record that holds a change this version doesn't know, before anything is modified.
+fn good_record_follows(rest: &[u8]) -> Result<bool> {
+    let mut good = false;
+    for l in rest.split(|b| *b == b'\n') {
+        match std::str::from_utf8(l).map(|l| decode_line(l.trim_end_matches('\r'))) {
+            Ok(Line::Record(..)) => good = true,
+            Ok(Line::Newer(seq)) => return Err(newer(format!("{LOG} record {seq} holds a change this version doesn't know"))),
+            Ok(Line::Bad) | Err(_) => {}
+        }
+    }
+    Ok(good)
+}
+
+/// Segment files without the snapshot that lists them (a folder copied or synced in part, a `catalog.snap` that was
+/// removed): they hold the photos, and opening this as a new library would abandon them. Not so when the log holds
+/// every change from the first: a library that never had a snapshot, whose first one got as far as writing segments.
+fn refuse_orphan_segments(store: &mut dyn Store, snap: Option<&[u8]>, log: Option<&[u8]>) -> Result<()> {
+    if snap.is_none()
+        && store.segmented()
+        && !log_from_the_start(log)
+        && let n @ 1.. = segments::files(store).map_err(io)?
+    {
+        return Err(CatalogError::Corrupt(format!(
+            "{SNAPSHOT} is missing, but {n} segment file(s) of a catalog are here ({SEGMENT_PREFIX}…{SEGMENT_SUFFIX})"
+        )));
+    }
+    Ok(())
+}
+
 impl Journal {
+    /// The log ends after its last good record, at byte `good_end` of `log_len`: drop a torn final record, or end the
+    /// last line, so that what is appended starts a line of its own.
+    fn settle_tail(&mut self, report: &mut LoadReport, log_len: usize, good_end: usize, needs_newline: bool) -> Result<()> {
+        if good_end < log_len {
+            report.torn_bytes = (log_len - good_end) as u64;
+            log::warn!("catalog log: dropped a torn final record ({} bytes)", report.torn_bytes);
+            self.store.truncate(LOG, good_end as u64).map_err(io)?;
+            self.log_bytes = good_end as u64;
+        } else if needs_newline {
+            self.store.append(LOG, b"\n").map_err(io)?;
+            self.log_bytes = good_end as u64 + 1;
+        } else {
+            self.log_bytes = good_end as u64;
+        }
+        Ok(())
+    }
+
     /// Open (or create) the catalog in `store`: load the snapshot, replay the log, repair a torn
     /// tail. Fails if the snapshot is unreadable or a newer LightCraft's (then nothing is
     /// modified), or if the library is in an older format and can't be brought to this build's
@@ -736,19 +848,7 @@ impl Journal {
         let snap = store.read(SNAPSHOT).map_err(io)?;
         let log = store.read(LOG).map_err(io)?;
         report.created = snap.is_none() && log.is_none();
-        // Segment files without the snapshot that lists them (a folder copied or synced in part,
-        // a `catalog.snap` that was removed): they hold the photos, and opening this as a new
-        // library would abandon them. Not so when the log holds every change from the first: a
-        // library that never had a snapshot, whose first one got as far as writing segments.
-        if snap.is_none()
-            && store.segmented()
-            && !log_from_the_start(log.as_deref())
-            && let n @ 1.. = segments::files(store.as_mut()).map_err(io)?
-        {
-            return Err(CatalogError::Corrupt(format!(
-                "{SNAPSHOT} is missing, but {n} segment file(s) of a catalog are here ({SEGMENT_PREFIX}…{SEGMENT_SUFFIX})"
-            )));
-        }
+        refuse_orphan_segments(store.as_mut(), snap.as_deref(), log.as_deref())?;
         let head_bytes = snap.as_ref().map_or(0, |b| b.len() as u64);
         let mut listed = Vec::new();
         let mut stated = None;
@@ -759,62 +859,19 @@ impl Journal {
         let mut states_defaults = false;
         let (mut catalog, snapshot_seq, snapshot_version) = match &snap {
             Some(bytes) => {
-                // the header first: a newer snapshot may not parse as this version's catalog
-                let h: SnapHeader = serde_json::from_slice(bytes).map_err(|e| CatalogError::Corrupt(format!("{SNAPSHOT}: {e}")))?;
-                if h.format != FORMAT {
-                    return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: not a LightCraft catalog (format {:?})", h.format)));
-                }
-                if h.version > VERSION {
-                    return Err(newer(format!("{SNAPSHOT} is catalog format v{}", h.version)));
-                }
-                states_defaults = h.defaults.is_some();
-                if h.defaults.as_ref().is_some_and(|theirs| !crate::stored::states_every_setting(theirs)) {
-                    report.defaults_added = true;
-                }
-                if let Some(theirs) = h.defaults.filter(|theirs| !crate::stored::reads_the_same(theirs)) {
-                    log::info!("catalog: the library was written with other develop defaults; reading it over its own");
-                    report.other_defaults = true;
-                    reading = Some(crate::stored::reading_over(Some(std::sync::Arc::new(theirs))));
-                }
-                let s: SnapFile = serde_json::from_slice(bytes).map_err(|e| CatalogError::Corrupt(format!("{SNAPSHOT}: {e}")))?;
-                // a seq this high can't come from real use; the next record's seq would wrap
-                if s.seq > MAX_SEQ {
-                    return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: seq {} is out of range", s.seq)));
-                }
+                let (s, version, defaults, over) = read_snapshot(bytes, &mut report)?;
+                states_defaults = defaults;
+                reading = over;
                 listed = s.segments;
                 stated = s.photos;
-                (s.catalog, s.seq, Some(h.version))
+                (s.catalog, s.seq, Some(version))
             }
             None => (Catalog::new(), 0, None),
         };
         report.snapshot_seq = snapshot_seq;
         // the photos: in `catalog.snap` itself (a one-file library), or in the segments it lists
         let inline_photos = !catalog.is_empty();
-        let mut baseline = Photos::new();
-        if !listed.is_empty() {
-            if inline_photos {
-                return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: holds photos and lists segments")));
-            }
-            let readers = segments::readers(store.as_ref(), listed.len());
-            let photos = segments::load(store.as_mut(), readers, &listed).map_err(|e| match e.kind() {
-                std::io::ErrorKind::InvalidData => CatalogError::Corrupt(e.to_string()),
-                _ => io(e),
-            })?;
-            if store.segmented() && !report.other_defaults {
-                // (shared with the catalog: pointers, not copies. Not where the segments were
-                // written with other defaults: none of them is what this build would write, so
-                // none is what the next snapshot may keep.)
-                baseline = photos.clone();
-            }
-            catalog.set_photos(photos);
-        }
-        if stated.is_some_and(|n| n != catalog.len() as u64) {
-            return Err(CatalogError::Corrupt(format!(
-                "{SNAPSHOT}: its segments hold {} photos where it states {}",
-                catalog.len(),
-                stated.unwrap_or(0)
-            )));
-        }
+        let baseline = load_photos(store.as_mut(), &mut catalog, &listed, inline_photos, stated, report.other_defaults)?;
         // (once the photos are in: on a library in segments `catalog.snap` holds none, and its
         // stacks would read as stacks of missing photos)
         report.repaired = catalog.repair();
@@ -896,16 +953,7 @@ impl Journal {
                 }
                 _ => {
                     // bad record (or a gap): torn tail if nothing good follows, else damage
-                    let mut rest_has_good = false;
-                    for l in log[next..].split(|b| *b == b'\n') {
-                        match std::str::from_utf8(l).map(|l| decode_line(l.trim_end_matches('\r'))) {
-                            Ok(Line::Record(..)) => rest_has_good = true,
-                            // refused before anything is modified
-                            Ok(Line::Newer(seq)) => return Err(newer(format!("{LOG} record {seq} holds a change this version doesn't know"))),
-                            Ok(Line::Bad) | Err(_) => {}
-                        }
-                    }
-                    if rest_has_good {
+                    if good_record_follows(&log[next..])? {
                         damaged_at = Some(pos);
                     }
                     break;
@@ -939,17 +987,7 @@ impl Journal {
             }
             rewritten = true;
         } else {
-            if good_end < log.len() {
-                report.torn_bytes = (log.len() - good_end) as u64;
-                log::warn!("catalog log: dropped a torn final record ({} bytes)", report.torn_bytes);
-                j.store.truncate(LOG, good_end as u64).map_err(io)?;
-                j.log_bytes = good_end as u64;
-            } else if needs_newline {
-                j.store.append(LOG, b"\n").map_err(io)?;
-                j.log_bytes = good_end as u64 + 1;
-            } else {
-                j.log_bytes = good_end as u64;
-            }
+            j.settle_tail(&mut report, log.len(), good_end, needs_newline)?;
         }
         if report.created {
             // tiny: written directly, not counted as a compaction

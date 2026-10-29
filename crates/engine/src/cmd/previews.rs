@@ -118,7 +118,7 @@ struct Running {
 
 impl Running {
     /// The build is over: the row of how it went is kept, the build reads as finished, and only then does its running
-    /// row go (whoever waits for `finished` finds the row; whoever sees the running row go finishes the build).
+    /// row go (whoever waits for `finished` finds the row; whoever sees the running row go finds the build finished).
     fn end(mut self) {
         self.task.report(self.state.outcome());
         self.state.finished.store(true, Ordering::Release);
@@ -845,10 +845,7 @@ mod tests {
 
         let s = Session::with_demo();
         let state = Arc::new(super::PreviewBuild::default());
-        let run = super::Running {
-            task: super::task_for(&s, &state, crate::activity::Request::default()),
-            state: state.clone(),
-        };
+        let run = super::Running { task: super::task_for(&s, &state, crate::activity::Request::default()), state: state.clone() };
         assert!(s.activity.lane_busy(crate::activity::Lane::Previews));
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
             let _run = run;
@@ -868,10 +865,7 @@ mod tests {
 
         let s = Session::with_demo();
         let state = Arc::new(super::PreviewBuild::default());
-        let run = super::Running {
-            task: super::task_for(&s, &state, crate::activity::Request::default()),
-            state: state.clone(),
-        };
+        let run = super::Running { task: super::task_for(&s, &state, crate::activity::Request::default()), state: state.clone() };
         state.finished.store(true, Ordering::Relaxed);
         drop(run);
         assert!(state.error().is_none());

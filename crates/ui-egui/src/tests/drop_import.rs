@@ -108,6 +108,12 @@ fn library_at(dir: &Scratch, rel: &str) -> String {
     path
 }
 
+/// Open the list under the bell (`view.tasks`): the rows of waiting tasks are drawn there.
+fn show_list(h: &mut Headless) {
+    let r = h.request("engine.execute", json!({"command": "view.tasks", "params": {"show": true}}), Duration::from_secs(60));
+    assert_eq!(r["result"]["tasks"], true, "{r}");
+}
+
 fn drop_files(h: &mut Headless, paths: &[String], hover: bool) {
     let r = h.request("ui.dropFiles", json!({"paths": paths, "hover": hover}), T);
     assert_eq!(r["ok"], true, "{r}");
@@ -984,6 +990,7 @@ fn a_waiting_import_shows_a_row_and_its_cross_takes_it_out_of_the_line() {
     let waiting = h.app.session.activity.waiting();
     assert_eq!(waiting.len(), 2, "{waiting:?}");
     let (first, second) = (waiting[0].id, waiting[1].id);
+    show_list(&mut h);
     for _ in 0..3 {
         h.step();
     }

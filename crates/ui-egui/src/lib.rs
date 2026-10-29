@@ -20,8 +20,8 @@ pub mod headless;
 pub mod i18n;
 pub mod icons;
 mod import_queue;
-pub mod library_work;
 mod job_notice;
+pub mod library_work;
 pub mod lightroom_import;
 pub mod links;
 pub mod menus;
@@ -505,7 +505,7 @@ pub struct LightcraftApp {
     /// Which running jobs ended, for the system notification (`services.notify`).
     pub(crate) job_watch: job_notice::JobWatch,
     /// The library failed to open at launch: the blocking window, then the temporary-session
-/// banner (issue #100). Cleared once a library opens.
+    /// banner (issue #100). Cleared once a library opens.
     pub library_problem: Option<panels::library_problem::LibraryProblem>,
     /// First-frame focus/input state for a newly shown blocking library window.
     pub(crate) library_window_input: panels::library_problem::WindowBarrier,

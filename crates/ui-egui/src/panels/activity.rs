@@ -142,8 +142,7 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
     // a scan that finished in the background and waits to be looked at
     let ready = app.sync_ready.clone();
     // newest first: the one just started is the one looked for
-    // (a task waiting in line has nothing to show yet and no progress to draw: agents see it in `activity.list`)
-    let mut all: Vec<TaskInfo> = app.session.activity.list().into_iter().filter(|t| !t.waiting).collect();
+    let mut all: Vec<TaskInfo> = app.session.activity.list();
     all.reverse();
     if !all.is_empty() {
         // look again soon: a young task becomes due, the ring and the bars move
@@ -556,7 +555,7 @@ fn list(ui: &mut egui::Ui, t: &Tokens, rows: &Rows) -> Option<Act> {
                     if row(ui, t, task, width) {
                         act = Some(Act::Cancel(task.id));
                     }
-                    if rows.queue_scan == Some(task.id) && link(ui, t, &tr("Queue without review"), "activity:queueScan") {
+                    if rows.queue_scan == Some(task.id) && link(ui, t, tr("Queue without review"), "activity:queueScan") {
                         act = Some(Act::QueueScan);
                     }
                 }
@@ -606,7 +605,7 @@ fn link(ui: &mut egui::Ui, t: &Tokens, text: &str, id: impl Into<String>) -> boo
 fn review_line(ui: &mut egui::Ui, t: &Tokens, how: &str, id: u64, width: f32) -> Option<u64> {
     let mut asked = None;
     ui.allocate_ui_with_layout(vec2(width, 16.0), Layout::right_to_left(Align::Center), |ui| {
-        if link(ui, t, &tr("Review…"), format!("activity:review:{id}")) {
+        if link(ui, t, tr("Review…"), format!("activity:review:{id}")) {
             asked = Some(id);
         }
         let room = ui.available_width();

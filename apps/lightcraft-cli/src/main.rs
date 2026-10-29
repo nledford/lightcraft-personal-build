@@ -521,6 +521,30 @@ fn run_step(b: &mut dyn Backend, s: &Step) -> Result<Value, String> {
     if direct { b.call(&s.id, s.params.clone()) } else { b.call("engine.execute", json!({"command": s.id, "params": s.params})) }
 }
 
+/// Say how a background job (`status`: `library.backupStatus` or `library.restoreStatus`) ended, once it is seen
+/// through: one line, as for the last one at the end. Whether it ended well.
+fn say_how_it_ended(backend: &mut dyn Backend, status: &str, out: &mut impl Write) -> Result<bool, String> {
+    let step = Step { id: status.to_string(), params: json!({}) };
+    let t = std::time::Instant::now();
+    // (it is seen through first, as at the end)
+    let ended = loop {
+        match run_step(backend, &step) {
+            Ok(r) if r["running"] == json!(true) => std::thread::sleep(std::time::Duration::from_millis(20)),
+            other => break other,
+        }
+    };
+    let ms = (t.elapsed().as_secs_f64() * 1e4).round() / 10.0;
+    let (line, ok) = match ended {
+        Ok(r) => {
+            let ok = r["error"].is_null();
+            (json!({"command": status, "ok": ok, "result": r, "ms": ms}), ok)
+        }
+        Err(e) => (json!({"command": status, "ok": false, "error": e}), false),
+    };
+    writeln!(out, "{line}").map_err(|e| e.to_string())?;
+    Ok(ok)
+}
+
 fn run(args: &[String]) -> Result<(), String> {
     let mut connect: Option<String> = None;
     let mut demo = false;
@@ -627,32 +651,15 @@ fn run(args: &[String]) -> Result<(), String> {
             if !(headless && starts_job && earlier) {
                 continue;
             }
-            let step = Step { id: status.to_string(), params: json!({}) };
-            let t = std::time::Instant::now();
-            // (it is seen through first, as at the end)
-            let ended = loop {
-                match run_step(backend.as_mut(), &step) {
-                    Ok(r) if r["running"] == json!(true) => std::thread::sleep(std::time::Duration::from_millis(20)),
-                    other => break other,
-                }
-            };
             // (said here: it is not asked about again at the end, unless another is started)
             if is_backup {
                 backing_up = false;
             } else {
                 restoring = false;
             }
-            let ms = (t.elapsed().as_secs_f64() * 1e4).round() / 10.0;
-            let (line, ok) = match ended {
-                Ok(r) => {
-                    let ok = r["error"].is_null();
-                    (json!({"command": status, "ok": ok, "result": r, "ms": ms}), ok)
-                }
-                Err(e) => (json!({"command": status, "ok": false, "error": e}), false),
-            };
+            let ok = say_how_it_ended(backend.as_mut(), status, &mut out)?;
             // (a line for each job, as for the last one at the end; only a failure fails the call)
             failed += usize::from(!ok);
-            writeln!(out, "{line}").map_err(|e| e.to_string())?;
             stop |= !ok && !keep_going;
         }
         if stop {

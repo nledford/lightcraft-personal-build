@@ -370,7 +370,9 @@ pub fn start_request(app: &mut LightcraftApp, ctx: &egui::Context, request: &Req
     }
     let undo0 = app.session.undo.len();
     let auto = request.params["auto"].as_bool().unwrap_or(false);
-    let mut task = ImportTask::new(paths, request.params["params"].clone(), undo0, false).about(request.subject.clone());
+    let roots: Vec<String> =
+        request.params["roots"].as_array().map(|a| a.iter().filter_map(|p| p.as_str().map(str::to_string)).collect()).unwrap_or_default();
+    let mut task = ImportTask::new(paths, request.params["params"].clone(), undo0, false).named_below(roots).about(request.subject.clone());
     if auto {
         task = task.auto();
     }

@@ -139,7 +139,7 @@ as tried, so without it nothing would import them. Opening another library while
 `app.openLibrary` and `app.newLibrary` return `asked: true` and the question is up), and the switch says how many it
 dropped. At most `MAX_WAITING` (100) tasks wait; the app's own refusals of a full line say so in the window's language,
 the engine's (`Activity::line_full_error`) stays English. Without `queue` a call is refused while its lane is
-busy, as before. A waiting task whose start fails (there is no smart previews folder any more, say) is logged (the app's own, an import or a Synchronize Folder, also says why in a toast), leaves a failed row saying why, and the next in line goes on.
+busy, as before. A waiting task whose start fails (there is no smart previews folder any more, say) is logged and the next in line goes on: an engine command (a preview build) leaves a failed row saying why, which can be retried; the app's own, an import or a Synchronize Folder, says why in a toast instead (an Auto Import gives its files back).
 
 A job that kept what it was asked (`guard.set_request`, only the preview builds so far) and did not end well has Retry in its
 row (`activity.retry`, `retryable` in `activity.finished`): the row goes and the same request waits at the end of its

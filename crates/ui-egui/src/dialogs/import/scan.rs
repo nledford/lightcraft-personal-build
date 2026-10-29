@@ -40,7 +40,7 @@ pub const IMPORT_REQUEST: &str = lightcraft_engine::activity::IMPORT_REQUEST;
 pub(super) fn import_request(paths: &[String], params: &Value, auto: bool, sources: &[String], counted: bool) -> Request {
     Request {
         command: IMPORT_REQUEST.into(),
-        params: json!({"paths": paths, "params": params, "auto": auto}),
+        params: json!({"paths": paths, "params": params, "auto": auto, "roots": sources}),
         subject: subject_of(sources),
         facts: facts_of(counted.then_some(paths.len()), params["mode"].as_str().unwrap_or("add")),
     }
@@ -128,7 +128,10 @@ pub(crate) fn auto_import_listed(app: &mut LightcraftApp, listing: Vec<(String, 
         o.remove("paths");
     }
     if library_busy(app) {
-        if let Err(e) = wait_in_line(app, import_request(&paths, &params, true, &[], true)) {
+        let mut request = import_request(&paths, &params, true, &[], true);
+        // (the folders unreadable files are named below, once it starts)
+        request.params["roots"] = json!(roots);
+        if let Err(e) = wait_in_line(app, request) {
             log::warn!("auto import: {e}");
         }
         return;

@@ -105,7 +105,7 @@ impl LightcraftApp {
         let jobs = self.session.activity.person_jobs();
         let now = self.tick_now();
         let in_background = ctx.input(|i| !i.raw.focused || i.viewport().minimized.unwrap_or(false));
-        let toast = self.ui.toast().map(|t| (t.text.as_str(), t.until));
+        let toast = self.ui.toast().filter(|t| !t.hovered).map(|t| (t.text.as_str(), t.until));
         let ended = self.job_watch.update(now, &jobs, toast, in_background);
         if self.job_watch.waiting() {
             ctx.request_repaint_after(std::time::Duration::from_millis(250));
