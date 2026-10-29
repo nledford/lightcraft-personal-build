@@ -58,7 +58,6 @@
   "Can't be moved here": "Sem nelze přesunout",
   "This row covers more than one disk: drop on a folder inside it": "Tento řádek zahrnuje více disků: přetáhněte položky na některou ze složek v něm",
   "Local photos aren't in the library yet: Add to My Photos first, then move them": "Místní fotografie zatím nejsou v knihovně: nejprve použijte Přidat do mých fotografií a pak je přesuňte",
-  "Demo photos have no file on disk, so they can't be moved": "Ukázkové fotografie nemají soubor na disku, proto je nelze přesunout",
   "Add to My Photos First": "Nejprve přidat do mých fotografií",
   "Add to Selected Photos": "Přidat k vybraným fotografiím",
   "Add to Target Album": "Přidat do cílového alba",
@@ -2566,5 +2565,13 @@
   "Duplicate Album": "Duplikovat album",
   "Paste Inside This Keyword": "Vložit do tohoto klíčového slova",
   "Paste Into This Folder": "Vložit do této složky",
-  "Paste at Top Level": "Vložit na nejvyšší úroveň"
+  "Paste at Top Level": "Vložit na nejvyšší úroveň",
+  "Drag to move, or use the arrow keys": "Přetažením přesunete, nebo použijte šipky",
+  "A group can't go inside itself": "Skupinu nelze vložit do sebe samé",
+  "Groups can't nest any deeper": "Skupiny nelze vnořovat hlouběji",
+  "This album is in a loop, so it shows nothing": "Toto album je ve smyčce, a proto nic nezobrazuje",
+  "It tests itself: change its rules (Edit Smart Album…)": "Testuje samo sebe: změňte jeho pravidla (Upravit inteligentní album…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Kolidující fotografii přejmenujte nebo zvolte jinou složku, a půjde přesunout.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Znovu připojte disk nebo použijte Soubor → Najít chybějící fotografie… a zkuste to znovu.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Fotografii bez souboru nelze přesunout. Místní fotografii lze, jakmile použijete Přidat do mých fotografií."
 }

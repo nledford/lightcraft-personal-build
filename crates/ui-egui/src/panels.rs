@@ -41,6 +41,7 @@ pub use crate::dialogs::faces;
 pub use crate::dialogs::keymap;
 pub use crate::dialogs::rules_editor;
 pub use crate::dialogs::rules_editor::rules_move;
+pub use crate::dialogs::rules_editor::rules_reorder;
 pub use crate::dialogs::settings;
 pub use crate::dialogs::settings::slide_layout;
 pub use crate::dialogs::settings::slide_overlays;
@@ -183,7 +184,8 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
     }
 }
 
-/// Paint a centred, dimmed message (empty states).
+/// Paint a centred, dimmed message (empty states). Each line wraps to the area, so a long one (a
+/// translation, an album named in it) is not cut off at its edges.
 pub fn empty_message(ui: &egui::Ui, rect: Rect, title: &str, body: &str) {
     let t = Tokens::get(ui.ctx());
     let p = ui.painter();

@@ -228,7 +228,7 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
             }
             Ok(moved)
         }
-        Dialog::MovePhotos { ids, folder, dont_ask, library, .. } => {
+        Dialog::MovePhotos { ids, folder, dont_ask, library, problems, .. } => {
             // another library opened meanwhile (from the menu bar, an agent): these numbers are
             // other photos there
             if *library != app.session.library_generation() {
@@ -236,7 +236,12 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
             }
             let ctx = app.tasks.repaint.clone().unwrap_or_default();
             // (the question is turned off by the move itself, once a photo has moved: see `move_task::start_asked`)
-            crate::move_task::start_asked(app, &ctx, &json!({"ids": ids, "folder": folder}), *dont_ask)
+            let mut params = json!({"ids": ids, "folder": folder});
+            // the photos found to have a problem stay where they are, the rest move
+            if !problems.is_empty() {
+                params["skip"] = json!(problems.iter().map(|p| p.id).collect::<Vec<u64>>());
+            }
+            crate::move_task::start_asked(app, &ctx, &params, *dont_ask)
         }
         // the catalog found: no file dialog; none: File ▸ Import Lightroom Catalog… asks for it
         Dialog::LightroomCatalog { catalog, .. } => {

@@ -2499,7 +2499,6 @@
   "Can't add to a smart album": "Kan inte läggas till i ett smart album",
   "Can't add to an album folder": "Kan inte läggas till i en albummapp",
   "Can't go inside itself": "Kan inte läggas inuti sig själv",
-  "Demo photos have no file on disk, so they can't be moved": "Demofoton har ingen fil på disken och kan därför inte flyttas",
   "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Ge foton ett nyckelord i nyckelordslistan (Fönster → Nyckelord, K): släpp dem på det där",
   "Reduce Motion": "Minska rörelse",
   "Reduce motion": "Minska rörelse",
@@ -2587,5 +2586,13 @@
   "Duplicate Album": "Duplicera album",
   "Paste Inside This Keyword": "Klistra in i det här nyckelordet",
   "Paste Into This Folder": "Klistra in i den här mappen",
-  "Paste at Top Level": "Klistra in på översta nivån"
+  "Paste at Top Level": "Klistra in på översta nivån",
+  "Drag to move, or use the arrow keys": "Dra för att flytta, eller använd piltangenterna",
+  "A group can't go inside itself": "En grupp kan inte läggas inuti sig själv",
+  "Groups can't nest any deeper": "Grupper kan inte nästlas djupare",
+  "This album is in a loop, so it shows nothing": "Det här albumet ingår i en loop och visar därför ingenting",
+  "It tests itself: change its rules (Edit Smart Album…)": "Det testar sig självt: ändra dess regler (Redigera smart album…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Byt namn på fotot med samma namn eller välj en annan mapp så kan det flyttas.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Anslut disken igen eller använd Fil → Sök efter saknade foton… och försök igen.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ett foto utan fil kan inte flyttas. Ett lokalt foto kan det, när du har använt Lägg till i Mina foton."
 }

@@ -364,5 +364,16 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "Фото с одним из них: {count}. Вложенные ключевые слова тоже удаляются. Отмена вернёт их.",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "Убрать папки ({n}) из библиотеки? Импортированных из них фото: {count}.",
   "…and {n} more": "…и ещё {n}",
-  "{n} keywords": "Ключевые слова: {n}"
+  "{n} keywords": "Ключевые слова: {n}",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Условие {n} из {m}: {what}. Перемещение стрелками",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Группа {n} из {m}: совпадение {mode}, внутри {count}. Перемещение стрелками",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Он возвращается к себе через альбом «{}»: измените условия одного из альбомов в цикле (Изменить смарт-альбом…)",
+  "These can't be moved to “{}”:": "Эти фото нельзя переместить в «{0}»:",
+  "{} is already in “{}”": "{0} уже в «{1}»",
+  "{} is missing or offline": "{0} отсутствует или недоступен",
+  "and {n} more": "и ещё {n}",
+  "Move {n}, skip {m}": "Переместить {n}, пропустить {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "В «{1}» перемещено фото: {n}{0:.0}, пропущено: {skipped}. Правка → Отменить вернёт их.",
+  "{} can't be moved": "{0} нельзя переместить",
+  "{} has the same name as another photo being moved": "{0} имеет то же имя, что и другое перемещаемое фото"
 }

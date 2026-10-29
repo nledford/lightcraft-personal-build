@@ -43,7 +43,6 @@
   "Can't be moved here": "Non si possono spostare qui",
   "This row covers more than one disk: drop on a folder inside it": "Questa riga comprende più di un disco: rilascia su una cartella al suo interno",
   "Local photos aren't in the library yet: Add to My Photos first, then move them": "Le foto locali non sono ancora nella libreria: prima Aggiungi a Le mie foto, poi spostale",
-  "Demo photos have no file on disk, so they can't be moved": "Le foto dimostrative non hanno un file su disco, quindi non si possono spostare",
   "Add to Selected Photos": "Aggiungi alle foto selezionate",
   "Add to Target Album": "Aggiungi all'album di destinazione",
   "Add to this mask": "Aggiungi a questa maschera",
@@ -2521,5 +2520,13 @@
   "Duplicate Album": "Duplica album",
   "Paste Inside This Keyword": "Incolla in questa parola chiave",
   "Paste Into This Folder": "Incolla in questa cartella",
-  "Paste at Top Level": "Incolla al livello superiore"
+  "Paste at Top Level": "Incolla al livello superiore",
+  "Drag to move, or use the arrow keys": "Trascina per spostare, oppure usa le frecce",
+  "A group can't go inside itself": "Un gruppo non può stare dentro se stesso",
+  "Groups can't nest any deeper": "I gruppi non si possono annidare più in profondità",
+  "This album is in a loop, so it shows nothing": "Questo album è in un ciclo, quindi non mostra nulla",
+  "It tests itself: change its rules (Edit Smart Album…)": "Verifica se stesso: modifica le sue regole (Modifica album smart…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Rinomina la foto in conflitto o scegli un'altra cartella per spostarla.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Ricollega il disco o usa File → Trova foto mancanti…, poi riprova.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Una foto senza file non può essere spostata. Una foto locale sì, dopo aver usato Aggiungi a Le mie foto."
 }

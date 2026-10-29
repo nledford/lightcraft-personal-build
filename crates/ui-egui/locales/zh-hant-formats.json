@@ -364,5 +364,16 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "含其中任一個的照片：{count} 張。其下的關鍵字也會被刪除。復原即可回復。",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "要從照片庫移除 {n} 個資料夾嗎？從中匯入的照片：{count} 張。",
   "…and {n} more": "…以及另外 {n} 個",
-  "{n} keywords": "{n} 個關鍵字"
+  "{n} keywords": "{n} 個關鍵字",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "規則 {n}/{m}：{what}。用方向鍵移動",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "群組 {n}/{m}：符合{mode}，內含 {count} 項。用方向鍵移動",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "它透過相簿「{}」回到自身：請變更循環中某個相簿的規則（編輯智慧型相簿…）",
+  "These can't be moved to “{}”:": "以下照片無法移到「{0}」：",
+  "{} is already in “{}”": "{0} 已在「{1}」中",
+  "{} is missing or offline": "{0} 遺失或處於離線狀態",
+  "and {n} more": "另有 {n} 張",
+  "Move {n}, skip {m}": "移動 {n} 張，略過 {m} 張",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "已將 {n} 張照片移到「{1}」{0:.0}，略過 {skipped} 張。編輯 → 復原 可移回。",
+  "{} can't be moved": "{0} 無法移動",
+  "{} has the same name as another photo being moved": "{0} 與另一張要移動的照片同名"
 }

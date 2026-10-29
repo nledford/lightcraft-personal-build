@@ -269,6 +269,42 @@
   and 2 % edited, a photo takes about 2.8 kB where it took 4.4 kB (285 MB instead of 441 MB). Nothing changes on
   screen, and the library's files are byte for byte what they were, so earlier versions open them as before.
 
+### A right-click while you carry photos opens no menu
+- While you drag photos from the grid, a right-click opens no context menu, on an album, folder or keyword row in
+  the sidebar or anywhere else. Before, the menu opened on the row the photos were over.
+
+### Adding photos that are already in an album no longer costs an undo step
+- Add to Album and dragging photos to an album now leave the album, the undo history and Redo alone when every
+  photo was in the album already. Before, they still recorded an undo step, so Redo was lost and Undo had a step
+  that changed nothing. Photos the library no longer has (a selection kept after an Undo took them away) are also
+  left out of a new album made from the selection, out of Add to Album, and out of the target album (B), which does
+  nothing and says nothing when none of them is left, and counts only the photos it changed.
+
+### Reorder rules and groups in the smart album editor
+- Every rule and every group in the New / Edit Smart Album window has a grip (six dots) at the start of its row. Drag it
+  to move the row: a line shows where it will land, the row's name follows the pointer, and Esc gives the drag up. Drop
+  on a rule inside a group to put it in that group, beside the group's frame to take it out; drag a whole group to
+  nest it in another. A group can't go inside itself or deeper than three levels: the pointer shows a not-allowed
+  cursor and says why, and nothing moves. A group a move leaves empty goes away.
+- With the keyboard, Tab to a grip and press ↑ or ↓ to move the row one place (at the end of a group it moves out of
+  the group), → to move it into the group above it (or below it, if that is the one next to it) and ← to move it out
+  of its group. The focus stays on the moved row's grip, and a screen reader says where the row is: "Rule 2 of 4:
+  Rating is ≥ 3. Move with the arrow keys".
+- OK saves the rules in the order shown, in one undo step like any other change to the rules.
+
+### An album caught in a loop is empty, and says so
+- A smart album that tests another album, which tests it back (or that tests itself), used to show a share of
+  its photos, and which photos depended on the album you asked about. Now every album on such a loop shows no
+  photos, however you look at it: in the grid, in the count beside it in the sidebar, and in an Album rule of
+  another smart album.
+- The empty album says why instead of "No photos": "This album is in a loop, so it shows nothing", then the album it
+  loops through and where to fix it (Edit Smart Album…). The row in the sidebar keeps its ⚠, and hovering it says the
+  same.
+- An album that only tests a looping album is not on the loop: it keeps working, and sees the looping album as empty
+  (so an Album rule set to "isn't" that album matches every photo). Change the rules of one album on the loop and its albums hold
+  their photos again.
+- A library that already holds such a loop opens as before; only what the albums on it show changes.
+
 ## 2026-10-23
 
 ### Large libraries (#2968)
@@ -322,6 +358,21 @@
 - LightCraft now imports PSD and PSB files with EXIF and XMP image resources. Capture dates, GPS and descriptive fields
   stay available in All Metadata; PSD edit copies keep their capture date. Original exports with Remove Location Info enabled
   are refused when a PSD or PSB embeds GPS, since LightCraft cannot strip metadata from a byte-for-byte original copy.
+
+### A refused move to another folder says what is wrong
+- When photos can't be moved into another folder, the message now names the photos and what to do (rename them,
+  reconnect the disk, or leave them out of the move), in plain words, instead of an "invalid parameters" error that
+  named an internal command. Moving the photos you chose with Move Selected Photos Here still stops as a whole when one
+  of them can't go, and then nothing is moved.
+- Agents get the same details: `photo.checkMove` lists, without moving anything, the photos that can go, the ones
+  already in the folder, and those that can't go: a name taken there, a file that is missing or offline, or a photo
+  that can't move as it is (a Local photo, until it is added to the library, or one with no file).
+  `photo.moveToFolder` takes `skip`, the ids of photos to leave where they are while the rest move (a Local photo
+  can be skipped too), and reports each skipped photo with the reason.
+- Dropping photos on a folder in the sidebar now checks the move first. The question names the photos that can't go
+  (up to five, then a count) and why: the name is taken in the folder, two photos being moved share a name, the file is
+  missing or offline, or the photo has no file. It says what to do and offers to move the rest, and it asks even when
+  you turned off the confirmation. Dropping a Local photo is still refused on the row, with its own reason.
 
 ### Choose where a Lightroom catalog goes
 - File ▸ Import Lightroom Catalog… now asks first: merge the catalog's photos, collections and edits into the
@@ -1658,6 +1709,10 @@
 - A folder's view can be saved as a smart album that follows the folder, also after its rules are edited (editing
   the rules of a saved album view used to drop the album). It can't be made in, or moved into, the folder it shows
   (it would include itself): that folder is no drop target and isn't offered under Move to, and commands say why.
+- No edit can make a smart album include itself any more, whichever command, importer or task makes it: the library
+  itself refuses it and names the album. A library that already holds such a loop still opens; each album on the loop
+  is marked ⚠ and holds nothing (it used to hold different photos depending on which album was looked at first, and
+  many of them in one folder made the folder slow to show), and moving it out or changing its rules mends it.
 - Agents show a folder with `library.source {"kind": "album", "id": <folder id>}`; `albums.list` reports a folder's
   `count`.
 

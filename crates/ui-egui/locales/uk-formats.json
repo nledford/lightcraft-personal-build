@@ -364,5 +364,16 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "Фото з одним із них: {count}. Вкладені ключові слова теж видаляються. Скасування поверне їх.",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "Вилучити теки ({n}) з бібліотеки? Імпортованих із них фото: {count}.",
   "…and {n} more": "…і ще {n}",
-  "{n} keywords": "Ключові слова: {n}"
+  "{n} keywords": "Ключові слова: {n}",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Правило {n} з {m}: {what}. Переміщення стрілками",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Група {n} з {m}: збіг {mode}, усередині {count}. Переміщення стрілками",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Він повертається до себе через альбом «{}»: змініть правила одного з альбомів у циклі (Редагувати смарт-альбом…)",
+  "These can't be moved to “{}”:": "Ці фото не можна перемістити до «{0}»:",
+  "{} is already in “{}”": "{0} уже в «{1}»",
+  "{} is missing or offline": "{0} відсутній або недоступний",
+  "and {n} more": "і ще {n}",
+  "Move {n}, skip {m}": "Перемістити {n}, пропустити {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "До «{1}» переміщено фото: {n}{0:.0}, пропущено: {skipped}. Редагування → Скасувати поверне їх.",
+  "{} can't be moved": "{0} не можна перемістити",
+  "{} has the same name as another photo being moved": "{0} має таку саму назву, як інше фото, що переміщується"
 }

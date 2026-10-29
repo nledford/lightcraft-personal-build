@@ -364,5 +364,16 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "Fotos mit einem davon: {count}. Die Stichwörter darunter werden ebenfalls gelöscht. Rückgängig stellt sie wieder her.",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "{n} Ordner aus der Bibliothek entfernen? Daraus importierte Fotos: {count}.",
   "…and {n} more": "…und {n} weitere",
-  "{n} keywords": "{n} Stichwörter"
+  "{n} keywords": "{n} Stichwörter",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Regel {n} von {m}: {what}. Mit den Pfeiltasten verschieben",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Gruppe {n} von {m}: erfülle {mode}, {count} darin. Mit den Pfeiltasten verschieben",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Es führt über das Album „{}“ zu sich selbst zurück: Ändere die Regeln eines Albums im Kreis (Smart-Album bearbeiten…)",
+  "These can't be moved to “{}”:": "Diese lassen sich nicht nach „{0}“ verschieben:",
+  "{} is already in “{}”": "{0} ist bereits in „{1}“",
+  "{} is missing or offline": "{0} fehlt oder ist offline",
+  "and {n} more": "und {n} weitere",
+  "Move {n}, skip {m}": "{n} verschieben, {m} überspringen",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} Foto{0} nach „{1}“ verschoben, {skipped} übersprungen. Bearbeiten → Rückgängig holt sie zurück.",
+  "{} can't be moved": "{0} lässt sich nicht verschieben",
+  "{} has the same name as another photo being moved": "{0} hat denselben Namen wie ein anderes Foto, das verschoben wird"
 }

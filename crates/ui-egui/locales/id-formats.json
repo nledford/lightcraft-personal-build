@@ -364,5 +364,16 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "Foto yang memiliki salah satunya: {count}. Kata kunci di bawahnya ikut terhapus. Urungkan mengembalikannya.",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "Keluarkan {n} folder dari pustaka? Foto yang diimpor dari folder tersebut: {count}.",
   "…and {n} more": "…dan {n} lainnya",
-  "{n} keywords": "{n} kata kunci"
+  "{n} keywords": "{n} kata kunci",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Aturan {n} dari {m}: {what}. Pindahkan dengan tombol panah",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Grup {n} dari {m}: cocokkan {mode}, isi: {count}. Pindahkan dengan tombol panah",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Album ini kembali ke dirinya sendiri melalui album “{}”: ubah aturan salah satu album dalam perulangan (Edit album pintar…)",
+  "These can't be moved to “{}”:": "Tidak dapat dipindahkan ke “{0}”:",
+  "{} is already in “{}”": "{0} sudah ada di “{1}”",
+  "{} is missing or offline": "{0} hilang atau offline",
+  "and {n} more": "dan {n} lainnya",
+  "Move {n}, skip {m}": "Pindahkan {n}, lewati {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} foto dipindahkan ke “{1}”{0:.0}, {skipped} dilewati. Pilih Edit → Urungkan untuk mengembalikannya.",
+  "{} can't be moved": "{0} tidak dapat dipindahkan",
+  "{} has the same name as another photo being moved": "{0} memiliki nama yang sama dengan foto lain yang dipindahkan"
 }

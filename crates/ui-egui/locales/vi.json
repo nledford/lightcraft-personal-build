@@ -2316,7 +2316,6 @@
   "Can't add to a smart album": "Không thể thêm vào album thông minh",
   "Can't add to an album folder": "Không thể thêm vào thư mục album",
   "Can't go inside itself": "Không thể đặt vào chính nó",
-  "Demo photos have no file on disk, so they can't be moved": "Ảnh demo không có tệp trên đĩa nên không thể di chuyển",
   "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Gán từ khóa cho ảnh trong Danh sách từ khóa (Cửa sổ → Từ khóa, K): hãy thả ảnh lên từ khóa ở đó",
   "Reduce Motion": "Giảm chuyển động",
   "Reduce motion": "Giảm chuyển động",
@@ -2395,5 +2394,13 @@
   "Duplicate Album": "Nhân bản album",
   "Paste Inside This Keyword": "Dán vào từ khóa này",
   "Paste Into This Folder": "Dán vào thư mục này",
-  "Paste at Top Level": "Dán ở cấp cao nhất"
+  "Paste at Top Level": "Dán ở cấp cao nhất",
+  "Drag to move, or use the arrow keys": "Kéo để di chuyển, hoặc dùng phím mũi tên",
+  "A group can't go inside itself": "Nhóm không thể nằm trong chính nó",
+  "Groups can't nest any deeper": "Không thể lồng nhóm sâu hơn",
+  "This album is in a loop, so it shows nothing": "Album này nằm trong một vòng lặp nên không hiển thị gì",
+  "It tests itself: change its rules (Edit Smart Album…)": "Album này tự kiểm tra chính nó: hãy đổi quy tắc của nó (Chỉnh sửa album thông minh…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Đổi tên ảnh bị trùng tên hoặc chọn thư mục khác để chuyển được.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Kết nối lại ổ đĩa hoặc dùng Tệp → Tìm ảnh bị thiếu… rồi thử lại.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ảnh không có tệp thì không thể chuyển. Ảnh cục bộ thì được, sau khi dùng Thêm vào Ảnh của tôi."
 }

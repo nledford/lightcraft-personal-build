@@ -364,5 +364,16 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "Foto che ne hanno uno: {count}. Vengono eliminate anche le parole chiave sotto di esse. Annulla le ripristina.",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "Rimuovere {n} cartelle dalla libreria? Foto importate da esse: {count}.",
   "…and {n} more": "…e altri {n}",
-  "{n} keywords": "{n} parole chiave"
+  "{n} keywords": "{n} parole chiave",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Regola {n} di {m}: {what}. Sposta con le frecce",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Gruppo {n} di {m}: corrispondenza {mode}, {count} all’interno. Sposta con le frecce",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Ritorna su se stesso attraverso l'album “{}”: modifica le regole di un album del ciclo (Modifica album smart…)",
+  "These can't be moved to “{}”:": "Queste non possono essere spostate in “{0}”:",
+  "{} is already in “{}”": "{0} è già in “{1}”",
+  "{} is missing or offline": "{0} manca o è offline",
+  "and {n} more": "e altre {n}",
+  "Move {n}, skip {m}": "Sposta {n}, salta {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Foto spostate in “{1}”: {n}{0:.0}, saltate: {skipped}. Modifica → Annulla le riporta indietro.",
+  "{} can't be moved": "{0} non può essere spostato",
+  "{} has the same name as another photo being moved": "{0} ha lo stesso nome di un’altra foto da spostare"
 }

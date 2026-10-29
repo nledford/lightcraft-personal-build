@@ -25,10 +25,12 @@ use export::{
     LIMIT_KB, QUALITY, START_NUMBER, WM_IMAGE_WIDTH, WM_INSET_X, WM_INSET_Y, WM_OPACITY, WM_POSITIONS, WM_SIZE, export_dialog_params, export_size,
     group_checklist, watermark_preview,
 };
+#[cfg(test)]
+pub(crate) use frame::move_problem_line;
 pub use frame::{ConfirmStyle, confirm_style, list_height, prompt};
 use frame::{
-    DIALOG_CHROME_GUESS, DIALOG_MIN_BODY, DIALOG_SCREEN_MARGIN, choices, clicked_backdrop, dialog_body, dialog_field, field, just_opened, num,
-    only_shows, return_confirms, trailing_button_row,
+    DIALOG_CHROME_GUESS, DIALOG_MIN_BODY, DIALOG_SCREEN_MARGIN, choices, clicked_backdrop, dialog_body, dialog_field, field, just_opened,
+    move_problems_body, num, only_shows, return_confirms, trailing_button_row,
 };
 pub(crate) use rename::rename_preview;
 use rename::{RENAME_PREVIEW_ROWS, person_rename_plan};
@@ -363,6 +365,11 @@ fn ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, sam: &SamSta
         Dialog::FaceModel { .. } if !informational => "Install",
         Dialog::ConfirmDelete { .. } | Dialog::DeleteKeyword { .. } | Dialog::DeleteEffects { .. } => "Delete",
         Dialog::SaveEffect { .. } => "Create",
+        // nothing that can go: only Cancel; some can: Move those, skip the others
+        Dialog::MovePhotos { problems, movable, .. } if !problems.is_empty() && *movable == 0 => "",
+        Dialog::MovePhotos { problems, movable, .. } if !problems.is_empty() => {
+            return crate::i18n::tr_format!("Move {n}, skip {m}", n = movable, m = problems.len());
+        }
         Dialog::MovePhotos { .. } | Dialog::MoveFolder { .. } => "Move",
         // (not "Merge": that is photo merging, HDR / panorama, in some languages)
         Dialog::MoveKeyword { .. } => "Merge Keywords",
@@ -1901,6 +1908,7 @@ fn dialog_content(
             ui.label(crate::i18n::tr_format!("Move {what} to Recently Deleted?", what = what));
             ui.label(egui::RichText::new(crate::i18n::tr("They can be restored from Recently Deleted until it is emptied.")).color(t.text_dim));
         }
+        Dialog::MovePhotos { name, problems, .. } if !problems.is_empty() => move_problems_body(ui, name, problems, t),
         Dialog::MovePhotos { .. } => move_photos_body(ui, t, dlg),
         Dialog::MoveFolder { .. } => move_folder_body(ui, t, dlg),
         d @ Dialog::SynchronizeFolder { .. } => crate::sync::body(app, ui, d),
