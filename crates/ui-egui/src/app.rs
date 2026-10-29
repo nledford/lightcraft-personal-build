@@ -217,14 +217,14 @@ impl LightcraftApp {
     /// It flags `let _ = app.session.execute(…)`, which goes round this, too, unless a comment
     /// on its line or the one above says why (`// refusal expected: <reason>`).
     pub fn act(&mut self, id: &str, params: Value) -> Option<Value> {
-        let before = self.ui.toast().cloned();
+        let shown = self.ui.toasts_shown;
         match self.run_told(id, params) {
             Ok(v) => Some(v),
             Err(refusal) => {
                 let now = self.tick_now();
                 // A toast the command made itself (a partial import report) says what did happen:
                 // keep it ahead of the reason rather than replacing it.
-                let made = self.ui.toasts.pop().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
+                let made = (self.ui.toasts_shown != shown).then(|| self.ui.toasts.pop()).flatten().map(|t| t.text);
                 let said = refusal_toast(made, &refusal);
                 self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
                 None

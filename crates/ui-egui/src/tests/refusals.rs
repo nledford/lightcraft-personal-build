@@ -85,6 +85,20 @@ fn a_command_that_isnt_available_says_why() {
     assert!(!said.contains("photo.rate"), "{said}");
 }
 
+/// A refusal that made no toast of its own is shown beside the toasts already up, not in place of the newest.
+#[test]
+fn a_refusal_leaves_the_toasts_already_showing() {
+    let mut app = app();
+    app.session.selection = Default::default();
+    let now = app.tick_now();
+    app.ui.show_toast(now, "Library saved".into(), 5.0, None);
+    assert_eq!(app.act("photo.rate", json!({"rating": 3})), None);
+    let texts: Vec<&str> = app.ui.toasts.iter().map(|t| t.text.as_str()).collect();
+    assert_eq!(texts.len(), 2, "{texts:?}");
+    assert_eq!(texts[0], "Library saved");
+    assert!(texts[1].to_lowercase().contains("no photo"), "{texts:?}");
+}
+
 #[test]
 fn a_command_that_goes_through_adds_nothing() {
     let mut app = app();

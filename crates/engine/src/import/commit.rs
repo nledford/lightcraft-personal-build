@@ -254,7 +254,8 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                     ops.push(Op::SetLocal { id, local: false });
                 }
                 // "Import as new": a trashed photo with the same content is replaced, as for a new file
-                if let Some((_, old)) = s.catalog.photo(id).and_then(|p| p.content_hash.as_ref()).and_then(|h| trash_content.get(crate::sync::base_hash(h)))
+                if let Some((_, old)) =
+                    s.catalog.photo(id).and_then(|p| p.content_hash.as_ref()).and_then(|h| trash_content.get(crate::sync::base_hash(h)))
                     && purged.insert(*old)
                 {
                     purge.push(*old);
@@ -265,7 +266,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 let existing = existing.or_else(|| {
                     let h = hash?;
                     // the plain key first, then a Duplicate's `<hash>:dup<id>`
-                    
+
                     new_hash
                         .get(&h)
                         .copied()

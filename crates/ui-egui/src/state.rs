@@ -363,6 +363,7 @@ pub struct UiState {
     pub toasts: Vec<crate::toast::Toast>,
     /// How many times a toast was shown ([`UiState::show_toast`]), a repeat of one showing included: what
     /// [`LightcraftApp::act`] reads to tell whether a command made a toast of its own.
+    #[serde(skip)]
     pub toasts_shown: u64,
     /// The result of the last Find Missing Photos (it searches in the background).
     #[serde(skip)]

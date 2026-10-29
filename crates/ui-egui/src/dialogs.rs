@@ -234,8 +234,8 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
         close = true;
     }
     if !raw_blocked && confirm {
-    close |= confirmed(app, ctx, &mut dlg);
-}
+        close |= confirmed(app, ctx, &mut dlg);
+    }
     // a dialog opened from inside this one (a button in Settings that shows a licence) takes its place
     if app.ui.dialog.as_ref().is_some_and(|now| *now != at_start) {
         return;
