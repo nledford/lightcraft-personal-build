@@ -28,6 +28,10 @@ struct Rig {
     swept: Vec<Save>,
     /// The app's sweep runs at the end of each pass (off: the pass is one egui throws away).
     sweep: bool,
+    /// As a caller does, `start` follows the text on a frame no edit is under way (the saved value).
+    adopts: bool,
+    /// What the field's text is for (`saves_with`'s target): a caller shows another photo's, say.
+    target: u8,
 }
 
 impl Rig {
@@ -47,6 +51,8 @@ impl Rig {
             saved: vec![],
             swept: vec![],
             sweep: true,
+            adopts: false,
+            target: 0,
         };
         rig.frame(vec![]);
         rig
@@ -63,14 +69,16 @@ impl Rig {
         let mut raw = HeadlessView::raw_input(egui::vec2(400.0, 300.0), 1.0, self.time, events);
         raw.focused = self.window_focused;
         let (text, select, shown, endings, editing) = (&mut self.text, self.select_on_focus, self.shown, &mut self.endings, &mut self.editing);
-        let (declares, start, saved, swept, sweep) = (self.declares, &self.start, &mut self.saved, &mut self.swept, self.sweep);
+        let (declares, start, saved, swept, sweep, target) = (self.declares, &self.start, &mut self.saved, &mut self.swept, self.sweep, &self.target);
         self.view.run(raw, |ui| {
             ui.add_space(20.0);
             if shown {
                 let start = start.as_str();
                 let field = TextField::singleline(FIELD, text).width(200.0).select_on_focus(select);
                 let field = if declares {
-                    field.saves_with(|typed| (typed != start).then(|| Save { command: "city.set", params: serde_json::json!({ "city": typed }) }))
+                    field.saves_with(*target, |typed| {
+                        (typed != start).then(|| Save { command: "city.set", params: serde_json::json!({ "city": typed }) })
+                    })
                 } else {
                     field
                 };
@@ -84,9 +92,12 @@ impl Rig {
             }
             // (the app's sweep at the end of each pass)
             if sweep {
-                swept.extend(take_left_behind(ui.ctx()));
+                swept.extend(take_left_behind(ui.ctx()).into_iter().map(|p| p.save));
             }
         });
+        if self.adopts && !self.editing {
+            self.start.clone_from(&self.text);
+        }
         self.widgets = crate::widgets::take_registry(&self.view.ctx);
     }
 
@@ -517,7 +528,65 @@ fn a_field_not_drawn_with_its_menu_open_leaves_its_save_for_the_sweep() {
 fn closing_takes_the_save_of_a_field_still_drawn() {
     let mut rig = saving_rig();
     rig.type_text("Rome");
-    assert_eq!(take_all(&rig.view.ctx), vec![city("Rome")]);
+    assert_eq!(take_all(&rig.view.ctx).into_iter().map(|p| p.save).collect::<Vec<_>>(), vec![city("Rome")]);
+}
+
+/// A save that ran from outside while the field stays drawn ends its edit: leaving does not hand the
+/// text over a second time and Esc has nothing to give up. (As a caller does, the rig takes the
+/// text as the field's value once no edit is under way.)
+#[test]
+fn a_save_run_from_outside_ends_the_edit_of_a_field_still_drawn() {
+    for esc in [false, true] {
+        let mut rig = saving_rig();
+        rig.adopts = true;
+        rig.type_text("Rome");
+        let taken = take_all(&rig.view.ctx);
+        end_edits(&rig.view.ctx, taken.iter().map(|p| p.id));
+        rig.settle();
+        assert!(take_all(&rig.view.ctx).is_empty(), "esc {esc}: the saved edit is not recorded again");
+        if esc {
+            rig.key(Key::Escape, Modifiers::NONE);
+        } else {
+            rig.click_at(Pos2::new(300.0, 250.0), PointerButton::Primary);
+        }
+        assert!(rig.saved.is_empty(), "esc {esc}: nothing handed over a second time");
+        assert_eq!(rig.text, "Rome", "esc {esc}: the saved text stays");
+    }
+}
+
+/// Text typed after the save ran is a new edit that goes on, whether the field was drawn once more
+/// first or not; and a field that selects on focus does not select its text again, as it never
+/// took a new focus (the next key would replace the saved text).
+#[test]
+fn text_typed_after_a_save_run_from_outside_stays_an_edit() {
+    for (select, drawn_first) in [(false, false), (false, true), (true, false), (true, true)] {
+        let mut rig = saving_rig();
+        rig.select_on_focus = select;
+        rig.adopts = true;
+        rig.type_text("Rome");
+        let taken = take_all(&rig.view.ctx);
+        end_edits(&rig.view.ctx, taken.iter().map(|p| p.id));
+        if drawn_first {
+            rig.settle();
+        }
+        rig.type_text("!");
+        assert_eq!(rig.text, "Rome!", "select {select}, drawn first {drawn_first}");
+        assert_eq!(take_all(&rig.view.ctx).into_iter().map(|p| p.save).collect::<Vec<_>>(), vec![city("Rome!")]);
+    }
+}
+
+/// A field that went on after its save ran gives back the saved text on Esc, not the one before it.
+#[test]
+fn a_field_that_went_on_after_a_save_run_from_outside_gives_back_the_saved_text() {
+    let mut rig = saving_rig();
+    rig.adopts = true;
+    rig.type_text("Rome");
+    let taken = take_all(&rig.view.ctx);
+    end_edits(&rig.view.ctx, taken.iter().map(|p| p.id));
+    rig.settle();
+    rig.type_text("!");
+    rig.key(Key::Escape, Modifiers::NONE);
+    assert_eq!(rig.text, "Rome");
 }
 
 /// Esc gives the edit up: nothing is handed over or left.
@@ -568,4 +637,26 @@ fn a_save_is_kept_across_a_pass_that_was_thrown_away() {
     rig.frame(vec![]);
     assert!(rig.saved.is_empty(), "the field was not in an edit to hand it over");
     assert_eq!(rig.swept, vec![city("Rome")], "the sweep ran it");
+}
+
+/// The field is drawn for another target than its edit under way (the caller shows another photo's
+/// text): the edit ends there and its save, made for the first target, is left for the sweep; the
+/// field goes on from the new target's text, which Esc gives back and leaving saves nothing for.
+#[test]
+fn a_field_drawn_for_another_target_ends_its_edit_and_leaves_its_save_for_the_sweep() {
+    let mut rig = saving_rig();
+    rig.type_text("Rome");
+    assert!(rig.swept.is_empty(), "the field is still drawn for its target");
+    rig.target = 1;
+    rig.text = "Paris".into();
+    rig.start = "Paris".into();
+    rig.frame(vec![]);
+    assert_eq!(rig.swept, vec![city("Rome")], "the first target's text, as it was typed");
+    assert!(!rig.editing, "no edit is under way on the frame the target changed");
+    rig.settle();
+    assert!(rig.editing && rig.focused(), "the focus is still in the field: a new edit");
+    assert!(take_all(&rig.view.ctx).is_empty(), "nothing typed for the new target");
+    rig.key(Key::Escape, Modifiers::NONE);
+    assert_eq!(rig.text, "Paris", "Esc gives back the new target's text");
+    assert!(rig.saved.is_empty() && rig.swept.len() == 1, "and nothing else was saved");
 }

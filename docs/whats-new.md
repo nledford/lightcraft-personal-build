@@ -1,5 +1,18 @@
 # What's new in LightCraft
 
+## 2026-10-28
+
+### Text typed in a box goes where you typed it
+- A box that saves when you finish now belongs to what you were typing for. If the Info panel moves to another photo
+  while you are typing in it (Select by, a command, an agent), the text is saved to the photo you typed it for and the
+  box shows the new photo's own value; before, it kept showing the old photo's text, and Return saved that to the old
+  photo.
+- A text overlay in Settings ▸ Slideshow that is removed while you are typing in its box stays removed: the save is
+  refused rather than bringing the overlay back, and it is never written to another overlay that took its place.
+- Clicking Remove on a text overlay, or applying a template, while you are typing in the box of an overlay saves that
+  text first, to the overlay you typed it for (a template's text then shows under Previous settings), even though the
+  overlays move up or are replaced.
+
 ## 2026-10-27
 
 ### Reading a photo from a network share asks the server less
@@ -18,6 +31,9 @@
 - If the text can't be saved (a place that isn't coordinates, say), the window, Quit or the other library stays where it
   was, the box keeps the text and the error is shown. Closing, quitting or switching again, with that text still in the
   box, gives it up.
+- Text saved when you close the window or quit is saved once: if the window then stays open (you cancel the question about
+  running tasks, say), the box has nothing more to save, clicking away or pressing Return saves nothing a second time, and
+  Esc no longer undoes the text that was saved.
 - Copyright, Creator and the Auto Import album in Settings now have the same right-click Cut, Copy, Paste and Select
   All menu as the other text boxes, and Esc in them gives the text back.
 
