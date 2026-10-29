@@ -152,7 +152,12 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
             } else {
                 crate::panels::left::moved_text(moved, &run.name)
             };
-            app.toast(ctx, text);
+            if moved > 0 {
+                // (the step is committed: Undo on the toast takes the photos back)
+                app.toast_undoable(ctx, text);
+            } else {
+                app.toast(ctx, text);
+            }
         }
         Err(e) => app.toast_for(ctx, e.clone(), 12.0),
     }

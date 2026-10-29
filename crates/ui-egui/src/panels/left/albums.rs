@@ -496,7 +496,13 @@ fn drop_photos_on_album(app: &mut LightcraftApp, ui: &egui::Ui, a: &Album, ids: 
     match app.run("album.addPhotos", json!({"id": a.id.0, "ids": ids})) {
         Ok(r) => {
             let name = crate::destination::album(&app.session.catalog, a);
-            app.toast(ui.ctx(), added_message(&name, &r, there));
+            let msg = added_message(&name, &r, there);
+            // an Undo button only when something was added (the drop is then one undo step)
+            if r.get("added").and_then(serde_json::Value::as_u64).unwrap_or(0) > 0 {
+                app.toast_undoable(ui.ctx(), msg);
+            } else {
+                app.toast(ui.ctx(), msg);
+            }
         }
         Err(e) => app.toast_error(ui.ctx(), e),
     }

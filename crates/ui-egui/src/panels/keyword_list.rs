@@ -350,7 +350,8 @@ fn drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, rect: Rect, path: &st
 fn drop_photos_on_keyword(app: &mut LightcraftApp, ui: &mut egui::Ui, ids: &[u64], path: &str, outline: &dyn Fn(&egui::Ui)) {
     let released = ui.input(|i| i.pointer.any_released());
     let lacking = |id: &u64| {
-        app.session.catalog.photo(PhotoId(*id)).is_some_and(|p| !p.meta.keywords.iter().any(|k| same(&lightcraft_catalog::keywords::clean(k), path)))
+        // (as `photo.setMeta` compares: the stored keyword as it is, with the cleaned name)
+        app.session.catalog.photo(PhotoId(*id)).is_some_and(|p| !p.meta.keywords.iter().any(|k| same(k, &lightcraft_catalog::keywords::clean(path))))
     };
     let n = ids.iter().filter(|id| lacking(id)).count();
     if n == 0 {
@@ -376,7 +377,14 @@ fn drop_photos_on_keyword(app: &mut LightcraftApp, ui: &mut egui::Ui, ids: &[u64
 fn give_keyword(app: &mut LightcraftApp, ctx: &egui::Context, ids: &[u64], path: &str, n: usize) {
     let keyword = path.replace('|', " › ");
     match app.run("photo.setMeta", json!({"ids": ids, "addKeywords": [path]})) {
-        Ok(_) => app.toast(ctx, crate::i18n::tr_format!("Added “{keyword}” to {n} photo{}", if n == 1 { "" } else { "s" }, keyword = keyword, n = n)),
+        Ok(_) => {
+            let text = crate::i18n::tr_format!("Added “{keyword}” to {n} photo{}", if n == 1 { "" } else { "s" }, keyword = keyword, n = n);
+            if n > 0 {
+                app.toast_undoable(ctx, text);
+            } else {
+                app.toast(ctx, text);
+            }
+        }
         Err(e) => app.toast_error(ctx, e),
     }
 }

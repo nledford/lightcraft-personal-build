@@ -31,6 +31,7 @@ mod docking_acceptance;
 mod drag_contract;
 mod drag_dim;
 mod drop_import;
+mod drop_undo;
 mod edit_layout;
 mod empty_library;
 mod error_kinds;

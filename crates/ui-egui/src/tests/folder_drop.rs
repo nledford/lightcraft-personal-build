@@ -221,6 +221,7 @@ fn photos_already_in_the_folder_stay_put() {
     release(&mut h, target.center());
     assert!(home.join("garden.png").is_file());
     assert_eq!(h.app.session.undo.len(), undo, "nothing done");
+    assert!(widget(&h, "button:toastUndo").is_none(), "nothing to undo");
     let _ = std::fs::remove_dir_all(&root);
 }
 
@@ -501,7 +502,7 @@ fn a_background_move_has_a_cancellable_row_and_holds_back_other_moves_until_it_e
     let photo = h.app.session.catalog.photo(lightcraft_catalog::PhotoId(beach)).unwrap();
     assert!(matches!(&photo.source, lightcraft_catalog::Source::File { path } if Path::new(path) == home.join("beach.png")));
     assert!(h.app.session.activity.list().is_empty());
-    assert!(toast(&h).starts_with("Moved 1 photo to “home”."), "{}", toast(&h));
+    assert!(toast(&h).starts_with("Moved 1 file to “home”."), "{}", toast(&h));
     let inspect = crate::control::inspect(&h.app, &h.view.ctx);
     assert_eq!(inspect["move"]["running"], serde_json::Value::Null);
     assert_eq!(inspect["move"]["last"], json!({"moved": 1, "of": 1, "folder": home.to_string_lossy(), "stopped": false}));
@@ -678,8 +679,8 @@ fn two_folders_with_one_name_are_told_apart_in_the_label_the_question_and_the_to
     glide(&mut h, row_a.center(), row_b.center());
     h.step();
     let label_b = hint(&h).expect("a label over b/home");
-    assert!(label_a.starts_with("Move 1 photo to “home (") && label_a.ends_with("/a)”"), "{label_a}");
-    assert!(label_b.starts_with("Move 1 photo to “home (") && label_b.ends_with("/b)”"), "{label_b}");
+    assert!(label_a.starts_with("Move 1 file to “home (") && label_a.ends_with("/a)”"), "{label_a}");
+    assert!(label_b.starts_with("Move 1 file to “home (") && label_b.ends_with("/b)”"), "{label_b}");
     // and the question asked on the release says the same
     release(&mut h, row_b.center());
     let Some(crate::state::Dialog::MovePhotos { name, .. }) = &h.app.ui.dialog else { panic!("{:?}", h.app.ui.dialog) };
@@ -687,7 +688,60 @@ fn two_folders_with_one_name_are_told_apart_in_the_label_the_question_and_the_to
     // and so does the toast
     h.step();
     click(&mut h, "button:dialogOk");
-    assert!(toast(&h).starts_with("Moved 1 photo to “home (") && toast(&h).contains("/b)”"), "{}", toast(&h));
+    settle(&mut h);
+    assert!(toast(&h).starts_with("Moved 1 file to “home (") && toast(&h).contains("/b)”"), "{}", toast(&h));
     assert!(b.join("beach.png").is_file(), "moved into the one that was asked about");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Open the folder `root` (it holds `trip` and `home`) and drag the beach photo onto `home`'s row.
+fn drag_beach_onto_home(h: &mut Headless, root: &Path, home: &Path) {
+    let toggle = widget(h, &format!("libraryFolderToggle:{}", folder_key(root))).unwrap();
+    press(h, toggle.center());
+    release(h, toggle.center());
+    let target = folder_row(h, home).expect("opened");
+    let beach = id_of(h, "beach.png");
+    let from = widget(h, &format!("thumb:{beach}")).unwrap().center();
+    press(h, from);
+    glide(h, from, target.center());
+    release(h, target.center());
+}
+
+#[test]
+fn a_move_by_drop_offers_undo_on_its_toast() {
+    let (root, trip, home) = folders("undo");
+    let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
+    drag_beach_onto_home(&mut h, &root, &home);
+    assert!(matches!(h.app.ui.dialog, Some(crate::state::Dialog::MovePhotos { .. })), "{:?}", h.app.ui.dialog);
+    h.step();
+    click(&mut h, "button:dialogOk");
+    settle(&mut h);
+    assert!(home.join("beach.png").is_file(), "moved");
+    h.step();
+    // Then the toast has an Undo button, and a click on it moves the photo back
+    click(&mut h, "button:toastUndo");
+    assert!(trip.join("beach.png").is_file() && !home.join("beach.png").exists(), "back where it was");
+    assert_eq!(toast(&h), "Undo");
+    // and the button goes with the toast it belonged to
+    h.step();
+    assert!(widget(&h, "button:toastUndo").is_none(), "no button on the toast that says Undo");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn undo_is_not_offered_once_something_else_was_done() {
+    let (root, trip, home) = folders("undo-stale");
+    let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
+    h.app.ui.settings.ask_before_move = false;
+    drag_beach_onto_home(&mut h, &root, &home);
+    settle(&mut h);
+    h.step();
+    assert!(toast(&h).starts_with("Moved 1 file"), "{}", toast(&h));
+    assert!(widget(&h, "button:toastUndo").is_some(), "offered after the drop");
+    // When another step is committed while the toast is still up, Undo would reach that step instead
+    h.app.run("photo.rate", json!({"rating": 3})).unwrap();
+    h.step();
+    assert!(toast(&h).starts_with("Moved 1 file"), "still the same toast");
+    assert!(widget(&h, "button:toastUndo").is_none(), "withdrawn: it would undo the rating");
     let _ = std::fs::remove_dir_all(&root);
 }

@@ -178,6 +178,8 @@ impl From<lightcraft_engine::EngineError> for Refusal {
     }
 }
 
+/// How long a toast that offers Undo stays: time to read it and reach the button.
+const UNDO_TOAST_SECONDS: f64 = 6.0;
 /// The `path` of a display profile read from the screen rather than chosen as a file.
 pub const SCREEN_PROFILE: &str = "screen";
 
