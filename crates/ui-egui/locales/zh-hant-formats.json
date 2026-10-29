@@ -328,5 +328,9 @@
   "Lists “{name}”, the folder this one is in": "列出此資料夾所在的「{name}」",
   "Showing {what}": "正在顯示 {what}",
   "{title}, showing {what}": "{title}，正在顯示 {what}",
-  "+{n} more": "還有 {n} 項"
+  "+{n} more": "還有 {n} 項",
+  "Panel layout could not be restored: {error}": "無法還原面板配置：{error}",
+  "Panel move was not applied: {error}": "面板移動未套用：{error}",
+  "{name} is installed": "{name} 已安裝",
+  "{name} is installed and in use: face recognition is on": "{name} 已安裝並在使用中：臉部辨識已開啟"
 }

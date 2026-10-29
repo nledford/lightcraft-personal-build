@@ -328,5 +328,9 @@
   "Lists “{name}”, the folder this one is in": "列出此文件夹所在的“{name}”",
   "Showing {what}": "正在显示 {what}",
   "{title}, showing {what}": "{title}，正在显示 {what}",
-  "+{n} more": "还有 {n} 项"
+  "+{n} more": "还有 {n} 项",
+  "Panel layout could not be restored: {error}": "无法恢复面板布局：{error}",
+  "Panel move was not applied: {error}": "面板移动未应用：{error}",
+  "{name} is installed": "{name} 已安装",
+  "{name} is installed and in use: face recognition is on": "{name} 已安装并在使用：人脸识别已开启"
 }

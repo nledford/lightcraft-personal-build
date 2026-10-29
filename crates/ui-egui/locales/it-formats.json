@@ -328,5 +328,9 @@
   "Look at the changes found in “{name}” first, or dismiss them": "Guarda prima le modifiche trovate in “{name}”, oppure scartale",
   "Lists “{name}”, the folder this one is in": "Elenca “{name}”, la cartella in cui si trova questa",
   "Showing {what}": "Mostra {what}",
-  "{title}, showing {what}": "{title}, mostra {what}"
+  "{title}, showing {what}": "{title}, mostra {what}",
+  "Panel layout could not be restored: {error}": "Non è stato possibile ripristinare la disposizione dei pannelli: {error}",
+  "Panel move was not applied: {error}": "Lo spostamento del pannello non è stato applicato: {error}",
+  "{name} is installed": "{name} è installato",
+  "{name} is installed and in use: face recognition is on": "{name} è installato e in uso: il riconoscimento dei volti è attivo"
 }

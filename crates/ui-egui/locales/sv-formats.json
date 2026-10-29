@@ -328,5 +328,9 @@
   "Creates {stacks} stack{} from {photos} of {scope}": "Skapar staplar: {stacks} · foton: {photos} av {scope}{:.0}",
   "{n} selected photo{} · {pages} page{}": "Markerade foton: {n} · sidor: {pages}{:.0}{:.0}",
   "{n} photo{} in view · {slides} slide{} · {time}": "Foton i vyn: {n} · bilder: {slides} · {time}{:.0}{:.0}",
-  "Listing folders — folders: {folders}, files: {files}": "Listar mappar — mappar: {folders}, filer: {files}"
+  "Listing folders — folders: {folders}, files: {files}": "Listar mappar — mappar: {folders}, filer: {files}",
+  "Panel layout could not be restored: {error}": "Panellayouten kunde inte återställas: {error}",
+  "Panel move was not applied: {error}": "Panelflytten tillämpades inte: {error}",
+  "{name} is installed": "{name} är installerad",
+  "{name} is installed and in use: face recognition is on": "{name} är installerad och används: ansiktsigenkänning är på"
 }

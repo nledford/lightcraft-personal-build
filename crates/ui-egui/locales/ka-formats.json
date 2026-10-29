@@ -328,5 +328,9 @@
   "Look at the changes found in “{name}” first, or dismiss them": "ჯერ ნახეთ „{name}“-ში ნაპოვნი ცვლილებები, ან უარყავით ისინი",
   "Lists “{name}”, the folder this one is in": "აჩვენებს „{name}“-ს, საქაღალდეს, რომელშიც ეს არის",
   "Showing {what}": "ნაჩვენებია: {what}",
-  "{title}, showing {what}": "{title}, ნაჩვენებია: {what}"
+  "{title}, showing {what}": "{title}, ნაჩვენებია: {what}",
+  "Panel layout could not be restored: {error}": "პანელების განლაგების აღდგენა ვერ მოხერხდა: {error}",
+  "Panel move was not applied: {error}": "პანელის გადატანა არ შესრულდა: {error}",
+  "{name} is installed": "{name} დაინსტალირებულია",
+  "{name} is installed and in use: face recognition is on": "{name} დაინსტალირებულია და გამოიყენება: სახეების ამოცნობა ჩართულია"
 }

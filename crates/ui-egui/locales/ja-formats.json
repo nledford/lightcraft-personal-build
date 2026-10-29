@@ -328,5 +328,9 @@
   "Lists “{name}”, the folder this one is in": "このフォルダが入っている「{name}」を表示します",
   "Showing {what}": "{what} を表示中",
   "{title}, showing {what}": "{title}、{what} を表示中",
-  "+{n} more": "ほか{n}件"
+  "+{n} more": "ほか{n}件",
+  "Panel layout could not be restored: {error}": "パネル配置を復元できませんでした：{error}",
+  "Panel move was not applied: {error}": "パネルの移動は適用されませんでした：{error}",
+  "{name} is installed": "{name} をインストールしました",
+  "{name} is installed and in use: face recognition is on": "{name} をインストールして使用中です：顔認識はオンです"
 }
