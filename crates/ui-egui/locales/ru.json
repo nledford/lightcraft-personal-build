@@ -1667,6 +1667,8 @@
   "Stopped": "Остановлено",
   "Stopped by an error (see the log)": "Остановлено из-за ошибки (см. журнал)",
   "Not saved": "Не сохранено",
+  "A folder is being synchronized": "Папка синхронизируется",
+  "Wait for the import to finish": "Дождитесь завершения импорта",
   "Files": "Файлы",
   "Monitor": "Монитор",
   "Filter settings": "Фильтр настроек",

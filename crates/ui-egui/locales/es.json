@@ -2136,6 +2136,8 @@
   "Stopped": "Detenido",
   "Stopped by an error (see the log)": "Detenido por un error (ver el registro)",
   "Not saved": "Sin guardar",
+  "A folder is being synchronized": "Se está sincronizando una carpeta",
+  "Wait for the import to finish": "Esperar a que termine la importación",
   "Files": "Archivos",
   "Monitor": "Monitor",
   "Filter settings": "Filtrar ajustes",

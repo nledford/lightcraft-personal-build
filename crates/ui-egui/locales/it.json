@@ -2044,6 +2044,8 @@
   "Stopped": "Interrotto",
   "Stopped by an error (see the log)": "Interrotta da un errore (vedi il log)",
   "Not saved": "Non salvato",
+  "A folder is being synchronized": "Una cartella è in sincronizzazione",
+  "Wait for the import to finish": "Aspetta che l'importazione finisca",
   "Appearance": "Aspetto",
   "Appearance Mode": "Modalità aspetto",
   "Sync with System": "Segui il sistema",
