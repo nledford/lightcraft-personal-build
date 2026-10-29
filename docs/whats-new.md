@@ -2,6 +2,11 @@
 
 ## 2026-10-28
 
+### The grid's thumbnail size slider is a slider to screen readers
+- With VoiceOver, the Thumbnail size control at the right of the grid's bottom bar is now announced as a slider with its
+  value and range, instead of a button with no value. Increment and Decrement (VoiceOver's Control-Option-Up and Down) and,
+  while it has the keyboard focus, the Up and Down arrow keys change it by one step, as the `=` and `-` keys do.
+
 ### Screen readers read photo thumbnails as selectable items, not check boxes
 - On macOS, VoiceOver said "checked" or "unchecked" for a photo's thumbnail in the grid, as it does for a check box, and
   the filmstrip's thumbnails, which began saying whether they are selected in the entry below, were read the same way.
