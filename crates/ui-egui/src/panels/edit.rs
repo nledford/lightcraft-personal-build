@@ -14,6 +14,7 @@ use serde_json::{Value, json};
 use crate::LightcraftApp;
 use crate::button::Button;
 use crate::icons::{Icon, paint};
+use crate::menu_item::MenuItem;
 use crate::render::Slot;
 use crate::state::RightPanel;
 use crate::theme::Tokens;
@@ -32,7 +33,7 @@ pub(crate) use grading::wheel_pointer_frame_end;
 pub(crate) use grading::{WheelGrab, WheelLock, WheelMods, wheel_pick};
 use histogram::{histogram, soft_proofing};
 use mixer::{mixer, point_color};
-use sliders::{REL_TEMP, REL_TINT, hdr_row, k_to_rel, profile_menu, quick_develop, rel_to_k, reset_tip, section};
+use sliders::{REL_TEMP, REL_TINT, hdr_row, k_to_rel, profile_menu, quick_develop, rel_to_k, section};
 pub use sliders::{apply_slider_out, sub_title};
 pub(crate) use sliders::{control, reload_preview_only};
 
@@ -90,7 +91,12 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
                 if Button::new("Reset")
                     .small()
                     .widget("button:reset")
-                    .tooltip(&reset_tip(&app.ui.settings.keymap, ui.ctx().os() == egui::os::OperatingSystem::Mac))
+                    .tooltip(&crate::kbd::tip_with_shortcut(
+                        crate::i18n::tr("Reset all edits"),
+                        "develop.reset",
+                        &app.ui.settings.keymap,
+                        crate::kbd::is_mac(ui.ctx()),
+                    ))
                     .show(ui)
                     .clicked()
                 {
@@ -208,7 +214,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
                         if m == WbMode::Custom {
                             continue;
                         }
-                        if ui.selectable_label(d.wb.mode == m, m.label()).clicked() {
+                        if MenuItem::new(m.label()).selected(d.wb.mode == m).show(ui).clicked() {
                             let mode = serde_json::to_value(m).unwrap_or_default();
                             let _ = app.run("develop.wb", json!({"mode": mode}));
                         }

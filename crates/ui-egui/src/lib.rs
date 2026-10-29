@@ -68,6 +68,8 @@ pub use widgets::album_picker;
 pub use widgets::button;
 pub use widgets::check;
 pub use widgets::date_picker;
+pub use widgets::kbd;
+pub use widgets::menu_item;
 pub use widgets::progress;
 pub use widgets::rating;
 pub use widgets::text_field;
