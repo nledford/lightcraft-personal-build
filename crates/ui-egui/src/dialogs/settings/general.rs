@@ -2,7 +2,7 @@ use super::import::xmp_sidecars;
 use super::performance::local_folders;
 #[cfg(not(target_arch = "wasm32"))]
 use super::performance::smart_previews;
-use super::widgets::{choices, heading, hint, path_label, row};
+use super::widgets::{choices, heading, hint, path_label, path_stand_in, row};
 use super::{Button, LightcraftApp, RichText, StartupView, Tokens, check, json, register};
 use crate::menu_item::MenuItem;
 
@@ -52,12 +52,11 @@ pub(super) fn general_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens
 /// Library: where the open library is, and opening or making another.
 fn library_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     heading(ui, t, "Library");
-    let location = match &app.session.library {
-        Some(l) => l.dir.display().to_string(),
-        None => crate::i18n::tr("In memory — nothing is saved").to_string(),
-    };
-    row(ui, t, crate::i18n::tr("Location"), |ui| {
-        path_label(ui, "settingsLocation", &location, egui::TextStyle::Body.resolve(ui.style()), t.text, 0.0);
+    let font = egui::TextStyle::Body.resolve(ui.style());
+    row(ui, t, crate::i18n::tr("Location"), |ui| match &app.session.library {
+        Some(l) => path_label(ui, "settingsLocation", &l.dir.display().to_string(), font, t.text, 0.0),
+        // (no folder: words, which the filter looks through)
+        None => path_stand_in(ui, "settingsLocation", crate::i18n::tr("In memory — nothing is saved"), font, t.text, 0.0),
     });
     row(ui, t, "", |ui| {
         let can = app.services.pick_folder.is_some();
