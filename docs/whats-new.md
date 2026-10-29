@@ -356,7 +356,7 @@
   explanations were 4.2:1 in Charcoal and 4.3:1 in Silver, "In Use" 2.9:1 in Charcoal); the borders of text boxes,
   checkboxes, radio buttons, buttons and each choice of a row, and the line under the tabs, stand 3:1, where they
   were 1.2 to 1.7:1; so do the buttons of a question a button asks. The AI Denoise and Faces tabs' own lines,
-  the GPU line under Rendering and the star that marks a favourite theme are read the same way. The colours of the rest of
+  the GPU line under Rendering and the star that marks a favorite theme are read the same way. The colors of the rest of
   LightCraft are as they were (so are the warnings and group labels on the Slideshow tab and the dialogs that add a
   face model), but for the Info row's choices in View Options, which are outlined the same way.
 - The hint under External Editing drew two empty boxes where its menu path had arrows; it reads "Photo > Edit In >
