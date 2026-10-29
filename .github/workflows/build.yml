@@ -95,7 +95,9 @@ jobs:
           targets: aarch64-apple-darwin
 
       # rust-cache keys on the toolchain and Cargo.lock and falls back to the newest entry with the same prefix, so a
-      # candidate restores my build's dependencies and rebuilds only what changed.
+      # candidate restores my build's dependencies and rebuilds only what changed. The root Cargo.toml (profiles,
+      # workspace dependencies) is not in the key, unlike storytold's gate.yml, so candidates keep that fallback; a change
+      # there with an unchanged Cargo.lock rebuilds those dependencies until Cargo.lock next changes (slower, never wrong).
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: v1-rust
@@ -186,6 +188,8 @@ jobs:
       - name: Install Linux build dependencies
         uses: storytold/craft-common-actions/actions/install-apt-packages@main
         with:
+          # The action saves only on pushes to the default branch by default; every run here is a dispatch.
+          save: ${{ inputs.save-cache && 'always' || 'never' }}
           packages: >-
             pkg-config libxkbcommon-dev libwayland-dev libx11-dev libxcb1-dev libxcursor-dev
             libxrandr-dev libxi-dev libfontconfig1-dev libfreetype-dev mesa-vulkan-drivers
