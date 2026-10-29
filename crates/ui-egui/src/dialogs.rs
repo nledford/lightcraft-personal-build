@@ -599,94 +599,106 @@ pub(crate) fn toast_created_folder(app: &mut LightcraftApp, ctx: &egui::Context,
 
 /// The dialog's confirm was pressed: do it. Whether the dialog closes.
 fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> bool {
-    let mut closed = false;
     match confirm_dialog(app, dlg) {
+        Err(e) => confirm_refused(app, ctx, dlg, e),
+        Ok(r) => confirm_done(app, ctx, dlg, &r),
+    }
+}
+
+/// [`confirmed`] when the command refused (`e` says why): whether the dialog closes.
+fn confirm_refused(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog, e: String) -> bool {
+    match dlg {
         // the import review stays open on an error (e.g. an unusable folder template), and so
         // does Export (e.g. no folder chosen) so the choices aren't lost, and Edit Capture Time
         // (a time that isn't a date, or a shift it refuses)
-        Err(e)
-            if matches!(
-                dlg,
-                Dialog::Import { .. }
-                    | Dialog::Export { .. }
-                    | Dialog::ContactSheet { .. }
-                    | Dialog::SlideshowExport { .. }
-                    | Dialog::Print
-                    | Dialog::NewAlbum { .. }
-                    | Dialog::NewSmartAlbum { .. }
-                    | Dialog::SmartRules { .. }
-                    | Dialog::KeywordTag { .. }
-                    | Dialog::KeywordSet { .. }
-                    | Dialog::SynchronizeFolder { .. }
-                    | Dialog::SaveEffect { .. }
-                    | Dialog::CaptureTime { .. }
-            ) =>
-        {
-            app.toast_error(ctx, e)
+        Dialog::Import { .. }
+        | Dialog::Export { .. }
+        | Dialog::ContactSheet { .. }
+        | Dialog::SlideshowExport { .. }
+        | Dialog::Print
+        | Dialog::NewAlbum { .. }
+        | Dialog::NewSmartAlbum { .. }
+        | Dialog::SmartRules { .. }
+        | Dialog::KeywordTag { .. }
+        | Dialog::KeywordSet { .. }
+        | Dialog::SynchronizeFolder { .. }
+        | Dialog::SaveEffect { .. }
+        | Dialog::CaptureTime { .. } => {
+            app.toast_error(ctx, e);
+            false
         }
         // the list of backups stays too, as the folder now is (the backup may be gone since)
-        Err(e) if matches!(dlg, Dialog::RestoreBackup { .. }) => {
+        Dialog::RestoreBackup { .. } => {
             refresh_backups(app, dlg);
-            app.toast_error(ctx, e)
+            app.toast_error(ctx, e);
+            false
         }
         // nothing could go to the Trash: say why (the photos and their files are as they were)
-        Err(e) if matches!(dlg, Dialog::TrashFiles(_)) => {
+        Dialog::TrashFiles(_) => {
             app.toast_for(ctx, e, 12.0);
-            closed = true;
+            true
         }
         // several rows: one that can't be deleted or removed refuses them all; `several_run`
         // already toasted the reason, which says which
-        Err(_) if matches!(dlg, Dialog::Several(_)) => closed = true,
+        Dialog::Several(_) => true,
         // the SAM 3 dialog stays open to show the download (or why it can't start)
-        Err(e) if matches!(dlg, Dialog::SamModel { .. }) => {
-            if let Dialog::SamModel { error, .. } = dlg {
-                *error = Some(e);
-            }
+        Dialog::SamModel { error, .. } => {
+            *error = Some(e);
+            false
         }
         // a one-line prompt that is refused stays open with its text, so the name can be fixed
-        Err(e) if matches!(dlg, Dialog::TextPrompt { .. }) => app.toast_error(ctx, e),
-        // a folder made on disk says so (the new folder holds no photos yet)
-        Ok(r) if matches!(&dlg, Dialog::TextPrompt { command, .. } if command == "folder.create") => {
-            toast_created_folder(app, ctx, dlg, &r);
-            closed = true;
-        }
-        Ok(r) if matches!(dlg, Dialog::NewAlbum { .. }) && r.get("skipped").and_then(serde_json::Value::as_u64).is_some_and(|n| n > 0) => {
-            // albums hold library photos (issue #684): say which part of the selection stayed out
-            crate::panels::grid::toast_skipped(app, ctx, &r);
-            closed = true;
-        }
-        // a move that began says how it went when it ends (`move_task`); one that can't, why now
-        Ok(_) if matches!(dlg, Dialog::MovePhotos { .. }) => closed = true,
-        Err(e) if matches!(dlg, Dialog::MovePhotos { .. } | Dialog::MoveFolder { .. }) => {
+        Dialog::TextPrompt { .. } => {
             app.toast_error(ctx, e);
-            closed = true;
+            false
         }
-        Ok(r) if matches!(dlg, Dialog::MoveFolder { .. }) => {
-            if let Dialog::MoveFolder { path, into, .. } = dlg {
-                crate::panels::left::toast_folder_moved(app, ctx, path, into, &r);
-            }
-            closed = true;
-        }
-        // photos whose capture time doesn't read are left as they were: say so
-        Ok(r) if matches!(dlg, Dialog::CaptureTime { .. }) && r["unreadable"].as_u64().is_some_and(|n| n > 0) => {
-            app.toast_error(ctx, crate::i18n::tr("Photos whose capture time can't be read were left as they were"));
-            closed = true;
+        // a move that can't begin says why now
+        Dialog::MovePhotos { .. } | Dialog::MoveFolder { .. } => {
+            app.toast_error(ctx, e);
+            true
         }
         // where a Lightroom catalog goes: stays open to be corrected (a folder that isn't
         // empty), unless the library it names has gone
-        Err(e) if matches!(dlg, Dialog::LightroomDestination { .. }) => {
-            closed = !crate::lightroom_destination::keeps_open_on_error(app, dlg);
+        Dialog::LightroomDestination { .. } => {
+            let closed = !crate::lightroom_destination::keeps_open_on_error(app, dlg);
             app.toast_error(ctx, e);
+            closed
         }
-        Ok(_) if keeps_open(app, dlg) => {
+        _ => true,
+    }
+}
+
+/// [`confirmed`] when the command went through (`r` is what it returned): whether the dialog closes.
+fn confirm_done(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog, r: &serde_json::Value) -> bool {
+    match dlg {
+        // a folder made on disk says so (the new folder holds no photos yet)
+        Dialog::TextPrompt { command, .. } if command == "folder.create" => {
+            toast_created_folder(app, ctx, dlg, r);
+            true
+        }
+        Dialog::NewAlbum { .. } if r.get("skipped").and_then(serde_json::Value::as_u64).is_some_and(|n| n > 0) => {
+            // albums hold library photos (issue #684): say which part of the selection stayed out
+            crate::panels::grid::toast_skipped(app, ctx, r);
+            true
+        }
+        // a move that began says how it went when it ends (`move_task`); one that can't, why now
+        Dialog::MovePhotos { .. } => true,
+        Dialog::MoveFolder { path, into, .. } => {
+            crate::panels::left::toast_folder_moved(app, ctx, path, into, r);
+            true
+        }
+        // photos whose capture time doesn't read are left as they were: say so
+        Dialog::CaptureTime { .. } if r["unreadable"].as_u64().is_some_and(|n| n > 0) => {
+            app.toast_error(ctx, crate::i18n::tr("Photos whose capture time can't be read were left as they were"));
+            true
+        }
+        _ if keeps_open(app, dlg) => {
             if let Dialog::SamModel { error, .. } = dlg {
                 *error = None;
             }
+            false
         }
-        _ => closed = true,
+        _ => true,
     }
-
-    closed
 }
 
 /// The last frame a dialog was drawn and stayed open, for [`clicked_backdrop`].
