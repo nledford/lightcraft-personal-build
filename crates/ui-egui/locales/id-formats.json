@@ -325,5 +325,8 @@
   "Lists “{name}”, the folder this one is in": "Menampilkan “{name}”, folder tempat folder ini berada",
   "Showing {what}": "Menampilkan {what}",
   "{title}, showing {what}": "{title}, menampilkan {what}",
-  "{n} tasks": "{n} tugas"
+  "{n} tasks": "{n} tugas",
+  "Exported contact sheet: {photos} photos, {pages} pages": "Lembar kontak diekspor (foto: {photos}, halaman: {pages})",
+  "Printed to PDF: {photos} photos, {pages} pages": "Dicetak ke PDF (foto: {photos}, halaman: {pages})",
+  "{} import warning{}": "Peringatan impor: {}{:.0}"
 }

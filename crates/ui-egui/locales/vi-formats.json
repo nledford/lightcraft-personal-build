@@ -325,5 +325,8 @@
   "Lists “{name}”, the folder this one is in": "Hiển thị “{name}”, thư mục chứa thư mục này",
   "Showing {what}": "Đang hiển thị {what}",
   "{title}, showing {what}": "{title}, đang hiển thị {what}",
-  "{n} tasks": "{n} tác vụ"
+  "{n} tasks": "{n} tác vụ",
+  "Exported contact sheet: {photos} photos, {pages} pages": "Đã xuất tờ tiếp xúc (ảnh: {photos}, trang: {pages})",
+  "Printed to PDF: {photos} photos, {pages} pages": "Đã in ra PDF (ảnh: {photos}, trang: {pages})",
+  "{} import warning{}": "Cảnh báo khi nhập: {}{:.0}"
 }

@@ -325,5 +325,8 @@
   "Lists “{name}”, the folder this one is in": "Visar “{name}”, mappen som den här ligger i",
   "Showing {what}": "Visar {what}",
   "{title}, showing {what}": "{title}, visar {what}",
-  "{n} tasks": "{n} uppgifter"
+  "{n} tasks": "{n} uppgifter",
+  "Exported contact sheet: {photos} photos, {pages} pages": "Kontaktark exporterat (foton: {photos}, sidor: {pages})",
+  "Printed to PDF: {photos} photos, {pages} pages": "Utskrivet till PDF (foton: {photos}, sidor: {pages})",
+  "{} import warning{}": "Importvarningar: {}{:.0}"
 }

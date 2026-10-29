@@ -325,5 +325,8 @@
   "Lists “{name}”, the folder this one is in": "Näyttää kansion “{name}”, jonka sisällä tämä on",
   "Showing {what}": "Näytetään: {what}",
   "{title}, showing {what}": "{title}, näytetään: {what}",
-  "{n} tasks": "{n} tehtävää"
+  "{n} tasks": "{n} tehtävää",
+  "Exported contact sheet: {photos} photos, {pages} pages": "Kontaktivedos viety (kuvia: {photos}, sivuja: {pages})",
+  "Printed to PDF: {photos} photos, {pages} pages": "Tulostettu PDF-tiedostoon (kuvia: {photos}, sivuja: {pages})",
+  "{} import warning{}": "Tuontivaroituksia: {}{:.0}"
 }
