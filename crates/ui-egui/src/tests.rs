@@ -90,6 +90,7 @@ mod samples;
 mod samples_banner;
 mod samples_landing;
 mod scroll;
+mod shuffle_chip;
 mod side_keys;
 mod side_keys_sidebar;
 mod slider_reset;

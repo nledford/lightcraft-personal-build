@@ -67,6 +67,8 @@
   "Import cancelled · {} photo{} added": "Importación cancelada · {0} foto{1} añadida{1}",
   "Import failed: {e}": "Error de importación: {e}",
   "Import warnings ({n}):\n{warnings}": "Avisos de importación ({n}):\n{warnings}",
+  "Sort: {key}": "Orden: {key}",
+  "Sort: {key}, {direction}": "Orden: {key}, {direction}",
   "The XMP sidecars of {n} photos couldn't be written (is their folder offline?). LightCraft keeps trying.": "No se pudieron escribir los archivos XMP de {n} fotos (¿su carpeta está desconectada?). LightCraft lo sigue intentando.",
   "Open the sample photo “{title}”": "Abrir la foto de muestra «{title}»",
   "Or explore LightCraft with {n} sample photos": "O explora LightCraft con {n} fotos de muestra",

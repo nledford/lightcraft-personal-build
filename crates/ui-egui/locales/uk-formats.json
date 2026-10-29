@@ -71,6 +71,8 @@
   "Imported {n} preset{}": "Імпортовано наборів налаштувань: {n}{:.0}",
   "Imported {n} preset{}, {f} file{} not readable": "Імпортовано наборів налаштувань: {n}{:.0}, файлів не читається: {f}{:.0}",
   "Imported {profiles} profile{} (Profile browser ▸ their groups)": "Імпортовано профілів: {profiles}{:.0} (Оглядач профілів → їхні групи)",
+  "Sort: {key}": "Сортування: {key}",
+  "Sort: {key}, {direction}": "Сортування: {key}, {direction}",
   "The XMP sidecars of {n} photos couldn't be written (is their folder offline?). LightCraft keeps trying.": "Не вдалося записати XMP-файли {n} фото (папка недоступна?). LightCraft продовжує спроби.",
   "Open the sample photo “{title}”": "Відкрити зразок фото «{title}»",
   "Or explore LightCraft with {n} sample photos": "Або спробуйте LightCraft на зразках фото ({n})",
