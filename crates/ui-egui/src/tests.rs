@@ -98,6 +98,7 @@ mod titlebar;
 mod toast_timing;
 mod tool_overlay;
 mod type_roles;
+mod type_scale;
 mod unsaved;
 mod view_cost;
 mod wb_selector;

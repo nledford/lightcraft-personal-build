@@ -229,7 +229,7 @@ fn draw_row(app: &mut LightcraftApp, ui: &mut egui::Ui, row: Row) -> egui::Respo
         (false, 0) => t.text_dim.gamma_multiply(0.55),
         (false, _) => t.text_dim,
     };
-    let count_galley = count.filter(|_| app.ui.show_counts).map(|n| ui.painter().layout_no_wrap(n.to_string(), t.font(12.5), count_color(n)));
+    let count_galley = count.filter(|_| app.ui.show_counts).map(|n| ui.painter().layout_no_wrap(n.to_string(), t.label(), count_color(n)));
     let label_left = r.left() + 42.0 + indent;
     let count_left = count_galley.as_ref().map_or(edge - 18.0, |g| edge - 18.0 - g.size().x);
     // a label's dot sits just before the count
@@ -244,7 +244,7 @@ fn draw_row(app: &mut LightcraftApp, ui: &mut egui::Ui, row: Row) -> egui::Respo
     // wide they are, and the heavier face never pushes a panel that just fit into scrolling
     let room = count_left - mark_w - 8.0 - label_left;
     let measure_in = |font: &egui::FontId, s: &str| ui.painter().layout_no_wrap(s.to_string(), font.clone(), color).size().x;
-    let regular = t.font(13.5);
+    let regular = t.body();
     let heavy = t.semibold(13.5);
     let font = if selected && measure_in(&heavy, label) <= room { heavy } else { regular.clone() };
     let measure = |s: &str| measure_in(&font, s);
@@ -290,8 +290,8 @@ pub(super) fn out_of_sight(
     let indent = drawn_indent(ui, indent);
     let t = Tokens::get(ui.ctx());
     let painter = ui.painter();
-    let name_w = painter.layout_no_wrap(label.to_string(), t.font(13.5), t.text_label).size().x;
-    let count_w = count.filter(|_| app.ui.show_counts).map(|n| painter.layout_no_wrap(n.to_string(), t.font(12.5), t.text_dim).size().x);
+    let name_w = painter.layout_no_wrap(label.to_string(), t.body(), t.text_label).size().x;
+    let count_w = count.filter(|_| app.ui.show_counts).map(|n| painter.layout_no_wrap(n.to_string(), t.label(), t.text_dim).size().x);
     note_width(ui, row_need(indent, name_w, if mark { MARK_W } else { 0.0 }, count_w));
     true
 }

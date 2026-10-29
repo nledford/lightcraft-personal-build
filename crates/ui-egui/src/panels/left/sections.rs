@@ -91,7 +91,7 @@ fn empty_hint(ui: &mut egui::Ui, section: SidebarSection) {
     let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_HEIGHT), Sense::hover());
     register(ui, format!("sidebarEmpty:{}", section.id()), r);
     let text = crate::i18n::tr(section.empty_hint());
-    let galley = ui.painter().layout_no_wrap(text.to_string(), t.font(12.5), t.text_dim);
+    let galley = ui.painter().layout_no_wrap(text.to_string(), t.label(), t.text_dim);
     note_width(ui, 42.0 + galley.size().x + 18.0);
     ui.painter().galley(pos2(r.left() + 42.0, r.center().y - galley.size().y / 2.0), galley, t.text_dim);
 }
@@ -260,7 +260,7 @@ fn section_header(app: &mut LightcraftApp, ui: &mut egui::Ui, section: SidebarSe
     register(ui, format!("{widget}Chevron:{id}"), Rect::from_center_size(c, vec2(16.0, 16.0)));
     let col = if hovered { t.text } else { t.text_dim };
     paint(ui.painter(), Rect::from_center_size(c, vec2(16.0, 16.0)), if open { Icon::ChevronDown } else { Icon::ChevronRight }, col);
-    let title_rect = ui.painter().text(pos2(r.left() + 18.0, r.center().y), Align2::LEFT_CENTER, title, t.semibold(13.5), t.text_label);
+    let title_rect = ui.painter().text(pos2(r.left() + 18.0, r.center().y), Align2::LEFT_CENTER, title, t.title_strong(), t.text_label);
     let button = header_button(section);
     // (an album being dragged puts "Top Level" in the Albums header)
     let room = !(section == SidebarSection::Albums && app.ui.dragging_album.is_some());
@@ -269,7 +269,7 @@ fn section_header(app: &mut LightcraftApp, ui: &mut egui::Ui, section: SidebarSe
     // folded: how much is in there (left of the header's own button); not beside the name of
     // what is shown, where it would read as that row's own count
     if !open && rows > 0 && app.ui.show_counts && room && current.is_none() {
-        let count = ui.painter().text(pos2(free_until, r.center().y), Align2::RIGHT_CENTER, rows.to_string(), t.font(12.5), t.text_dim);
+        let count = ui.painter().text(pos2(free_until, r.center().y), Align2::RIGHT_CENTER, rows.to_string(), t.label(), t.text_dim);
         register(ui, format!("{widget}Count:{id}"), count);
         free_until = count.left();
     }
