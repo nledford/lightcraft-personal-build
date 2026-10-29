@@ -72,8 +72,10 @@ fn theme_card<V: PartialEq + Copy>(ui: &mut egui::Ui, t: &Tokens, card: ThemeCar
                         crate::check::radio(ui, &format!("theme-{}", kind.id()), value, *v, kind.label());
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let favorite = favorites.iter().any(|id| id == kind.id());
+                            // (always there, so that Tab reaches it; drawn while it is a
+                            // favourite, under the mouse or has the focus)
                             let r = ui
-                                .add_visible(favorite || hovered, egui::Button::new("").min_size(egui::vec2(24.0, 24.0)).frame(false))
+                                .add(egui::Button::new("").min_size(egui::vec2(24.0, 24.0)).frame(false))
                                 .on_hover_text(crate::i18n::tr(if favorite { "Remove from favorites" } else { "Add to favorites" }));
                             r.widget_info(|| {
                                 egui::WidgetInfo::labeled(
@@ -87,7 +89,8 @@ fn theme_card<V: PartialEq + Copy>(ui: &mut egui::Ui, t: &Tokens, card: ThemeCar
                                 )
                             });
                             register(ui, format!("button:themeFavorite-{}", kind.id()), r.rect);
-                            if favorite || hovered {
+                            crate::widgets::ring_on_focus(ui, t, &r, r.rect);
+                            if favorite || hovered || r.has_focus() {
                                 crate::rating::paint_star(ui.painter(), r.rect.shrink(4.0), favorite, favorite_star_colour(t, favorite));
                             }
                             if r.clicked() {

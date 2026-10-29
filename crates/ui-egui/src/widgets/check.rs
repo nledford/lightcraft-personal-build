@@ -330,7 +330,7 @@ fn row(ui: &mut Ui, spec: Spec) -> (Response, bool) {
         }
     }
     if resp.has_focus() {
-        let ring = crate::widgets::focus_stroke(&t);
+        let ring = crate::widgets::focus_stroke_in(ui.ctx(), &t);
         match shape {
             Form::Box => {
                 p.rect_stroke(b.expand(2.0), 5.0, ring, StrokeKind::Outside);
