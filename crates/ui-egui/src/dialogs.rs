@@ -365,12 +365,8 @@ fn ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, sam: &SamSta
         Dialog::FaceModel { .. } if !informational => "Install",
         Dialog::ConfirmDelete { .. } | Dialog::DeleteKeyword { .. } | Dialog::DeleteEffects { .. } => "Delete",
         Dialog::SaveEffect { .. } => "Create",
-        // nothing that can go: only Cancel; some can: Move those, skip the others
-        Dialog::MovePhotos { problems, movable, .. } if !problems.is_empty() && *movable == 0 => "",
-        Dialog::MovePhotos { problems, movable, .. } if !problems.is_empty() => {
-            return crate::i18n::tr_format!("Move {n}, skip {m}", n = movable, m = problems.len());
-        }
-        Dialog::MovePhotos { .. } | Dialog::MoveFolder { .. } => "Move",
+        Dialog::MovePhotos { problems, movable, .. } => return move_photos_ok_label(problems.len(), *movable),
+        Dialog::MoveFolder { .. } => "Move",
         // (not "Merge": that is photo merging, HDR / panorama, in some languages)
         Dialog::MoveKeyword { .. } => "Merge Keywords",
         Dialog::KeywordSet { .. } => "Save",
@@ -394,6 +390,15 @@ fn ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, sam: &SamSta
         _ => "OK",
     };
     label.to_string()
+}
+
+/// The confirm button of the Move Photos dialog: nothing that can go: only Cancel (empty); some can: Move those, skip the others.
+fn move_photos_ok_label(problems: usize, movable: usize) -> String {
+    match (problems, movable) {
+        (0, _) => "Move".to_string(),
+        (_, 0) => String::new(),
+        _ => crate::i18n::tr_format!("Move {n}, skip {m}", n = movable, m = problems),
+    }
 }
 
 /// The label of the SAM 3 dialog's confirm button.
