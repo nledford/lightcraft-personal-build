@@ -284,6 +284,7 @@ fn dialog_title(app: &LightcraftApp, dlg: &Dialog) -> String {
         Dialog::Settings { .. } => "Settings",
         Dialog::ConfirmDelete { .. } => "Delete Photos",
         Dialog::MovePhotos { .. } => "Move Photos",
+        Dialog::MoveFolder { .. } => "Move Folder",
         Dialog::LightroomCatalog { .. } => "Lightroom Classic Catalog",
         Dialog::LightroomDestination { .. } => "Import Lightroom Catalog",
         Dialog::SaveEffect { .. } => "New Effect Preset",
@@ -361,7 +362,7 @@ fn ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, sam: &SamSta
         Dialog::FaceModel { .. } if !informational => "Install",
         Dialog::ConfirmDelete { .. } | Dialog::DeleteKeyword { .. } | Dialog::DeleteEffects { .. } => "Delete",
         Dialog::SaveEffect { .. } => "Create",
-        Dialog::MovePhotos { .. } => "Move",
+        Dialog::MovePhotos { .. } | Dialog::MoveFolder { .. } => "Move",
         // (not "Merge": that is photo merging, HDR / panorama, in some languages)
         Dialog::MoveKeyword { .. } => "Merge Keywords",
         Dialog::KeywordSet { .. } => "Save",
@@ -508,8 +509,14 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
         }
         // a move that began says how it went when it ends (`move_task`); one that can't, why now
         Ok(_) if matches!(dlg, Dialog::MovePhotos { .. }) => closed = true,
-        Err(e) if matches!(dlg, Dialog::MovePhotos { .. }) => {
+        Err(e) if matches!(dlg, Dialog::MovePhotos { .. } | Dialog::MoveFolder { .. }) => {
             app.toast_error(ctx, e);
+            closed = true;
+        }
+        Ok(r) if matches!(dlg, Dialog::MoveFolder { .. }) => {
+            if let Dialog::MoveFolder { path, into, .. } = dlg {
+                crate::panels::left::toast_folder_moved(app, ctx, path, into, &r);
+            }
             closed = true;
         }
         // photos whose capture time doesn't read are left as they were: say so
@@ -1702,6 +1709,20 @@ fn move_photos_body(ui: &mut egui::Ui, t: &Tokens, dlg: &mut Dialog) {
         .show(ui);
 }
 
+/// The body of the MoveFolder dialog.
+fn move_folder_body(ui: &mut egui::Ui, t: &Tokens, dlg: &mut Dialog) {
+    let Dialog::MoveFolder { name, into_name, count, dont_ask, .. } = dlg else { return };
+    ui.label(crate::i18n::tr_format!("Move “{name}” into “{into}”?", name = name, into = into_name));
+    ui.label(egui::RichText::new(crate::i18n::tr_format!("Photos in it and in the folders inside it: {count}", count = count)).color(t.text_dim));
+    ui.label(
+        egui::RichText::new(crate::i18n::tr("The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.")).color(t.text_dim),
+    );
+    ui.add_space(4.0);
+    let c = ui.checkbox(dont_ask, crate::i18n::tr("Don't ask again"));
+    crate::widgets::register(ui, "check:moveDontAsk", c.rect);
+    c.on_hover_text(crate::i18n::tr("Settings → Confirm before moving photos to another folder on disk turns it back on"));
+}
+
 /// The body of the LightroomCatalog dialog.
 fn lightroom_catalog_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut Dialog) {
     let Dialog::LightroomCatalog { folder, catalog } = dlg else { return };
@@ -1869,6 +1890,7 @@ fn dialog_content(
             ui.label(egui::RichText::new(crate::i18n::tr("They can be restored from Recently Deleted until it is emptied.")).color(t.text_dim));
         }
         Dialog::MovePhotos { .. } => move_photos_body(ui, t, dlg),
+        Dialog::MoveFolder { .. } => move_folder_body(ui, t, dlg),
         d @ Dialog::SynchronizeFolder { .. } => crate::sync::body(app, ui, d),
         d @ Dialog::LocateFolder { .. } => crate::relocate::body(ui, d),
         Dialog::LightroomCatalog { .. } => lightroom_catalog_body(app, ui, t, dlg),

@@ -2484,5 +2484,9 @@
   "Unfinished moves": "Незавершені переміщення",
   "Go Deeper": "Глибше",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Теки на такій глибині тут не показуються. Клацніть, щоб додати цю теку до локальних як окреме місце й розгортати її далі",
-  "Opens as its own place": "Відкривається як окреме місце"
+  "Opens as its own place": "Відкривається як окреме місце",
+  "The library's own folder can't be moved": "Теку самої бібліотеки не можна перемістити",
+  "A folder can't move into itself or a folder inside it": "Теку не можна перемістити в саму себе або в теку всередині неї",
+  "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "Тека, її файли та XMP-файли переміщуються на диску. Редагування → Скасувати поверне її.",
+  "Another library was opened since the folder was dropped: nothing was moved": "Після перетягування теки було відкрито іншу бібліотеку: нічого не переміщено"
 }

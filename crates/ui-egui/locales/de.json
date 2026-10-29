@@ -3568,5 +3568,9 @@
   "Unfinished moves": "Unvollständige Verschiebungen",
   "Go Deeper": "Tiefer gehen",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "So tief liegende Ordner werden hier nicht aufgelistet. Klicken, um diesen Ordner als eigenen Ort zu „Lokal“ hinzuzufügen und ihn dort weiter zu öffnen",
-  "Opens as its own place": "Öffnet sich als eigener Ort"
+  "Opens as its own place": "Öffnet sich als eigener Ort",
+  "The library's own folder can't be moved": "Der Ordner der Bibliothek selbst kann nicht verschoben werden",
+  "A folder can't move into itself or a folder inside it": "Ein Ordner kann nicht in sich selbst oder in einen Ordner darin verschoben werden",
+  "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "Der Ordner, seine Dateien und XMP-Filialdateien werden auf dem Datenträger verschoben. Bearbeiten → Rückgängig holt ihn zurück.",
+  "Another library was opened since the folder was dropped: nothing was moved": "Seit dem Ablegen des Ordners wurde eine andere Bibliothek geöffnet: Es wurde nichts verschoben"
 }

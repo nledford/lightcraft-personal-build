@@ -343,5 +343,9 @@
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Knihovna nemohla následovat soubory, které se přesouvaly ({}); Najít chybějící fotografie je znovu propojí.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Knihovna následuje soubory, které se přesouvaly, ale nepodařilo se to uložit ({}).",
   "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopie odstraněné z nového místa, protože originál byl stále tam, kde ho knihovna má: {}.",
-  "“{name}” is now a place in Local: open it there": "„{name}“ je nyní místem v místních souborech: otevřete ji tam"
+  "“{name}” is now a place in Local: open it there": "„{name}“ je nyní místem v místních souborech: otevřete ji tam",
+  "Move “{name}” into “{into}”": "Přesunout „{name}“ do „{into}“",
+  "Move “{name}” into “{into}”?": "Přesunout „{name}“ do „{into}“?",
+  "Photos in it and in the folders inside it: {count}": "Fotografie v ní a ve složkách v ní: {count}",
+  "“{name}” is no longer there: nothing was moved": "„{name}“ už neexistuje: nic nebylo přesunuto"
 }

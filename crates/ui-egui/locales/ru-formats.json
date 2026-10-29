@@ -343,5 +343,9 @@
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Библиотека не смогла последовать за перемещавшимися файлами ({}); «Найти отсутствующие фото» свяжет их заново.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Библиотека следует за перемещавшимися файлами, но сохранить это не удалось ({}).",
   "Copies removed from the new place, because the original was still where the library has it: {}.": "Копии, удалённые из нового места, потому что оригинал оставался там, где его хранит библиотека: {}.",
-  "“{name}” is now a place in Local: open it there": "«{name}» теперь отдельное место в «Локальном»: откройте её там"
+  "“{name}” is now a place in Local: open it there": "«{name}» теперь отдельное место в «Локальном»: откройте её там",
+  "Move “{name}” into “{into}”": "Переместить «{name}» в «{into}»",
+  "Move “{name}” into “{into}”?": "Переместить «{name}» в «{into}»?",
+  "Photos in it and in the folders inside it: {count}": "Фото в ней и в папках внутри неё: {count}",
+  "“{name}” is no longer there: nothing was moved": "«{name}» больше нет: ничего не перемещено"
 }

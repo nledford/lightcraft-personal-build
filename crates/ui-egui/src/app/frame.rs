@@ -456,6 +456,7 @@ impl LightcraftApp {
         if !self.drawing_offscreen {
             panels::grid::drag_feedback(self, &ctx);
             panels::left::album_drag_feedback(self, &ctx);
+            panels::left::folder_drag_feedback(self, &ctx);
             panels::left::section_drag_feedback(self, &ctx);
             panels::keyword_list::drag_feedback(self, &ctx);
         }

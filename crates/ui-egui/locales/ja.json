@@ -2486,5 +2486,9 @@
   "Unfinished moves": "未完了の移動",
   "Go Deeper": "さらに深く",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "これより深いフォルダはここには表示されません。クリックするとこのフォルダを独立した場所としてローカルに追加し、そこでさらに開けます",
-  "Opens as its own place": "独立した場所として開きます"
+  "Opens as its own place": "独立した場所として開きます",
+  "The library's own folder can't be moved": "ライブラリ自体のフォルダは移動できません",
+  "A folder can't move into itself or a folder inside it": "フォルダを自身またはその中のフォルダに移動することはできません",
+  "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "フォルダ、そのファイル、XMP サイドカーがディスク上で移動します。編集 → 取り消す で元に戻せます。",
+  "Another library was opened since the folder was dropped: nothing was moved": "フォルダをドロップした後に別のライブラリが開かれました。何も移動していません"
 }

@@ -2332,5 +2332,9 @@
   "Unfinished moves": "Movimentações inacabadas",
   "Go Deeper": "Ir mais fundo",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Pastas tão profundas não são listadas aqui. Clique para adicionar esta pasta a Local como um lugar próprio e abri-la mais",
-  "Opens as its own place": "Abre como um lugar próprio"
+  "Opens as its own place": "Abre como um lugar próprio",
+  "The library's own folder can't be moved": "A pasta da própria biblioteca não pode ser movida",
+  "A folder can't move into itself or a folder inside it": "Uma pasta não pode ser movida para dentro de si mesma ou de uma pasta dentro dela",
+  "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "A pasta, seus arquivos e os arquivos XMP auxiliares são movidos no disco. Editar → Desfazer a traz de volta.",
+  "Another library was opened since the folder was dropped: nothing was moved": "Outra biblioteca foi aberta depois que a pasta foi solta: nada foi movido"
 }

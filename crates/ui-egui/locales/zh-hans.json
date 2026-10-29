@@ -2330,5 +2330,9 @@
   "Unfinished moves": "未完成的移动",
   "Go Deeper": "继续深入",
   "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "这么深的文件夹不在此处列出。点按可将此文件夹作为单独的位置添加到本地，以便继续展开",
-  "Opens as its own place": "作为单独的位置打开"
+  "Opens as its own place": "作为单独的位置打开",
+  "The library's own folder can't be moved": "无法移动图库自身的文件夹",
+  "A folder can't move into itself or a folder inside it": "文件夹不能移到自身或其内部的文件夹中",
+  "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "该文件夹、其文件和 XMP 附属文件会在磁盘上移动。编辑 → 撤销 可移回。",
+  "Another library was opened since the folder was dropped: nothing was moved": "拖放文件夹后打开了另一个图库：未移动任何内容"
 }

@@ -38,6 +38,7 @@ mod error_kinds;
 mod filmstrip;
 mod filmstrip_drag;
 mod focus_point;
+mod folder_drag;
 mod folder_drop;
 mod folder_move_message;
 mod grading;

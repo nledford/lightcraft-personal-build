@@ -343,5 +343,9 @@
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "图库未能跟随正在移动的文件（{}）；查找缺失的照片 可重新链接它们。",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "图库已跟随正在移动的文件，但无法保存（{}）。",
   "Copies removed from the new place, because the original was still where the library has it: {}.": "已从新位置删除的副本（原文件仍在图库记录的位置）：{}。",
-  "“{name}” is now a place in Local: open it there": "“{name}”现在是本地中的一个位置：请在那里打开"
+  "“{name}” is now a place in Local: open it there": "“{name}”现在是本地中的一个位置：请在那里打开",
+  "Move “{name}” into “{into}”": "将“{name}”移到“{into}”",
+  "Move “{name}” into “{into}”?": "将“{name}”移到“{into}”？",
+  "Photos in it and in the folders inside it: {count}": "其中及其子文件夹中的照片：{count}",
+  "“{name}” is no longer there: nothing was moved": "“{name}”已不存在：未移动任何内容"
 }

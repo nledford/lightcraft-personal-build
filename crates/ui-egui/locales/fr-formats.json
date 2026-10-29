@@ -343,5 +343,9 @@
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "La bibliothèque n'a pas pu suivre les fichiers en cours de déplacement ({}) ; Rechercher les photos manquantes les relie à nouveau.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "La bibliothèque suit les fichiers qui étaient en cours de déplacement, mais cela n'a pas pu être enregistré ({}).",
   "Copies removed from the new place, because the original was still where the library has it: {}.": "Copies supprimées du nouvel emplacement, car l’original se trouvait toujours là où la bibliothèque le place : {}.",
-  "“{name}” is now a place in Local: open it there": "« {name} » est maintenant un emplacement dans Local : ouvrez-le là"
+  "“{name}” is now a place in Local: open it there": "« {name} » est maintenant un emplacement dans Local : ouvrez-le là",
+  "Move “{name}” into “{into}”": "Déplacer « {name} » dans « {into} »",
+  "Move “{name}” into “{into}”?": "Déplacer « {name} » dans « {into} » ?",
+  "Photos in it and in the folders inside it: {count}": "Photos qu'il contient et dans les dossiers à l'intérieur : {count}",
+  "“{name}” is no longer there: nothing was moved": "« {name} » est introuvable : rien n’a été déplacé"
 }
