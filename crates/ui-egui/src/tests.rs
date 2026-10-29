@@ -110,6 +110,7 @@ mod type_roles;
 mod type_scale;
 mod tree_branch;
 mod tree_state;
+mod trash_files;
 mod unsaved;
 mod view_cost;
 mod wb_selector;

@@ -339,5 +339,16 @@
   "Look at the changes found in “{name}” first, or dismiss them": "ჯერ ნახეთ „{name}“-ში ნაპოვნი ცვლილებები, ან უარყავით ისინი",
   "Lists “{name}”, the folder this one is in": "აჩვენებს „{name}“-ს, საქაღალდეს, რომელშიც ეს არის",
   "Showing {what}": "ნაჩვენებია: {what}",
-  "{title}, showing {what}": "{title}, ნაჩვენებია: {what}"
+  "{title}, showing {what}": "{title}, ნაჩვენებია: {what}",
+  "Move the files of {n} photos to the Trash?": "გადავიტანოთ {n} ფოტოს ფაილები ურნაში?",
+  "{n} photos are on a disk that has no Trash. Erase their files for good?": "{n} ფოტო ისეთ დისკზეა, რომელსაც ურნა არ აქვს. წავშალოთ მათი ფაილები სამუდამოდ?",
+  "…and {n} more": "…და კიდევ {n}",
+  "Files erased: {files} (photos out of the library: {photos})": "წაშლილი ფაილები: {files} (ბიბლიოთეკიდან ამოღებული ფოტოები: {photos})",
+  "Files moved to the Trash: {files} (photos out of the library: {photos})": "ურნაში გადატანილი ფაილები: {files} (ბიბლიოთეკიდან ამოღებული ფოტოები: {photos})",
+  "Stopped: photos not reached stay in the library: {n}": "შეწყდა: {n} ფოტომდე რიგი ვერ მივიდა და ბიბლიოთეკაში რჩება",
+  "Files moved to the Trash: {trashed}, files erased: {erased} (photos out of the library: {photos})": "ურნაში გადატანილი ფაილები: {trashed}, წაშლილი ფაილები: {erased} (ბიბლიოთეკიდან ამოღებული ფოტოები: {photos})",
+  "Photos that could not be moved stay in the library ({n}): {why}": "{n} ვერ გადავიდა და ბიბლიოთეკაში რჩება: {why}",
+  "Photos whose file was already gone: {n}": "ფოტოები, რომელთა ფაილი უკვე აღარ იყო: {n}",
+  "Sidecars left in place: {n}": "ადგილზე დატოვებული თანმხლები ფაილები: {n}",
+  "Files other photos still use, kept: {n}": "ფაილები, რომლებსაც სხვა ფოტოები ჯერ კიდევ იყენებს (შენახულია): {n}"
 }
