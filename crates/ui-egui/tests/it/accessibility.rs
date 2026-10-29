@@ -398,7 +398,8 @@ fn menu(title: &'static str) -> Screen {
     screen(format!("Menu {title}"), move || {
         let mut h = harness(ViewMode::PhotoGrid, RightPanel::None);
         let before = audit(&h).0;
-        h.get_by_label(title).click();
+        // (a tool strip button of the same name, "Edit", carries its key as a description: the menu title has none)
+        h.query_all_by_label(title).find(|n| n.accesskit_node().description().is_none()).unwrap_or_else(|| panic!("no menu titled {title}")).click();
         h.run_steps(8);
         assert!(audit(&h).0 > before, "the {title} menu did not open");
         h
