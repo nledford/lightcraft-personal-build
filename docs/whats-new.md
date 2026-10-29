@@ -10,6 +10,9 @@
 
 ## 2026-10-27
 
+### The Edit menu groups Select Only Active Photo and Paste Settings from Previous with their kin
+- Select Only Active Photo now sits under Deselect All, and Paste Settings from Previous under Paste Selected Settings…, instead of both after Settings…, near the end of the Edit menu. On macOS, where Settings… lives in the application menu, the Edit menu no longer shows two separator lines in a row.
+
 ### One Enter Full Screen row in the macOS View menu
 - On macOS the View menu showed two "Enter Full Screen" rows: LightCraft's and the one macOS adds itself (not with
   LightCraft in German). Now there is one, LightCraft's. It reads "Exit Full Screen" while the window is full screen
