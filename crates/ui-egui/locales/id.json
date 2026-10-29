@@ -2442,5 +2442,6 @@
   "Imports, exports and other long jobs show here while they run.": "Impor, ekspor, dan tugas panjang lainnya ditampilkan di sini selama berjalan.",
   "No tasks are running": "Tidak ada tugas yang berjalan",
   "Tasks": "Tugas",
-  "cancelled": "dibatalkan"
+  "cancelled": "dibatalkan",
+  "Stopped: no photo was moved": "Dihentikan: tidak ada foto yang dipindahkan"
 }
