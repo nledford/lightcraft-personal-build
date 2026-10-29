@@ -9,6 +9,22 @@
   them, and folders you keep in Local with Browse Folder…, rename as before, starting from their real name. The
   `folder.rename` and `folder.move` commands now refuse the home folder and its Pictures, Desktop and Downloads too,
   so a script or an agent can't do it either.
+### Text typed in a box goes where you typed it
+- A box that saves when you finish now belongs to what you were typing for. If the Info panel moves to another photo
+  while you are typing in it (Select by, a command, an agent), the text is saved to the photo you typed it for and the
+  box shows the new photo's own value; before, it kept showing the old photo's text, and Return saved that to the old
+  photo.
+- A text overlay in Settings ▸ Slideshow that is removed while you are typing in its box stays removed: the save is
+  refused rather than bringing the overlay back, and it is never written to another overlay that took its place.
+- Clicking Remove on a text overlay, or applying a template, while you are typing in the box of an overlay saves that
+  text first, to the overlay you typed it for (a template's text then shows under Previous settings), even though the
+  overlays move up or are replaced.
+
+### Language: Sync with System
+- Settings ▸ General ▸ Language has a new first choice, Sync with System. Choosing it switches to the system's
+  preferred language right away (the browser's in the web build) and keeps following it each time LightCraft starts.
+  Before, a language chosen once was kept for good and nothing went back. A new installation starts with it chosen,
+  and choosing any language turns it off.
 
 ## 2026-10-27
 
@@ -57,6 +73,56 @@
   shows a notification. It says what the job reported ("Exported 24 photos"), or names it, or says how many ended
   when several did. The first time, macOS asks whether LightCraft may notify you. Turn it off in Settings ▸ General ▸
   Notifications.
+### Text typed in a box is kept however you leave it
+- Text typed in a box that saves when you finish (the Info panel's fields, Copyright and Creator in Settings, the Auto
+  Import album, the slideshow's title, overlay and template-name boxes, and Manage Effect Presets' rename) is now saved
+  however you leave the box, except with Esc, which still gives it up. Before, it was kept only while the box was still
+  on screen when you left it: a click on another Settings tab, a menu item or command that opened another tab or dialog,
+  hiding the Info panel, opening another library, and closing the window or quitting could drop what you had typed.
+- If the text can't be saved (a place that isn't coordinates, say), the window, Quit or the other library stays where it
+  was, the box keeps the text and the error is shown. Closing, quitting or switching again, with that text still in the
+  box, gives it up.
+- Text saved when you close the window or quit is saved once: if the window then stays open (you cancel the question about
+  running tasks, say), the box has nothing more to save, clicking away or pressing Return saves nothing a second time, and
+  Esc no longer undoes the text that was saved.
+- Copyright, Creator and the Auto Import album in Settings now have the same right-click Cut, Copy, Paste and Select
+  All menu as the other text boxes, and Esc in them gives the text back.
+
+### The filter never holds what the source shown already supplies
+- The albums or folders you are showing, and Picks, already decide what they show, so a copy of one of them left in the
+  filter narrowed the next source with nothing on screen to explain why. Now every way of changing the filter (the
+  bar, a saved preset, View ▸ Enable Filters, showing a source) leaves them out. A preset that holds the albums or the
+  folders shown, or Picks' flag, applies the rest and leaves them out (a script is told which); setting one of them in
+  the filter by hand is refused, and the flag buttons are off while Picks is shown.
+- Renaming or moving a Local folder you browsed earlier no longer narrows All Photos to it, and no longer replaces the
+  filter View ▸ Enable Filters put aside: the browsed folder follows the rename, and the filter is left as it was.
+
+### Undo puts the filter back with the keyword, person or folder
+- Deleting or renaming a keyword, renaming a person and removing a library folder change the filter that names them, and
+  undo brought the keyword, name or folder back but left the filter as it was changed, so the grid showed everything or
+  nothing. Now undo gives the filter its old keyword, name or folder, also in the filter View ▸ Enable Filters put aside,
+  and redo changes it again. Only what the step changed moves, and only while you have not changed that part of the
+  filter since; a filter you built after emptying or replacing the old one is left alone. Redo leaves alone a keyword,
+  name or folder you had picked yourself when you undid the step, as undo did, for as long as you keep it. When View ▸
+  Enable Filters had the filter put aside, a folder that undo restores while another folder is shown stays in it and
+  comes back with Enable Filters once that other folder is no longer shown.
+
+### A refused name prompt stays open and says why
+- A one-line prompt (Rename Folder, New Folder on Disk, the preset and version names, New Library for a name it can't
+  use, Auto-Tag from Tracklog) that the app refuses, for example a folder name that is taken, now stays open with what
+  you typed and shows the reason, so you can change the name. Before, it closed without a word. A New Folder on Disk
+  that works now says so: “Created folder “Selects” in “2026/Shoot””. Cancel and Esc still close the prompt.
+
+### `--no-update-check` for throwaway copies
+- Starting LightCraft with `--no-update-check` skips the look for a newer release at start, so a throwaway copy (a test
+  or scripted run) makes no request to GitHub and never opens the update prompt. Help ▸ Check for Updates… still
+  checks when you ask; without the option nothing changes.
+
+### The desktop app starts in the system's language
+- On macOS, Windows and Linux, a library with no saved settings now opens in the first of the system's preferred
+  languages that LightCraft has a catalog for (Russian for `ru-SK`, German for `de-AT`), as the web build follows the
+  browser's languages. Before, it opened in English unless `LIGHTCRAFT_LANGUAGE` was set. A language chosen in
+  Settings ▸ General ▸ Language is kept as before.
 
 ## 2026-10-26
 
@@ -185,6 +251,41 @@
   `folder.metadataPump` again and again (the app doesn't yet), and then the row's ✕ stops it between photos: a stopped
   save keeps the sidecars it wrote, a stopped read commits what it read as one undo step. A photo whose file can't be
   written or read is listed in `failed` and the rest go on. The Folders menu items that use them come later.
+### A folder's menu has one order, in Folders and in Local
+- Right-clicking a folder in Folders or in Local opens a menu in the same order, in groups: what it does with the
+  library's photos (Import to This Folder… or Add to My Photos…, Synchronize Folder…, Locate Missing Files…), then
+  reorganizing the disk (New Folder on Disk…, Rename Folder…, Move Folder To…, Move Selected Photos Here), Set Color
+  Label, Show in Finder, and removal last. A disk's row and a Local place keep that order with the groups that apply to
+  them.
+- An item that can't apply right now is grayed out, and its tooltip says why, instead of disappearing: Move Selected
+  Photos Here until photos are selected, Synchronize Folder… in Local for a folder with no library photo, Keep in
+  Local on a place already kept, Remove from Local for a folder inside a place.
+- Show in Finder on a folder, and Keep in Local, now say why when they fail.
+- Rename Folder… in Local starts from the folder's own name on disk, as in Folders.
+
+### A folder's menu can bring photos in
+- Import to This Folder… (first in a Folders row's menu) asks for a folder and opens the Import review for its photos,
+  copying them into the folder you right-clicked, all into it rather than into dated subfolders. Copy is the default
+  because it leaves the originals alone; the review still lets you pick Move or another destination.
+- Add to My Photos… (first in a Local row's menu) opens the Import review for that folder, adding the photos where they
+  are. The photos you browsed there are offered checked, instead of listed as "In library" and out of reach, in this and
+  in any other review that adds in place.
+  When keywords or a preset are set, the review notes that they apply to new files only, not to those photos.
+- Both are grayed out while another scan or import is running.
+
+### A folder can be exported from its menu
+- Right-click a folder in Folders, or a disk's row, and choose Export Folder… or Export Folder with Preset ▸ a preset.
+  Like an album's, they show the folder as its row does (its photos and those of the folders inside it), select them
+  all, then open the Export dialog or start the preset's export in the background. They sit with Synchronize Folder…
+  and Locate Missing Files…, the items that act on the library's photos.
+- Both are grayed out, with the reason in the tooltip, for a row that covers more than one disk (open it and export a
+  folder inside it).
+
+### Every folder menu can copy the folder's path and make a folder on disk
+- Copy Path, right after Show in Finder, is in every folder menu (Folders, a disk's row, Local): it puts the folder's
+  path on the clipboard, as your system spells it, and a toast says so.
+- A disk's row now offers Show in Finder and New Folder on Disk…, and a folder in Local offers New Folder on Disk…,
+  whose new folder is listed in Local.
 
 ## 2026-10-24
 
@@ -396,6 +497,29 @@
   its content is the photo's.
 - Agents and the CLI: `folder.updateLocation {folder, path}`. In the running app it looks for the files in the
   background too and answers at once; `ui.inspect` → `relocate` says how it went.
+### A right-click on a text field while you carry photos opens no menu
+- While you drag photos from the grid, a right-click on a text field, such as the search box, opens no Cut, Copy and
+  Paste menu. Before, the menu opened over the field the photos were on. Right-clicking a field without a drag works
+  as before.
+
+### The Slideshow settings page stays put while the preview renders
+- In Settings ▸ Slideshow, the line under the slide preview ("The selected photo as a slide…") now shows from the first
+  frame instead of only once the preview has finished rendering. Before, it appeared with the render, pushing the page
+  below it down by a line, so a click made in that moment could land beside the control you aimed at.
+
+### Settings tabs look like tabs, and the keyboard focus shows
+- The tabs of Settings look like tabs: names on the window with a line under the open one, no longer the same
+  buttons as the choices under them (on General the languages read as a second row of tabs). In Settings a chosen
+  option is outlined as well as filled, so it stands out in every theme. Screen readers are told a choice in
+  Settings is a radio button, and the tab bar is a list of tabs, each a tab that says whether it is the open one
+  and that opens the page under it.
+- Settings by keyboard is a short way. Tab stops once at the tab bar (at the open tab) and once at each row of
+  choices (at the one that holds), and the arrow keys move inside: → ↓ to the next, ← ↑ to the one before, Home and
+  End to the ends, Space or Return to open or choose. An arrow held with ⌘, ⇧, ⌥ or ⌃ is left alone.
+- Whatever has the keyboard focus is ringed 2 pt in the text colour: tabs, choices, checkboxes, buttons, closed
+  lists, radio buttons and text boxes. A click leaves no ring. Every text button in LightCraft shows the same ring
+  when Tab reaches it, the Edit panel's Auto, B&W, HDR and Reset among them. The star
+  that makes a theme a favourite is a Tab stop for every theme, not only for one that is a favourite already.
 
 ### Relative-date filters and smart albums follow the clock
 - A current view or source count using “in the last” rules now refreshes when the session clock moves into a new
@@ -488,6 +612,39 @@
 - The short messages at the bottom of the photo view used to replace one another: a label set right after an export
   ended hid the export's message. Now a new message appears where they always did and the ones still showing move up
   above it, up to three, each going at its own time (at the top during a slideshow, the newest on top).
+### Settings asks before it does what can't be taken back
+- Settings asks before it does what is slow or impossible to take back. Clear Cache says that thumbnails and
+  previews are made again as you browse. The prompt for removing a model says that the model's file is deleted.
+  Each prompt opens under its button with the action and a Keep button. Keep has the focus, so Return alone changes
+  nothing; Esc or a click elsewhere answers no.
+- Changing the smart previews folder with "Delete them" chosen no longer deletes at the press of Choose Folder: with
+  the new folder chosen, it says how many smart previews would go and what they are for, and waits for Delete and
+  Change Folder or Cancel. The choice goes back to "Move them" afterwards, and neither it nor the question is
+  left standing when Settings is closed or another library is opened.
+- Automatically write changes into XMP sidecars says what is written where.
+
+### Settings text can be read in every theme
+
+- What Settings says can be read in every theme. Its explanations, the text a box shows while it is empty, "In Use"
+  on a theme's card and the lines that warn or refuse now stand at least 4.5:1 against what they are on (the
+  explanations were 4.2:1 in Charcoal and 4.3:1 in Silver, "In Use" 2.9:1 in Charcoal); the borders of text boxes,
+  checkboxes, radio buttons, buttons and each choice of a row, and the line under the tabs, stand 3:1, where they
+  were 1.2 to 1.7:1; so do the buttons of a question a button asks. The AI Denoise page's own lines,
+  the GPU line under Rendering and the star that marks a favourite theme are read the same way. The colours of the rest of
+  LightCraft are as they were, but for the Info row's choices in View Options, which are outlined the same way.
+- The hint under External Editing drew two empty boxes where its menu path had arrows; it reads "Photo > Edit In >
+  Edit in PhotoCraft" now.
+- Photo ▸ Edit In, Edit in PhotoCraft and Edit in Other Editor have names in all seventeen languages, the ones the
+  hint under External Editing gives.
+- Sentences and names in Settings that some languages had no word for (External Editing and its hints, the
+  Monitor tab, the model installation messages) are in every language now. "(library default)" and "starting…" are
+  translated too.
+
+### Text boxes in Settings
+- Esc in a text box of Settings (Copyright, Creator, the Auto Import album, the two External Editing boxes) gives
+  the text back and stays in Settings; in the first three it used to save what was typed, and in all of them it
+  closed the window. Those three now have the Cut / Copy / Paste menu too, and what is typed in Copyright or
+  Creator is saved when another tab is clicked, where it used to be dropped.
 
 ### Tab leaves the name field in New Album, New Smart Album and the name prompts
 - In New Album, New Smart Album, Save Metadata Preset and the other dialogs with one name field, the field has the
@@ -543,6 +700,11 @@
   (up to five, then a count) and why: the name is taken in the folder, two photos being moved share a name, the file is
   missing or offline, or the photo has no file. It says what to do and offers to move the rest, and it asks even when
   you turned off the confirmation. Dropping a Local photo is still refused on the row, with its own reason.
+### Quitting on macOS leaves no lock note
+- Quitting LightCraft on macOS no longer leaves `catalog.lock.owner` in the library folder. The note, which names the
+  program that has the library open, stayed behind after Quit and the window's close button, pointing at a process
+  that no longer existed. The library's lock is now released as soon as everything is saved, as it already was on
+  the other systems.
 
 ### Choose where a Lightroom catalog goes
 - File ▸ Import Lightroom Catalog… now asks first: merge the catalog's photos, collections and edits into the
@@ -636,6 +798,12 @@
   both folders and how many photos go along; "Don't ask again" (Settings → Confirm before moving photos to another
   folder on disk) moves it at once. Esc gives the drag up, and Edit ▸ Undo moves the folder back. A click on a row
   still chooses it.
+### Panel layout messages, face recognition prompts and the second window's title in your language
+- The messages shown when a panel layout cannot be restored or a panel move is not applied, the face recognition
+  prompts (the banner and the name box's offer, with their buttons), the "Face recognition is on" and "is installed"
+  messages, and the title of the second window are now in the interface language in all 17 languages. They stayed in
+  English before. So did "The download failed", shown under a denoise or face recognition model's download when the
+  download gives no reason.
 
 ## 2026-10-22
 
@@ -1056,6 +1224,34 @@
 - In the left panel's Local, a folder eight levels below its place used to open onto nothing. It now says **Go Deeper**:
   click it to add that folder to Local as a place of its own (a message says so), where it opens further. A folder
   that is already a place of its own says "Opens as its own place" there instead, where the listing stops.
+### Dialog buttons say what they do
+- The confirm button in dialogs now names its action instead of "OK": Create for a new album, smart album, folder or
+  preset, Rename for photos, albums, keywords, people and presets, Create Stacks for Auto-Stack, Change Time for Capture Time,
+  Copy and Paste for settings, and Export 12 Photos in the Export dialog. Rename Photos now explains what its Tags
+  button lists and what happens on disk, instead of pointing at the button. Contact Sheet, Auto-Stack and
+  Slideshow Export no longer say "1 photos" or "1 stacks".
+
+### A big selection no longer slows every frame
+- With a very large selection (hundreds of thousands of photos), the app spent most of each frame working out which
+  menu items to enable, so the window felt frozen even when nothing was happening. Menus, the grid and the Keywording
+  box now answer from facts kept for the current selection, refreshed when the selection or the photos change, so an
+  idle frame is no longer slowed by how many photos are selected. Which items are enabled hasn't changed.
+
+### Big views open without sorting the whole library again
+- Showing All Photos, Recently Added or a smart album, or clearing a filter or search, no longer sorts every photo of
+  the library each time. Once a sort (capture date, import date, edit date, file name, rating or file size) has been
+  used for a big view, LightCraft keeps that order and moves only the photos an edit changed. On a library of 312,000
+  photos, All Photos then lists in about 30 ms instead of about 330 ms, and a view sorted by file name in about 30 ms
+  instead of about 970 ms. A view of less than about a sixteenth of the library (a folder, a search) never builds
+  this order itself; a mid-sized one builds it the second time it is shown in a sort (Recently Added: about 0.6 s at
+  312,000 photos), and a larger one the first time; after that it is fast. In a library of 50,000 photos or more,
+  LightCraft also makes the order for the current sort in the background as soon as a view is shown, so the first big
+  view in that sort (All Photos after an import that started in Picks, say) no longer freezes the window for the sort
+  (about 0.4 s at 324,000 photos) once the background sort is done, about half a second after the first view; before
+  that it sorts as it did. While that sort runs, the activity stack lists it as "Sorting the library". The order of the
+  photos is the same as before.
+  Photos added or removed (an import, an undone import) go into or out of that order, even after more changes than
+  LightCraft remembers one by one, instead of sorting the whole library again.
 
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a

@@ -122,7 +122,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, chips: &[FilterChip]) {
     let mut x = bar.left() + 20.0;
     let mut shown = 0;
     for (i, c) in chips.iter().enumerate() {
-        let label = display_label(c, &app.session.filter, &app.session.catalog);
+        let label = display_label(c, app.session.filter(), &app.session.catalog);
         let w = chip_width(ui, &label, font.clone());
         // always show the first chip; keep room for the tail unless this is the last one that fits
         let room = right - x - if i + 1 == chips.len() { 90.0 } else { TAIL };
@@ -162,7 +162,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, chips: &[FilterChip]) {
         let more = crate::button::Button::new(&crate::i18n::tr_format!("+{} more", hidden.len())).small().widget("button:chipsMore").show(&mut child);
         egui::Popup::menu(&more).show(|ui| {
             for c in hidden {
-                if MenuItem::new(&format!("{}  ✕", display_label(c, &app.session.filter, &app.session.catalog)))
+                if MenuItem::new(&format!("{}  ✕", display_label(c, app.session.filter(), &app.session.catalog)))
                     .show(ui)
                     .on_hover_text(crate::i18n::tr("Remove this filter"))
                     .clicked()

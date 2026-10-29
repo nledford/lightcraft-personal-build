@@ -184,7 +184,7 @@ fn locale_tags_normalize() {
     assert_eq!(Locale::parse_tag("xx"), None);
 }
 
-/// The web host's "Auto" (issue #2085): the browser's `navigator.languages` in order, first
+/// The hosts' "Auto" (issue #2085): the browser's `navigator.languages`, or the system's languages, in order, first
 /// shipped language wins, unsupported tags are skipped, an empty or foreign list stays English
 /// ([`default_language`] fallback).
 #[test]
@@ -196,6 +196,9 @@ fn locale_from_tags_takes_the_first_shipped_language() {
     assert_eq!(locale_from_tags(&["zh-TW".into(), "en".into()]), Some(Locale::ZhHant));
     assert_eq!(locale_from_tags(&["ja_JP.UTF-8".into(), "en".into()]), Some(Locale::Ja));
     assert_eq!(locale_from_tags(&["pt".into(), "pt-BR".into()]), Some(Locale::PtBr));
+    // A language set up with a region it has no catalog of its own for (Russian in Slovakia).
+    assert_eq!(locale_from_tags(&["ru-SK".into(), "en-SK".into(), "sk-SK".into()]), Some(Locale::Ru));
+    assert_eq!(locale_from_tags(&["en-US".into(), "ru-RU".into()]), Some(Locale::En));
 }
 
 #[test]
@@ -955,16 +958,54 @@ fn vietnamese_panels_dialogs_and_diacritics_paint_with_bundled_fonts() {
     });
     set_language(Locale::En);
 }
-/// The messages each language lacks, which it shows in English. Never fails: `cargo xtask ci`
+/// The messages each language lacks, which it shows in English, then the places that show
+/// English without `tr` at all (`untranslated.rs`). Never fails: `cargo xtask ci`
 /// runs it with `--nocapture`, so the list lands in the gate log. Plain messages are every key
-/// some catalog has plus the labels the UI passes to `tr` from tables (commands, controls, rule
-/// fields…); formats are every key some `*-formats.json` has plus every `tr_format!` message in
-/// the app's source. An empty translation counts as missing.
+/// some catalog has, every `tr("…")` literal in the app's source (`gaps.rs`, wrapped calls and
+/// `if`/`match` branches included, so a string no language has yet is listed too) and the
+/// labels the UI passes to `tr` from tables (commands, controls, rule fields…); formats are
+/// every key some `*-formats.json` has plus every `tr_format!` message in the app's source. An
+/// empty translation counts as missing.
 #[test]
 fn translation_gaps_report() {
     let notes = whats_new_lines();
     let messages: std::collections::BTreeSet<String> = plain_messages().into_iter().filter(|m| !notes.contains(&m.as_str())).collect();
-    let formats = format_messages();
+    let mut out = gaps_text(&messages, &format_messages(), &notes);
+    out.push_str(&untranslated_text(&untranslated::untranslated_places()));
+    println!("{out}");
+}
+
+/// The report's last section: the places that show English without `tr`, one per line.
+fn untranslated_text(places: &[(String, String, String)]) -> String {
+    let mut out = format!("English shown without tr: {} places\n", places.len());
+    for (place, call, text) in places {
+        out.push_str(&format!("  {place}: {call} shows {text:?}\n"));
+    }
+    out
+}
+
+/// A string only the source parsing finds (a call rustfmt wrapped, the branches of an `if` or a
+/// `match`) is in no catalog, and the report still lists it for every language.
+#[test]
+fn translation_gaps_report_lists_strings_no_catalog_has() {
+    let found = gaps::messages_in(
+        "fn f(m: u8) {\n    ui.label(crate::i18n::tr(\n        \"Only wrapped here\",\n    ));\n    \
+             ui.label(tr(if m == 0 { \"Only in an if\" } else { \"Only in an else\" }));\n    \
+             ui.label(tr(match m { 1 => \"Only in a match\", _ => \"Only in a last arm\" }));\n}\n",
+    );
+    assert_eq!(found.len(), 5, "{found:?}");
+    let text = gaps_text(&found, &Default::default(), &[]);
+    for language in Locale::ALL.iter().filter(|language| **language != Locale::En) {
+        let line = text.lines().find(|line| line.starts_with(&format!("{}: ", language.code()))).expect("a line per language");
+        assert!(line.contains("5 messages"), "{line}");
+    }
+    for key in &found {
+        assert!(text.contains(&format!("{key:?}")), "{key}");
+    }
+}
+
+/// The report: the totals, then per language its counts and the lists.
+fn gaps_text(messages: &std::collections::BTreeSet<String>, formats: &std::collections::BTreeSet<String>, notes: &[&str]) -> String {
     let quoted = |list: &[&str]| list.iter().map(|m| format!("{m:?}")).collect::<Vec<_>>().join(", ");
     let mut out =
         format!("Translation gaps, shown in English ({} messages, {} formats, {} What's New lines):\n", messages.len(), formats.len(), notes.len());
@@ -988,11 +1029,12 @@ fn translation_gaps_report() {
             out.push_str(&format!("  formats: {}\n", quoted(&missing_formats)));
         }
     }
-    println!("{out}");
+    out
 }
 
 /// Every plain message: the keys of every catalog (but contextual entries, which a language adds
-/// only where it needs one) and the labels the UI translates from tables.
+/// only where it needs one), the `tr("…")` literals in the source and the labels the UI
+/// translates from tables.
 fn plain_messages() -> std::collections::BTreeSet<String> {
     use lightcraft_catalog::rules;
     let mut labels: Vec<&str> = lightcraft_engine::command_specs().iter().map(|spec| spec.label).collect();
@@ -1034,6 +1076,7 @@ fn plain_messages() -> std::collections::BTreeSet<String> {
         .flat_map(|language| language.catalog().keys())
         .filter(|key| !key.starts_with(&contextual))
         .cloned()
+        .chain(gaps::source_messages())
         .chain(labels.into_iter().map(str::to_string))
         .collect()
 }
@@ -1226,5 +1269,62 @@ fn polish_switches_formats_dates_and_reads_every_count() {
     let text = painted_text(&ctx, &mut app, Locale::Pl);
     assert!(text.contains("Plik") && text.contains("Ekspozycja"), "{text}");
     assert_polish_glyphs(&ctx);
+    set_language(Locale::En);
+}
+
+/// "Sync with System" (Settings ▸ General ▸ Language): the saved language is the host's default
+/// again at each start, a file without the flag is an explicit choice, and picking a language by
+/// any route (menu command, control channel) leaves the sync.
+#[test]
+fn sync_with_system_takes_the_host_default_until_a_language_is_picked() {
+    use crate::control::{ControlRequest, Outcome};
+    use crate::state::UiState;
+    set_default_language(Locale::De);
+    let read = |saved: &str| serde_json::from_str::<UiState>(saved).unwrap().sanitized();
+
+    // Given settings saved while syncing, the language is the system's now, not the one beside it
+    let synced = read(r#"{"language":"fr","followSystemLanguage":true}"#);
+    assert!(synced.follow_system_language);
+    assert_eq!(synced.language, Locale::De);
+    // And an older build's file, without the flag, keeps its explicit language
+    let explicit = read(r#"{"language":"fr"}"#);
+    assert!(!explicit.follow_system_language);
+    assert_eq!(explicit.language, Locale::Fr);
+    // And the flag is written only while on (an older build reads the same file as before)
+    assert!(!serde_json::to_string(&explicit).unwrap().contains("followSystemLanguage"));
+    let saved = serde_json::to_string(&synced).unwrap();
+    assert!(saved.contains(r#""followSystemLanguage":true"#) && saved.contains(r#""language":"de""#), "{saved}");
+
+    // And a fresh install, with no file, syncs from the start: its first language is the system's
+    // by default, not a choice, so a later change of the system's language is followed
+    let fresh = UiState::default();
+    assert!(fresh.follow_system_language);
+    assert_eq!(fresh.language, Locale::De);
+    assert!(serde_json::to_string(&fresh).unwrap().contains(r#""followSystemLanguage":true"#));
+
+    let ctx = egui::Context::default();
+    let mut app = crate::LightcraftApp::new(lightcraft_engine::Session::with_demo(), Default::default());
+    let set = |app: &mut crate::LightcraftApp, params: serde_json::Value| {
+        let (request, _) = ControlRequest::new("ui.set", params);
+        let Outcome::Done(reply) = crate::control::handle(app, &ctx, &request) else { panic!("expected reply") };
+        assert_eq!(reply["ok"], true, "{reply}");
+    };
+    // When the control channel turns it on, the language follows the host at once
+    app.ui.language = Locale::Fr;
+    app.ui.follow_system_language = false;
+    set(&mut app, serde_json::json!({"followSystemLanguage": true}));
+    assert_eq!((app.ui.language, language()), (Locale::De, Locale::De));
+    // And no language's menu command is checked while it is on
+    assert_eq!(crate::menubar::checked(&app, "app.language.german"), Some(false));
+    // When a language is picked by its command, the sync is off and that language is kept
+    app.run("app.language.french", serde_json::json!({})).unwrap();
+    assert!(!app.ui.follow_system_language);
+    assert_eq!((app.ui.language, language()), (Locale::Fr, Locale::Fr));
+    assert_eq!(crate::menubar::checked(&app, "app.language.french"), Some(true));
+    // And so is a language set by its tag through the control channel
+    set(&mut app, serde_json::json!({"followSystemLanguage": true}));
+    set(&mut app, serde_json::json!({"language": "ja"}));
+    assert!(!app.ui.follow_system_language);
+    assert_eq!((app.ui.language, language()), (Locale::Ja, Locale::Ja));
     set_language(Locale::En);
 }

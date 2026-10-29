@@ -496,15 +496,14 @@ impl NativeMenu {
     /// app can crash in winit's teardown, PR #444).
     pub fn update(&mut self, app: &mut LightcraftApp, ctx: &egui::Context) -> bool {
         lightcraft_ui_egui::i18n::set_language(app.ui.language);
+        app.session.begin_frame();
         let mut quit = false;
         while let Ok(key) = self.rx.try_recv() {
             // Resolve the native id to its command, then let the shared policy decide. Native menu
             // events never reach `shortcuts::handle`, so this is the one guard for AppKit's
             // accelerators and clicks: while the blocking library window or a quit/settings notice
             // owns input, a queued command is dropped (Quit stays for the existing confirmation).
-            let (cmd, params) = if key == QUIT {
-                (key, serde_json::json!({}))
-            } else if key == "app.about" || key == SETTINGS {
+            let (cmd, params) = if key == QUIT || key == "app.about" || key == SETTINGS {
                 (key, serde_json::json!({}))
             } else if let Some(it) = self.items.get(&key) {
                 (it.cmd.clone(), it.params.clone())

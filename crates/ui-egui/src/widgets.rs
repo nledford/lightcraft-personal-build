@@ -52,7 +52,7 @@ pub fn set_carrying(ctx: &egui::Context, carrying: bool) {
     ctx.data_mut(|d| d.insert_temp(egui::Id::unique("lc-carrying"), carrying));
 }
 
-fn carrying(ctx: &egui::Context) -> bool {
+pub(crate) fn carrying(ctx: &egui::Context) -> bool {
     ctx.data(|d| d.get_temp::<bool>(egui::Id::unique("lc-carrying"))).unwrap_or(false)
 }
 
@@ -151,12 +151,28 @@ pub fn register_geometry(ctx: &egui::Context, id: impl Into<String>, rect: Rect)
 /// as focused whether it is idle, hovered or selected. It is drawn inside `rect`, so it survives a
 /// painter clipped to the control. [`crate::check`] draws the same stroke around its box.
 pub fn focus_ring(p: &egui::Painter, rect: Rect, t: &Tokens) {
-    p.rect_stroke(rect, CornerRadius::same(4), focus_stroke(t), StrokeKind::Inside);
+    p.rect_stroke(rect, CornerRadius::same(4), focus_stroke_in(p.ctx(), t), StrokeKind::Inside);
 }
 
 /// The stroke of every focus ring: 2 px in the accent colour.
 pub fn focus_stroke(t: &Tokens) -> Stroke {
     Stroke::new(2.0, t.accent)
+}
+
+/// [`focus_stroke`], or in the text colour while [`focus_in_text_colour`] is on (the Settings
+/// window draws its one look for the focus that way).
+pub fn focus_stroke_in(ctx: &egui::Context, t: &Tokens) -> Stroke {
+    Stroke::new(2.0, if focus_is_in_text_colour(ctx) { t.text } else { t.accent })
+}
+
+/// Whether the focus rings drawn from now on are in the text colour ([`focus_stroke_in`]): on for
+/// the length of a window that has one look for the focus, which turns it off again after.
+pub fn focus_in_text_colour(ctx: &egui::Context, on: bool) {
+    ctx.data_mut(|d| d.insert_temp(egui::Id::unique("lc-focus-in-text-colour"), on));
+}
+
+pub(crate) fn focus_is_in_text_colour(ctx: &egui::Context) -> bool {
+    ctx.data(|d| d.get_temp::<bool>(egui::Id::unique("lc-focus-in-text-colour"))).unwrap_or(false)
 }
 
 /// Esc was handled this frame by something nested (an open popup closed on it): containers such
@@ -921,13 +937,125 @@ fn text_button_size(label_w: f32) -> f32 {
 /// A small bordered text button with an active state: the toggle and choice vocabulary (Auto, B&W,
 /// HDR, a segmented choice, a tab). An action that just does something is a [`crate::button::Button`].
 pub fn text_button(ui: &mut Ui, id: &str, label: &str, active: bool) -> Response {
+    chip(ui, id, label, active, false, None)
+}
+
+/// One of a row of choices of which exactly one holds (`button:{id}`) and that is one Tab stop
+/// ([`Roving`]), drawn as [`text_button`] is, except that the one chosen is also outlined in the
+/// label colour: its fill alone stands about 1.4:1 against the others, the outline 3:1 or more in
+/// every theme. The border of one that is not chosen is made to stand 3:1 against the window as
+/// well. A screen reader is told it is a radio button.
+pub fn choice_button_in(ui: &mut Ui, row: &mut Roving, id: &str, label: &str, chosen: bool) -> Response {
+    chip(ui, id, label, chosen, true, Some(row))
+}
+
+/// A row of buttons that is one stop for Tab, as a tab bar or a group of radio buttons is: Tab
+/// comes to the one that holds (`chosen`, or the first) and leaves the row from wherever in it
+/// the focus is, and the arrow keys move the focus inside it (→ ↓ to the next, ← ↑ to the one
+/// before, Home and End to the ends) without choosing anything: Space or Return does that. The
+/// buttons are told to it one by one as they are drawn ([`choice_button_in`], [`tab_button_in`]),
+/// and it is [`Roving::end`]ed after the last.
+pub struct Roving {
+    key: egui::Id,
+    /// The buttons of the row as they were drawn on the frame before, in order.
+    last: Vec<egui::Id>,
+    now: Vec<egui::Id>,
+    /// Which of them Tab stops at on this frame: the one with the focus, or the one that holds.
+    stop: usize,
+    /// The button an arrow key moved the focus to, given it when the row has been drawn.
+    to: Option<egui::Id>,
+}
+
+impl Roving {
+    /// The row named `name` (unique on screen), of which the button at `chosen` holds.
+    pub fn new(ui: &Ui, name: &str, chosen: Option<usize>) -> Self {
+        let key = egui::Id::unique(("roving-row", name));
+        let last: Vec<egui::Id> = ui.data(|d| d.get_temp(key)).unwrap_or_default();
+        let focused = ui.memory(|m| m.focused());
+        let stop = focused.and_then(|focused| last.iter().position(|id| *id == focused)).or(chosen).unwrap_or(0);
+        // (a choice that is not among the buttons leaves the first as the stop)
+        let stop = if last.is_empty() || stop < last.len() { stop } else { 0 };
+        Self { key, last, now: Vec::new(), stop, to: None }
+    }
+
+    /// What the next button of the row senses: clicks, and the focus by Tab if it is the stop.
+    fn sense(&self) -> Sense {
+        if self.now.len() == self.stop { Sense::click() } else { Sense::CLICK }
+    }
+
+    /// The next button of the row, drawn: the arrow keys move from it while it has the focus.
+    fn drawn(&mut self, ui: &Ui, resp: &Response) {
+        let place = self.now.len();
+        self.now.push(resp.id);
+        // (a click anywhere in the row brings the focus there, as on a button that takes it by Tab)
+        if !resp.has_focus() {
+            return;
+        }
+        // (the arrow keys are this row's while the focus is in it: not egui's, which go to
+        // whatever is nearest in that direction)
+        let arrows = egui::EventFilter { horizontal_arrows: true, vertical_arrows: true, ..Default::default() };
+        // (and on the frame the focus came here, when egui takes no filter yet and would look for
+        // what is nearest in the arrow's direction, starting from the button the focus was just
+        // given to: that search is called off)
+        ui.memory_mut(|m| {
+            m.set_focus_lock_filter(resp.id, arrows);
+            m.move_focus(egui::FocusDirection::None);
+        });
+        let end = self.last.len().saturating_sub(1);
+        let to = ui.input(|i| {
+            // (an arrow held with ⌘, ⇧, ⌃ or ⌥ is not the row's: it is left to whoever else takes it)
+            if i.modifiers.any() {
+                None
+            } else if i.key_pressed(egui::Key::ArrowRight) || i.key_pressed(egui::Key::ArrowDown) {
+                Some(place.saturating_add(1).min(end))
+            } else if i.key_pressed(egui::Key::ArrowLeft) || i.key_pressed(egui::Key::ArrowUp) {
+                Some(place.saturating_sub(1))
+            } else if i.key_pressed(egui::Key::Home) {
+                Some(0)
+            } else if i.key_pressed(egui::Key::End) {
+                Some(end)
+            } else {
+                None
+            }
+        });
+        // (given in `end`: a button drawn after this one on this frame does not take the focus
+        // by Tab yet, and egui takes the focus from one that does not)
+        self.to = to.filter(|to| *to != place).and_then(|to| self.last.get(to)).copied();
+    }
+
+    /// After the row's last button: what was drawn is remembered for the next frame.
+    pub fn end(self, ui: &Ui) {
+        if let Some(to) = self.to {
+            ui.memory_mut(|m| m.request_focus(to));
+            ui.ctx().request_repaint();
+        }
+        ui.ctx().data_mut(|d| {
+            d.get_temp_mut_or_insert_with::<std::collections::HashSet<u64>>(egui::Id::unique("lc-roving-members"), Default::default)
+                .extend(self.now.iter().map(|id| id.value()))
+        });
+        ui.data_mut(|d| d.insert_temp(self.key, self.now));
+    }
+}
+
+/// The widgets of every [`Roving`] row drawn so far (their ids' values): Tab stops at one of a row
+/// and the arrow keys reach the others, so a gate that counts what Tab reaches counts these as
+/// reached.
+pub fn roving_members(ctx: &egui::Context) -> std::collections::HashSet<u64> {
+    ctx.data(|d| d.get_temp(egui::Id::unique("lc-roving-members"))).unwrap_or_default()
+}
+
+fn chip(ui: &mut Ui, id: &str, label: &str, active: bool, choice: bool, row: Option<&mut Roving>) -> Response {
     let label = crate::i18n::tr(label);
     let t = Tokens::get(ui.ctx());
     let font = t.caption_strong();
     let galley = ui.painter().layout_no_wrap(label.to_string(), font, t.text);
     let size = vec2(text_button_size(galley.size().x), 24.0);
-    let (r, resp) = ui.allocate_exact_size(size, Sense::click());
-    resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, true, active, label));
+    let (r, resp) = ui.allocate_exact_size(size, row.as_ref().map_or(Sense::click(), |row| row.sense()));
+    if let Some(row) = row {
+        row.drawn(ui, &resp);
+    }
+    let kind = if choice { egui::Role::RadioButton } else { egui::Role::Button };
+    resp.widget_info(|| egui::WidgetInfo::selected(kind, true, active, label));
     register(ui, format!("button:{id}"), r);
     let fill = if active {
         t.pressed
@@ -936,13 +1064,91 @@ pub fn text_button(ui: &mut Ui, id: &str, label: &str, active: bool) -> Response
     } else {
         t.button
     };
+    // (a choice's border says where it is, among its neighbours on the window: it stands 3:1
+    // there in every theme, where a button's own border is 1.6 to 1.7:1)
+    let border = match (choice, active) {
+        (true, true) => t.text_label,
+        (true, false) => t.legible(t.button_border, t.chrome, 3.0),
+        (false, _) => t.button_border,
+    };
     let p = ui.painter();
-    p.rect(r, CornerRadius::same(4), fill, Stroke::new(1.0, t.button_border), StrokeKind::Inside);
+    p.rect(r, CornerRadius::same(4), fill, Stroke::new(1.0, border), StrokeKind::Inside);
     p.galley(r.center() - galley.size() / 2.0, galley, t.text);
-    if resp.has_focus() {
-        focus_ring(p, r, &t);
-    }
+    ring_on_focus(ui, &t, &resp, r);
     resp
+}
+
+/// The ring a button drawn here shows while it has the keyboard focus (Tab, the arrow keys): 2 pt
+/// in the text colour with a 1 pt line of the surface's colour inside it, both within its rect so
+/// that a neighbour or the edge of a scrolled list never cuts them. The inner line sets the ring
+/// off from the button's fill, and makes it a double line: a chosen [`choice_button_in`] has a
+/// single thin one, so "has the focus" and "is chosen" are told apart by shape, not thickness.
+pub(crate) fn ring_on_focus(ui: &Ui, t: &Tokens, resp: &Response, r: Rect) {
+    if resp.has_focus() {
+        let p = ui.painter();
+        // (outside a window with one look for the focus, the app's own ring)
+        if !focus_is_in_text_colour(ui.ctx()) {
+            focus_ring(p, r, t);
+            return;
+        }
+        p.rect_stroke(r, CornerRadius::same(4), Stroke::new(2.0, t.text), StrokeKind::Inside);
+        p.rect_stroke(r.shrink(2.0), CornerRadius::same(2), Stroke::new(1.0, t.chrome), StrokeKind::Inside);
+    }
+}
+
+/// How tall a [`tab_button_in`] is.
+const TAB_HEIGHT: f32 = 28.0;
+
+/// A tab of a tab bar (`button:{id}`): its name on the surface it is on, with no border and no
+/// fill, so that it does not read as one of the buttons a page holds. The open tab's name is in
+/// the text colour over a 2 pt line of that colour along its bottom edge (the bar's own line, when
+/// the caller draws one there); the others are in the label colour. The names are a size up from
+/// the headings inside a page, which are in the same face. To a screen reader it is a tab that says
+/// whether it is the one selected (AccessKit's `selected`: macOS reports a tab as a radio button
+/// with the tab subrole, not a check box as for a button with a toggled state); the bar it is in
+/// is a [`tab_list`] and the page it opens a [`tab_panel`] (see [`tab_controls`]).
+pub fn tab_button_in(ui: &mut Ui, bar: &mut Roving, id: &str, label: &str, open: bool) -> Response {
+    let label = crate::i18n::tr(label);
+    let t = Tokens::get(ui.ctx());
+    let color = if open { t.text } else { t.text_label };
+    let galley = ui.painter().layout_no_wrap(label.to_string(), t.semibold(13.5), color);
+    let size = vec2((galley.size().x + 20.0).max(37.0), TAB_HEIGHT);
+    let (r, resp) = ui.allocate_exact_size(size, bar.sense());
+    bar.drawn(ui, &resp);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Tab, true, label));
+    ui.ctx().accesskit_node_builder(resp.id, |node| node.set_selected(open));
+    register(ui, format!("button:{id}"), r);
+    let p = ui.painter();
+    // (on whole pixels, so the line under the open tab is crisp at a whole-number scale)
+    let r = egui::emath::GuiRounding::round_to_pixels(r, p.pixels_per_point());
+    if resp.hovered() && !open {
+        p.rect_filled(r.shrink2(vec2(0.0, 3.0)), CornerRadius::same(4), t.hover);
+    }
+    let color = if resp.hovered() { t.text } else { color };
+    p.galley_with_override_text_color(r.center() - galley.size() / 2.0, galley, color);
+    if open {
+        p.rect_filled(Rect::from_min_max(pos2(r.left(), r.bottom() - 2.0), r.max), CornerRadius::ZERO, t.text);
+    }
+    ring_on_focus(ui, &t, &resp, r);
+    resp
+}
+
+/// The tabs `add` draws, told to a screen reader as a list of tabs named `name` (already
+/// translated). The tabs are [`tab_button_in`]s.
+pub fn tab_list<R>(ui: &mut Ui, name: &str, add: impl FnOnce(&mut Ui) -> R) -> R {
+    ui.scope_builder(egui::UiBuilder::new().accessibility_role(egui::Role::TabList).accessibility_label(name), add).inner
+}
+
+/// The page `add` draws, told to a screen reader as the panel of the open tab: named `name` (the
+/// tab's), with the id `panel` that [`tab_controls`] names.
+pub fn tab_panel<R>(ui: &mut Ui, panel: egui::Id, name: &str, add: impl FnOnce(&mut Ui) -> R) -> R {
+    ui.scope_builder(egui::UiBuilder::new().scope_id(panel).accessibility_role(egui::Role::TabPanel).accessibility_label(name), add).inner
+}
+
+/// Tells a screen reader that the tab `tab` controls the [`tab_panel`] `panel`. Only the open tab
+/// does: the page of another is not on screen, and a node it names would not be in the tree.
+pub fn tab_controls(tab: &Response, panel: egui::Id) {
+    tab.ctx.accesskit_node_builder(tab.id, |node| node.push_controlled(panel.accesskit_id()));
 }
 
 /// [`text_button`] in a box `width` wide, for a grid of them or a button of a fixed width: its text

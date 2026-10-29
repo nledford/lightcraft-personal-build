@@ -30,37 +30,25 @@ fn commit_keywords(s: &mut Session, label: &str, op: lightcraft_catalog::Op, fol
     if photos + listed > 0 {
         s.commit(label, op)?;
     }
-    if let Some(k) = s.filter.keyword.clone() {
-        s.filter.keyword = follow(&k);
-    }
-    // several keywords filtered by: each follows, one that is gone leaves
-    let follow_all = |keywords: &[String]| {
+    let held_keywords = s.filters.aside().is_some_and(|f| f.keyword.is_some() || !f.keywords.is_empty());
+    // a filter put aside by Enable Filters follows the keyword too
+    s.filters.follow(|f| {
+        if let Some(k) = f.keyword.clone() {
+            f.keyword = follow(&k);
+        }
+        // several keywords filtered by: each follows, one that is gone leaves
         let mut kept: Vec<String> = Vec::new();
-        for k in keywords.iter().filter_map(|k| follow(k)) {
+        for k in f.keywords.iter().filter_map(|k| follow(k)) {
             if !kept.iter().any(|o| lightcraft_catalog::keywords::same(o, &k)) {
                 kept.push(k);
             }
         }
-        kept
-    };
-    s.filter.keywords = follow_all(&s.filter.keywords);
-    // a filter put aside by Enable Filters follows the keyword too
-    let mut gone_from_put_aside = false;
-    if let Some(f) = s.shelved_filter.as_mut() {
-        let held_keywords = f.keyword.is_some() || !f.keywords.is_empty();
-        if let Some(k) = f.keyword.clone() {
-            f.keyword = follow(&k);
-        }
-        f.keywords = follow_all(&f.keywords);
-        // every keyword it held was deleted: if that emptied the filter, nothing is left to bring back. The
-        // rating operator filters nothing without stars, so it alone does not count as something to bring back.
-        gone_from_put_aside = held_keywords
-            && f.keyword.is_none()
-            && f.keywords.is_empty()
-            && (Filter { rating_op: Default::default(), ..f.clone() }) == Filter::default();
-    }
-    if gone_from_put_aside {
-        s.shelved_filter = None;
+        f.keywords = kept;
+    });
+    // every keyword the put-aside filter held was deleted: if that emptied it, nothing is left to bring back. The
+    // rating operator filters nothing without stars, so it alone does not count as something to bring back.
+    if held_keywords {
+        s.filters.drop_aside_if(|f| (Filter { rating_op: Default::default(), ..f.clone() }) == Filter::default());
     }
     Ok(json!({"changed": photos, "listed": listed}))
 }

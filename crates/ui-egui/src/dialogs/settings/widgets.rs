@@ -65,6 +65,91 @@ pub(super) fn button_width(ui: &egui::Ui, text: &str) -> f32 {
     label_width(ui, text, egui::TextStyle::Button) + 2.0 * ui.spacing().button_padding.x
 }
 
+/// What [`ask_first`] makes of a button: [`Asked::clicked`] once the person has said yes.
+pub(crate) struct Asked {
+    yes: bool,
+}
+
+impl Asked {
+    /// The person pressed the button and then said yes to its question.
+    pub(crate) fn clicked(&self) -> bool {
+        self.yes
+    }
+}
+
+/// A button whose action cannot be taken back, or takes long to make good again, asks before it
+/// acts. Pressing `button` (registered by the caller as `id`) opens a small panel under it with
+/// `question`, which says what the action costs, and two buttons: `yes` (`{id}:confirm`) and
+/// Keep (`{id}:keep`), which has the focus when the panel opens. A click elsewhere or Esc answers no. What comes back stands in for the
+/// button: its `clicked` is true on the frame the answer was yes.
+pub(crate) fn ask_first(t: &Tokens, id: &str, button: egui::Response, question: &str, yes: &str) -> Asked {
+    let mut answer = false;
+    let opened = button.clicked();
+    let mut ids = None;
+    egui::Popup::from_toggle_button_response(&button).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
+        ui.set_max_width(280.0);
+        legible_controls(ui, t);
+        ui.add(egui::Label::new(RichText::new(crate::i18n::tr(question)).color(t.text_label)).wrap());
+        ui.horizontal(|ui| {
+            let r = ui.button(crate::i18n::tr(yes));
+            let confirm = r.id;
+            register(ui, format!("{id}:confirm"), r.rect);
+            if r.clicked() {
+                answer = true;
+                ui.close();
+            }
+            let r = ui.button(crate::i18n::tr("Keep"));
+            register(ui, format!("{id}:keep"), r.rect);
+            // (the question opens with the focus on Keep, so Return or Space alone changes nothing)
+            if opened {
+                r.request_focus();
+            }
+            if r.clicked() {
+                ui.close();
+            }
+            ids = Some((confirm, r.id));
+        });
+    });
+    // However the question closed (yes, Keep, Esc, a click elsewhere), the focus goes back to the
+    // button it was about, unless the click elsewhere put it on another widget. Only in the frame
+    // after the question was last drawn: a button that was not drawn since (a model's Remove while
+    // the model was gone) left its entry behind, and the button coming back is not that question's.
+    let ctx = button.ctx.clone();
+    let was_open = egui::Id::unique(("ask-first", id));
+    let frame = ctx.cumulative_frame_nr();
+    if let Some((confirm, keep)) = ids {
+        ctx.data_mut(|d| d.insert_temp(was_open, (confirm, keep, frame)));
+    } else if let Some((confirm, keep, shown)) = ctx.data(|d| d.get_temp::<(egui::Id, egui::Id, u64)>(was_open)) {
+        ctx.data_mut(|d| d.remove::<(egui::Id, egui::Id, u64)>(was_open));
+        let focused = ctx.memory(|m| m.focused());
+        if frame.saturating_sub(shown) <= 1 && (focused.is_none() || focused == Some(keep) || focused == Some(confirm)) {
+            button.request_focus();
+        }
+    }
+    Asked { yes: answer }
+}
+
+/// One look for "the focus is here", whatever the control, for everything drawn in `ui` from here
+/// on: a line 2 pt wide in the text colour round it, as round a tab or a choice
+/// ([`crate::widgets::ring_on_focus`]). egui draws a button, checkbox, radio button or list that has
+/// the focus (or is being pressed) with its "active" outline, and a text box in use with the
+/// selection's.
+pub(super) fn focus_style(ui: &mut egui::Ui, t: &Tokens) {
+    let visuals = ui.visuals_mut();
+    visuals.widgets.active.bg_stroke = egui::Stroke::new(2.0, t.text);
+    visuals.selection.stroke = egui::Stroke::new(2.0, t.text);
+}
+
+/// A text box of the Settings window, shown: Esc in it gives its text back and is used up by
+/// that, so Settings stays open (a second Esc, with nothing being edited, closes it).
+pub(super) fn field(ui: &mut egui::Ui, field: crate::text_field::TextField<'_>) -> crate::text_field::TextFieldResponse {
+    let shown = field.show(ui);
+    if shown.cancelled() {
+        crate::widgets::take_escape(ui.ctx());
+    }
+    shown
+}
+
 pub(crate) fn heading(ui: &mut egui::Ui, t: &Tokens, text: &str) {
     ui.add_space(4.0);
     // `text` is the heading's English name (its message key). It is shown translated and
@@ -89,7 +174,7 @@ pub(crate) fn heading(ui: &mut egui::Ui, t: &Tokens, text: &str) {
         if left > 0.0 {
             let strength = (left * 2.0).min(1.0);
             let around = r.rect.expand2(egui::vec2(6.0, 2.0));
-            let outline = egui::Stroke::new(1.0, t.accent.gamma_multiply(strength));
+            let outline = egui::Stroke::new(1.0, t.legible(t.accent, t.chrome, 3.0).gamma_multiply(strength));
             ui.painter().set(behind, egui::Shape::rect_filled(around, egui::CornerRadius::same(4), t.hover.gamma_multiply(strength)));
             ui.painter().rect_stroke(around, egui::CornerRadius::same(4), outline, egui::StrokeKind::Inside);
             register_geometry(ui.ctx(), format!("settingsLanded:{name}"), around);
@@ -119,20 +204,38 @@ pub(crate) fn row<R>(ui: &mut egui::Ui, t: &Tokens, label: &str, add: impl FnOnc
     .inner
 }
 
+/// What says where a control is, and what a text box says while it is empty, made legible for
+/// everything drawn in `ui` from here on: the border of a button, checkbox, radio button, list or
+/// text box stands 3:1 against the window and against a theme card's fill, a text box in use is
+/// outlined in an accent that does too, and placeholder text stands 4.5:1 in its box.
+pub(super) fn legible_controls(ui: &mut egui::Ui, t: &Tokens) {
+    // (a little over 3:1 as a colour: a radio button's ring is one antialiased pixel wide, and
+    // what is drawn of it is fainter than the colour it is drawn in)
+    let border = t.legible(t.legible(t.button_border, t.chrome, 3.0), t.inset, 3.6);
+    let visuals = ui.visuals_mut();
+    visuals.widgets.inactive.bg_stroke.color = border;
+    visuals.selection.stroke.color = t.legible(t.accent, t.chrome, 3.0);
+    visuals.weak_text_color = Some(t.legible(t.text_dim, t.field, 4.5));
+}
+
 pub(crate) fn hint(ui: &mut egui::Ui, t: &Tokens, text: &str) {
-    ui.label(RichText::new(crate::i18n::tr(text)).font(t.caption()).color(t.text_dim));
+    // (an explanation is small text: the dim colour where it reads, else as near it as reads)
+    ui.label(RichText::new(crate::i18n::tr(text)).font(t.caption()).color(t.legible(t.text_dim, t.chrome, 4.5)));
 }
 
 /// Mutually exclusive buttons (`button:{id}-{index}`).
 pub(crate) fn choices<V: PartialEq + Copy>(ui: &mut egui::Ui, id: &str, options: &[(V, &str)], value: &mut V) -> bool {
     let mut changed = false;
     ui.spacing_mut().item_spacing.x = 4.0;
+    // (the row is one stop for Tab, at the choice that holds; the arrow keys go along it)
+    let mut group = crate::widgets::Roving::new(ui, id, options.iter().position(|(v, _)| *v == *value));
     for (i, (v, l)) in options.iter().enumerate() {
-        if crate::widgets::text_button(ui, &format!("{id}-{i}"), l, *value == *v).clicked() && *value != *v {
+        if crate::widgets::choice_button_in(ui, &mut group, &format!("{id}-{i}"), l, *value == *v).clicked() && *value != *v {
             *value = *v;
             changed = true;
         }
     }
+    group.end(ui);
     changed
 }
 

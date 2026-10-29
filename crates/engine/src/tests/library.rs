@@ -240,6 +240,21 @@ fn profile_favorites_and_recent_survive_reopen() {
 }
 
 #[test]
+fn opening_a_library_on_picks_leaves_no_flag_filter_carried_over() {
+    // a filter set before another library opens, which was left on Picks (the source that owns the flag)
+    let dir = temp_dir("picksflag");
+    drop(open(&dir, true));
+    std::fs::write(dir.join("view.json"), br#"{"source": {"kind": "picks"}}"#).unwrap();
+    let mut s = Session::new();
+    s.set_filter(lightcraft_catalog::Filter { flag: Some(lightcraft_catalog::Flag::Reject), rating: 2, ..Default::default() });
+    s.open_library(&dir, false).unwrap();
+    assert_eq!(s.source, crate::LibrarySource::Picks);
+    // (this build starts a library unfiltered, as after a restart: ids in the filter mean others in another library)
+    assert_eq!(*s.filter(), lightcraft_catalog::Filter::default(), "no flag chip over the picks, and nothing carried over");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn the_shown_library_folder_survives_reopen() {
     let dir = temp_dir("libfolder");
     let mut s = open(&dir, true);
@@ -305,7 +320,7 @@ fn smart_album_rule_sets() {
         let r = s.execute("library.filter", &serde_json::json!({"ruleSet": {"rules": rules}}));
         assert!(r.is_err(), "{rules}");
     }
-    assert!(s.filter.rule_set.is_none(), "a refused filter isn't applied");
+    assert!(s.filter().rule_set.is_none(), "a refused filter isn't applied");
     s.execute("library.filter", &serde_json::json!({"ruleSet": {"rules": [{"field": "edited", "op": "is", "value": "no"}]}})).unwrap();
     s.execute("library.filter", &serde_json::json!({"ruleSet": null})).unwrap();
     let r = s
@@ -352,7 +367,7 @@ fn filter_label_and_labels_together_chip() {
         s.execute("photo.label", &json!({"ids": [id], "label": l})).unwrap();
     }
     let reds = s.catalog.photos().filter(|p| p.in_library() && p.label == Some(ColorLabel::Red)).count();
-    let chip = |s: &Session| crate::filter_chips(&s.filter, &s.catalog).into_iter().find(|c| c.label.starts_with("Label")).expect("a label chip");
+    let chip = |s: &Session| crate::filter_chips(s.filter(), &s.catalog).into_iter().find(|c| c.label.starts_with("Label")).expect("a label chip");
     s.execute("library.filter", &json!({"label": "red", "labels": ["yellow", "red"]})).unwrap();
     assert_eq!(s.visible_cloned().len(), reds);
     assert_eq!(chip(&s).label, "Label: Red");
@@ -361,7 +376,7 @@ fn filter_label_and_labels_together_chip() {
     assert_eq!(s.visible_cloned().len(), 0);
     assert_eq!(chip(&s).label, "Label: Red and (Yellow or Green)");
     s.execute("library.filter", &chip(&s).clear).unwrap();
-    assert_eq!((s.filter.label, s.filter.labels.len()), (None, 0));
+    assert_eq!((s.filter().label, s.filter().labels.len()), (None, 0));
 }
 
 /// The filter bar's label multi-select: any of the chosen labels.
@@ -379,7 +394,7 @@ fn filter_any_of_several_labels() {
     assert_eq!(want, 2);
     assert_eq!(vis.len(), want);
     assert!(vis.iter().all(|id| matches!(s.catalog.photo(*id).unwrap().label, Some(ColorLabel::Red | ColorLabel::Yellow))));
-    assert!(s.filter.describe().contains("label red or yellow"));
+    assert!(s.filter().describe().contains("label red or yellow"));
     s.execute("library.filter", &serde_json::json!({"labels": []})).unwrap();
     assert!(s.visible_cloned().len() > want);
 }
@@ -795,7 +810,7 @@ fn a_stale_rule_doesnt_block_other_changes() {
     s.execute("album.delete", &serde_json::json!({"id": trip})).unwrap();
     // the filter bar: a rating still applies on top of the stale rule
     s.execute("library.filter", &serde_json::json!({"rating": 3})).unwrap();
-    assert_eq!(s.filter.rating, 3);
+    assert_eq!(s.filter().rating, 3);
     // the album: a partial edit that leaves its rules alone
     s.execute("album.setRules", &serde_json::json!({"id": smart, "rules": {"rating": 2}})).unwrap();
     // changing the rules is still checked

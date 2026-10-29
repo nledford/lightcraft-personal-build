@@ -276,6 +276,9 @@ pub struct Headless {
     /// create a prompt after the host input was already filtered for the previous frame.
     #[cfg(test)]
     after_raw_input_hook: Option<Box<dyn FnMut(&mut LightcraftApp)>>,
+    /// Test-only: the next frame carries the window's close request ([`Self::request_close`]).
+    #[cfg(test)]
+    close_next: bool,
 }
 
 /// A headless run (`lightcraft-cli snapshot`, tests) is a one-shot process: however it ends, it
@@ -320,6 +323,8 @@ impl Headless {
             last_cursor: egui::CursorIcon::Default,
             #[cfg(test)]
             after_raw_input_hook: None,
+            #[cfg(test)]
+            close_next: false,
         }
     }
 
@@ -329,6 +334,13 @@ impl Headless {
     #[cfg(test)]
     pub(crate) fn set_after_raw_input_hook(&mut self, hook: impl FnMut(&mut LightcraftApp) + 'static) {
         self.after_raw_input_hook = Some(Box::new(hook));
+    }
+
+    /// The next frame carries the window's close request, as the close button (or the host's Quit)
+    /// sends it.
+    #[cfg(test)]
+    pub(crate) fn request_close(&mut self) {
+        self.close_next = true;
     }
 
     pub fn frames(&self) -> u64 {
@@ -362,6 +374,10 @@ impl Headless {
         self.app.set_simulated_clock(Some(self.time));
         self.app.raw_input_hook(&self.view.ctx, &mut raw);
         #[cfg(test)]
+        if std::mem::take(&mut self.close_next) {
+            raw.viewports.entry(ViewportId::ROOT).or_default().events.push(egui::ViewportEvent::Close);
+        }
+        #[cfg(test)]
         if let Some(mut hook) = self.after_raw_input_hook.take() {
             hook(&mut self.app);
         }
@@ -392,7 +408,9 @@ impl Headless {
                     self.window_commands.push(c);
                 }
                 // recorded, not carried out: the simulated pointer moves only when a test moves it
-                ViewportCommand::StartDrag | ViewportCommand::CursorPosition(_) | ViewportCommand::CursorGrab(_) => self.window_commands.push(c),
+                ViewportCommand::CancelClose | ViewportCommand::StartDrag | ViewportCommand::CursorPosition(_) | ViewportCommand::CursorGrab(_) => {
+                    self.window_commands.push(c)
+                }
                 _ => {}
             }
         }
@@ -481,6 +499,43 @@ impl Headless {
     pub fn snapshot(&mut self, timeout: Duration) -> ColorImage {
         self.settle(timeout);
         self.paint()
+    }
+
+    /// Scrolls the page of the open dialog (a wheel over the middle of its window) until the widget `id` is drawn well
+    /// inside the window, and the scroll has come to rest: a widget below or above the fold of a long page is not
+    /// drawn, or only partly, and a click at its middle would miss. Down first, then back up. Whether it is in view
+    /// in the end.
+    #[cfg(test)]
+    pub(crate) fn bring_into_view(&mut self, id: &str) -> bool {
+        let window = |h: &Self| h.app.widgets.iter().find(|(w, _)| w == "dialog:window").map(|(_, r)| *r);
+        let inside = |h: &Self| {
+            let (Some(window), Some(at)) = (window(h), h.app.widgets.iter().find(|(w, _)| w == id).map(|(_, r)| *r)) else { return false };
+            window.shrink2(egui::vec2(0.0, 60.0)).contains(at.center())
+        };
+        let rest = |h: &mut Self| {
+            for _ in 0..240 {
+                h.step();
+                if !h.view.ctx.input(|i| i.is_scrolling()) {
+                    break;
+                }
+            }
+        };
+        if inside(self) {
+            return true;
+        }
+        let Some(window) = window(self) else { return false };
+        let at = window.center();
+        self.request("ui.move", json!({"x": at.x, "y": at.y}), Duration::from_secs(10));
+        for dy in [-250.0, 250.0] {
+            for _ in 0..24 {
+                self.request("ui.scroll", json!({"dy": dy}), Duration::from_secs(10));
+                rest(self);
+                if inside(self) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// Tests that browse a folder in the temp directory expect it to be a Local location of its

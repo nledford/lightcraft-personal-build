@@ -51,12 +51,14 @@ fn parent_param(p: &Value) -> Option<u64> {
 
 /// `file.addPhotos` / `file.addFolder` / `file.addFromDevice` `{album?}`: the review of the scan
 /// just started opens with that album chosen (an album's context menu ▸ Import ▸ …). An error
-/// means another scan is running.
+/// means another scan is running. `file.addFolder {destination?}` opens it copying into that
+/// folder (a folder's menu ▸ Import to This Folder…).
 fn import_into_album(app: &mut LightcraftApp, p: &Value, r: Result<Value, String>) -> Result<Value, String> {
     if r.is_ok()
         && let Some(t) = &mut app.scan
     {
         t.album = p.get("album").and_then(Value::as_u64);
+        t.destination = p.get("destination").and_then(Value::as_str).filter(|d| !d.is_empty()).map(str::to_string);
     }
     r
 }
@@ -295,6 +297,7 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
     }
     if let Some(language) = language_from_command(id) {
         app.ui.language = language;
+        app.ui.follow_system_language = false;
         // Immediately, not on the next frame: the reply and anything else run this frame
         // (menus rebuilt from it, toasts) are already in the new language.
         crate::i18n::set_language(app.ui.language);

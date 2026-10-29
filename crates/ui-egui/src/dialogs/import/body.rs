@@ -41,7 +41,10 @@ pub(super) fn dup_counts(d: &ImportDialog) -> (usize, usize, usize) {
     let in_source = d.candidates.iter().filter(|c| c.duplicate.as_deref() == Some("content") && c.existing.is_none()).count() - twins;
     // (a browsed photo isn't offered while copying: it counts as already there)
     let browsed = if d.copy { (0..d.candidates.len()).filter(|i| d.is_browsed(*i)).count() } else { 0 };
-    let dups = (d.candidates.iter().filter(|c| c.duplicate.is_some()).count() + browsed).saturating_sub(trashed + twins).saturating_sub(in_source);
+    let dups = (d.candidates.iter().filter(|c| c.duplicate.is_some()).count() + browsed)
+        .saturating_sub(trashed + twins)
+        .saturating_sub(in_source)
+        .saturating_sub(browsed);
     (dups, in_source, trashed)
 }
 
@@ -477,6 +480,7 @@ fn candidate_cell(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDial
         (Some(_), _) if in_trash && on => Some(if d.on_deleted == "fresh" { "Will be replaced" } else { "Will be restored" }),
         (Some(_), _) if d.is_copy_twin(i) => None,
         (Some(_), _) if in_trash => Some("In Recently Deleted"),
+        (Some(_), _) if d.is_browsed(i) && !d.copy => None,
         (Some(r), _) if r == "path" => Some("In library"),
         (Some(_), _) => Some("Duplicate"),
         (None, None) if d.copy && d.is_browsed(i) => Some("In library"),

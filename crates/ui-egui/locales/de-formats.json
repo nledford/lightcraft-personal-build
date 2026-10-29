@@ -39,7 +39,7 @@
   "Color space: Rec. 2020 {curve} (HDR AVIF)": "Farbraum: Rec. 2020 {curve} (HDR-AVIF)",
   "Couldn't open the editor: {e}": "Editor konnte nicht geöffnet werden: {e}",
   "Create {n} Virtual Copies": "{n} virtuelle Kopien erstellen",
-  "Creates {} stacks from {} of {scope}": "Erstellt {} Stapel aus {} von {scope}",
+  "Creates {stacks} stack{} from {photos} of {scope}": "Erstellt {stacks} Stapel aus {photos} von {scope}{:.0}",
   "Decoder: {reason}": "Decoder: {reason}",
   "Delete \"{label}\"": "„{label}“ löschen",
   "Delete \"{label}\" (and the mask)": "„{label}“ löschen (und die Maske)",
@@ -165,7 +165,6 @@
   "{n} photo{}": "{n} Foto{}",
   "{n} photo{} match · updates automatically as photos change": "Passende Fotos: {n}{:.0} · wird bei Änderungen an Fotos automatisch aktualisiert",
   "{n} photo{} now · updates automatically as photos change": "Derzeit {n} Foto{} · wird bei Änderungen an Fotos automatisch aktualisiert",
-  "{n} selected photos · {pages} pages": "{n} ausgewählte Fotos · {pages} Seiten",
   "{pid} (missing)": "{pid} (fehlt)",
   "{sel_n} selected · {counted}": "{sel_n} ausgewählt · {counted}",
   "{stage}… {:.0}%": "{stage}… {:.0}%",
@@ -309,7 +308,8 @@
   "Skipped {problem}": "Übersprungen: {problem}",
   "…and {more} more": "…und {more} weitere",
   "Template preview: {name}": "Vorlagenvorschau: {name}",
-  "{n} photos in view · {slides} slides · {time}": "{n} Fotos in der Ansicht · {slides} Dias · {time}",
+  "{n} selected photo{} · {pages} page{}": "Ausgewählte Fotos: {n} · Seiten: {pages}{:.0}{:.0}",
+  "{n} photo{} in view · {slides} slide{} · {time}": "Fotos in der Ansicht: {n} · Folien: {slides} · {time}{:.0}{:.0}",
   "{n} pages": "{n} Seiten",
   "{n} JPEG files": "{n} JPEG-Dateien",
   "{s} s of AV1 video": "{s} s AV1-Video",
@@ -409,5 +409,10 @@
   "Move {n}, skip {m}": "{n} verschieben, {m} überspringen",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} Foto{0} nach „{1}“ verschoben, {skipped} übersprungen. Bearbeiten → Rückgängig holt sie zurück.",
   "{} can't be moved": "{0} lässt sich nicht verschieben",
-  "{} has the same name as another photo being moved": "{0} hat denselben Namen wie ein anderes Foto, das verschoben wird"
+  "{} has the same name as another photo being moved": "{0} hat denselben Namen wie ein anderes Foto, das verschoben wird",
+  "Created folder “{name}” in “{parent}”": "Ordner „{name}“ in „{parent}“ erstellt",
+  "Panel layout could not be restored: {error}": "Die Bereichsanordnung konnte nicht wiederhergestellt werden: {error}",
+  "Panel move was not applied: {error}": "Das Verschieben des Bereichs wurde nicht ausgeführt: {error}",
+  "{name} is installed": "{name} ist installiert",
+  "{name} is installed and in use: face recognition is on": "{name} ist installiert und in Gebrauch: Gesichtserkennung ist eingeschaltet"
 }

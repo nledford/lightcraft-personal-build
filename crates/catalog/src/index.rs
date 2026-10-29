@@ -40,6 +40,8 @@ pub(crate) struct Indexes {
     /// File name, lower-cased ([`file_name_index_key`]) → the photos whose file has it (same
     /// states as `folders`).
     names: OnceLock<HashMap<String, HashSet<PhotoId>>>,
+    /// Every photo in each sort order, see [`crate::order`].
+    pub(crate) orders: crate::order::Orders,
 }
 
 /// A copy builds its own when asked (copies are made to be saved, not queried).

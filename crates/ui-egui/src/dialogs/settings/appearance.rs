@@ -50,7 +50,7 @@ fn theme_card<V: PartialEq + Copy>(ui: &mut egui::Ui, t: &Tokens, card: ThemeCar
     let ThemeCard { title, active, options, width } = card;
     egui::Frame::new()
         .fill(t.inset)
-        .stroke(egui::Stroke::new(1.0, if active { t.accent } else { t.field_border }))
+        .stroke(egui::Stroke::new(1.0, if active { t.legible(t.accent, t.chrome, 3.0) } else { t.field_border }))
         .corner_radius(6)
         .inner_margin(8)
         .show(ui, |ui| {
@@ -72,8 +72,10 @@ fn theme_card<V: PartialEq + Copy>(ui: &mut egui::Ui, t: &Tokens, card: ThemeCar
                         crate::check::radio(ui, &format!("theme-{}", kind.id()), value, *v, kind.label());
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let favorite = favorites.iter().any(|id| id == kind.id());
+                            // (always there, so that Tab reaches it; drawn while it is a
+                            // favourite, under the mouse or has the focus)
                             let r = ui
-                                .add_visible(favorite || hovered, egui::Button::new("").min_size(egui::vec2(24.0, 24.0)).frame(false))
+                                .add(egui::Button::new("").min_size(egui::vec2(24.0, 24.0)).frame(false))
                                 .on_hover_text(crate::i18n::tr(if favorite { "Remove from favorites" } else { "Add to favorites" }));
                             r.widget_info(|| {
                                 egui::WidgetInfo::labeled(
@@ -87,8 +89,9 @@ fn theme_card<V: PartialEq + Copy>(ui: &mut egui::Ui, t: &Tokens, card: ThemeCar
                                 )
                             });
                             register(ui, format!("button:themeFavorite-{}", kind.id()), r.rect);
-                            if favorite || hovered {
-                                crate::rating::paint_star(ui.painter(), r.rect.shrink(4.0), favorite, if favorite { t.accent } else { t.text_dim });
+                            crate::widgets::ring_on_focus(ui, t, &r, r.rect);
+                            if favorite || hovered || r.has_focus() {
+                                crate::rating::paint_star(ui.painter(), r.rect.shrink(4.0), favorite, favorite_star_colour(t, favorite));
                             }
                             if r.clicked() {
                                 if favorite {
@@ -102,6 +105,12 @@ fn theme_card<V: PartialEq + Copy>(ui: &mut egui::Ui, t: &Tokens, card: ThemeCar
                 }
             });
         });
+}
+
+/// The star that marks a favourite theme (or offers to), a mark that says what a click does: it
+/// stands 3:1 against the card it is on.
+pub(crate) fn favorite_star_colour(t: &Tokens, favorite: bool) -> egui::Color32 {
+    t.legible(if favorite { t.accent } else { t.text_dim }, t.inset, 3.0)
 }
 
 /// A small LightCraft window painted with `kind`'s tokens: the top bar with its search field, the

@@ -464,19 +464,15 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                     ui.label(RichText::new(m["name"].as_str().unwrap_or("")).color(t.text));
                     let size = mb(m["sizeBytes"].as_u64());
                     if !size.is_empty() {
-                        ui.label(RichText::new(size).color(t.text_dim));
+                        ui.label(RichText::new(size).color(t.legible(t.text_dim, t.chrome, 4.5)));
                     }
                     if selected {
                         ui.label(RichText::new(tr("in use")).color(t.text_link()));
                     } else if installed {
-                        ui.label(RichText::new(tr("installed")).color(t.text_dim));
+                        ui.label(RichText::new(tr("installed")).color(t.legible(t.text_dim, t.chrome, 4.5)));
                     }
                 });
-                ui.label(RichText::new(licence_line(m)).font(t.caption()).color(if m["licence"]["commercial"] == "yes" {
-                    t.text_dim
-                } else {
-                    t.text_caution()
-                }));
+                ui.label(RichText::new(licence_line(m)).font(t.caption()).color(licence_colour(t, m, t.text_dim)));
                 match m["accepted"]["selfTest"].as_object() {
                     Some(test) if test.get("ok").and_then(Value::as_bool) == Some(true) => {
                         ui.label(RichText::new(tr("Tested and works on this computer")).font(t.caption()).color(t.text_dim));
@@ -507,7 +503,7 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                         });
                     }
                     (Some("failed"), Some(d)) => {
-                        let why = sentence(d["error"].as_str().unwrap_or("The download failed"));
+                        let why = download_failure(d);
                         ui.add(egui::Label::new(RichText::new(why).font(t.caption()).color(t.text_caution())).wrap());
                     }
                     _ => {}
@@ -516,6 +512,13 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if installed {
                     let r = Button::new("Remove").widget(format!("denoise:remove:{id}")).show(ui);
+                    let r = super::settings::ask_first(
+                        t,
+                        &format!("denoise:remove:{id}"),
+                        r,
+                        "The model's file is deleted. To use it again you download or add it again.",
+                        "Remove",
+                    );
                     if r.clicked() {
                         app.act("denoise.models.remove", json!({"id": id}));
                         app.caches.denoise.epoch += 1;
@@ -658,13 +661,25 @@ pub(super) fn mb(bytes: Option<u64>) -> String {
     }
 }
 
+/// Why a model download failed, as a sentence: the engine's reason, or, when it gave none, a message in the UI language.
+pub(crate) fn download_failure(d: &Value) -> String {
+    sentence(d["error"].as_str().unwrap_or_else(|| tr("The download failed")))
+}
+
 pub(super) fn sentence(s: &str) -> String {
     let s = s.trim();
     let mut out = crate::i18n::upper_first(s);
-    if !out.is_empty() && !out.ends_with(['.', '!', '?']) {
+    if !out.is_empty() && !out.ends_with(['.', '!', '?', '。', '！', '？']) {
         out.push('.');
     }
     out
+}
+
+/// The colour of a model's licence line, made legible on the window's surface: `plain` when
+/// commercial use is allowed, the caution colour when it is not or unknown.
+pub(crate) fn licence_colour(t: &Tokens, m: &Value, plain: egui::Color32) -> egui::Color32 {
+    let colour = if m["licence"]["commercial"].as_str() == Some("yes") { plain } else { t.caution };
+    t.legible(colour, t.chrome, 4.5)
 }
 
 pub(super) fn licence_line(m: &Value) -> String {
@@ -699,16 +714,19 @@ pub fn model_dialog(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, info
             )
             .wrap(),
         );
-        ui.label(RichText::new(tr_format!("{file} · {size}", file = file, size = mb(info["sizeBytes"].as_u64()))).color(t.text_dim));
+        ui.label(
+            RichText::new(tr_format!("{file} · {size}", file = file, size = mb(info["sizeBytes"].as_u64())))
+                .color(t.legible(t.text_dim, t.chrome, 4.5)),
+        );
         return;
     }
     let m = &info["model"];
     ui.horizontal(|ui| {
         ui.label(RichText::new(m["name"].as_str().unwrap_or(file)).font(t.semibold(14.0)).color(t.text));
-        ui.label(RichText::new(mb(info["sizeBytes"].as_u64())).color(t.text_dim));
+        ui.label(RichText::new(mb(info["sizeBytes"].as_u64())).color(t.legible(t.text_dim, t.chrome, 4.5)));
     });
     if info["alreadyInstalled"] == true {
-        ui.label(RichText::new(tr("Already installed. Remove it before installing a replacement.")).color(t.text_dim));
+        ui.label(RichText::new(tr("Already installed. Remove it before installing a replacement.")).color(t.legible(t.text_dim, t.chrome, 4.5)));
     }
     let download = info["download"].is_string();
     if download {
@@ -726,21 +744,30 @@ pub fn model_dialog(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, info
             .wrap(),
         );
     }
-    let commercial = m["licence"]["commercial"].as_str().unwrap_or("unknown");
-    ui.label(RichText::new(licence_line(m)).font(t.body_strong()).color(if commercial == "yes" { t.text } else { t.text_caution() }));
+    ui.label(RichText::new(licence_line(m)).font(t.body_strong()).color(licence_colour(t, m, t.text)));
     let notice = m["licence"]["notice"].as_str().unwrap_or("");
     if !notice.is_empty() {
         ui.add(egui::Label::new(RichText::new(notice).color(t.text_label)).wrap());
     }
     let provenance = m["provenance"].as_str().unwrap_or("");
     if !provenance.is_empty() {
-        ui.add(egui::Label::new(RichText::new(tr_format!("Trained on: {provenance}", provenance = provenance)).color(t.text_dim)).wrap());
+        ui.add(
+            egui::Label::new(
+                RichText::new(tr_format!("Trained on: {provenance}", provenance = provenance)).color(t.legible(t.text_dim, t.chrome, 4.5)),
+            )
+            .wrap(),
+        );
     }
     if kind == "draft" {
         ui.add_space(2.0);
         ui.label(RichText::new(tr("LightCraft does not know this model, so it assumed:")).color(t.text_label));
         for a in info["assumptions"].as_array().into_iter().flatten().filter_map(Value::as_str) {
-            ui.add(egui::Label::new(RichText::new(tr_format!("•  {assumption}", assumption = tr(a))).font(t.font(12.0)).color(t.text_dim)).wrap());
+            ui.add(
+                egui::Label::new(
+                    RichText::new(tr_format!("•  {assumption}", assumption = tr(a))).font(t.font(12.0)).color(t.legible(t.text_dim, t.chrome, 4.5)),
+                )
+                .wrap(),
+            );
         }
     }
     if let Some(url) = m["source"].as_str().or(m["licence"]["url"].as_str()) {
@@ -758,4 +785,20 @@ pub fn model_dialog(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, info
         "The model is kept on this computer only. LightCraft never uploads or shares it."
     };
     ui.label(RichText::new(tr(closing)).font(t.caption()).color(t.text_dim));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_download_failure_without_a_reason_is_said_in_the_ui_language() {
+        let de = crate::i18n::Locale::De;
+        crate::i18n::set_language(de);
+        let said = download_failure(&json!({}));
+        crate::i18n::set_language(crate::i18n::Locale::En);
+        assert_eq!(said, sentence(de.tr("The download failed")));
+        assert_eq!(download_failure(&json!({"error": "no space left"})), "No space left.", "the engine's own reason is shown as given");
+        assert_eq!(sentence("下载失败。"), "下载失败。", "a Chinese or Japanese full stop ends the sentence");
+    }
 }

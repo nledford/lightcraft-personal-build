@@ -31,6 +31,8 @@ mod performance;
 mod slideshow;
 mod widgets;
 
+#[cfg(test)]
+pub(crate) use appearance::favorite_star_colour;
 pub use display::display_profile;
 #[cfg(test)]
 pub(crate) use display::info_line_rows;
@@ -41,8 +43,11 @@ use import::import_tab;
 pub(crate) use libraries::{can_switch_library, confirm_switch, free_name};
 pub use libraries::{forget_library, library_name, new_library, open_library, open_library_name, recent_libraries, remember_library};
 use performance::performance_tab;
+#[cfg(test)]
+pub(crate) use performance::{gpu_line, smart_folder_default};
 use slideshow::slideshow_tab;
-pub(crate) use widgets::{choices, heading, hint, row};
+pub(crate) use widgets::{ask_first, choices, heading, hint, row};
+use widgets::{focus_style, legible_controls};
 
 pub mod slide_layout;
 pub mod slide_overlays;
@@ -134,8 +139,23 @@ const PINNED_PAGE_MIN_HEIGHT: f32 = 100.0;
 /// On Slideshow the slide preview is pinned between the tab bar and the page (where the room
 /// allows), and comes off that page's room.
 pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_height: f32) {
+    // (one look for the focus in this window, whichever control: the text colour, not the accent
+    // the rest of the app rings a focused control in; see [`focus_style`])
+    crate::widgets::focus_in_text_colour(ui.ctx(), true);
+    window_page(app, ui, tab, max_height);
+    crate::widgets::focus_in_text_colour(ui.ctx(), false);
+}
+
+fn window_page(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_height: f32) {
     ui.set_width((ui.ctx().content_rect().width() - 64.0).clamp(240.0, PAGE_SIZE.x));
     let top = ui.cursor().top();
+    // What says where a control is, and what a text box says while it is empty, are made legible
+    // here for everything in the window, the filter too (the tab bar draws its own, and its line is
+    // made legible below): a theme's border is 1.6 to 1.7:1 against the window and its weak text
+    // under 4.3:1 in a box (the tokens keep their values for the rest of the app).
+    let t = Tokens::get(ui.ctx());
+    legible_controls(ui, &t);
+    focus_style(ui, &t);
     // The filter, above the tabs it looks through. What is typed is kept from one frame of the
     // window to the next only: Settings opened again starts with it empty.
     let filter_id = egui::Id::unique("settings-filter");
@@ -187,17 +207,48 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
     let open_first = typed.ending == Some(crate::text_field::Ending::Return);
     // (with something typed the page is what was found, of any tab: no tab is the open one)
     let filtering = !filter.text.trim().is_empty();
-    ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = egui::vec2(4.0, 4.0);
-        for (id, label) in TABS {
-            if crate::widgets::text_button(ui, &format!("settingsTab-{id}"), tab_label(id, label), tab == id && !filtering).clicked() {
-                *tab = id.to_string();
-                // (a tab opened is its page asked for: the filter gives way)
-                filter.text.clear();
+    // Each line of tabs stands on a line of its own the width of the window, so the open tab's
+    // line always has the bar's under it: in a narrow window, or a language with long names, the
+    // tabs take two lines or more.
+    let mut lines: Vec<f32> = Vec::new();
+    // The page drawn is the one that was open when the frame began: a tab clicked now opens on
+    // the next frame, so a text box on the page being left is drawn once more and saves what was
+    // typed in it (the click took the focus from it).
+    let shown = tab.clone();
+    // (the bar is one stop for Tab, at the open tab; the arrow keys go along it)
+    let mut bar = crate::widgets::Roving::new(ui, "settingsTabs", TABS.iter().position(|(id, _)| *id == shown.as_str()).filter(|_| !filtering));
+    // (the page of the open tab: its tab tells a screen reader that it controls this)
+    let panel = ui.scope_id().with("settings-tab-panel");
+    let sections = crate::i18n::tr("Settings sections");
+    crate::widgets::tab_list(ui, sections, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            ui.spacing_mut().item_spacing = egui::vec2(4.0, 5.0);
+            for (id, label) in TABS {
+                let open = shown == *id && !filtering;
+                let r = crate::widgets::tab_button_in(ui, &mut bar, &format!("settingsTab-{id}"), tab_label(id, label), open);
+                if open {
+                    crate::widgets::tab_controls(&r, panel);
+                }
+                let bottom = egui::emath::GuiRounding::round_to_pixels(r.rect.bottom(), ui.pixels_per_point());
+                if !lines.iter().any(|line| (line - bottom).abs() < 0.5) {
+                    lines.push(bottom);
+                }
+                if r.clicked() {
+                    *tab = id.to_string();
+                    ui.ctx().request_repaint();
+                    // (a tab opened is its page asked for: the filter gives way)
+                    filter.text.clear();
+                }
             }
-        }
+        })
     });
-    ui.separator();
+    bar.end(ui);
+    let divider = t.legible(t.divider, t.chrome, 3.0);
+    for bottom in lines {
+        let line = egui::Rect::from_min_max(egui::pos2(ui.min_rect().left(), bottom), egui::pos2(ui.min_rect().right(), bottom + 1.0));
+        ui.painter().rect_filled(line, egui::CornerRadius::ZERO, divider);
+    }
+    ui.add_space(1.0);
     // With something typed, the page gives way to the sections found, of whatever tab.
     let words = filter.text.trim().to_lowercase();
     let now = ui.input(|i| i.time);
@@ -205,61 +256,71 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
     let mut goto = None;
     // (a point less than the room left, so rounding never makes the dialog's own scroll area scroll)
     let room = max_height - (ui.cursor().top() - top) - 1.0;
-    let mut height = room.min(PAGE_SIZE.y);
-    // The slide preview stays above the page on Slideshow: hovering a template in the Template
-    // Browser previews it there, so it has to stay in view however far down the templates are
-    // scrolled to. With its heading and choice it takes [`PINNED_PREVIEW_SHARE`] of the room
-    // (at least the least tall slide); where that leaves less than [`PINNED_PAGE_MIN_HEIGHT`] for the
-    // page, it scrolls with the page instead (as in the short window above). What was found
-    // is drawn in its place while the filter has something typed.
-    let mut pinned = false;
-    if tab == "slideshow" && found.is_none() && room >= PAGE_MIN_HEIGHT {
-        // (the filter row is taken off the page, not off the preview: the slide is as large as it was)
-        let slide_h = ((room + filter_row).min(PAGE_SIZE.y) * PINNED_PREVIEW_SHARE - PREVIEW_CHROME).max(crate::panels::slide_layout::PREVIEW_MIN_H);
-        if height - (slide_h + PREVIEW_CHROME_DRAWN) >= PINNED_PAGE_MIN_HEIGHT {
-            let before = ui.cursor().top();
-            crate::panels::slide_layout::preview(app, ui, &Tokens::get(ui.ctx()), slide_h);
-            ui.add_space(2.0);
-            ui.separator();
-            height = (height - (ui.cursor().top() - before)).max(PINNED_PAGE_MIN_HEIGHT);
-            pinned = true;
-        }
-    }
-    let mut page = |ui: &mut egui::Ui| match &found {
+    let mut page = |app: &mut LightcraftApp, ui: &mut egui::Ui, pinned: bool| match &found {
         Some(found) => goto = results(ui, found, &words, open_first, to_first),
         None => {
             // (a section chosen that starts its tab, with no heading of its own: the page goes to its top)
             if ui
                 .data(|d| d.get_temp::<(&'static str, String)>(egui::Id::unique(GOTO)))
-                .is_some_and(|(to, section)| to == tab.as_str() && section.is_empty())
+                .is_some_and(|(to, section)| to == shown.as_str() && section.is_empty())
             {
                 ui.scroll_to_cursor(Some(egui::Align::TOP));
             }
             if pinned {
                 slideshow_tab(app, ui, &Tokens::get(ui.ctx()), false);
             } else {
-                body(app, ui, tab.as_str());
+                body(app, ui, shown.as_str());
             }
             // (what the page took: wider than the room for it would mean a control is cut off)
             register(ui, "settings:page", ui.min_rect());
         }
     };
+    // (named as its tab is on the tab bar; while the filter has text no tab is open: the panel holds the results)
+    let name = if filtering {
+        crate::i18n::tr("Settings")
+    } else {
+        TABS.iter().find(|(id, _)| *id == shown.as_str()).map_or("", |(id, label)| crate::i18n::tr(tab_label(id, label)))
+    };
     if room < PAGE_MIN_HEIGHT {
-        page(ui);
+        crate::widgets::tab_panel(ui, panel, name, |ui| page(app, ui, false));
     } else {
         // A page that goes on below shows its scroll handle all the time: without it, a page a
         // line or two too long looks cut off, not scrollable.
         ui.spacing_mut().scroll.dormant_handle_opacity = 0.6;
-        let salt = if found.is_some() { "found" } else { tab.as_str() };
-        let area = egui::ScrollArea::vertical()
-            .id_salt(("settings-page", salt))
-            .max_height(height)
-            .min_scrolled_height(height)
-            .auto_shrink([false, false])
-            .show(ui, |ui| {
-                ui.add_space(2.0);
-                page(ui);
-            });
+        // (the pinned preview below is part of the page the open tab controls: in the tab panel with it)
+        let area = crate::widgets::tab_panel(ui, panel, name, |ui| {
+            let mut height = room.min(PAGE_SIZE.y);
+            // The slide preview stays above the page on Slideshow: hovering a template in the Template
+            // Browser previews it there, so it has to stay in view however far down the templates are
+            // scrolled to. With its heading and choice it takes [`PINNED_PREVIEW_SHARE`] of the room
+            // (at least the least tall slide); where that leaves less than [`PINNED_PAGE_MIN_HEIGHT`] for the
+            // page, it scrolls with the page instead (as in the short window above). What was found
+            // is drawn in its place while the filter has something typed.
+            let mut pinned = false;
+            if shown == "slideshow" && found.is_none() {
+                // (the filter row is taken off the page, not off the preview: the slide is as large as it was)
+                let slide_h =
+                    ((room + filter_row).min(PAGE_SIZE.y) * PINNED_PREVIEW_SHARE - PREVIEW_CHROME).max(crate::panels::slide_layout::PREVIEW_MIN_H);
+                if height - (slide_h + PREVIEW_CHROME_DRAWN) >= PINNED_PAGE_MIN_HEIGHT {
+                    let before = ui.cursor().top();
+                    crate::panels::slide_layout::preview(app, ui, &Tokens::get(ui.ctx()), slide_h);
+                    ui.add_space(2.0);
+                    ui.separator();
+                    height = (height - (ui.cursor().top() - before)).max(PINNED_PAGE_MIN_HEIGHT);
+                    pinned = true;
+                }
+            }
+            let salt = if found.is_some() { "found" } else { shown.as_str() };
+            egui::ScrollArea::vertical()
+                .id_salt(("settings-page", salt))
+                .max_height(height)
+                .min_scrolled_height(height)
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    ui.add_space(2.0);
+                    page(app, ui, pinned);
+                })
+        });
         register(ui, "settings:pageRoom", area.inner_rect);
     }
     // A section chosen from what was found: its tab opens (on the next frame, as a clicked tab

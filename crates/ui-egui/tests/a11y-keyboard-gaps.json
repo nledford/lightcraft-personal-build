@@ -1,0 +1,275 @@
+{
+  "Context menu of a photo": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 46,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Context menu of an album": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 46,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Dialog About": {},
+  "Dialog Settings denoise": {},
+  "Dialog Settings display": {},
+  "Dialog Settings faces": {},
+  "Dialog Settings files": {},
+  "Dialog Settings general": {},
+  "Dialog Settings import": {},
+  "Dialog Settings interface": {
+    "CheckBox shows no focus in Settings › Appearance": 1,
+    "RadioButton shows no focus in Settings › Appearance": 1
+  },
+  "Dialog Settings library": {},
+  "Dialog Settings performance": {},
+  "Dialog Settings slideshow": {
+    "Button shows no focus in Settings › Slideshow": 5,
+    "CheckBox shows no focus in Settings › Slideshow": 15,
+    "ColorWell shows no focus in Settings › Slideshow": 1,
+    "RadioButton shows no focus in Settings › Slideshow": 2,
+    "Slider shows no focus in Settings › Slideshow": 3,
+    "SpinButton shows no focus in Settings › Slideshow": 3,
+    "Unknown shows no focus in Settings › Slideshow": 5
+  },
+  "Dialog Shortcuts": {},
+  "Dialog ViewOptions": {},
+  "Dialog dialog.allMetadata": {},
+  "Dialog dialog.autoStack": {},
+  "Dialog dialog.captureTime": {},
+  "Dialog dialog.contactSheet": {},
+  "Dialog dialog.copySettings": {},
+  "Dialog dialog.createPreset": {},
+  "Dialog dialog.export": {
+    "Button shows no focus in Export": 8,
+    "Slider shows no focus in Export": 4
+  },
+  "Dialog dialog.labelNames": {},
+  "Dialog dialog.newAlbum": {},
+  "Dialog dialog.newSmartAlbum": {},
+  "Dialog dialog.pasteSettings": {},
+  "Dialog dialog.rename": {},
+  "Dialog dialog.saveMetadataPreset": {},
+  "Import review": {
+    "Button shows no focus in Import Photos": 6
+  },
+  "Menu Edit": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 46,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Menu File": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 46,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Menu Help": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 46,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Menu Photo": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button \"Scroll menu down\" not reached by Tab in Photo": 1,
+    "Button shows no focus in (top level)": 46,
+    "Button shows no focus in Photo": 12,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Menu View": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button \"Scroll menu down\" not reached by Tab in View": 1,
+    "Button shows no focus in (top level)": 46,
+    "Button shows no focus in View": 20,
+    "CheckBox shows no focus in View": 11,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Menu Window": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 46,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Right panel Activity": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 48,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Right panel Crop": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 64,
+    "DisclosureTriangle shows no focus in (top level)": 5,
+    "Slider shows no focus in (top level)": 8
+  },
+  "Right panel Edit": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 63,
+    "DisclosureTriangle shows no focus in (top level)": 6,
+    "Slider shows no focus in (top level)": 6
+  },
+  "Right panel Info": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 2,
+    "Button \"3 ★\" not reached by Tab in (top level)": 2,
+    "Button \"4 ★\" not reached by Tab in (top level)": 2,
+    "Button \"5 ★\" not reached by Tab in (top level)": 2,
+    "Button shows no focus in (top level)": 54,
+    "DisclosureTriangle shows no focus in (top level)": 5,
+    "TextInput shows no focus in (top level)": 5
+  },
+  "Right panel Keywords": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 121,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Right panel Masking": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 58,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Right panel Profiles": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 75,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Right panel RedEye": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 48,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "Right panel Remove": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button \"Reset Threshold\" not reached by Tab in (top level)": 1,
+    "Button \"Threshold: Click to type a value, drag to change it\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 54,
+    "DisclosureTriangle shows no focus in (top level)": 5,
+    "Slider shows no focus in (top level)": 3
+  },
+  "Right panel Versions": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 48,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "View Compare": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 52,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "View Detail": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 51,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "View People": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 56,
+    "DisclosureTriangle shows no focus in (top level)": 6,
+    "Slider shows no focus in (top level)": 6
+  },
+  "View People of one person": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 55,
+    "DisclosureTriangle shows no focus in (top level)": 6,
+    "Slider shows no focus in (top level)": 6
+  },
+  "View People with an unnamed face selected": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 56,
+    "DisclosureTriangle shows no focus in (top level)": 6,
+    "Slider shows no focus in (top level)": 6
+  },
+  "View PhotoGrid": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 46,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "View Reference": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 51,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "View SquareGrid": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 46,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  },
+  "View Survey": {
+    "Button \"2 ★\" not reached by Tab in (top level)": 1,
+    "Button \"3 ★\" not reached by Tab in (top level)": 1,
+    "Button \"4 ★\" not reached by Tab in (top level)": 1,
+    "Button \"5 ★\" not reached by Tab in (top level)": 1,
+    "Button shows no focus in (top level)": 51,
+    "DisclosureTriangle shows no focus in (top level)": 5
+  }
+}

@@ -406,8 +406,16 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
             };
             let mut v = serde_json::to_value(&app.ui).unwrap_or_default();
             lightcraft_develop::presets::deep_merge(&mut v, p);
+            // a language named here is a choice: it ends the sync with the system's, unless the same request turns it on
+            if p.get("language").is_some()
+                && p.get("followSystemLanguage").is_none()
+                && let Some(fields) = v.as_object_mut()
+            {
+                fields.remove("followSystemLanguage");
+            }
             match serde_json::from_value::<crate::UiState>(v) {
                 Ok(mut u) => {
+                    u.resolve_language();
                     if let Err(error) = crate::docking::set_widths(&mut u, p) {
                         return err(error);
                     }
@@ -456,7 +464,13 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
                 // action may ask whether it is (`folder.locate` scans the folder afterwards only
                 // for the Synchronize dialog that is waiting for it)
                 let r = crate::panels::dialogs::confirm_dialog(app, &d);
-                // the import review, the rule editor and Synchronize Folder stay open on an
+                // a refused one-line prompt says why on screen, as with its button; a folder made says where
+                match (&r, &d) {
+                    (Err(e), crate::state::Dialog::TextPrompt { .. }) => app.toast_error(ctx, e.clone()),
+                    (Ok(made), crate::state::Dialog::TextPrompt { .. }) => crate::dialogs::toast_created_folder(app, ctx, &d, made),
+                    _ => {}
+                }
+                // the import review, the rule editor, Synchronize Folder and the one-line prompts stay open on an
                 // error, as with their buttons (other dialogs the button keeps open close here)
                 let stays = (r.is_err()
                     && matches!(
@@ -468,6 +482,7 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
                             | crate::state::Dialog::CaptureTime { .. }
                             | crate::state::Dialog::RestoreBackup { .. }
                             | crate::state::Dialog::SynchronizeFolder { .. }
+                            | crate::state::Dialog::TextPrompt { .. }
                     ))
                     || (r.is_ok() && crate::panels::dialogs::keeps_open(app, &d))
                     || (r.is_err() && crate::lightroom_destination::keeps_open_on_error(app, &d));

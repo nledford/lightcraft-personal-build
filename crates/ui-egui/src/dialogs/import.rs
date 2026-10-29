@@ -37,6 +37,7 @@ pub(crate) use body::{DIALOG_SIZE, READ_HINT, note_dialog_bottom, read_choices, 
 pub use scan::{
     IMPORT_REQUEST, ScanTask, Unreviewed, browse, drop_refusal, open, poll_scan, prune_unreviewed, queue_scan, queueable_scan, review_queued, running,
 };
+pub use scan::{add_folder_picker_pending, can_open};
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use scan::{auto_import_listed, cards_seen};
 pub(crate) use scan::{lane_ahead_text, library_busy};

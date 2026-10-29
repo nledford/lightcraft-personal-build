@@ -56,6 +56,7 @@ mod recheck;
 mod relocate;
 mod restore;
 mod segment;
+mod selection_facts;
 mod settings_files;
 mod slide;
 mod slideshow_export;
@@ -63,6 +64,7 @@ mod spots;
 mod sync;
 mod task_queue;
 mod trash;
+mod undo_filters;
 mod view_follow;
 mod view_reconcile;
 pub(super) mod xmp;
@@ -390,6 +392,23 @@ fn permanently_deleting_explicit_targets_keeps_the_surviving_selection() {
     assert!(s.execute("photo.deletePermanently", &json!({"ids": [999_999]})).is_err());
     assert_eq!(s.selection, before, "a refused deletion doesn't change selection");
     assert_eq!(s.catalog.to_snapshot(), snapshot);
+}
+
+#[test]
+fn editing_info_of_named_photos_needs_no_selection() {
+    let mut s = demo();
+    let first = s.visible_cloned()[0];
+    // (what Select by leaves when nothing matches)
+    s.selection = Selection::default();
+    s.execute("photo.setMeta", &json!({"ids": [first], "caption": "Evening"})).unwrap();
+    assert_eq!(s.catalog.photo(first).unwrap().meta.caption, "Evening");
+    // photos that are gone change nothing and leave no empty undo step
+    let undo = s.undo.len();
+    assert_eq!(s.execute("photo.setMeta", &json!({"ids": [999_999], "caption": "Gone"})).unwrap()["changed"], 0);
+    assert_eq!(s.undo.len(), undo);
+    // without photos named it still acts on the selection, and there is none
+    assert!(s.execute("photo.setMeta", &json!({"caption": "Nowhere"})).is_err());
+    assert!(s.execute("photo.setMeta", &json!({"ids": [], "caption": "Nowhere"})).is_err());
 }
 
 /// `mask.brushStroke {connect: true}` (a ⇧-click) starts from the last point of the mask's last stroke: one straight
@@ -1417,11 +1436,11 @@ fn find_similar_of_a_flat_photo_shows_an_empty_view_and_counts_zero() {
     let r = s.execute("library.findSimilar", &json!({"id": photo.id.0})).unwrap();
     assert_eq!(r["photos"].as_array().map(Vec::len), Some(0));
     assert_eq!(s.visible_cloned().len(), 0, "no matches show nothing, not the whole library");
-    assert_eq!(s.catalog.count(&s.filter), 0);
-    let chips = crate::filter_chips(&s.filter, &s.catalog);
+    assert_eq!(s.catalog.count(s.filter()), 0);
+    let chips = crate::filter_chips(s.filter(), &s.catalog);
     assert_eq!(chips.iter().map(|c| c.label.as_str()).collect::<Vec<_>>(), ["Only 0 photos"]);
     s.execute("library.filter", &chips[0].clear).unwrap();
-    assert_eq!(s.filter, Default::default(), "the chip clears the empty state");
+    assert_eq!(*s.filter(), Default::default(), "the chip clears the empty state");
     assert_eq!(s.visible_cloned().len(), s.catalog.len());
 }
 

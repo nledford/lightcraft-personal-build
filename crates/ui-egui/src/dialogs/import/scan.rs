@@ -11,6 +11,9 @@ pub struct ScanTask {
     rx: std::sync::mpsc::Receiver<ScanOutput>,
     /// Open the review with "copy into the library" checked (a camera / card).
     pub copy: bool,
+    /// Open the review copying into this folder, all into it with no subfolders (a folder's menu
+    /// ▸ Import to This Folder…); implies `copy`.
+    pub destination: Option<String>,
     /// Open the review with this album chosen (an album's context menu ▸ Import…).
     pub album: Option<u64>,
     /// Browsing a folder (Local): the photos are read in place instead of opening the review.
@@ -183,7 +186,17 @@ pub fn open(app: &mut LightcraftApp, paths: Vec<String>) -> Result<Value, String
     #[cfg(target_arch = "wasm32")]
     job();
     let guard = scan_guard(app, &progress, false);
-    app.scan = Some(ScanTask { progress, rx, copy: false, album: None, browse: false, sources, library: app.session.library_generation(), guard });
+    app.scan = Some(ScanTask {
+        progress,
+        rx,
+        copy: false,
+        destination: None,
+        album: None,
+        browse: false,
+        sources,
+        library: app.session.library_generation(),
+        guard,
+    });
     Ok(json!({"scanning": true}))
 }
 
@@ -249,6 +262,7 @@ pub fn browse(app: &mut LightcraftApp, path: &str, subfolders: Option<bool>) -> 
         progress,
         rx,
         copy: false,
+        destination: None,
         album: None,
         browse: true,
         sources: Vec::new(),
@@ -371,7 +385,12 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
         })
         .collect();
     d.set_trashed(trashed);
-    d.set_transfer(task.copy, false);
+    d.set_transfer(task.copy || task.destination.is_some(), false);
+    if let Some(dest) = task.destination {
+        d.destination = dest;
+        // the files go into that folder itself, not into dated subfolders of it
+        d.organize = "flat".into();
+    }
     // only an album the review offers (it may have been deleted while the scan ran)
     d.album = task.album.filter(|id| app.session.catalog.album(lightcraft_catalog::AlbumId(*id)).is_some_and(|a| !a.folder && !a.is_smart()));
     d.sources = task.sources;
@@ -421,7 +440,17 @@ pub(crate) fn stall_scan_in(app: &mut LightcraftApp, sources: Vec<String>, brows
     let progress = std::sync::Arc::new(ScanProgress::default());
     let (tx, rx) = std::sync::mpsc::channel::<ScanOutput>();
     let guard = scan_guard(app, &progress, false);
-    app.scan = Some(ScanTask { progress, rx, copy: false, album: None, browse, sources, library: app.session.library_generation(), guard });
+    app.scan = Some(ScanTask {
+        progress,
+        rx,
+        copy: false,
+        destination: None,
+        album: None,
+        browse,
+        sources,
+        library: app.session.library_generation(),
+        guard,
+    });
     Box::new(tx)
 }
 
@@ -533,6 +562,19 @@ pub fn prune_unreviewed(app: &mut LightcraftApp) {
     }
     let waiting = app.session.activity.waiting();
     app.unreviewed.retain(|u| waiting.iter().any(|w| w.id == u.id));
+}
+
+/// Whether a folder's menu can start an import review now: not while a scan or an import runs (a
+/// Local folder being read counts), a finished scan's review waits for a dialog to close, or a
+/// Lightroom catalog import runs (as for File ▸ Import from Folder…).
+pub fn can_open(app: &LightcraftApp) -> bool {
+    app.scan.is_none() && app.import.is_none() && app.review_pending.is_none() && !crate::lightroom_import::is_running(app)
+}
+
+/// Whether a `file.addFolder` folder picker is up. "Import to This Folder…" asks for its folder through that
+/// command, and a second request while its picker is up is deduplicated, which would drop the new destination.
+pub fn add_folder_picker_pending(app: &LightcraftApp) -> bool {
+    app.pending_picks.iter().any(|p| p.command == "file.addFolder")
 }
 
 impl ScanTask {

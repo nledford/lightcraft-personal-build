@@ -242,11 +242,12 @@ fn the_filter_set_aside_by_enable_filters_follows_too() {
     let dir = Scratch::new("shelved");
     let mut s = library(&dir);
     let before = Filter { library_folder: Some(dir.path("trip/day1")), ..Default::default() };
-    s.shelved_filter = Some(before);
+    s.set_filter(before);
+    s.execute("library.toggleFilters", &json!({})).unwrap();
     let now = moved_away(&dir);
 
     relocate(&mut s, &dir.path("trip"), &now);
-    let shelved = |s: &Session| s.shelved_filter.as_ref().and_then(|f| f.library_folder.clone());
+    let shelved = |s: &Session| s.filters.aside().and_then(|f| f.library_folder.clone());
     assert_eq!(shelved(&s), Some(dir.path("archive/journey/day1")));
 
     s.undo_step().unwrap();

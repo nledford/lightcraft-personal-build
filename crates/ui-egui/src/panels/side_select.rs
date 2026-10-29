@@ -109,7 +109,7 @@ fn keys_mark(app: &LightcraftApp) -> u64 {
     let (s, ui) = (&app.session, &app.ui);
     let mut h = std::collections::hash_map::DefaultHasher::new();
     format!("{:?}|{:?}|{:?}|{:?}", s.source, s.library_folder, ui.view, ui.right).hash(&mut h);
-    (&s.also_albums, &s.also_library_folders, &s.filter.keyword, &s.filter.keywords).hash(&mut h);
+    (&s.also_albums, &s.also_library_folders, &s.filter().keyword, &s.filter().keywords).hash(&mut h);
     // (the selection by its size and ends: it can be every photo of a large library, each frame)
     (s.selection.ids.len(), s.selection.ids.first(), s.selection.ids.last(), s.selection.active).hash(&mut h);
     (&ui.keyword_list_selected, &ui.side.keyword_list_also, ui.left_panel, s.library_generation()).hash(&mut h);
@@ -153,7 +153,7 @@ pub(crate) fn delete_asked(app: &mut LightcraftApp, ctx: &egui::Context) -> bool
     let Some(list) = app.ui.side.keys else { return false };
     let dialog = match list {
         SideList::Albums => Some(albums_shown(app)).filter(|ids| ids.len() > 1).map(|ids| delete_albums_dialog(&ids)),
-        SideList::Keywords => Some(app.session.filter.keywords_wanted()).filter(|k| k.len() > 1).map(|k| delete_keywords_dialog(app, &k)),
+        SideList::Keywords => Some(app.session.filter().keywords_wanted()).filter(|k| k.len() > 1).map(|k| delete_keywords_dialog(app, &k)),
         SideList::KeywordList => Some(list_picked(app)).filter(|k| k.len() > 1).map(|k| delete_keywords_dialog(app, &k)),
         SideList::Folders => {
             let paths = app.session.source_library_folders();
@@ -385,14 +385,14 @@ pub(crate) fn folders_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, paths: &[
 
 /// Whether keyword `path` is one the grid is filtered by.
 pub(crate) fn keyword_shown(app: &LightcraftApp, path: &str) -> bool {
-    let f = &app.session.filter;
+    let f = &app.session.filter();
     f.keyword.iter().chain(&f.keywords).any(|k| same_keyword(k, path))
 }
 
 /// A click on the Keywords row `path`: the grid shows the photos with it (again: every photo),
 /// or with Cmd/Ctrl or Shift the photos with any of the keywords chosen.
 pub(crate) fn keyword_clicked(app: &mut LightcraftApp, ui: &egui::Ui, path: &str) {
-    let chosen = app.session.filter.keywords_wanted();
+    let chosen = app.session.filter().keywords_wanted();
     let how = how(ui);
     // a plain click on the one keyword shown clears it, as it always did
     let clears = how == Click::Plain && chosen.len() == 1 && chosen.iter().any(|k| same_keyword(k, path));
@@ -409,23 +409,23 @@ pub(crate) fn keyword_clicked(app: &mut LightcraftApp, ui: &egui::Ui, path: &str
         [one] => app.act("library.filter", json!({"keyword": one, "keywords": []})),
         many => app.act("library.filter", json!({"keyword": null, "keywords": many})),
     };
-    take_keys(app, SideList::Keywords, how, app.session.filter.keywords_wanted().len());
+    take_keys(app, SideList::Keywords, how, app.session.filter().keywords_wanted().len());
 }
 
 /// The keywords a context menu opened on the Keywords row `path` acts on.
 pub(crate) fn keyword_targets(app: &LightcraftApp, path: &str) -> Vec<String> {
-    targets(&app.session.filter.keywords_wanted(), &path.to_string(), &same_kw)
+    targets(&app.session.filter().keywords_wanted(), &path.to_string(), &same_kw)
 }
 
 /// Whether the By Date row `key` is one the grid is filtered by.
 pub(crate) fn date_shown(app: &LightcraftApp, key: &str) -> bool {
-    let f = &app.session.filter;
+    let f = &app.session.filter();
     f.date.iter().chain(&f.dates).any(|d| d == key)
 }
 
 /// A click on the By Date row `key`, like [`keyword_clicked`].
 pub(crate) fn date_clicked(app: &mut LightcraftApp, ui: &egui::Ui, key: &str) {
-    let chosen = app.session.filter.dates_wanted();
+    let chosen = app.session.filter().dates_wanted();
     let how = how(ui);
     let clears = how == Click::Plain && chosen.len() == 1 && chosen.iter().any(|d| d == key);
     let keys = if clears {

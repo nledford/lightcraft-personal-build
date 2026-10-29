@@ -1,0 +1,25 @@
+{
+  "Dialog Settings slideshow": {
+    "Slider without a name in Settings › Slideshow": 3,
+    "SpinButton without a name in Settings › Slideshow": 3,
+    "Unknown without a name in Settings › Slideshow": 5
+  },
+  "Dialog Shortcuts": {
+    "TextInput without a name in Keyboard Shortcuts": 1
+  },
+  "Dialog dialog.captureTime": {
+    "TextInput without a name in Edit Capture Time": 1
+  },
+  "Dialog dialog.contactSheet": {
+    "SpinButton without a name in Contact Sheet PDF": 2
+  },
+  "Dialog dialog.rename": {
+    "SpinButton without a name in Rename Photos": 1
+  },
+  "Import review": {
+    "TextInput without a name in Import Photos": 1
+  },
+  "Right panel Crop": {
+    "SpinButton without a name in (top level)": 1
+  }
+}

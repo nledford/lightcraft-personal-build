@@ -105,16 +105,21 @@ fn inked(image: &egui::ColorImage, rect: Rect, colour: Color32, ground: Color32)
 fn unreadable(h: &Headless, t: &Tokens, within: Option<Rect>) -> Vec<String> {
     let image = h.paint();
     let mut out = BTreeMap::new();
-    fn texts(shape: &egui::Shape, clip: Rect, out: &mut Vec<(egui::epaint::TextShape, Rect)>) {
+    // (`window_at`: how many texts were drawn before the dialog window's own frame: they lie under it, covered)
+    fn texts(shape: &egui::Shape, clip: Rect, within: Option<Rect>, out: &mut Vec<(egui::epaint::TextShape, Rect)>, window_at: &mut Option<usize>) {
         match shape {
             egui::Shape::Text(text) => out.push((text.clone(), clip)),
-            egui::Shape::Vec(shapes) => shapes.iter().for_each(|s| texts(s, clip, out)),
+            egui::Shape::Vec(shapes) => shapes.iter().for_each(|s| texts(s, clip, within, out, window_at)),
+            egui::Shape::Rect(r) if within.is_some_and(|w| (r.rect.min - w.min).length() < 2.0 && (r.rect.max - w.max).length() < 2.0) => {
+                *window_at = Some(out.len());
+            }
             _ => {}
         }
     }
     let mut drawn = Vec::new();
-    h.view.shapes.iter().for_each(|s| texts(&s.shape, s.clip_rect, &mut drawn));
-    for (text, clip) in drawn {
+    let mut window_at = None;
+    h.view.shapes.iter().for_each(|s| texts(&s.shape, s.clip_rect, within, &mut drawn, &mut window_at));
+    for (text, clip) in drawn.into_iter().skip(window_at.unwrap_or(0)) {
         let said = text.galley.job.text.trim();
         // (a disabled control is drawn fainter as a whole; nothing to read in an empty string)
         if said.is_empty() || text.opacity_factor < 1.0 {

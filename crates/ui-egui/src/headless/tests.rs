@@ -464,7 +464,7 @@ fn the_search_field_pastes_from_its_menu() {
         h.settle(SETTLE);
     }
     assert_eq!(h.app.ui.search, "wedding");
-    assert_eq!(h.app.session.filter.text, "wedding", "and the library is filtered by it");
+    assert_eq!(h.app.session.filter().text, "wedding", "and the library is filtered by it");
 }
 
 /// Issue #1648: clearing the filters from the loupe's pill empties the search field too, so
@@ -479,14 +479,14 @@ fn clearing_the_loupe_filters_empties_the_search_field() {
         assert_eq!(r["ok"], true, "{r}");
         h.settle(SETTLE);
     }
-    assert_eq!(h.app.session.filter.text, "a", "filtered while typing");
+    assert_eq!(h.app.session.filter().text, "a", "filtered while typing");
     assert!(!h.app.session.visible_cloned().is_empty(), "the search finds photos, so the loupe has one to show");
     h.request("engine.execute", json!({"command": "view.detail"}), t);
     h.settle(SETTLE);
     let r = h.request("ui.clickWidget", json!({"id": "loupe:filters"}), t);
     assert_eq!(r["ok"], true, "{r}");
     h.settle(SETTLE);
-    assert_eq!((h.app.ui.search.as_str(), h.app.session.filter.text.as_str()), ("", ""));
+    assert_eq!((h.app.ui.search.as_str(), h.app.session.filter().text.as_str()), ("", ""));
 }
 
 /// Esc in the search field gives back the search from before the edit, and the filter with it.
@@ -500,11 +500,11 @@ fn escape_in_the_search_field_gives_back_the_search() {
         assert_eq!(r["ok"], true, "{r}");
         h.settle(SETTLE);
     }
-    assert_eq!(h.app.session.filter.text, "travel", "filtered while typing");
+    assert_eq!(h.app.session.filter().text, "travel", "filtered while typing");
     let r = h.request("ui.key", json!({"key": "Escape"}), t);
     assert_eq!(r["ok"], true, "{r}");
     h.settle(SETTLE);
-    assert_eq!((h.app.ui.search.as_str(), h.app.session.filter.text.as_str()), ("", ""));
+    assert_eq!((h.app.ui.search.as_str(), h.app.session.filter().text.as_str()), ("", ""));
 }
 
 #[test]
@@ -872,11 +872,23 @@ fn people_and_the_name_box_offer_to_set_face_recognition_up() {
     h.step();
     assert!(offers(&mut h));
     assert_eq!(h.app.session.execute("faces.models.list", &json!({})).unwrap()["enabled"], false);
+    h.app.ui.language = crate::i18n::Locale::De;
+    crate::i18n::set_language(crate::i18n::Locale::De);
+    h.step();
+    h.step();
+    assert!(offers(&mut h), "the offer is still there in German");
     let r = h.request("ui.clickWidget", json!({"id": "faces:setup"}), t);
     assert_eq!(r["ok"], true, "{r}");
     h.step();
     h.step();
     assert_eq!(h.app.session.execute("faces.models.list", &json!({})).unwrap()["enabled"], true);
+    assert_eq!(
+        h.app.ui.toast().map(|toast| toast.text.as_str()),
+        Some(crate::i18n::Locale::De.tr("Face recognition is on")),
+        "the toast is looked up in the UI language"
+    );
+    h.app.ui.language = crate::i18n::Locale::En;
+    crate::i18n::set_language(crate::i18n::Locale::En);
     assert_eq!(h.app.ui.dialog, None, "nothing to go to Settings for");
     h.step();
     assert!(!offers(&mut h), "once it is on the offer is gone");
@@ -1544,13 +1556,13 @@ fn filter_bar_labels_from_label_and_labels() {
     h.step();
     let r = h.request("ui.clickWidget", json!({"id": "filter:label-green"}), t);
     assert_eq!(r["ok"], true, "{r}");
-    let f = h.app.session.filter.clone();
+    let f = h.app.session.filter().clone();
     assert_eq!((f.label, f.labels), (None, vec![ColorLabel::Red, ColorLabel::Green]));
     // nothing passes both: nothing is lit, so a click shows just that label
     h.app.session.execute("library.filter", &json!({"label": "red", "labels": ["yellow"]})).unwrap();
     h.step();
     h.request("ui.clickWidget", json!({"id": "filter:label-green"}), t);
-    let f = h.app.session.filter.clone();
+    let f = h.app.session.filter().clone();
     assert_eq!((f.label, f.labels), (None, vec![ColorLabel::Green]));
     h.settle(SETTLE);
 }
@@ -1567,7 +1579,7 @@ fn filter_bar_filters_and_saves_a_smart_album() {
         let r = h.request("ui.clickWidget", json!({"id": w}), t);
         assert_eq!(r["ok"], true, "{w}: {r}");
     }
-    let f = h.app.session.filter.clone();
+    let f = h.app.session.filter().clone();
     assert_eq!((f.rating, f.flag, f.label), (3, Some(lightcraft_catalog::Flag::Pick), None), "a second click clears the label");
     let n = h.app.session.visible_cloned().len();
     assert!(n > 0 && n < all);
@@ -1578,7 +1590,7 @@ fn filter_bar_filters_and_saves_a_smart_album() {
     let smart = h.app.session.catalog.albums().find(|a| a.is_smart()).expect("smart album").id;
     assert_eq!(h.app.session.catalog.album_count(smart), n);
     h.request("ui.clickWidget", json!({"id": "button:filterClear"}), t);
-    assert_eq!(h.app.session.filter, Default::default());
+    assert_eq!(*h.app.session.filter(), Default::default());
     assert_eq!(h.app.session.visible_cloned().len(), all);
     h.settle(SETTLE);
 }
@@ -1634,7 +1646,7 @@ fn keyword_list_filters_renames_and_suggests() {
     h.settle(SETTLE);
     let r = h.request("ui.clickWidget", json!({"id": "source:keyword:travel"}), t);
     assert_eq!(r["ok"], true, "{r}");
-    assert_eq!(h.app.session.filter.keyword.as_deref(), Some("travel"));
+    assert_eq!(h.app.session.filter().keyword.as_deref(), Some("travel"));
     assert_eq!(h.app.session.visible_cloned().len(), 3);
     // open the level, filter by the child
     h.request("ui.clickWidget", json!({"id": "keywordToggle:travel"}), t);
@@ -1646,7 +1658,7 @@ fn keyword_list_filters_renames_and_suggests() {
     h.settle(SETTLE);
     let r = h.request("ui.dialog.confirm", json!({}), t);
     assert_eq!(r["ok"], true, "{r}");
-    assert_eq!(h.app.session.filter.keyword.as_deref(), Some("trips|italy"));
+    assert_eq!(h.app.session.filter().keyword.as_deref(), Some("trips|italy"));
     assert_eq!(h.app.session.visible_cloned().len(), 2);
     // Keywords panel: suggestions co-occurring with the photo's keywords
     h.request("engine.execute", json!({"command": "library.clearFilter"}), t);

@@ -1,5 +1,5 @@
 use super::general::{cameras, preset_combo};
-use super::widgets::{button_width, choices, heading, hint, path_label, row};
+use super::widgets::{button_width, choices, field, heading, hint, path_label, row};
 use super::{Button, LightcraftApp, RichText, Tokens, check, json, register};
 use crate::menu_item::MenuItem;
 
@@ -78,18 +78,23 @@ pub(super) fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens)
         [("copyright", "Copyright", "© 2026 Your Name", d.copyright.clone()), ("creator", "Creator", "Your Name", d.creator.clone())]
     {
         row(ui, t, label, |ui| {
-            let id = egui::Id::unique(("settingsMeta", key));
-            let mut text: String = ui.data(|m| m.get_temp(id)).unwrap_or(value.clone());
-            let r = ui.add(egui::TextEdit::singleline(&mut text).hint_text(hint_text).desired_width(240.0));
-            register(ui, format!("field:settings.{key}"), r.rect);
-            if r.lost_focus() && text.trim() != value {
-                app.act("library.preferences", json!({"import": {key: text.trim()}}));
+            // (a field of the library it was typed for: another one's is another edit)
+            let library = app.session.library_generation();
+            let mut text = crate::text_field::draft(ui, ("settingsMeta", key), &library, &value);
+            // (the project's text field: Esc gives the text back and stays in Settings, and with
+            // the text back the line below has nothing to save)
+            let widget = format!("field:settings.{key}");
+            let shown = field(
+                ui,
+                crate::text_field::TextField::singleline(&widget, &mut text).hint(hint_text).width(240.0).saves_with(library, |typed| {
+                    let typed = typed.trim();
+                    (typed != value).then(|| crate::text_field::Save { command: "library.preferences", params: json!({"import": {key: typed}}) })
+                }),
+            );
+            if let Some(save) = shown.save {
+                app.act(save.command, save.params);
             }
-            if r.has_focus() {
-                ui.data_mut(|m| m.insert_temp(id, text));
-            } else {
-                ui.data_mut(|m| m.remove::<String>(id));
-            }
+            crate::text_field::keep_draft(ui, ("settingsMeta", key), &library, shown.editing, &text);
         });
     }
     if !app.session.metadata_presets.is_empty() {
@@ -135,6 +140,11 @@ pub(super) fn xmp_sidecars(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Token
     if check(ui, "settings.autoWriteXmp", &mut xmp.auto_write, "Automatically write changes into XMP sidecars").changed() {
         app.act("library.xmpPreferences", json!({"autoWrite": xmp.auto_write}));
     }
+    hint(
+        ui,
+        t,
+        "On, supported changes to a photo's edits or metadata are written to an XMP file beside the photo automatically when possible, for other apps to read. Off, that happens when you choose Save Metadata to File in the Photo menu.",
+    );
     row(ui, t, crate::i18n::tr("Sidecar names"), |ui| {
         use lightcraft_engine::sidecar::SidecarNaming as N;
         let mut n = xmp.naming;
@@ -190,13 +200,24 @@ fn auto_import(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
                 }
             });
             row(ui, t, crate::i18n::tr("Album"), |ui| {
-                let id = egui::Id::unique("auto-album");
-                let mut name = ui.data(|m| m.get_temp::<String>(id)).unwrap_or_else(|| d.auto_album.clone().unwrap_or_default());
-                let r = ui.add(egui::TextEdit::singleline(&mut name).hint_text(crate::i18n::tr("None")).desired_width(180.0));
-                if r.lost_focus() {
-                    app.act("library.autoImport", json!({"album": name.trim()}));
+                // (a field of the library it was typed for: another one's is another edit)
+                let library = app.session.library_generation();
+                let mut name = crate::text_field::draft(ui, "auto-album", &library, &d.auto_album.clone().unwrap_or_default());
+                let current = d.auto_album.clone().unwrap_or_default();
+                let shown = field(
+                    ui,
+                    crate::text_field::TextField::singleline("field:settingsAutoAlbum", &mut name)
+                        .hint(crate::i18n::tr("None"))
+                        .width(180.0)
+                        .saves_with(library, |typed| {
+                            let typed = typed.trim();
+                            (typed != current).then(|| crate::text_field::Save { command: "library.autoImport", params: json!({"album": typed}) })
+                        }),
+                );
+                if let Some(save) = shown.save {
+                    app.act(save.command, save.params);
                 }
-                ui.data_mut(|m| m.insert_temp(id, name));
+                crate::text_field::keep_draft(ui, "auto-album", &library, shown.editing, &name);
             });
         }
     }

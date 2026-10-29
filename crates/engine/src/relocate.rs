@@ -594,14 +594,14 @@ pub(crate) fn follow_located(s: &mut Session, from: &str, to: &str) {
     if let Some(now) = moved(s, &s.library_folder) {
         s.library_folder = Some(now);
     }
-    if let Some(now) = moved(s, &s.filter.library_folder) {
-        s.filter.library_folder = Some(now);
-    }
-    if let Some(f) = s.shelved_filter.as_ref()
-        && let Some(now) = moved(s, &f.library_folder)
-        && let Some(f) = s.shelved_filter.as_mut()
-    {
-        f.library_folder = Some(now);
+    // (the filter in use and the one Enable Filters put aside: `follow` visits them in that order)
+    let mut now = [moved(s, &s.filters.current().library_folder), s.filters.aside().and_then(|f| moved(s, &f.library_folder))].into_iter();
+    if now.clone().any(|n| n.is_some()) {
+        s.filters.follow(|f| {
+            if let Some(Some(now)) = now.next() {
+                f.library_folder = Some(now);
+            }
+        });
     }
 }
 

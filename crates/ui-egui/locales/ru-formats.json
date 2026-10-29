@@ -40,7 +40,7 @@
   "Color space: Rec. 2020 {curve} (HDR AVIF)": "Цветовое пространство: Rec. 2020 {curve} (HDR AVIF)",
   "Couldn't open the editor: {e}": "Не удалось открыть редактор: {e}",
   "Create {n} Virtual Copies": "Создать виртуальные копии: {n}",
-  "Creates {} stacks from {} of {scope}": "Будет создано стопок: {} из {} фото ({scope})",
+  "Creates {stacks} stack{} from {photos} of {scope}": "Будет создано стопок: {stacks} из {photos} фото ({scope}){:.0}",
   "Decoder: {reason}": "Декодер: {reason}",
   "Delete \"{label}\"": "Удалить «{label}»",
   "Delete \"{label}\" (and the mask)": "Удалить «{label}» (и маску)",
@@ -170,7 +170,7 @@
   "{n} photo{}": "Фото: {n}{:.0}",
   "{n} photo{} match · updates automatically as photos change": "Подходящих фото: {n}{:.0} · обновляется автоматически при изменении фото",
   "{n} photo{} now · updates automatically as photos change": "Сейчас фото: {n}{:.0} · обновляется автоматически при изменении фото",
-  "{n} selected photos · {pages} pages": "Выбрано фото: {n} · страниц: {pages}",
+  "{n} selected photo{} · {pages} page{}": "Выбрано фото: {n} · страниц: {pages}{:.0}{:.0}",
   "{n} similar photo{} · View ▸ Clear Filters to see all": "Похожих фото: {n}{:.0} · Вид → Сбросить фильтры, чтобы увидеть все",
   "{pid} (missing)": "{pid} (отсутствует)",
   "{sel_n} selected · {counted}": "Выбрано: {sel_n} · {counted}",
@@ -309,7 +309,7 @@
   "Skipped {problem}": "Пропущено: {problem}",
   "…and {more} more": "…и ещё {more}",
   "Template preview: {name}": "Просмотр шаблона: {name}",
-  "{n} photos in view · {slides} slides · {time}": "Фото в просмотре: {n} · слайдов: {slides} · {time}",
+  "{n} photo{} in view · {slides} slide{} · {time}": "Фото в просмотре: {n} · слайдов: {slides} · {time}{:.0}{:.0}",
   "{n} pages": "Страниц: {n}",
   "{n} JPEG files": "Файлов JPEG: {n}",
   "{s} s of AV1 video": "{s} с видео AV1",
@@ -409,5 +409,10 @@
   "Move {n}, skip {m}": "Переместить {n}, пропустить {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "В «{1}» перемещено фото: {n}{0:.0}, пропущено: {skipped}. Правка → Отменить вернёт их.",
   "{} can't be moved": "{0} нельзя переместить",
-  "{} has the same name as another photo being moved": "{0} имеет то же имя, что и другое перемещаемое фото"
+  "{} has the same name as another photo being moved": "{0} имеет то же имя, что и другое перемещаемое фото",
+  "Created folder “{name}” in “{parent}”": "Папка «{name}» создана в «{parent}»",
+  "Panel layout could not be restored: {error}": "Не удалось восстановить расположение панелей: {error}",
+  "Panel move was not applied: {error}": "Перемещение панели не применено: {error}",
+  "{name} is installed": "Модель {name} установлена",
+  "{name} is installed and in use: face recognition is on": "Модель {name} установлена и используется: распознавание лиц включено"
 }

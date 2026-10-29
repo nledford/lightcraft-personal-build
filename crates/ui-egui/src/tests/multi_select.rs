@@ -325,10 +325,10 @@ fn cmd_click_filters_by_any_of_several_keywords() {
     run(&mut h, "photo.setMeta", json!({"ids": [ids[1]], "addKeywords": ["Sel Two"]}));
     run(&mut h, "photo.setMeta", json!({"ids": [ids[2]], "addKeywords": ["Sel Three"]}));
     click(&mut h, "source:keyword:Sel One");
-    assert_eq!(h.app.session.filter.keyword.as_deref(), Some("Sel One"), "a plain click is what it was");
+    assert_eq!(h.app.session.filter().keyword.as_deref(), Some("Sel One"), "a plain click is what it was");
     cmd_click(&mut h, "source:keyword:Sel Two");
-    assert_eq!(h.app.session.filter.keywords, vec!["Sel One".to_string(), "Sel Two".to_string()]);
-    assert_eq!(h.app.session.filter.keyword, None);
+    assert_eq!(h.app.session.filter().keywords, vec!["Sel One".to_string(), "Sel Two".to_string()]);
+    assert_eq!(h.app.session.filter().keyword, None);
     assert_eq!(visible(&mut h), {
         let mut v = vec![ids[0], ids[1]];
         v.sort_unstable();
@@ -341,9 +341,9 @@ fn cmd_click_filters_by_any_of_several_keywords() {
     ask(&mut h, "ui.key", json!({"key": "Escape"}));
     // a plain click: that keyword alone; again: every photo
     click(&mut h, "source:keyword:Sel Two");
-    assert_eq!((h.app.session.filter.keyword.as_deref(), h.app.session.filter.keywords.len()), (Some("Sel Two"), 0));
+    assert_eq!((h.app.session.filter().keyword.as_deref(), h.app.session.filter().keywords.len()), (Some("Sel Two"), 0));
     click(&mut h, "source:keyword:Sel Two");
-    assert_eq!(h.app.session.filter, lightcraft_catalog::Filter::default());
+    assert_eq!(*h.app.session.filter(), lightcraft_catalog::Filter::default());
 }
 
 #[test]
@@ -359,11 +359,11 @@ fn cmd_click_filters_by_any_of_several_dates() {
     click(&mut h, &format!("source:date:{}", years[0]));
     let first = h.app.session.visible().len();
     cmd_click(&mut h, &format!("source:date:{}", years[1]));
-    assert_eq!(h.app.session.filter.dates, vec![years[0].clone(), years[1].clone()]);
+    assert_eq!(h.app.session.filter().dates, vec![years[0].clone(), years[1].clone()]);
     let both = h.app.session.visible().len();
     assert!(both > first && both <= all, "{first} then {both} of {all}");
     cmd_click(&mut h, &format!("source:date:{}", years[0]));
-    assert_eq!((h.app.session.filter.date.as_deref(), h.app.session.filter.dates.len()), (Some(years[1].as_str()), 0));
+    assert_eq!((h.app.session.filter().date.as_deref(), h.app.session.filter().dates.len()), (Some(years[1].as_str()), 0));
 }
 
 /// A library of file-backed photos that exist only in the catalog.
@@ -453,7 +453,7 @@ fn the_keyword_list_picks_several_with_cmd_and_shift() {
     shift_click(&mut h, "keywordRow:Sel K3");
     assert_eq!(picked(&h), vec!["Sel K1", "Sel K2", "Sel K3"]);
     // picking never changes what the grid shows
-    assert_eq!(h.app.session.filter, lightcraft_catalog::Filter::default());
+    assert_eq!(*h.app.session.filter(), lightcraft_catalog::Filter::default());
 }
 
 #[test]
@@ -501,7 +501,7 @@ fn the_menu_of_several_keywords_gives_them_all_to_the_selected_photos() {
     // …and shows the photos with any of them
     right_click(&mut h, "keywordRow:Sel K3");
     click(&mut h, "sideMenu:keywords:show");
-    assert_eq!(h.app.session.filter.keywords, vec!["Sel K1".to_string(), "Sel K3".to_string()]);
+    assert_eq!(h.app.session.filter().keywords, vec!["Sel K1".to_string(), "Sel K3".to_string()]);
 }
 
 #[test]
@@ -682,9 +682,9 @@ fn showing_a_keyword_from_the_keyword_list_replaces_the_keywords_chosen_in_the_s
     let (mut h, _) = keyword_list();
     click(&mut h, "source:keyword:Sel K1");
     cmd_click(&mut h, "source:keyword:Sel K2");
-    assert_eq!(h.app.session.filter.keywords_wanted(), vec!["Sel K1".to_string(), "Sel K2".to_string()]);
+    assert_eq!(h.app.session.filter().keywords_wanted(), vec!["Sel K1".to_string(), "Sel K2".to_string()]);
     click(&mut h, "keywordShow:Sel K3");
-    assert_eq!(h.app.session.filter.keywords_wanted(), vec!["Sel K3".to_string()]);
+    assert_eq!(h.app.session.filter().keywords_wanted(), vec!["Sel K3".to_string()]);
 }
 
 /// The Delete key goes back to the photos when anything else changes what is shown or selected.
@@ -866,11 +866,11 @@ fn show_in_library_clears_keywords_chosen_with_cmd_click() {
     run(&mut h, "photo.setMeta", json!({"ids": [ids[1]], "addKeywords": ["Sel Two"]}));
     click(&mut h, "source:keyword:Sel One");
     cmd_click(&mut h, "source:keyword:Sel Two");
-    assert_eq!(h.app.session.filter.keywords.len(), 2);
+    assert_eq!(h.app.session.filter().keywords.len(), 2);
     h.app.ui.dialog = Some(Dialog::LightroomResult { summary: "done".into(), library: None, details: vec![], first: Some(ids[0]) });
     h.settle(SETTLE);
     click(&mut h, "button:dialogOk");
-    assert_eq!(h.app.session.filter, lightcraft_catalog::Filter::default());
+    assert_eq!(*h.app.session.filter(), lightcraft_catalog::Filter::default());
     assert_eq!(h.app.session.selection.active.map(|p| p.0), Some(ids[0]));
 }
 
@@ -883,12 +883,12 @@ fn show_in_library_clears_albums_and_folders_in_the_filter() {
     let a = album(&mut h, "Sel A", None, &[]);
     let b = album(&mut h, "Sel B", None, &[]);
     run(&mut h, "library.filter", json!({"albums": [a, b], "libraryFolders": ["/pics/trip", "/pics/home"]}));
-    assert!(!h.app.session.filter.albums.is_empty() && !h.app.session.filter.library_folders.is_empty());
+    assert!(!h.app.session.filter().albums.is_empty() && !h.app.session.filter().library_folders.is_empty());
     let first = h.app.session.catalog.photos().next().unwrap().id.0;
     h.app.ui.dialog = Some(Dialog::LightroomResult { summary: "done".into(), library: None, details: vec![], first: Some(first) });
     h.settle(SETTLE);
     click(&mut h, "button:dialogOk");
-    assert_eq!(h.app.session.filter, lightcraft_catalog::Filter::default());
+    assert_eq!(*h.app.session.filter(), lightcraft_catalog::Filter::default());
 }
 
 /// The smart-album editor counts the photos of every folder the album was made from, not only the

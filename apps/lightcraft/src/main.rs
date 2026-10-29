@@ -1,6 +1,6 @@
 //! LightCraft desktop app.
 //!
-//! Usage: `lightcraft [--library DIR | --memory] [--no-demo] [--control <port>] [files or folders…]`
+//! Usage: `lightcraft [--library DIR | --memory] [--no-demo] [--no-update-check] [--control <port>] [files or folders…]`
 //!
 //! The library (catalog, presets, thumbnail cache) lives in `--library DIR`, else
 //! `$LIGHTCRAFT_LIBRARY`, else — with Settings ▸ General ▸ At launch set to *Ask me*, or Alt/Option
@@ -63,7 +63,10 @@ use gpu_crash::{gpu_crash_check, gpu_lost_check_at, gpu_lost_marker_path, gpu_lo
 use gpu_crash::{gpu_crash_check_at, gpu_crash_notice, window_wgpu_options};
 #[cfg(test)]
 use launch::launch_imports_in;
-use launch::{HELP, control_port_from, launch_imports, log_dir, panic_log_path_with, startup_failed, stopped_text, stopped_while_running};
+use launch::{
+    HELP, LaunchArgs, Parsed, control_port_from, launch_imports, log_dir, panic_log_path_with, parse_args, startup_failed, stopped_text,
+    stopped_while_running,
+};
 #[cfg(test)]
 use platform::{explorer_select_arg, explorer_select_command, windows_open_url_command};
 use prefs::{PrefsWriter, as_remembered, load_prefs, prefs_path};
@@ -91,7 +94,7 @@ impl eframe::App for App {
         #[cfg(target_os = "macos")]
         if let Some(m) = self.2.as_mut()
             && m.update(&mut self.0, ctx)
-            && lightcraft_ui_egui::panels::notices::may_close(&mut self.0)
+            && self.0.may_close_after_saving_edits(ctx)
         {
             // Quit from the menu bar: save exactly what closing the window saves (settings and
             // library, after the unsaved-changes check; otherwise its prompt shows), then end the
@@ -129,6 +132,12 @@ impl eframe::App for App {
         if !self.0.shutdown(EXIT_WAIT) {
             log::warn!("quit: background work was still running after {EXIT_WAIT:?}");
         }
+        // macOS only: the process ends below without running destructors, and only the lock's
+        // `Drop` removes `catalog.lock.owner` (the OS frees the lock, not the note), so let go of
+        // the library's lock here, saved or not (we leave either way). Elsewhere eframe drops the
+        // app after this and the session's last writes (face data) still go out under the lock.
+        #[cfg(target_os = "macos")]
+        self.0.session.release_library_lock();
         // macOS (#1331): end the process here, before eframe tears the window down, as Quit from
         // the menu bar already does (PR #444). AccessKit's macOS adapter subclasses the window's
         // content view and restores its class on teardown; AppKit's Touch Bar support observes
@@ -159,33 +168,23 @@ fn main() -> eframe::Result {
         logging::record_panics(logger);
     }
     alloc_release::install();
-    let mut control_port = control_port_from("LIGHTCRAFT_CONTROL_PORT", std::env::var("LIGHTCRAFT_CONTROL_PORT").ok().filter(|v| !v.is_empty()));
-    let mut files = Vec::new();
-    let mut seed_demo = true;
-    let mut in_memory = false;
-    let mut library_dir: Option<std::path::PathBuf> = None;
-    let mut args = std::env::args().skip(1);
-    while let Some(a) = args.next() {
-        match a.as_str() {
-            "--control" => control_port = control_port_from("--control", Some(args.next().unwrap_or_default())),
-            "--library" => library_dir = args.next().map(std::path::PathBuf::from),
-            "--no-demo" => seed_demo = false,
-            "--memory" | "--demo" => in_memory = true,
-            "--version" => {
+    let env_port = control_port_from("LIGHTCRAFT_CONTROL_PORT", std::env::var("LIGHTCRAFT_CONTROL_PORT").ok().filter(|v| !v.is_empty()));
+    let LaunchArgs { control_port, files, seed_demo, in_memory, library_dir, startup_update_check } =
+        match parse_args(std::env::args().skip(1), env_port) {
+            Parsed::Run(args) => args,
+            Parsed::Version => {
                 println!("lightcraft {}", env!("CARGO_PKG_VERSION"));
                 return Ok(());
             }
-            "-h" | "--help" => {
+            Parsed::Help => {
                 print!("{HELP}");
                 return Ok(());
             }
-            o if o.starts_with("--") => {
+            Parsed::Unknown(o) => {
                 eprintln!("lightcraft: unknown option `{o}`\n\n{HELP}");
                 std::process::exit(2);
             }
-            _ => files.push(a),
-        }
-    }
+        };
     // The log file: opened after the arguments, so `--version`, `--help` and a usage error leave
     // no file behind. Records logged until now are written to it first.
     let mut log_file = None;
@@ -206,6 +205,11 @@ fn main() -> eframe::Result {
     // what the arguments name, resolved now: an empty or relative argument never becomes a drive
     // root, and a whole drive or home folder is not walked (issue #374)
     let (files, launch_notices) = launch_imports(&files);
+    // "Auto" follows the system's preferred languages, as the web build follows the browser's:
+    // installed before the settings load, since a library without saved settings starts in it.
+    if let Some(language) = lightcraft_ui_egui::i18n::locale_from_tags(&sys_locale::get_locales().collect::<Vec<_>>()) {
+        lightcraft_ui_egui::i18n::set_default_language(language);
+    }
     let (prefs, prefs_warning, keep_prefs_file) = load_prefs(in_memory);
     // the saved language from the start, so a failed start is reported in it too
     if let Some(ui) = &prefs {
@@ -280,7 +284,7 @@ fn main() -> eframe::Result {
                 // HDR display: SDR unless the surface, platform and display all allow HDR
                 hdr_display::report(cc.wgpu_render_state.as_ref().map(|r| r.target_format));
                 let mut app = LightcraftApp::new(session, services(cc, app_log_file.as_deref()));
-                app.set_startup_update_check(true);
+                app.set_startup_update_check(startup_update_check);
                 if let Some(ui) = prefs {
                     app.ui = ui;
                 }
