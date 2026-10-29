@@ -340,12 +340,45 @@ fn photos_on_a_disk_without_a_trash_get_a_second_question_before_anything_is_era
     assert!(in_library(&h, ids[1]) && exists(&paths[1]) && exists(&paths[2]), "nothing of them is touched yet");
     wait_for_erase(&mut h);
     let (t0, shown0) = (h.time(), h.app.ui.toasts_shown);
-    click(&mut h, "button:dialogOk");
-    assert!(ids.iter().all(|id| !in_library(&h, *id)) && paths.iter().all(|p| !exists(p)));
+    let r = h.request("ui.clickWidget", json!({"id": "button:dialogOk"}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    let t_req = h.time();
+    let (mut t_toast, mut t_run_none, mut t_quiet) = (None, None, None);
+    let mut causes = String::new();
+    for _ in 0..3000 {
+        h.step();
+        if t_toast.is_none() && h.app.ui.toasts_shown > shown0 {
+            t_toast = Some(h.time());
+        }
+        if t_run_none.is_none() && h.app.trash_run.is_none() {
+            t_run_none = Some(h.time());
+        }
+        if h.busy() {
+            causes = format!(
+                "r={} fs={} recount={} lib={} tasks={} act={} syn={} ev={} gest={} run={}",
+                h.app.renderer.in_flight(),
+                crate::panels::left::fs_cached_running(&h.view.ctx),
+                h.app.caches.album_recount_running(),
+                h.app.caches.library.busy(),
+                h.app.tasks.len(),
+                h.app.session.activity.waiting().len(),
+                h.app.synthetic.len(),
+                h.events.len(),
+                h.app.pending_gestures.len(),
+                h.app.trash_run.is_some()
+            );
+            std::thread::sleep(Duration::from_millis(1));
+        } else if t_run_none.is_some() {
+            t_quiet = Some(h.time());
+            break;
+        }
+    }
+    let dbg = format!("t0={t0:.3} t_req={t_req:.3} t_toast={t_toast:?} t_run_none={t_run_none:?} t_quiet={t_quiet:?} last_busy=[{causes}]");
+    assert!(ids.iter().all(|id| !in_library(&h, *id)) && paths.iter().all(|p| !exists(p)), "{dbg}");
     assert_eq!(h.app.ui.dialog, None);
     assert!(
         toast(&h).to_lowercase().contains("erased"),
-        "DBG toast={:?} t0={t0:.3} t1={:.3} shown0={shown0} shown1={} toasts={:?} busy={}",
+        "DBG {dbg} toast={:?} t0={t0:.3} t1={:.3} shown0={shown0} shown1={} toasts={:?} busy={}",
         toast(&h),
         h.time(),
         h.app.ui.toasts_shown,
