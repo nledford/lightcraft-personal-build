@@ -7,6 +7,11 @@
 
 ## 2026-10-27
 
+### One feedback row in the macOS Help menu
+- On macOS the Help menu showed macOS's own "Send LightCraft Feedback" row above LightCraft's Send Feedback…. Only
+  LightCraft's row is left; it opens a new issue on the project's GitHub. (A `--memory` session doesn't change that
+  setting, so on a Mac where LightCraft only ever ran that way macOS's row stays.)
+
 ### Screen readers name filmstrip thumbnails like the grid's
 - A thumbnail in the filmstrip is now named as the grid's cell for the same photo is: the file name, then its rating,
   flag and color label ("LC01207.JPG, 3 stars, picked"), and it says whether it is selected. It was named with the
