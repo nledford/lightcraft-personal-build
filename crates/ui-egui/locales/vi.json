@@ -2320,5 +2320,11 @@
   "Monitor": "Màn hình",
   "Filter settings": "Lọc cài đặt",
   "No setting matches what is typed.": "Không có cài đặt nào khớp với nội dung đã nhập.",
-  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Hãy thử một từ hoặc một phần của từ: tên các tab và mục, nhãn và phần giải thích đều được tìm."
+  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Hãy thử một từ hoặc một phần của từ: tên các tab và mục, nhãn và phần giải thích đều được tìm.",
+  "Continue in Background": "Tiếp tục ở nền",
+  "Folder not found": "Không tìm thấy thư mục",
+  "Dismiss": "Bỏ qua",
+  "Review…": "Xem lại…",
+  "Open Synchronize Folder with what the scan found": "Mở Đồng bộ thư mục với những gì quá trình quét tìm thấy",
+  "You can go on working: a notice at the top left says when the scan is done.": "Bạn có thể tiếp tục làm việc: thông báo ở góc trên bên trái cho biết khi quá trình quét xong."
 }

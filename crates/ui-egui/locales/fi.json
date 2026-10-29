@@ -2410,5 +2410,11 @@
   "Monitor": "Näyttö",
   "Filter settings": "Suodata asetuksia",
   "No setting matches what is typed.": "Mikään asetus ei vastaa kirjoitettua.",
-  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Kokeile yhtä sanaa tai sen osaa: haku kattaa välilehtien ja osioiden nimet, otsikot ja selitykset."
+  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Kokeile yhtä sanaa tai sen osaa: haku kattaa välilehtien ja osioiden nimet, otsikot ja selitykset.",
+  "Continue in Background": "Jatka taustalla",
+  "Folder not found": "Kansiota ei löytynyt",
+  "Dismiss": "Hylkää",
+  "Review…": "Tarkista…",
+  "Open Synchronize Folder with what the scan found": "Avaa Synkronoi kansio skannauksen löytämillä muutoksilla",
+  "You can go on working: a notice at the top left says when the scan is done.": "Voit jatkaa työskentelyä: vasemmassa yläkulmassa oleva ilmoitus kertoo, kun skannaus on valmis."
 }

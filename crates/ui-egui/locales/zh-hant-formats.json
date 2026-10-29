@@ -318,5 +318,8 @@
   ", rating {} of 5": "，評分：{}/5",
   "Add {n} photo{} to “{}”": "將 {n} 張照片加入「{1}」{0:.0}",
   "{n} already there": "{n} 張已在其中",
-  "Add “{keyword}” to {n} photo{}": "將「{keyword}」加入 {n} 張照片{:.0}"
+  "Add “{keyword}” to {n} photo{}": "將「{keyword}」加入 {n} 張照片{:.0}",
+  "Changes found: {n}": "找到的變更：{n}",
+  "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "「{name}」仍在掃描：請等待完成，或用其所在列的 × 停止",
+  "Look at the changes found in “{name}” first, or dismiss them": "請先檢視在「{name}」中找到的變更，或將其忽略"
 }

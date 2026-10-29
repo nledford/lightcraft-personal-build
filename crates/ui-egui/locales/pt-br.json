@@ -2287,5 +2287,11 @@
   "Reduce motion": "Reduzir movimento",
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Desativa as animações de zoom e dos indicadores de atividade. As transições de opacidade continuam. Segue o ajuste Reduzir movimento do sistema até você alterá-lo aqui.",
   "Use the system setting": "Usar o ajuste do sistema",
-  "Turns off zoom and spinner animations. Fades stay.": "Desativa as animações de zoom e dos indicadores de atividade. As transições de opacidade continuam."
+  "Turns off zoom and spinner animations. Fades stay.": "Desativa as animações de zoom e dos indicadores de atividade. As transições de opacidade continuam.",
+  "Continue in Background": "Continuar em segundo plano",
+  "Folder not found": "Pasta não encontrada",
+  "Dismiss": "Dispensar",
+  "Review…": "Revisar…",
+  "Open Synchronize Folder with what the scan found": "Abrir Sincronizar pasta com o que a verificação encontrou",
+  "You can go on working: a notice at the top left says when the scan is done.": "Você pode continuar trabalhando: um aviso no canto superior esquerdo informa quando a verificação terminar."
 }

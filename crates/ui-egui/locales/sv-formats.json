@@ -318,5 +318,8 @@
   ", rating {} of 5": ", betyg: {} av 5",
   "Add {n} photo{} to “{}”": "Lägg till foton i ”{1}”: {n}{0:.0}",
   "Add “{keyword}” to {n} photo{}": "Lägg till ”{keyword}” på foton: {n}{:.0}",
-  "{n} already there": "redan i albumet: {n}"
+  "{n} already there": "redan i albumet: {n}",
+  "Changes found: {n}": "Ändringar hittade: {n}",
+  "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "”{name}” genomsöks fortfarande: vänta, eller stoppa den med × på dess rad",
+  "Look at the changes found in “{name}” first, or dismiss them": "Titta först på ändringarna som hittades i ”{name}”, eller avfärda dem"
 }

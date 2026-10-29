@@ -318,5 +318,8 @@
   ", rating {} of 5": ", hodnocení: {} z 5",
   "Add {n} photo{} to “{}”": "Přidat do „{1}“ fotografie: {n}{0:.0}",
   "{n} already there": "již tam je: {n}",
-  "Add “{keyword}” to {n} photo{}": "Přidat „{keyword}“ k fotografiím: {n}{:.0}"
+  "Add “{keyword}” to {n} photo{}": "Přidat „{keyword}“ k fotografiím: {n}{:.0}",
+  "Changes found: {n}": "Nalezené změny: {n}",
+  "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "„{name}“ se ještě prohledává: počkejte, nebo hledání zastavte × na jeho řádku",
+  "Look at the changes found in “{name}” first, or dismiss them": "Nejprve si prohlédněte změny nalezené v „{name}“, nebo je zahoďte"
 }

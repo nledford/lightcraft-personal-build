@@ -318,5 +318,8 @@
   ", rating {} of 5": ", Bewertung: {} von 5",
   "Add {n} photo{} to “{}”": "{n} Foto{0} zu „{1}“ hinzufügen",
   "{n} already there": "{n} bereits enthalten",
-  "Add “{keyword}” to {n} photo{}": "„{keyword}“ zu {n} Foto{} hinzufügen"
+  "Add “{keyword}” to {n} photo{}": "„{keyword}“ zu {n} Foto{} hinzufügen",
+  "Changes found: {n}": "Gefundene Änderungen: {n}",
+  "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "„{name}“ wird noch durchsucht: Warte darauf oder beende die Suche mit × in ihrer Zeile",
+  "Look at the changes found in “{name}” first, or dismiss them": "Sieh dir zuerst die in „{name}“ gefundenen Änderungen an oder verwirf sie"
 }

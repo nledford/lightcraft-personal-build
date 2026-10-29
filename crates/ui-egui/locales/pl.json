@@ -2368,5 +2368,11 @@
   "Reduce motion": "Ogranicz ruch",
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Wyłącza animacje powiększania i wskaźników pracy. Zanikanie i przenikanie zostają. Dopóki nie zmienisz tego tutaj, program stosuje systemowe ustawienie Ogranicz ruch.",
   "Use the system setting": "Użyj ustawienia systemu",
-  "Turns off zoom and spinner animations. Fades stay.": "Wyłącza animacje powiększania i wskaźników pracy. Zanikanie i przenikanie zostają."
+  "Turns off zoom and spinner animations. Fades stay.": "Wyłącza animacje powiększania i wskaźników pracy. Zanikanie i przenikanie zostają.",
+  "Continue in Background": "Kontynuuj w tle",
+  "Folder not found": "Nie znaleziono folderu",
+  "Dismiss": "Odrzuć",
+  "Review…": "Przejrzyj…",
+  "Open Synchronize Folder with what the scan found": "Otwórz Synchronizuj folder z tym, co znalazło przeszukiwanie",
+  "You can go on working: a notice at the top left says when the scan is done.": "Możesz dalej pracować: komunikat w lewym górnym rogu powie, kiedy przeszukiwanie się skończy."
 }

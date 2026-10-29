@@ -2242,5 +2242,11 @@
   "Reduce motion": "減少動態效果",
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "關閉縮放與旋轉指示器的動畫。淡入淡出效果保留。在你於此處更改之前，跟隨系統的「減少動態效果」設定。",
   "Use the system setting": "使用系統設定",
-  "Turns off zoom and spinner animations. Fades stay.": "關閉縮放與旋轉指示器的動畫。淡入淡出效果保留。"
+  "Turns off zoom and spinner animations. Fades stay.": "關閉縮放與旋轉指示器的動畫。淡入淡出效果保留。",
+  "Continue in Background": "在背景繼續",
+  "Folder not found": "找不到資料夾",
+  "Dismiss": "移除",
+  "Review…": "檢視…",
+  "Open Synchronize Folder with what the scan found": "以掃描結果開啟「同步資料夾」",
+  "You can go on working: a notice at the top left says when the scan is done.": "你可以繼續工作：掃描完成時左上角會出現通知。"
 }
