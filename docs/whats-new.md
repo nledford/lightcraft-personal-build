@@ -652,7 +652,8 @@
 - While an import or Synchronize Folder adds photos to a large library, the sidebar's counts (Folders, By Date,
   Keywords, All Photos, Picks, Recently Deleted) take in each batch as it lands instead of counting every photo of
   the library again, which made the window slow and at times unresponsive for as long as the import ran. A change
-  too large to follow, such as opening a library, is counted in the background while the sidebar keeps its counts.
+  too large to follow, such as thousands of photos at once, is counted in the background while the sidebar keeps the
+  counts it showed; a large library just opened shows its counts once its first count is done.
 - The Folders list takes in a batch by changing only the rows of the folders the photos came into, so the time a
   batch costs no longer grows with the number of folders in the library (about 0.1 s at 22,000 folders before,
   microseconds now).
