@@ -38,6 +38,17 @@ on:
         type: choice
         options: [mbx, rust-cache]
         default: mbx
+      linux-cache:
+        description: "Linux jobs' compile cache: mbx (per-compilation objects, our own crates too) or rust-cache (dependencies only)"
+        required: false
+        type: choice
+        options: [mbx, rust-cache]
+        default: mbx
+      proof-release:
+        description: "Publish the kept build (ref integration only) under a throwaway tag build-proof-…, never a real build-* tag (to prove the release job; delete it afterwards)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -52,6 +63,11 @@ jobs:
     name: LightCraft.app (macOS arm64)
     runs-on: macos-15
     timeout-minutes: 120
+    outputs:
+      sha: ${{ steps.build.outputs.sha }}
+      short: ${{ steps.build.outputs.short }}
+      format: ${{ steps.format.outputs.number }}
+      licenses: ${{ steps.licenses.outputs.count }}
     env:
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: 0
@@ -78,12 +94,14 @@ jobs:
       # My library is catalog format 11 (the backup chain, #800/#814 and up); main writes 9 and refuses it. A build
       # without format 11 must never reach my library, so fail before building it.
       - name: Require catalog format 11
+        id: format
         run: |
           set -euo pipefail
           if ! grep -Eq '^[[:space:]]*format\(11,' crates/catalog/src/journal.rs; then
             echo "::error::crates/catalog/src/journal.rs has no catalog format 11: this build lacks the backup chain (#800/#814) and must not open my library."
             exit 1
           fi
+          echo "number=$(grep -Eo '^[[:space:]]*format\([0-9]+,' crates/catalog/src/journal.rs | grep -Eo '[0-9]+' | sort -n | tail -1)" >> "$GITHUB_OUTPUT"
 
       - name: Check out craft-fonts
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -118,7 +136,8 @@ jobs:
       # dependencies. `objects` mode because a fresh checkout's new file times would make Cargo rebuild a restored target/.
       # Objects leave out Cargo's downloads, so those get their own cache.
       - if: inputs.cache == 'mbx'
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        id: downloads
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cargo/registry/index
@@ -167,6 +186,33 @@ jobs:
           CRAFT_FONTS_REQUIRED: "1"
         run: packaging/macos/package.sh --arch aarch64
 
+      # Only my build (save-cache) writes the downloads cache; candidates only restore it.
+      - name: Save Cargo's downloads
+        if: inputs.cache == 'mbx' && inputs.save-cache && steps.downloads.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-downloads-${{ hashFiles('Cargo.lock') }}
+
+      # The app zip must carry the license texts the project's own packaging puts there (packaging/env.sh copy_docs: the
+      # project's licenses, Inter's OFL, one OFL per craft-fonts family). A missing one fails the run, never ships a build.
+      - name: Check the license texts in the app
+        id: licenses
+        run: |
+          set -euo pipefail
+          dir=target/macos-package/LightCraft.app/Contents/Resources/Licenses
+          for f in LICENSE-MIT LICENSE-APACHE NOTICE OFL-Inter.txt; do
+            [ -s "$dir/$f" ] || { echo "::error::$f is missing from $dir"; exit 1; }
+          done
+          want=$({ echo Inter; for l in craft-fonts/fonts/*/OFL.txt; do basename "$(dirname "$l")"; done; } | sort -u | wc -l | tr -d ' ')
+          have=$(ls "$dir"/OFL-*.txt | wc -l | tr -d ' ')
+          [ "$want" -gt 1 ] && [ "$have" -eq "$want" ] || { echo "::error::$have OFL texts in the app, expected $want (Inter and each craft-fonts family)"; exit 1; }
+          echo "count=$have" >> "$GITHUB_OUTPUT"
+          echo "- license texts in the app: LICENSE-MIT, LICENSE-APACHE, NOTICE and $have OFL files" >> "$GITHUB_STEP_SUMMARY"
+
       # upload-artifact drops the executable bit, so the bundle goes in as a ditto zip.
       - name: Zip LightCraft.app
         env:
@@ -194,106 +240,119 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  # The steps of `cargo xtask ci` (as in xtask/src/main.rs cmd_ci on 29 Oct), each run even after an earlier one failed,
-  # as `just ci-rest` does locally; `xtask ci` itself stops at the first failure. Setup follows storytold's gate.yml
-  # (craft-common-actions), which can't be called here because it checks out the dispatching ref, not `ref`.
-  # Advisory: it doesn't hold the app back, and Linux builds no macOS-only code.
-  linux:
-    name: xtask ci steps (Linux)
-    if: inputs.linux-ci
+  # My build only (ref `integration`): keep the app as a prerelease `build-<UTC yyyymmdd-hhmmss>-<short sha>` so going back to a
+  # recent build is a download (`just personal-kept`), and delete all but the newest 4 `build-*` releases with their tags, here
+  # in the workflow, so retention needs no laptop. Candidates publish nothing. A proof run (`proof-release`) publishes
+  # `build-proof-…` instead, which retention never touches: delete it by hand. The release carries the app zip and, as loose
+  # assets, the same license texts that are inside it; the job fails before it publishes anything when one is missing. This job
+  # alone gets a write token, and only to create and delete releases; every other job reads.
+  keep:
+    name: Keep this build as a release
+    if: inputs.ref == 'integration'
+    needs: app
     runs-on: ubuntu-24.04
-    timeout-minutes: 150
+    timeout-minutes: 15
+    permissions:
+      contents: write
     env:
-      CARGO_TERM_COLOR: always
-      CARGO_INCREMENTAL: 0
-      CARGO_NET_RETRY: 10
-      CARGO_PROFILE_DEV_DEBUG: line-tables-only
-      RUST_BACKTRACE: 1
-      # xtask ci caps test threads at 4 (frame-budget tests get flaky with more); the runner has 4 CPUs anyway.
-      RUST_TEST_THREADS: 4
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: LightCraft-integration-${{ needs.app.outputs.short }}-macos-arm64
+          path: out
+      - name: Check the license texts (before anything is published)
+        env:
+          WANT: ${{ needs.app.outputs.licenses }}
+        run: |
+          set -euo pipefail
+          [[ $WANT =~ ^[0-9]+$ ]] || { echo "::error::the app job named no license count"; exit 1; }
+          zip=$(ls out/*.zip)
+          mkdir -p unzipped licenses
+          unzip -q "$zip" 'LightCraft.app/Contents/Resources/Licenses/*' -d unzipped
+          dir=unzipped/LightCraft.app/Contents/Resources/Licenses
+          for f in LICENSE-MIT LICENSE-APACHE NOTICE OFL-Inter.txt; do
+            [ -s "$dir/$f" ] || { echo "::error::$f is missing from the app zip"; exit 1; }
+          done
+          have=$(ls "$dir"/OFL-*.txt | wc -l | tr -d ' ')
+          [ "$have" -eq "$WANT" ] || { echo "::error::$have OFL texts in the app zip, the app job counted $WANT"; exit 1; }
+          cp "$dir"/LICENSE-MIT "$dir"/LICENSE-APACHE "$dir"/NOTICE "$dir"/OFL-*.txt licenses/
+          echo "license texts to attach: $(ls licenses | wc -l)"
+      - name: Publish the release and keep the newest 4
+        env:
+          SHA: ${{ needs.app.outputs.sha }}
+          SHORT: ${{ needs.app.outputs.short }}
+          FORMAT: ${{ needs.app.outputs.format }}
+          FONTS: ${{ inputs.craft-fonts-ref }}
+          RUSTC: ${{ inputs.rust-toolchain }}
+          PROOF: ${{ inputs.proof-release }}
+        run: |
+          set -euo pipefail
+          [[ $SHA =~ ^[0-9a-f]{40}$ && $FORMAT =~ ^[0-9]+$ ]] || { echo "::error::the app job named no sha or catalog format"; exit 1; }
+          stamp="$(date -u +%Y%m%d-%H%M%S)-$SHORT"
+          if [ "$PROOF" = true ]; then tag="build-proof-$stamp"; else tag="build-$stamp"; fi
+          zip=$(ls out/*.zip)
+          cat > notes.md <<NOTES
+          Personal build of nledford's integration branch: unreleased, ad-hoc signed, not for others.
+          $([ "$PROOF" = true ] && echo "THROWAWAY PROOF RELEASE of the release job: it is deleted right after it is checked.")
+
+          - source: \`$SHA\` (branch \`integration\` of this repository)
+          - catalog format: $FORMAT
+          - rustc $RUSTC, craft-fonts \`$FONTS\`
+          - no update installs (patches/personal-no-update), so this build never replaces itself with a release
+          - license texts (LICENSE-MIT, LICENSE-APACHE, NOTICE, OFL-*.txt for the embedded fonts) are inside the app (Contents/Resources/Licenses) and attached here as loose files
+          - install: \`just personal-kept $tag <scratch dir>\` from the lightcraft tools
+          NOTES
+          gh release create "$tag" "$zip" licenses/* --prerelease --target "$SHA" --title "$tag" --notes-file notes.md
+          echo "- kept as release \`$tag\` (catalog format $FORMAT)" >> "$GITHUB_STEP_SUMMARY"
+          # newest 4 by tag name (the stamp sorts), older ones with their tags; proof releases never match
+          gh release list --limit 100 --json tagName --jq '.[].tagName' | { grep -E '^build-[0-9]{8}-[0-9]{6}-[0-9a-f]+$' || true; } | sort -r | tail -n +5 |
+            while read -r old; do
+              echo "deleting $old"
+              gh release delete "$old" --cleanup-tag --yes
+            done
+
+  # The steps of `cargo xtask ci`, in four groups on separate runners (linux-ci.yml; each group runs every one of its steps
+  # even after a failure). Advisory: it doesn't hold the app back, and Linux builds no macOS-only code.
+  linux:
+    name: Linux ${{ matrix.group }}
+    if: inputs.linux-ci
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [lint, test, heif-doc, wasm]
+    uses: ./.github/workflows/linux-ci.yml
+    with:
+      ref: ${{ inputs.ref }}
+      craft-fonts-ref: ${{ inputs.craft-fonts-ref }}
+      rust-toolchain: ${{ inputs.rust-toolchain }}
+      group: ${{ matrix.group }}
+      save-cache: ${{ inputs.save-cache }}
+      cache: ${{ inputs.linux-cache }}
+
+  # One place for the Linux result: every failed step and test of the four groups, and each group's times. Its conclusion is
+  # what `just personal-download` reads (the job name is how it finds it).
+  linux-summary:
+    name: xtask ci steps (Linux)
+    if: always() && inputs.linux-ci
+    needs: linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref }}
+          sparse-checkout: scripts
           persist-credentials: false
-
-      - name: Check out craft-fonts
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          repository: storytold/craft-fonts
-          ref: ${{ inputs.craft-fonts-ref }}
-          path: craft-fonts
-          persist-credentials: false
-
-      - name: Build with craft-fonts
-        run: |
-          echo "CRAFT_FONTS_DIR=$GITHUB_WORKSPACE/craft-fonts" >> "$GITHUB_ENV"
-          echo "CRAFT_FONTS_REQUIRED=1" >> "$GITHUB_ENV"
-
-      - name: Check out craft-i18n
-        uses: storytold/craft-common-actions/actions/checkout-craft-i18n@main
-
-      # Nothing waits on it: the space is free before the build needs it.
-      - name: Free disk space
-        run: |
-          nohup sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
-            /opt/hostedtoolcache/CodeQL </dev/null >/dev/null 2>&1 &
-
-      - name: Install Linux build dependencies
-        uses: storytold/craft-common-actions/actions/install-apt-packages@main
-        with:
-          # The action saves only on pushes to the default branch by default; every run here is a dispatch.
-          save: ${{ inputs.save-cache && 'always' || 'never' }}
-          packages: >-
-            pkg-config libxkbcommon-dev libwayland-dev libx11-dev libxcb1-dev libxcursor-dev
-            libxrandr-dev libxi-dev libfontconfig1-dev libfreetype-dev mesa-vulkan-drivers
-            libgl1-mesa-dev libdbus-1-dev
-
-      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
-        with:
-          toolchain: ${{ inputs.rust-toolchain }}
-          targets: wasm32-unknown-unknown
-          components: clippy, rustfmt
-
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          prefix-key: v1-rust
-          key: linux-ci
-          save-if: ${{ inputs.save-cache }}
-          cache-on-failure: true
-
-      - name: Every xtask ci step
+          pattern: xtask-result-*
+          path: results
+          merge-multiple: true
+        continue-on-error: true
+      - name: Every failed step and test
         env:
           REF: ${{ inputs.ref }}
+          LINUX: ${{ needs.linux.result }}
         run: |
-          set -uo pipefail
-          export LIGHTCRAFT_CONFIG_DIR="$RUNNER_TEMP/lightcraft-test-config"
-          mkdir -p "$LIGHTCRAFT_CONFIG_DIR"
-          log="$RUNNER_TEMP/steps.log"
-          failed=""
-          step() {
-            local name=$1
-            shift
-            echo "::group::$name"
-            if "$@" 2>&1 | tee -a "$log"; then r=ok; else r=FAIL; failed="$failed $name"; fi
-            echo "::endgroup::"
-            echo "$r $name"
-          }
-          step type cargo xtask type
-          step fmt cargo fmt --all -- --check
-          step clippy cargo clippy --workspace --all-targets --keep-going -- -D warnings
-          step heif cargo clippy -p lightcraft-codecs --features heif --all-targets -- -D warnings
-          step heif-test cargo test -p lightcraft-codecs -p lightcraft-heif --features lightcraft-codecs/heif --lib --bins --tests --no-fail-fast
-          step heif-engine cargo test -p lightcraft-engine --lib --features lightcraft-codecs/heif --no-fail-fast heic
-          step test cargo test --workspace --lib --bins --tests --no-fail-fast
-          step doctest cargo test --workspace --doc --no-fail-fast
-          for s in parity layers refusals assets wasm; do step "$s" cargo xtask "$s"; done
-          {
-            echo "### xtask ci steps (Linux): $REF"
-            echo ""
-            echo "Failed steps:${failed:- none}"
-            echo ""
-            # shellcheck disable=SC2016 # the backticks are Markdown, not a command
-            sed -nE 's/^test (.*) \.\.\. FAILED$/- `\1`/p' "$log" | sort -u
-          } >> "$GITHUB_STEP_SUMMARY"
-          [ -z "$failed" ]
+          bash scripts/xtask-summary.sh "xtask ci steps (Linux): $REF" "$LINUX" results
