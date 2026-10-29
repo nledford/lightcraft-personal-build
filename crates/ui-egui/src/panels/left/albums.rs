@@ -494,16 +494,19 @@ fn drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::Response
 /// Adds the dragged photos to the album and toasts how many went in (and how many Local ones were skipped).
 fn drop_photos_on_album(app: &mut LightcraftApp, ui: &egui::Ui, a: &Album, ids: Vec<u64>, there: usize) {
     match app.run("album.addPhotos", json!({"id": a.id.0, "ids": ids})) {
-        Ok(r) => app.toast(ui.ctx(), added_message(a, &r, there)),
+        Ok(r) => {
+            let name = crate::destination::album(&app.session.catalog, a);
+            app.toast(ui.ctx(), added_message(&name, &r, there));
+        }
         Err(e) => app.toast_error(ui.ctx(), e),
     }
 }
 
 /// "Added N photos to “album”", plus a note when some were there already and when Local photos were skipped.
-fn added_message(a: &Album, r: &serde_json::Value, there: usize) -> String {
+fn added_message(name: &str, r: &serde_json::Value, there: usize) -> String {
     let n = r.get("added").and_then(serde_json::Value::as_u64).unwrap_or(0);
     let skipped = r.get("skipped").and_then(serde_json::Value::as_u64).unwrap_or(0);
-    let mut msg = crate::i18n::tr_format!("Added {n} photo{} to “{}”", if n == 1 { "" } else { "s" }, a.name, n = n);
+    let mut msg = crate::i18n::tr_format!("Added {n} photo{} to “{}”", if n == 1 { "" } else { "s" }, name, n = n);
     if there > 0 {
         msg.push_str(" · ");
         msg.push_str(&crate::i18n::tr_format!("{n} already there", n = there));
