@@ -705,7 +705,8 @@ pub fn apply_kind(ctx: &egui::Context, kind: ThemeKind) {
         o.input_options.line_scroll_speed = WHEEL_LINE_POINTS;
         o.input_options.scroll_zoom_speed = WHEEL_ZOOM_PER_POINT;
     });
-    let t = Tokens::for_kind(kind);
+    let increased = crate::increase_contrast::increased(ctx);
+    let t = Tokens::for_kind_with(kind, increased);
     ctx.data_mut(|d| {
         d.insert_temp(egui::Id::NULL, t);
         d.insert_temp(theme_id(), kind);
@@ -716,11 +717,13 @@ pub fn apply_kind(ctx: &egui::Context, kind: ThemeKind) {
     v.window_fill = t.chrome;
     v.extreme_bg_color = t.field;
     v.faint_bg_color = t.inset;
-    v.window_stroke = Stroke::new(1.0, t.button_border);
+    let line = crate::increase_contrast::line_width(increased);
+    v.window_stroke = Stroke::new(line, t.button_border);
     v.window_corner_radius = CornerRadius::same(6);
     v.menu_corner_radius = CornerRadius::same(6);
     v.selection.bg_fill = t.selection_fill();
-    v.selection.stroke = Stroke::new(1.0, t.accent);
+    v.selection.stroke = Stroke::new(line, t.accent);
+    v.disabled_alpha = crate::increase_contrast::disabled_alpha(increased);
     v.override_text_color = Some(t.text_label);
     // (egui's own: the label colour at 60 %, under 4.1:1 in every theme, and a bright blue)
     v.weak_text_color = Some(t.text_dim);
@@ -737,8 +740,16 @@ pub fn apply_kind(ctx: &egui::Context, kind: ThemeKind) {
     // (what is marked strong is in the text colour: egui takes it from here, and as the label
     // colour it was no different from plain text; so are the icons of a control being pressed)
     w.active.fg_stroke = Stroke::new(1.0, t.text);
-    w.noninteractive.bg_stroke = Stroke::new(1.0, t.divider);
-    w.inactive.bg_stroke = Stroke::new(1.0, t.button_border);
+    w.noninteractive.bg_stroke = Stroke::new(line, t.divider);
+    w.inactive.bg_stroke = Stroke::new(line, t.button_border);
+    // (a control keeps its outline's weight while it is hovered, pressed or open)
+    for state in [&mut w.hovered, &mut w.active, &mut w.open] {
+        state.bg_stroke.width = line;
+    }
+    if increased {
+        // (an open drop-down's outline is egui's own gray, 1.2 to 2.5:1 on the panel)
+        w.open.bg_stroke.color = t.button_border;
+    }
     ctx.set_visuals_of(egui::Theme::Dark, v.clone());
     ctx.set_visuals_of(egui::Theme::Light, v);
     ctx.set_theme(if dark { egui::Theme::Dark } else { egui::Theme::Light });
