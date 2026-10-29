@@ -140,6 +140,7 @@ impl LightcraftApp {
             screen_profile_read: None,
             system_reduce_motion: None,
             system_reduce_motion_read: None,
+            awake_told: None,
             library_problem: None,
             library_window_input: Default::default(),
             alt_asks_for_library: false,
@@ -810,6 +811,7 @@ impl LightcraftApp {
     /// on other threads (export, denoise, the device warm-up). `false`: the deadline passed first
     /// (the host exits anyway). The app renders nothing afterwards.
     pub fn shutdown(&mut self, timeout: std::time::Duration) -> bool {
+        self.release_keep_awake();
         lightcraft_engine::gpu::begin_shutdown();
         #[cfg(not(target_arch = "wasm32"))]
         let t0 = std::time::Instant::now();

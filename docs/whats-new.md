@@ -33,6 +33,11 @@
   another folder is being scanned, or a finished scan's review waits for a dialog to close. With the library free there is nothing to queue: the review opens when the scan is in.
 - What your last review chose is kept until you quit or open another library.
 
+### On macOS, a long job keeps the Mac awake
+- While an export, import, preview build, merge or other job you started is running, the Mac no longer goes to sleep
+  on its own and macOS no longer slows the app down when its window is hidden or minimized. Both end as soon as the
+  last job finishes or is canceled.
+
 ## 2026-10-26
 
 ### The sidebar from the keyboard

@@ -1390,3 +1390,56 @@ fn the_frame_that_starts_a_waiting_build_asks_for_the_next_one() {
     assert!(ctx.has_requested_repaint(), "and the frame asked to look at it again");
     assert!(h.step_until(T, |h| h.app.session.activity.list().is_empty()), "the started build ends");
 }
+
+/// What `services.keep_awake` was told, in order.
+type Told = std::rc::Rc<std::cell::RefCell<Vec<Option<String>>>>;
+
+fn demo_keeping_awake() -> (Headless, Told) {
+    let told = Told::default();
+    let sink = told.clone();
+    let keep_awake: crate::KeepAwakeFn = Box::new(move |reason| sink.borrow_mut().push(reason.map(str::to_owned)));
+    let app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services { png: None, keep_awake: Some(keep_awake), ..Default::default() });
+    let mut h = Headless::new(app, [1200.0, 800.0], 1.0);
+    h.settle(T);
+    told.borrow_mut().clear();
+    (h, told)
+}
+
+#[test]
+fn a_running_job_is_told_to_the_host_once_and_its_end_too() {
+    let (mut h, told) = demo_keeping_awake();
+    for _ in 0..3 {
+        h.step();
+    }
+    assert!(told.borrow().is_empty(), "nothing runs: the host hears nothing");
+
+    let g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    for _ in 0..4 {
+        h.step();
+    }
+    assert_eq!(*told.borrow(), [Some("Exporting".to_string())], "told once, not on every frame");
+
+    drop(g);
+    for _ in 0..4 {
+        h.step();
+    }
+    assert_eq!(*told.borrow(), [Some("Exporting".to_string()), None]);
+}
+
+#[test]
+fn a_cancelled_job_is_released_before_it_stops() {
+    let (mut h, told) = demo_keeping_awake();
+    let g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    h.step();
+    h.app.session.activity.cancel(g.id()).unwrap();
+    h.step();
+    assert_eq!(*told.borrow(), [Some("Exporting".to_string()), None]);
+}
+
+#[test]
+fn a_window_with_no_host_service_ignores_jobs() {
+    let mut h = demo();
+    let _g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    h.step();
+    assert_eq!(h.app.awake_told, None);
+}
