@@ -124,10 +124,10 @@ pub struct SyncReady {
 }
 
 impl SyncReady {
-    /// How many changes there are to look at.
+    /// How many changes there are to look at (the copies of library photos count when the choice brings them in).
     pub fn changes(&self) -> usize {
         let c = &self.counts;
-        c.new + c.moved + c.missing + c.metadata
+        c.new + if self.choice.import_duplicates { c.copies } else { 0 } + c.moved + c.missing + c.metadata
     }
 }
 
@@ -240,7 +240,7 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
     };
     if background {
         let ready = SyncReady { path: task.path.clone(), name: task.name.clone(), disk: task.disk, counts: c, choice: task.choice };
-        if !ready.counts.offline && ready.changes() == 0 {
+        if ready.counts.up_to_date() {
             // nothing to look at: said and done
             app.toast(ctx, format!("{}: {}", ready.name, crate::i18n::tr("The library is up to date with this folder.")));
             return;
@@ -491,7 +491,7 @@ pub fn confirm(app: &mut LightcraftApp, dlg: &Dialog) -> Result<Value, String> {
     };
     // the Read row opens next time as it was used now (when it was there to be used, and only
     // for a synchronize that was taken: a refused one remembers nothing)
-    if counts.new > 0 && *import_new {
+    if counts.new.saturating_add(if *import_duplicates { counts.copies } else { 0 }) > 0 && *import_new {
         crate::import::remember_read(app, ReadDialog::Synchronize, *read);
     }
     let progress = Arc::new(SyncProgress::default());

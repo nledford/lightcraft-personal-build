@@ -388,8 +388,7 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
     field(ui, "Read", |ui| {
         ui.horizontal_wrapped(|ui| {
             for (kind, label, read) in read_choices(&mut d.read) {
-                let r = ui.checkbox(read, crate::i18n::tr(label)).on_hover_text(crate::i18n::tr(READ_HINT));
-                register(ui, format!("check:importRead.{kind}"), r.rect);
+                crate::check::Check::new(&format!("importRead.{kind}"), read, label).tooltip(crate::i18n::tr(READ_HINT)).show(ui);
             }
         });
     });

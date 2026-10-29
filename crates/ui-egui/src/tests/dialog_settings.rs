@@ -198,7 +198,7 @@ fn a_long_library_folder_is_cut_short_and_its_tooltip_has_all_of_it() {
     assert!(location.right() <= room.right() + 0.5, "the path {location:?} stays inside the room for the page {room:?}");
     let texts = h.painted_text();
     // (the Smart previews row below, which moved onto this tab with #2524, names a folder inside the library)
-    assert!(!texts.contains(&path), "the whole path is not drawn in the row");
+    assert!(!texts.iter().any(|text| text.contains(&path) && !text.contains(&format!("{path}/"))), "the whole path is not drawn in the row");
     // And what is left of it is its end, which says which library this is
     let name = "the-master-library";
     assert!(path.ends_with(name));
