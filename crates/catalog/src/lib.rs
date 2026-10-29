@@ -798,11 +798,11 @@ impl Catalog {
         self.remembers(revision).then(|| self.touched_after(revision, Aspects::ALL))
     }
 
-    /// The photos whose `reads` (what a tally reads of them) changed since the catalog was at
+    /// The photos whose `reads` (what a tally or a kept sort order reads of them) changed since the catalog was at
     /// `revision`, added and removed photos included, each once; ops that change no photo of their
     /// own (an album, a stack, the keyword list, a folder's label) and other things of a photo (a
-    /// rating, a slider) aside: for what is counted from the photos alone (the folders, days and
-    /// keywords they carry). `None` when that is not known: too long ago, or the catalog was set
+    /// rating, a slider) aside: for what is counted or ordered from the photos alone (the folders, days and
+    /// keywords they carry, the sort keys). `None` when that is not known: too long ago, or the catalog was set
     /// from outside (a library loaded).
     pub fn photos_changed_since(&self, revision: u64, reads: Aspects) -> Option<Vec<PhotoId>> {
         // (every op that changes a photo says which, in `photo_mut` or as it adds or removes it:
