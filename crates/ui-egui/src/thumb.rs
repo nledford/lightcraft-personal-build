@@ -411,7 +411,7 @@ pub(crate) struct Thumb<'a> {
     pub rect: Rect,
     /// The photo's stack and its place in it.
     pub stack: Option<(StackId, usize)>,
-    /// Whether the marks row is drawn (Settings → Interface).
+    /// Whether the marks row is drawn (Settings → Appearance).
     pub marks: bool,
     /// Whether the stars and the edited mark are in it (the grid's Stars on hover shows only the
     /// flag and the colour label until the photo is hovered or chosen).

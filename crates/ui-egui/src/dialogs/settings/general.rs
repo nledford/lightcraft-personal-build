@@ -179,7 +179,7 @@ fn backups(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     // (read, not asked with the command: this is every frame, and a command is journaled)
     let Some((folder, chosen)) = lightcraft_engine::cmd::backup::backup_folder(&app.session) else { return };
     let folder = folder.display().to_string();
-    heading(ui, t, crate::i18n::tr("Backups"));
+    heading(ui, t, "Backups");
     // What the folder is like is read from the file system: what volume it is on, whether it is
     // there, whether it holds a backup of this library. It is looked at when this section is
     // shown anew, when the library or the folder changes and when a backup starts or ends, not
@@ -355,7 +355,7 @@ fn backups(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 
     // (a folder or a choice that was refused: why. What was set shows in the rows above.)
     if let Some(Err(e)) = result {
-        app.toast(ui.ctx(), crate::i18n::refusal_text(&e));
+        app.toast_error(ui.ctx(), crate::i18n::refusal_text(&e));
     }
     hint(
         ui,
