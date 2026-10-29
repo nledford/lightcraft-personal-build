@@ -2460,9 +2460,16 @@ fn the_bar_reads_the_same_when_the_rows_are_scrolled_sideways() {
     // deep enough that the levels, stepping right by no more than the narrowest step, still
     // do not fit the panel
     let deep: String = ('a'..='z').chain('a'..='l').map(|c| format!("/{c}")).collect();
-    // (tall enough for the whole chain: Recently Deleted is above it now)
-    let mut h = folders_app_sized(&[&format!("{deep}/x/1.jpg"), &format!("{deep}/y/2.jpg")], [1400.0, 1400.0]);
-    click(&mut h, "source:libfolder:/a");
+    // (tall enough for the whole chain: Recently Deleted is above it now, and every level is a row)
+    // (a photo at every level: a folder that holds none and only leads on is passed over in the tree, not a row)
+    let mut paths: Vec<String> = deep.match_indices('/').map(|(i, _)| format!("{}/0.jpg", &deep[..i + 2])).collect();
+    paths.extend([format!("{deep}/x/1.jpg"), format!("{deep}/y/2.jpg")]);
+    let paths: Vec<&str> = paths.iter().map(String::as_str).collect();
+    let mut h = folders_app_sized(&paths, [1400.0, 2400.0]);
+    // the deepest folder is shown: the rows above it open, and it is the row that scrolls the furthest
+    let shown = format!("{deep}/x");
+    exec(&mut h, "library.source", json!({"kind": "libraryFolder", "path": shown}));
+    h.settle(SETTLE);
     let panel = widget(&h, "panel:left_panel");
     assert!(crate::panels::left::content_width(&h.view.ctx) > panel.width() + 40.0, "there is somewhere to scroll to");
     let r = h.request("ui.move", json!({"x": panel.center().x, "y": panel.center().y}), T);
@@ -2473,7 +2480,7 @@ fn the_bar_reads_the_same_when_the_rows_are_scrolled_sideways() {
     let img = h.snapshot(SETTLE);
     assert!(widget(&h, "source:all").left() < panel.left() - 20.0, "the rows did scroll: {:?}", widget(&h, "source:all"));
     let t = crate::theme::Tokens::get(&h.view.ctx);
-    let mark = widget(&h, "currentMark:libfolder:/a");
+    let mark = widget(&h, &format!("currentMark:libfolder:{shown}"));
     assert!((mark.left() - panel.left()).abs() <= 1.5, "the bar stays at the panel's edge: {mark:?} / {panel:?}");
     for y in [mark.top() + 3.0, mark.center().y, mark.bottom() - 3.0] {
         for x in [mark.left() + 0.5, mark.center().x, mark.right() - 0.5] {

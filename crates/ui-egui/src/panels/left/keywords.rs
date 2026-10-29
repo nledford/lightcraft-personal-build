@@ -1,7 +1,7 @@
 use super::albums::refuse_photos;
 use super::dates::browse_all_photos;
-use super::rows::{INDENT_STEP, Row, out_of_sight, tree_open, tree_toggle};
-use super::{Icon, KeywordNode, LightcraftApp, json};
+use super::rows::{INDENT_STEP, Row, out_of_sight, tree_toggle};
+use super::{Branch, Icon, KeywordNode, LightcraftApp, json};
 use crate::menu_item::MenuItem;
 
 /// "Keywords": the library's keyword tree with photo counts (`a|b|c` keywords nest). A click
@@ -10,13 +10,13 @@ use crate::menu_item::MenuItem;
 pub(super) fn keyword_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[KeywordNode], indent: f32) {
     for n in nodes {
         // leaves (most keywords) have no open state to look up
-        let open_id = (!n.children.is_empty()).then(|| egui::Id::unique(("kw-open", n.path.to_lowercase())));
-        let mut open = open_id.is_some_and(|k| tree_open(ui, k, false));
+        let branch = (!n.children.is_empty()).then(|| Branch::keyword(&n.path));
+        let mut open = branch.as_ref().is_some_and(|b| app.ui.sidebar_trees.is_open(b));
         let id = format!("keyword:{}", n.path);
         let sel_of = |app: &LightcraftApp| app.session.filter.keyword.as_deref().is_some_and(|k| k.eq_ignore_ascii_case(&n.path));
         if !out_of_sight(app, ui, &id, &n.name, Some(n.count), indent, false, || sel_of(app)) {
             let sel = sel_of(app);
-            keyword_row(app, ui, n, &id, indent, open_id, &mut open, sel);
+            keyword_row(app, ui, n, &id, indent, branch.as_ref(), &mut open, sel);
         }
         if open {
             keyword_rows(app, ui, &n.children, indent + INDENT_STEP);
@@ -24,7 +24,7 @@ pub(super) fn keyword_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[
     }
 }
 
-/// One drawn row of [`keyword_rows`]; `open_id` and `open` are its triangle's when it has rows inside it.
+/// One drawn row of [`keyword_rows`]; `branch` and `open` are its triangle's when it has rows inside it.
 #[allow(clippy::too_many_arguments)]
 fn keyword_row(
     app: &mut LightcraftApp,
@@ -32,7 +32,7 @@ fn keyword_row(
     n: &KeywordNode,
     id: &str,
     indent: f32,
-    open_id: Option<egui::Id>,
+    branch: Option<&Branch>,
     open: &mut bool,
     sel: bool,
 ) {
@@ -44,8 +44,8 @@ fn keyword_row(
         crate::i18n::tr("Add keywords in the Keyword List"),
         crate::i18n::tr("Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there"),
     );
-    if let Some(k) = open_id {
-        tree_toggle(ui, &resp, indent, k, open, format!("keywordToggle:{}", n.path));
+    if let Some(branch) = branch {
+        tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, branch, open, format!("keywordToggle:{}", n.path));
     }
     let resp = resp.on_hover_text(if n.children.is_empty() { n.path.clone() } else { format!("{} (includes the keywords below it)", n.path) });
     if super::side_keys::chosen(ui, &resp) {
