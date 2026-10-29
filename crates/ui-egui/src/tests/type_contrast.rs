@@ -140,8 +140,15 @@ fn unreadable(h: &Headless, t: &Tokens, within: Option<Rect>) -> Vec<String> {
         for section in &text.galley.job.sections {
             let own = Some(section.format.color).filter(|c| *c != Color32::PLACEHOLDER);
             let colour = text.override_text_color.or(own).unwrap_or(text.fallback_color);
-            // (a count of nothing is fainter on purpose: the rows that hold photos stand out)
-            if colour == t.text_disabled || colour.a() == 0 || colour == t.text_dim.gamma_multiply(0.55) {
+            // (a count of nothing is fainter on purpose: the rows that hold photos stand out; a disabled
+            // `Button` or check draws its label at 0.45 of its colour, the whole control fainter, as above)
+            let faded = |c: Color32| c.gamma_multiply(0.45);
+            if colour == t.text_disabled
+                || colour.a() == 0
+                || colour == t.text_dim.gamma_multiply(0.55)
+                || colour == faded(t.text)
+                || colour == faded(t.text_label)
+            {
                 continue;
             }
             let shown = blend(colour, on);
