@@ -3529,5 +3529,9 @@
   "Dismiss": "Entfernen",
   "Review…": "Ansehen…",
   "Open Synchronize Folder with what the scan found": "„Ordner synchronisieren“ mit dem Ergebnis der Suche öffnen",
-  "You can go on working: a notice at the top left says when the scan is done.": "Du kannst weiterarbeiten: Ein Hinweis oben links meldet, wenn die Suche abgeschlossen ist."
+  "You can go on working: a notice at the top left says when the scan is done.": "Du kannst weiterarbeiten: Ein Hinweis oben links meldet, wenn die Suche abgeschlossen ist.",
+  "Show Parent Folder": "Übergeordneten Ordner anzeigen",
+  "Hide This Parent": "Diesen übergeordneten Ordner ausblenden",
+  "Hides this row. Nothing on disk or in the library changes": "Blendet diese Zeile aus. Auf dem Datenträger und in der Bibliothek ändert sich nichts",
+  "This folder stays listed while the grid shows its photos": "Dieser Ordner bleibt aufgelistet, solange das Raster seine Fotos zeigt"
 }

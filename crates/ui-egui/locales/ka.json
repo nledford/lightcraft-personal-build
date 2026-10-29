@@ -2825,5 +2825,9 @@
   "Dismiss": "დახურვა",
   "Review…": "ნახვა…",
   "Open Synchronize Folder with what the scan found": "საქაღალდის სინქრონიზაციის გახსნა შემოწმების შედეგით",
-  "You can go on working: a notice at the top left says when the scan is done.": "შეგიძლიათ მუშაობა გააგრძელოთ: შემოწმების დასრულებისას ზედა მარცხენა კუთხეში შეტყობინება გამოჩნდება."
+  "You can go on working: a notice at the top left says when the scan is done.": "შეგიძლიათ მუშაობა გააგრძელოთ: შემოწმების დასრულებისას ზედა მარცხენა კუთხეში შეტყობინება გამოჩნდება.",
+  "Show Parent Folder": "მშობელი საქაღალდის ჩვენება",
+  "Hide This Parent": "ამ მშობელი საქაღალდის დამალვა",
+  "Hides this row. Nothing on disk or in the library changes": "მალავს ამ მწკრივს. დისკზე და ბიბლიოთეკაში არაფერი იცვლება",
+  "This folder stays listed while the grid shows its photos": "ეს საქაღალდე სიაში რჩება, სანამ ბადე მის ფოტოებს აჩვენებს"
 }

@@ -2449,5 +2449,9 @@
   "Dismiss": "Descartar",
   "Review…": "Revisar…",
   "Open Synchronize Folder with what the scan found": "Abrir Sincronizar carpeta con lo que encontró la búsqueda",
-  "You can go on working: a notice at the top left says when the scan is done.": "Puedes seguir trabajando: un aviso arriba a la izquierda indica cuándo termina la búsqueda."
+  "You can go on working: a notice at the top left says when the scan is done.": "Puedes seguir trabajando: un aviso arriba a la izquierda indica cuándo termina la búsqueda.",
+  "Show Parent Folder": "Mostrar carpeta superior",
+  "Hide This Parent": "Ocultar esta carpeta superior",
+  "Hides this row. Nothing on disk or in the library changes": "Oculta esta fila. No cambia nada en el disco ni en la biblioteca",
+  "This folder stays listed while the grid shows its photos": "Esta carpeta sigue en la lista mientras la cuadrícula muestre sus fotos"
 }

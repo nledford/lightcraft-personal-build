@@ -2326,5 +2326,9 @@
   "Dismiss": "Bỏ qua",
   "Review…": "Xem lại…",
   "Open Synchronize Folder with what the scan found": "Mở Đồng bộ thư mục với những gì quá trình quét tìm thấy",
-  "You can go on working: a notice at the top left says when the scan is done.": "Bạn có thể tiếp tục làm việc: thông báo ở góc trên bên trái cho biết khi quá trình quét xong."
+  "You can go on working: a notice at the top left says when the scan is done.": "Bạn có thể tiếp tục làm việc: thông báo ở góc trên bên trái cho biết khi quá trình quét xong.",
+  "Show Parent Folder": "Hiện thư mục cha",
+  "Hide This Parent": "Ẩn thư mục cha này",
+  "Hides this row. Nothing on disk or in the library changes": "Ẩn hàng này. Không có gì thay đổi trên đĩa hoặc trong thư viện",
+  "This folder stays listed while the grid shows its photos": "Thư mục này vẫn được liệt kê khi lưới hiển thị ảnh của nó"
 }

@@ -2293,5 +2293,9 @@
   "Dismiss": "Dispensar",
   "Review…": "Revisar…",
   "Open Synchronize Folder with what the scan found": "Abrir Sincronizar pasta com o que a verificação encontrou",
-  "You can go on working: a notice at the top left says when the scan is done.": "Você pode continuar trabalhando: um aviso no canto superior esquerdo informa quando a verificação terminar."
+  "You can go on working: a notice at the top left says when the scan is done.": "Você pode continuar trabalhando: um aviso no canto superior esquerdo informa quando a verificação terminar.",
+  "Show Parent Folder": "Mostrar pasta superior",
+  "Hide This Parent": "Ocultar esta pasta superior",
+  "Hides this row. Nothing on disk or in the library changes": "Oculta esta linha. Nada muda no disco nem na biblioteca",
+  "This folder stays listed while the grid shows its photos": "Esta pasta continua listada enquanto a grade mostra as fotos dela"
 }

@@ -2497,5 +2497,9 @@
   "Dismiss": "Zavřít",
   "Review…": "Prohlédnout…",
   "Open Synchronize Folder with what the scan found": "Otevřít Synchronizovat složku s tím, co hledání našlo",
-  "You can go on working: a notice at the top left says when the scan is done.": "Můžete pracovat dál: až hledání skončí, oznámí to upozornění vlevo nahoře."
+  "You can go on working: a notice at the top left says when the scan is done.": "Můžete pracovat dál: až hledání skončí, oznámí to upozornění vlevo nahoře.",
+  "Show Parent Folder": "Zobrazit nadřazenou složku",
+  "Hide This Parent": "Skrýt tuto nadřazenou složku",
+  "Hides this row. Nothing on disk or in the library changes": "Skryje tento řádek. Na disku ani v knihovně se nic nezmění",
+  "This folder stays listed while the grid shows its photos": "Tato složka zůstane v seznamu, dokud mřížka zobrazuje její fotografie"
 }
