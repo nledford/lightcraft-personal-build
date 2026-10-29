@@ -203,7 +203,7 @@ impl Unit {
 pub struct TaskInfo {
     pub id: u64,
     /// A stable id: `import`, `export`, `scan`, `sync`, `move`, `previews`, `smartPreviews`, `backup`, `lightroom`,
-    /// `merge`, `download`, `faces`, `denoise`, `findMissing`, `applePhotos`, `cache`, `focus`.
+    /// `merge`, `download`, `faces`, `denoise`, `findMissing`, `applePhotos`, `cache`, `focus`, `saveMetadata`, `readMetadata`.
     pub kind: &'static str,
     /// English; the frontend translates it.
     pub label: String,
