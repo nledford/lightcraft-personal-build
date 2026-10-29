@@ -235,7 +235,7 @@ fn several_keywords_show_the_photos_with_any_of_them() {
     s.execute("library.filter", &json!({"keyword": "beach", "keywords": ["trips"]})).unwrap();
     assert_eq!(shown(&mut s), vec![ids[1], ids[2]]);
     // one chip, and clearing it clears them all
-    let chips = filter_chips(&s.filter(), &s.catalog);
+    let chips = filter_chips(s.filter(), &s.catalog);
     assert_eq!(chips.len(), 1);
     assert_eq!(chips[0].label, "Keyword: beach or trips");
     s.execute("library.filter", &chips[0].clear.clone()).unwrap();
@@ -315,7 +315,7 @@ fn several_dates_show_the_photos_of_any_of_them() {
     assert_eq!(shown(&mut s), vec![ids[1], ids[3]]);
     s.execute("library.filter", &json!({"date": "2026-01-05", "dates": ["2026-01-02"]})).unwrap();
     assert_eq!(shown(&mut s), vec![ids[1], ids[4]]);
-    let chips = filter_chips(&s.filter(), &s.catalog);
+    let chips = filter_chips(s.filter(), &s.catalog);
     assert_eq!(chips.len(), 1);
     assert_eq!(chips[0].label, "Date: January 5, 2026 or January 2, 2026");
     s.execute("library.filter", &chips[0].clear.clone()).unwrap();
@@ -382,7 +382,7 @@ fn albums_in_the_filter_show_as_a_chip_and_are_refused_beside_an_album_source() 
     let (ids, a, b) = two_albums(&mut s);
     s.execute("library.filter", &json!({"albums": [a, b]})).unwrap();
     assert_eq!(shown(&mut s), vec![ids[0], ids[1], ids[2]]);
-    let chips = filter_chips(&s.filter(), &s.catalog);
+    let chips = filter_chips(s.filter(), &s.catalog);
     assert_eq!(chips.iter().map(|c| c.label.as_str()).collect::<Vec<_>>(), vec!["Album: Alps or Beach"]);
     s.execute("library.filter", &chips[0].clear.clone()).unwrap();
     assert_eq!(shown(&mut s).len(), 5);
@@ -472,7 +472,7 @@ fn albums_in_a_filter_put_aside_do_not_come_back_beside_an_album_source() {
     // Then the albums stay out of it, as they do for a filter set while an album is shown
     assert!(s.filter().albums.is_empty(), "{:?}", s.filter().albums);
     assert_eq!(shown(&mut s), vec![ids[0], ids[1]]);
-    assert!(filter_chips(&s.filter(), &s.catalog).is_empty());
+    assert!(filter_chips(s.filter(), &s.catalog).is_empty());
 }
 
 #[test]
@@ -488,7 +488,7 @@ fn a_single_album_in_a_filter_put_aside_does_not_come_back_beside_an_album_sourc
     // Then it stays out, as it does for a filter set while an album is shown: no chip that limits nothing
     assert_eq!(s.filter().album, None);
     assert_eq!(shown(&mut s), vec![ids[0], ids[1]]);
-    assert!(filter_chips(&s.filter(), &s.catalog).is_empty());
+    assert!(filter_chips(s.filter(), &s.catalog).is_empty());
 }
 
 #[test]
