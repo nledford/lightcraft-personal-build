@@ -501,6 +501,7 @@ impl NativeMenu {
 
         let mut ids = RowIds::default();
         let mut windows_menu = None;
+        let mut help_menu = None;
 
         for (title, nodes) in &menus {
             let sub = Submenu::new(label_text(title), true);
@@ -530,15 +531,19 @@ impl NativeMenu {
                 windows_menu = Some(sub.clone());
             }
             if title == "Help" {
-                sub.set_as_help_menu_for_nsapp();
+                help_menu = Some(sub.clone());
             }
             let _ = self.menu.append(&sub);
         }
         self.menu.init_for_nsapp();
-        // muda finds the submenu through the main menu installed just above; asked earlier it does
-        // nothing, and AppKit then never lists the open windows in the Window menu
+        // muda finds a submenu through the main menu installed just above; asked earlier it does
+        // nothing: AppKit then never lists the open windows in the Window menu, nor learns which
+        // menu is the Help menu
         if let Some(windows) = windows_menu {
             windows.set_as_windows_menu_for_nsapp();
+        }
+        if let Some(help) = help_menu {
+            help.set_as_help_menu_for_nsapp();
         }
         self.text_focus = false;
         self.sidebar_keys = false;
