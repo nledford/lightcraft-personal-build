@@ -313,6 +313,10 @@
   selection, the active photo and the two photos on screen stay as they were. Clicking a filmstrip photo works as
   before: outside Compare it selects the photo, and in Compare a plain click puts the photo into the active side.
 
+### Dragged photos step back in the grid
+- While you drag photos from the grid, their thumbnails are dimmed (as dark as a rejected photo's), so the label at
+  the pointer and the row it is over are what stands out. They return to normal when you let go of them.
+
 ## 2026-10-22
 
 ### Reliability
