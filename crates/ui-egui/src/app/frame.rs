@@ -393,6 +393,7 @@ impl LightcraftApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         self.library_changed(&ctx);
+        panels::empty_library::follow(self);
         // panels set it again this frame while the pointer rests on a preset or profile
         self.hover_preview = None;
         self.end_drags(&ctx);

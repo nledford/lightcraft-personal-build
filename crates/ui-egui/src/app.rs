@@ -148,6 +148,9 @@ impl LightcraftApp {
             activity_open: false,
             activity_set: None,
             samples_present: None,
+            welcome_seen: None,
+            welcome_samples: None,
+            welcome_drawn: false,
             model_setup: Default::default(),
         }
     }

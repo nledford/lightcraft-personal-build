@@ -481,6 +481,13 @@ pub struct LightcraftApp {
     /// newly appear, however they came (the welcome, Help ▸ Add Sample Photos, an agent), bring
     /// back a samples banner closed over earlier ones.
     pub samples_present: Option<bool>,
+    /// Whether the empty library's welcome had the window last frame (`None` before the first):
+    /// becoming empty puts the Tools panel aside ([`panels::empty_library::follow`]).
+    pub welcome_seen: Option<bool>,
+    /// The welcome's sample thumbnails while they are shown (drawn by a worker as it starts).
+    pub(crate) welcome_samples: Option<panels::empty_library::SampleStrip>,
+    /// The welcome was drawn this frame (its thumbnails go the frame after it isn't).
+    pub(crate) welcome_drawn: bool,
     /// The list of running tasks under the top bar's bell is open (as of the last frame).
     pub activity_open: bool,
     /// `view.tasks` asked for the list to be opened or closed; the top bar does it on its next frame.
