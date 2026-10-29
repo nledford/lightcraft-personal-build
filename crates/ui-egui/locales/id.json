@@ -2446,5 +2446,8 @@
   "cancelled": "dibatalkan",
   "Stopped: no photo was moved": "Dihentikan: tidak ada foto yang dipindahkan",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Pustaka ini terbuka tanpa kuncinya, sehingga pemindahan yang terputus dibiarkan apa adanya sampai pustaka dibuka dengan kunci; Cari foto hilang menautkan kembali file yang sudah dipindahkan.",
-  "Unfinished moves": "Pemindahan yang belum selesai"
+  "Unfinished moves": "Pemindahan yang belum selesai",
+  "Go Deeper": "Masuk lebih dalam",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Folder sedalam ini tidak dicantumkan di sini. Klik untuk menambahkan folder ini ke Lokal sebagai lokasi tersendiri, sehingga bisa dibuka lebih jauh",
+  "Opens as its own place": "Terbuka sebagai lokasi tersendiri"
 }

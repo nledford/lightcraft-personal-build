@@ -336,5 +336,6 @@
   "A sidecar of {} couldn't follow it ({}).": "Супровідний файл {} не вдалося перемістити разом із ним ({}).",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Бібліотека не змогла слідувати за файлами, що переміщувалися ({}); «Знайти відсутні фото» зв'яже їх знову.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Бібліотека слідує за файлами, що переміщувалися, але зберегти це не вдалося ({}).",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "Копії, видалені з нового місця, бо оригінал усе ще лежав там, де його зберігає бібліотека: {}."
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Копії, видалені з нового місця, бо оригінал усе ще лежав там, де його зберігає бібліотека: {}.",
+  "“{name}” is now a place in Local: open it there": "«{name}» тепер окреме місце в локальних: відкрийте її там"
 }

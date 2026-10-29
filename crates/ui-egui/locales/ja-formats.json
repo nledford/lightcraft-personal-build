@@ -336,5 +336,6 @@
   "A sidecar of {} couldn't follow it ({}).": "{} のサイドカーを一緒に移動できませんでした ({})。",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "移動中だったファイルにライブラリを合わせられませんでした ({})。見つからない写真を探す で再リンクできます。",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "移動中だったファイルにライブラリを合わせましたが、保存できませんでした ({})。",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "元のファイルがライブラリの記録どおりの場所に残っていたため、新しい場所から削除したコピー：{}。"
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "元のファイルがライブラリの記録どおりの場所に残っていたため、新しい場所から削除したコピー：{}。",
+  "“{name}” is now a place in Local: open it there": "「{name}」をローカルの場所に追加しました。そこで開いてください"
 }

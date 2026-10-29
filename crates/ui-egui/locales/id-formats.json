@@ -336,5 +336,6 @@
   "A sidecar of {} couldn't follow it ({}).": "File sidecar milik {} tidak dapat mengikutinya ({}).",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Pustaka tidak dapat mengikuti file yang sedang dipindahkan ({}); Cari foto hilang menautkannya kembali.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Pustaka mengikuti file yang sedang dipindahkan, tetapi itu tidak dapat disimpan ({}).",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "Salinan yang dihapus dari lokasi baru, karena file aslinya masih berada di tempat pustaka mencatatnya: {}."
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Salinan yang dihapus dari lokasi baru, karena file aslinya masih berada di tempat pustaka mencatatnya: {}.",
+  "“{name}” is now a place in Local: open it there": "“{name}” kini menjadi lokasi di Lokal: buka di sana"
 }

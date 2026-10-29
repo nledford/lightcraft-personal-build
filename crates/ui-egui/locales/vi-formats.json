@@ -336,5 +336,6 @@
   "A sidecar of {} couldn't follow it ({}).": "Sidecar của {} không thể đi theo tệp ({}).",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Thư viện không thể theo các tệp đang được di chuyển ({}); Tìm ảnh bị thiếu sẽ liên kết lại chúng.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Thư viện đi theo các tệp đang được di chuyển, nhưng không lưu được ({}).",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "Các bản sao đã bị xóa khỏi vị trí mới vì bản gốc vẫn ở nơi thư viện ghi nhận: {}."
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Các bản sao đã bị xóa khỏi vị trí mới vì bản gốc vẫn ở nơi thư viện ghi nhận: {}.",
+  "“{name}” is now a place in Local: open it there": "“{name}” giờ là một vị trí trong Cục bộ: hãy mở ở đó"
 }

@@ -336,5 +336,6 @@
   "A sidecar of {} couldn't follow it ({}).": "Tiedoston {} sivutiedosto ei voinut seurata sitä ({}).",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Kirjasto ei voinut seurata siirrettäviä tiedostoja ({}); Etsi puuttuvat kuvat yhdistää ne uudelleen.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Kirjasto seuraa siirrettäviä tiedostoja, mutta sitä ei voitu tallentaa ({}).",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "Uudesta paikasta poistetut kopiot, koska alkuperäinen oli yhä siellä, missä kirjasto sen tuntee: {}."
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Uudesta paikasta poistetut kopiot, koska alkuperäinen oli yhä siellä, missä kirjasto sen tuntee: {}.",
+  "“{name}” is now a place in Local: open it there": "“{name}” on nyt paikka Paikallisessa: avaa se siellä"
 }

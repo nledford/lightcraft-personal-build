@@ -2496,5 +2496,8 @@
   "Moving was stopped by an error (see the log). The library follows the files that had moved.": "Une erreur a arrêté le déplacement (voir le journal). La bibliothèque suit les fichiers déjà déplacés.",
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Une erreur a arrêté le déplacement (voir le journal). La bibliothèque peut ne pas suivre tous les fichiers déjà déplacés : Rechercher les photos manquantes rétablit le lien de ceux qu’elle a perdus.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Cette bibliothèque est ouverte sans son verrou : les déplacements interrompus sont laissés tels quels jusqu’à une ouverture avec le verrou ; Rechercher les photos manquantes relie à nouveau les fichiers déplacés.",
-  "Unfinished moves": "Déplacements inachevés"
+  "Unfinished moves": "Déplacements inachevés",
+  "Go Deeper": "Aller plus loin",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Les dossiers aussi profonds ne sont pas affichés ici. Cliquez pour ajouter ce dossier à Local comme un emplacement à part, et l’ouvrir plus loin",
+  "Opens as its own place": "S’ouvre comme emplacement à part"
 }

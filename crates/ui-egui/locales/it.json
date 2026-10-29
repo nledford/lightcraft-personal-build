@@ -2467,5 +2467,8 @@
   "This row has no name to change": "Questa riga non ha un nome da cambiare",
   "Stopped: no photo was moved": "Interrotto: nessuna foto è stata spostata",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Questa libreria è aperta senza il suo blocco, quindi gli spostamenti interrotti restano come sono finché non viene aperta con il blocco; Trova foto mancanti ricollega i file spostati.",
-  "Unfinished moves": "Spostamenti incompleti"
+  "Unfinished moves": "Spostamenti incompleti",
+  "Go Deeper": "Vai più a fondo",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Le cartelle a questa profondità non sono elencate qui. Fai clic per aggiungere questa cartella a Locale come luogo a sé, così potrai aprirla ulteriormente",
+  "Opens as its own place": "Si apre come luogo a sé"
 }

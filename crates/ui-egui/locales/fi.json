@@ -2431,5 +2431,8 @@
   "cancelled": "peruttu",
   "Stopped: no photo was moved": "Pysäytetty: yhtään kuvaa ei siirretty",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Tämä kirjasto on avattu ilman lukitusta, joten keskeytyneet siirrot jätetään ennalleen, kunnes kirjasto avataan lukituksen kanssa; Etsi puuttuvat kuvat yhdistää siirretyt tiedostot uudelleen.",
-  "Unfinished moves": "Keskeneräiset siirrot"
+  "Unfinished moves": "Keskeneräiset siirrot",
+  "Go Deeper": "Siirry syvemmälle",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Näin syviä kansioita ei listata tässä. Napsauta lisätäksesi tämän kansion Paikalliseen omaksi paikakseen, jolloin voit avata sen pidemmälle",
+  "Opens as its own place": "Avautuu omana paikkanaan"
 }

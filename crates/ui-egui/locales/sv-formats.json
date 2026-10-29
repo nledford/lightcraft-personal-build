@@ -336,5 +336,6 @@
   "A sidecar of {} couldn't follow it ({}).": "En sidofil till {} kunde inte följa med ({}).",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Biblioteket kunde inte följa de filer som flyttades ({}); Sök efter saknade foton länkar om dem.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Biblioteket följer de filer som flyttades, men det kunde inte sparas ({}).",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopior som togs bort från den nya platsen, eftersom originalet fortfarande låg där biblioteket har det: {}."
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopior som togs bort från den nya platsen, eftersom originalet fortfarande låg där biblioteket har det: {}.",
+  "“{name}” is now a place in Local: open it there": "“{name}” är nu en plats i Lokalt: öppna den där"
 }

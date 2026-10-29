@@ -336,5 +336,6 @@
   "A sidecar of {} couldn't follow it ({}).": "{} 的附屬檔案未能隨之移動（{}）。",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "照片庫未能跟隨正在移動的檔案（{}）；尋找遺失的照片 可重新連結它們。",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "照片庫已跟隨正在移動的檔案，但無法儲存（{}）。",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "已從新位置刪除的副本（原始檔案仍在照片庫記錄的位置）：{}。"
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "已從新位置刪除的副本（原始檔案仍在照片庫記錄的位置）：{}。",
+  "“{name}” is now a place in Local: open it there": "「{name}」現在是本機中的一個位置：請在那裡開啟"
 }

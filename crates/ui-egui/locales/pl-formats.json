@@ -336,5 +336,6 @@
   "A sidecar of {} couldn't follow it ({}).": "Plik pomocniczy {} nie mógł zostać przeniesiony razem z nim ({}).",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Biblioteka nie mogła podążyć za przenoszonymi plikami ({}); Znajdź brakujące zdjęcia połączy je ponownie.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Biblioteka podąża za przenoszonymi plikami, ale nie udało się tego zapisać ({}).",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopie usunięte z nowego miejsca, ponieważ oryginał nadal był tam, gdzie biblioteka go ma: {}."
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopie usunięte z nowego miejsca, ponieważ oryginał nadal był tam, gdzie biblioteka go ma: {}.",
+  "“{name}” is now a place in Local: open it there": "„{name}” jest teraz miejscem w lokalnych: otwórz go tam"
 }

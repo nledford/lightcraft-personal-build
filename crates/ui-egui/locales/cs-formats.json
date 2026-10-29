@@ -336,5 +336,6 @@
   "A sidecar of {} couldn't follow it ({}).": "Přidružený soubor XMP k {} se s ním nepřesunul ({}).",
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Knihovna nemohla následovat soubory, které se přesouvaly ({}); Najít chybějící fotografie je znovu propojí.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Knihovna následuje soubory, které se přesouvaly, ale nepodařilo se to uložit ({}).",
-  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopie odstraněné z nového místa, protože originál byl stále tam, kde ho knihovna má: {}."
+  "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopie odstraněné z nového místa, protože originál byl stále tam, kde ho knihovna má: {}.",
+  "“{name}” is now a place in Local: open it there": "„{name}“ je nyní místem v místních souborech: otevřete ji tam"
 }

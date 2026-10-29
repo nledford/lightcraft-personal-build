@@ -2533,5 +2533,8 @@
   "Moving was stopped by an error (see the log). The library follows the files that had moved.": "Flyttningen stoppades av ett fel (se loggen). Biblioteket följer de filer som redan flyttats.",
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Flyttningen stoppades av ett fel (se loggen). Biblioteket följer kanske inte alla filer som redan flyttats: Sök efter saknade foton länkar om de som tappats bort.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Det här biblioteket är öppet utan sitt lås, så avbrutna flyttningar lämnas som de är tills det öppnas med låset; Sök efter saknade foton länkar om de filer som flyttats.",
-  "Unfinished moves": "Ofullständiga flyttningar"
+  "Unfinished moves": "Ofullständiga flyttningar",
+  "Go Deeper": "Gå djupare",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Så här djupa mappar listas inte här. Klicka för att lägga till den här mappen i Lokalt som en egen plats, så att du kan öppna den längre",
+  "Opens as its own place": "Öppnas som en egen plats"
 }

@@ -2840,5 +2840,8 @@
   "Moving was stopped by an error (see the log). The library follows the files that had moved.": "გადატანა შეცდომის გამო შეჩერდა (იხილეთ ჟურნალი). ბიბლიოთეკა მიჰყვება უკვე გადატანილ ფაილებს.",
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "გადატანა შეცდომის გამო შეჩერდა (იხილეთ ჟურნალი). ბიბლიოთეკამ შეიძლება ყველა უკვე გადატანილ ფაილს ვერ მიჰყვეს: დაკარგულებს „დაკარგული ფოტოების მოძებნა“ თავიდან დააკავშირებს.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "ეს ბიბლიოთეკა ჩაკეტვის გარეშეა გახსნილი, ამიტომ შეწყვეტილი გადატანები უცვლელად რჩება, სანამ ბიბლიოთეკა ჩაკეტვით არ გაიხსნება; გადატანილ ფაილებს „დაკარგული ფოტოების მოძებნა“ თავიდან დააკავშირებს.",
-  "Unfinished moves": "დაუსრულებელი გადატანები"
+  "Unfinished moves": "დაუსრულებელი გადატანები",
+  "Go Deeper": "უფრო ღრმად",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "ამ სიღრმის საქაღალდეები აქ არ ჩანს. დააწკაპეთ, რომ ეს საქაღალდე „ლოკალურს“ ცალკე ადგილად დაემატოს და შემდგომ გახსნათ",
+  "Opens as its own place": "იხსნება როგორც ცალკე ადგილი"
 }
