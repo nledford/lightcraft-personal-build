@@ -323,19 +323,22 @@ fn nodes_with(app: &LightcraftApp, photo: PhotoId, infos: &[CommandInfo], preset
     v.push(Some(submenu("Export with Preset", export)));
     v.push(sep());
 
+    // their files too (always asks first, in the library and in Recently Deleted alike), and from Recently Deleted all
+    // of them at once; left out where the Trash can't be reached, as the old grid menu did
+    let trash = |n: Option<MenuNode>| n.filter(|n| matches!(n, MenuNode::Item { enabled: true, .. }));
+    if app.session.source == lightcraft_engine::LibrarySource::RecentlyDeleted && crate::panels::trash_files::available() {
+        v.push(trash(with(row("dialog.trashFiles"), |l, p, _, _| {
+            *l = "Move All Files in Recently Deleted to Trash…".into();
+            *p = json!({"recentlyDeleted": true});
+        })));
+    }
+    v.push(trash(row("dialog.trashFiles")));
+    v.push(sep());
+
     // delete it (Restore and Delete Permanently in Recently Deleted: the menu bar's choice)
     for id in ["photo.delete", "photo.restore", "photo.deletePermanently"] {
         v.push(menu("Photo").iter().find(|n| matches!(n, MenuNode::Item { id: i, .. } if i == id)).cloned());
     }
-    // from Recently Deleted, all of its files at once
-    if app.session.source == lightcraft_engine::LibrarySource::RecentlyDeleted && crate::panels::trash_files::available() {
-        v.push(with(row("dialog.trashFiles"), |l, p, _, _| {
-            *l = "Move All Files in Recently Deleted to Trash…".into();
-            *p = json!({"recentlyDeleted": true});
-        }));
-    }
-    // the files too: always asks first, in the library and in Recently Deleted alike
-    v.push(row("dialog.trashFiles"));
     menubar::tidy(v.into_iter().flatten().collect())
 }
 
@@ -379,6 +382,8 @@ fn alias(n: &MenuNode) -> Option<String> {
             }),
             "dialog.newAlbum" => Some("button:contextNewAlbum".into()),
             "photo.delete" => Some("button:contextDeletePhoto".into()),
+            "dialog.trashFiles" if params.get("recentlyDeleted").is_some() => Some("button:contextEmptyTrashFiles".into()),
+            "dialog.trashFiles" => Some("button:contextTrashFiles".into()),
             _ => None,
         },
         _ => None,

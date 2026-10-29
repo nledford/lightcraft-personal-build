@@ -138,7 +138,8 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
     let x = canvas.center().x;
     for (i, shown) in app.ui.toasts.iter_mut().rev().enumerate() {
         let offers = undo && i == 0;
-        let (background, foreground) = shown.label.map(crate::theme::label_toast_colors).unwrap_or((crate::transparency::hud(ctx, 200), Tokens::on_photo()));
+        let (background, foreground) =
+            shown.label.map(crate::theme::label_toast_colors).unwrap_or((crate::transparency::hud(ctx, 200), Tokens::on_photo()));
         let wrap = (canvas.width() - 80.0 - if offers { button_w + TOAST_UNDO_GAP } else { 0.0 }).clamp(200.0, 720.0);
         let galley = painter.layout(shown.text.clone(), t.font(14.0), foreground, wrap);
         let extra = if offers { button_w + TOAST_UNDO_GAP - 8.0 } else { 0.0 };
@@ -172,11 +173,14 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
         crate::widgets::register_geometry(ctx, format!("toast:{drawn}"), r);
         // a screen reader reads it out when it comes, without leaving what it was reading
         let words = shown.text.clone();
-        egui::Area::new(egui::Id::unique(("toast-words", drawn))).order(egui::Order::Foreground).fixed_pos(r.min).interactable(false).show(ctx, |ui| {
-            let resp = ui.interact(r, ui.scope_id().with("toast"), egui::Sense::hover());
-            resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &words));
-            ctx.accesskit_node_builder(resp.id, |node| node.set_live(egui::accesskit::Live::Polite));
-        });
+        egui::Area::new(egui::Id::unique(("toast-words", drawn))).order(egui::Order::Foreground).fixed_pos(r.min).interactable(false).show(
+            ctx,
+            |ui| {
+                let resp = ui.interact(r, ui.scope_id().with("toast"), egui::Sense::hover());
+                resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &words));
+                ctx.accesskit_node_builder(resp.id, |node| node.set_live(egui::accesskit::Live::Polite));
+            },
+        );
         drawn += 1;
         if offers {
             undo_at = Some((r, alpha, foreground));

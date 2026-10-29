@@ -400,7 +400,7 @@ fn import_ok_label(opts: &crate::import::ImportDialog, queues: bool) -> String {
     let restored = opts.restored_count();
     match (n - restored, restored) {
         (_, 0) => photo_count_label(moving, n),
-        (0, r) => photo_count_label("Restore", r),
+        (0, r) => photo_count_label(if queues { plain } else { "Restore" }, r),
         (m, r) => format!("{} · {}", photo_count_label(moving, m), photo_count_label("Restore", r)),
     }
 }

@@ -1080,18 +1080,10 @@ pub fn specs() -> Vec<CommandSpec> {
                 // as `added` counts them: albums, not the folders that held them
                 let album_count = albums.iter().filter(|id| s.catalog.album(**id).is_some_and(|a| !a.folder)).count();
                 s.commit("Remove Sample Photos", op)?;
-                // an album that went can't stay on screen (as `album.delete`)
-                if matches!(s.source, LibrarySource::Album(a) if albums.contains(&a)) {
-                    s.source = LibrarySource::All;
-                }
-                // nor can a filter (or the one put aside) on it: the filter bar has no album chip, so it would narrow the view unseen
-                s.filters.follow(|f| {
-                    if f.album.is_some_and(|a| albums.contains(&a)) {
-                        f.album = None;
-                    }
-                });
-                // (an empty filter is not left put aside, as in `library.removeFolder`)
-                s.filters.drop_aside_if_empty();
+                // an album that went can't stay on screen, nor in the filter or the one put aside (the filter bar has no album
+                // chip, so it would narrow the view unseen): the view follows what the library holds, and of several albums
+                // shown the others stay (as `album.delete`); an emptied filter is not left put aside
+                s.reconcile_view();
                 // the person's own photos that were selected stay selected (as `photo.deletePermanently`)
                 let active_before = s.selection.active;
                 select_after_deletion(s, &before);

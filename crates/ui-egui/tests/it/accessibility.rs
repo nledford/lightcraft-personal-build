@@ -1100,8 +1100,7 @@ fn the_settings_filter_reads_the_tabs_without_touching_the_tree() {
     h.ctx.set_missing_glyph_policy(egui::MissingGlyphPolicy::Tofu);
     h.state_mut().run("app.settings", serde_json::json!({"tab": "general"})).unwrap();
     h.run_steps(8);
-    let windows =
-        |h: &Harness<'_, LightcraftApp>| h.root().children_recursive().map(|n| n.accesskit_node()).filter(|n| is_window(n.role())).count();
+    let windows = |h: &Harness<'_, LightcraftApp>| h.root().children_recursive().map(|n| n.accesskit_node()).filter(|n| is_window(n.role())).count();
     let before = windows(&h);
     // (what Settings leaves unnamed of its own is not this test's: the filter adds none to it)
     let unnamed = |h: &Harness<'_, LightcraftApp>| audit(h).1.len();

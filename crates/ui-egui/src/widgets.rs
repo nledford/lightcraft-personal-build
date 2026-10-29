@@ -1110,7 +1110,8 @@ pub fn roving_members(ctx: &egui::Context) -> std::collections::HashSet<u64> {
 /// [`text_button`], [`choice_button`] and [`choice_button_in`]: `row` is the [`Roving`] row a choice is one stop of.
 fn text_chip(ui: &mut Ui, id: &str, label: &str, press: Press, row: Option<&mut Roving>) -> Response {
     let active = press.on();
-    let choice = matches!(press, Press::Choice(_));
+    // (the outline and the 3:1 border are of a choice in a [`Roving`] row: a lone choice button keeps a button's border)
+    let choice = row.is_some() && matches!(press, Press::Choice(_));
     let label = crate::i18n::tr(label);
     let t = Tokens::get(ui.ctx());
     let font = t.caption_strong();

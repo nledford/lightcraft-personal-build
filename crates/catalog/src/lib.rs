@@ -1097,7 +1097,6 @@ impl Catalog {
         Ok(inv)
     }
 
-
     /// `checked`: rules an op sets are checked ([`Self::validate_rules`]); not when a failed batch
     /// is taken back, where the rules put back are the ones that were there, whatever they are.
     fn apply_inner(&mut self, op: Op, checked: bool) -> Result<Op> {
