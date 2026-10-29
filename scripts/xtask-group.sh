@@ -37,10 +37,13 @@ timing="$out/timing-$group.txt"
 : >"$log"
 : >"$timing"
 failed=""
+unmatched=""
 started=$SECONDS
 
 # `must_run=1 step …` marks a filtered step: a filter that matches nothing (a misspelled name, a renamed module) runs zero
 # tests and cargo still exits 0, so such a step fails unless its test binaries reported at least one passed or failed test.
+# `must_words="a b" step …` also names the filter words: a word that matches no test run in the step is reported (a warning and a
+# line in the summary, not a failure: the macos-only lists name modules that exist on one ref and not on another).
 step() {
   local name=$1 t=$SECONDS r total=0
   shift
@@ -54,6 +57,12 @@ step() {
       echo "::error::step $name ran zero tests: its filter matched nothing"
       r=FAIL
     fi
+    for w in ${must_words:-}; do
+      if ! grep -E '^test .* \.\.\. ' "$stepout" | grep -qF -- "$w"; then
+        echo "::warning::step $name: the filter word '$w' matched no test"
+        unmatched="$unmatched $name:$w"
+      fi
+    done
   fi
   [ "$r" = ok ] || failed="$failed $name"
   echo "::endgroup::"
@@ -72,7 +81,7 @@ checks() {
 }
 heif_tests() {
   step heif-test cargo test -p lightcraft-codecs -p lightcraft-heif --features lightcraft-codecs/heif --lib --bins --tests --no-fail-fast
-  must_run=1 step heif-engine cargo test -p lightcraft-engine --lib --features lightcraft-codecs/heif --no-fail-fast heic
+  must_run=1 must_words=heic step heif-engine cargo test -p lightcraft-engine --lib --features lightcraft-codecs/heif --no-fail-fast heic
 }
 workspace_tests() {
   step test cargo test --workspace --lib --bins --tests --no-fail-fast
@@ -86,7 +95,7 @@ wasm() {
 
 if [ ${#filter[@]} -gt 0 ]; then
   # one run of the workspace tests with the given filter words (substrings of test names, `::` paths allowed)
-  must_run=1 step test-filter cargo test --workspace --lib --bins --tests --no-fail-fast -- "${filter[@]}"
+  must_run=1 must_words="${filter[*]}" step test-filter cargo test --workspace --lib --bins --tests --no-fail-fast -- "${filter[@]}"
 else
   case $group in
     lint)
@@ -116,8 +125,8 @@ else
       step sysmem cargo test -p lightcraft-sysmem --no-fail-fast
       step segment cargo test -p lightcraft-segment --lib --no-fail-fast
       step mcp cargo test -p lightcraft-mcp --lib --no-fail-fast
-      must_run=1 step engine cargo test -p lightcraft-engine --lib --no-fail-fast -- trash:: apple_photos:: tests_export:: export:: memory:: devices:: config::
-      must_run=1 step ui-egui cargo test -p lightcraft-ui-egui --lib --no-fail-fast -- window_place:: menus:: tests_grading:: tests_dialog_fit:: photos
+      must_run=1 must_words="trash:: apple_photos:: tests_export:: export:: memory:: devices:: config::" step engine cargo test -p lightcraft-engine --lib --no-fail-fast -- trash:: apple_photos:: tests_export:: export:: memory:: devices:: config::
+      must_run=1 must_words="window_place:: menus:: tests_grading:: tests_dialog_fit:: photos" step ui-egui cargo test -p lightcraft-ui-egui --lib --no-fail-fast -- window_place:: menus:: tests_grading:: tests_dialog_fit:: photos
       ;;
     *)
       echo "::error::unknown group '$group'"
@@ -132,6 +141,8 @@ total=$((SECONDS - started))
   echo ""
   echo "Failed steps:${failed:- none}. Cache: ${CACHE:-?}. Wall time of the steps ${total}s (setup excluded)."
   echo ""
+  echo "Filter words that matched no test (step:word):${unmatched:- none}."
+  echo ""
   echo "| step | result | time |"
   echo "|---|---|---|"
   cat "$timing"
@@ -143,6 +154,7 @@ total=$((SECONDS - started))
 {
   echo "group: $group (${RUNNER_OS:-?})"
   echo "failed steps:${failed:- none}"
+  echo "unmatched filter words:${unmatched:- none}"
   echo "steps seconds: $total"
   sed -nE 's/^test (.*) \.\.\. FAILED$/failed test: \1/p' "$log" | sort -u
   sed -n 's/^/step: /p' "$timing"

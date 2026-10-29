@@ -1,7 +1,7 @@
 # Builds one source branch of this repo: `integration` (my build of storytold/lightcraft with my open PRs) or a
 # `candidate-<name>` (an integration rebuild to compare against it). Started by `just personal-build` from the lightcraft
 # tools (lightcraft-local), which pushes the branch here and dispatches this workflow on `main` with the branch as `ref`.
-# Every run belongs to `main`, so all of them share `main`'s caches; only runs with save-cache (my build) write them.
+# Every run belongs to `main`, so all of them share `main`'s caches; only runs of ref `integration` with save-cache (my build) write them.
 name: Build
 run-name: ${{ inputs.ref }} (${{ inputs.save-cache && 'my build' || 'candidate' }})
 
@@ -129,7 +129,7 @@ jobs:
         with:
           prefix-key: v1-rust
           key: app-macos-aarch64
-          save-if: ${{ inputs.save-cache }}
+          save-if: ${{ inputs.save-cache && inputs.ref == 'integration' }}
           cache-on-failure: true
 
       # mbx (mr boxington) keys each compiler call by its inputs, so our own unchanged crates are reused too, not only
@@ -143,13 +143,13 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-          key: cargo-downloads-${{ hashFiles('Cargo.lock') }}
-          restore-keys: cargo-downloads-
+          key: cargo-downloads-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-downloads-${{ runner.os }}-
       - if: inputs.cache == 'mbx'
         uses: jdx/mr-boxington-action@88acf2bb50552c7c508cbac13e5f8c576b95b1de # v1.7.3
         with:
           github-cache-mode: objects
-          save-on-workflow-dispatch: ${{ inputs.save-cache }}
+          save-on-workflow-dispatch: ${{ inputs.save-cache && inputs.ref == 'integration' }}
       # package.sh runs plain `cargo build`: put mbx's Cargo shim first on PATH so those builds go through mbx.
       - if: inputs.cache == 'mbx'
         name: Route cargo through mbx
@@ -186,16 +186,16 @@ jobs:
           CRAFT_FONTS_REQUIRED: "1"
         run: packaging/macos/package.sh --arch aarch64
 
-      # Only my build (save-cache) writes the downloads cache; candidates only restore it.
+      # Only my build (ref integration with save-cache) writes the downloads cache; candidates only restore it.
       - name: Save Cargo's downloads
-        if: inputs.cache == 'mbx' && inputs.save-cache && steps.downloads.outputs.cache-hit != 'true'
+        if: inputs.cache == 'mbx' && inputs.save-cache && inputs.ref == 'integration' && steps.downloads.outputs.cache-hit != 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-          key: cargo-downloads-${{ hashFiles('Cargo.lock') }}
+          key: cargo-downloads-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
 
       # The app zip must carry the license texts the project's own packaging puts there (packaging/env.sh copy_docs: the
       # project's licenses, Inter's OFL, one OFL per craft-fonts family). A missing one fails the run, never ships a build.
@@ -337,7 +337,7 @@ jobs:
       craft-fonts-ref: ${{ inputs.craft-fonts-ref }}
       rust-toolchain: ${{ inputs.rust-toolchain }}
       group: ${{ matrix.group }}
-      save-cache: ${{ inputs.save-cache }}
+      save-cache: ${{ inputs.save-cache && inputs.ref == 'integration' }}
       cache: ${{ inputs.linux-cache }}
 
   # One place for the Linux result: every failed step and test of the four groups, and each group's times. Its conclusion is

@@ -57,7 +57,7 @@ All run on GitHub-hosted runners from this repo's `main`, with no secrets. The r
 | nightly test-merge | `nightly-merge.yml` | `just hosted-members`, `just hosted-merge` |
 | correctness bisect | `hosted-bisect.yml` | `just hosted-bisect <good> <bad> <crate> <test> [os] [repeat]` |
 
-`<ref>` is a sha, a branch, `fork/<branch>`, or `pr<N>` / `'#<N>'` (the head of that storytold/lightcraft pull request; an unquoted `#N` is a shell comment). A ref with a commit on no remote is refused (only public code goes here). Jobs share one list of steps (`scripts/xtask-group.sh`), one setup (`.github/actions/setup`) and one summary (`scripts/xtask-summary.sh`). A filtered step that ran zero tests (a misspelled filter) fails. `HOSTED_WATCH=1` exits nonzero when the run wasn't found.
+`<ref>` is a sha, a branch, `fork/<branch>`, or `pr<N>` / `'#<N>'` (the head of that storytold/lightcraft pull request; an unquoted `#N` is a shell comment). A ref with a commit on no remote is refused (only public code goes here). Jobs share one list of steps (`scripts/xtask-group.sh`), one setup (`.github/actions/setup`) and one summary (`scripts/xtask-summary.sh`). A filtered step (a `filter`, or the `macos-only` lists) that ran zero tests fails; a filter word that matched no test is listed in the summary as a warning. `HOSTED_WATCH=1` exits nonzero when the run wasn't found.
 
 ### Tests on any ref (`hosted-test.yml`)
 
@@ -74,7 +74,7 @@ Inputs: `ref`, `crate`, `test` (exact name, as `cargo test -- --exact` takes it)
 
 ### Nightly test-merge (`nightly-merge.yml`)
 
-At 06:17 UTC and on dispatch: merges the members of `members.txt` (`<PR number> <head sha> [note]` per line, written by `just hosted-members` from my open PRs or an integration inputs file) onto storytold/lightcraft's `main` in file order, each head fetched from my fork (or from the PR's head ref when the fork dropped it). A conflicting member is skipped and the next one is tried on top, so the summary names, per member, merged, already in, or the conflicting files (docs and locale-only conflicts are marked). Nothing is built, pushed or commented. Red when a member conflicts or can't be fetched (refresh `members.txt`). GitHub switches scheduled workflows off after 60 days without a push here; `just hosted-members` pushes one.
+At 06:17 UTC and on dispatch: merges the members of `members.txt` (`<PR number> <head sha> [note]` per line, written by `just hosted-members` from my open PRs or an integration inputs file) onto storytold/lightcraft's `main` in file order, each head fetched from my fork (or from the PR's head ref when the fork dropped it). A conflicting member is skipped and the next one is tried on top, so the summary names, per member, merged, already in, or the conflicting files (docs and locale-only conflicts are marked). It also compares each pinned sha with the PR's head ref on storytold/lightcraft and lists every PR whose head has moved. Nothing is built, pushed or commented. Red when a member conflicts, can't be fetched, or its PR head differs from the pinned sha (refresh `members.txt`). GitHub switches scheduled workflows off after 60 days without a push here; `just hosted-members` pushes one when the list changed (a push of any kind does).
 
 ### Correctness bisect (`hosted-bisect.yml`)
 

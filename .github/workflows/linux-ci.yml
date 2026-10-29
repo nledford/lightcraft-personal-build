@@ -140,8 +140,8 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-          key: cargo-downloads-${{ hashFiles('Cargo.lock') }}
-          restore-keys: cargo-downloads-
+          key: cargo-downloads-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-downloads-${{ runner.os }}-
       - if: inputs.cache == 'mbx'
         uses: jdx/mr-boxington-action@88acf2bb50552c7c508cbac13e5f8c576b95b1de # v1.7.3
         with:
@@ -172,7 +172,8 @@ jobs:
           # shellcheck disable=SC2086
           bash personal-build-main/scripts/xtask-group.sh "$GROUP" $FILTER
 
-      # Only my build (save-cache) writes the downloads cache, and only one group does, so no job races another's entry.
+      # Only my build (save-cache) writes the downloads cache, and only the lint group does, so no Linux job races another's entry
+      # (the key holds the OS, so the macOS app job's entry is a different one).
       - name: Save Cargo's downloads
         if: inputs.cache == 'mbx' && inputs.save-cache && inputs.group == 'lint' && steps.downloads.outputs.cache-hit != 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -181,7 +182,7 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-          key: cargo-downloads-${{ hashFiles('Cargo.lock') }}
+          key: cargo-downloads-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
 
       - name: Keep the group's result for the summary job
         if: always()

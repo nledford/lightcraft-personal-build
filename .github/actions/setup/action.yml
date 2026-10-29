@@ -92,8 +92,8 @@ runs:
           ~/.cargo/registry/index
           ~/.cargo/registry/cache
           ~/.cargo/git/db
-        key: cargo-downloads-${{ hashFiles('Cargo.lock') }}
-        restore-keys: cargo-downloads-
+        key: cargo-downloads-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: cargo-downloads-${{ runner.os }}-
     - if: inputs.cache == 'mbx'
       uses: jdx/mr-boxington-action@88acf2bb50552c7c508cbac13e5f8c576b95b1de # v1.7.3
       with:
