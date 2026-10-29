@@ -26,9 +26,9 @@ pub use albums::{album_drag_feedback, auto_scroll_speed};
 use albums::{albums_rows, drag_auto_scroll};
 pub(crate) use dates::browse_all_photos;
 use dates::date_rows;
-pub(crate) use folders::follow_shown;
 #[cfg(test)]
 pub(crate) use folders::folder_export_blocker;
+pub(crate) use folders::follow_shown;
 #[cfg(test)]
 pub(crate) use folders::native_path;
 pub(crate) use folders::{FolderPlace, created_text, folder_place, folder_row_of, move_photos, moved_text};

@@ -488,7 +488,7 @@ fn meta_field(app: &mut LightcraftApp, ui: &mut egui::Ui, label: &str, key: &str
     }
     // Return (one line) or leaving saves; Esc gives the edit up
     if let Some(save) = r.save {
-         app.act(save.command, save.params);
+        app.act(save.command, save.params);
     }
     ui.add_space(6.0);
 }
