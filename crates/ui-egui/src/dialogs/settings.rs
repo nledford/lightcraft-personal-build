@@ -275,7 +275,12 @@ fn window_page(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max
             register(ui, "settings:page", ui.min_rect());
         }
     };
-    let name = TABS.iter().find(|(id, _)| *id == shown.as_str()).map_or("", |(_, label)| crate::i18n::tr(label));
+    // (named as its tab is on the tab bar; while the filter has text no tab is open: the panel holds the results)
+    let name = if filtering {
+        crate::i18n::tr("Settings")
+    } else {
+        TABS.iter().find(|(id, _)| *id == shown.as_str()).map_or("", |(id, label)| crate::i18n::tr(tab_label(id, label)))
+    };
     if room < PAGE_MIN_HEIGHT {
         crate::widgets::tab_panel(ui, panel, name, |ui| page(app, ui, false));
     } else {

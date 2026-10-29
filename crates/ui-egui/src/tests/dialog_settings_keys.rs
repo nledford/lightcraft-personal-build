@@ -116,7 +116,7 @@ fn tab_stops_once_at_the_tabs_and_once_at_each_row_of_choices() {
 #[test]
 fn the_stop_of_a_row_is_the_choice_that_holds() {
     let mut h = demo();
-    // Given LightCraft set to open in Detail (the third choice) and Interface open (the fifth tab)
+    // Given LightCraft set to open in Detail (the third choice) and Interface open (the seventh tab)
     h.app.ui.settings.startup_view = crate::state::StartupView::Detail;
     show(&mut h, "general");
     for _ in 0..3 {
