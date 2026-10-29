@@ -172,7 +172,7 @@ fn drop_keyword(app: &mut LightcraftApp, ctx: &egui::Context, keyword: &str, par
     }
     match app.run("keyword.move", json!({"keyword": keyword, "parent": parent})) {
         Ok(_) => follow(app, keyword, &to),
-        Err(e) => app.toast(ctx, e),
+        Err(e) => app.toast_error(ctx, e),
     }
 }
 
@@ -377,7 +377,7 @@ fn give_keyword(app: &mut LightcraftApp, ctx: &egui::Context, ids: &[u64], path:
     let keyword = path.replace('|', " › ");
     match app.run("photo.setMeta", json!({"ids": ids, "addKeywords": [path]})) {
         Ok(_) => app.toast(ctx, crate::i18n::tr_format!("Added “{keyword}” to {n} photo{}", if n == 1 { "" } else { "s" }, keyword = keyword, n = n)),
-        Err(e) => app.toast(ctx, e),
+        Err(e) => app.toast_error(ctx, e),
     }
 }
 

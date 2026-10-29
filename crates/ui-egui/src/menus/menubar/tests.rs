@@ -290,7 +290,7 @@ fn restore_library_from_backup_lists_the_backups_or_asks_for_a_folder() {
     let ctx = egui::Context::default();
     app.ui.compare = Some(Default::default());
     app.restore_status(&ctx);
-    let said = app.ui.toast.take().map(|t| t.0).unwrap_or_default();
+    let said = app.ui.toast.take().map(|t| t.text).unwrap_or_default();
     assert!(said.contains("Replaced") && said.contains(dir.to_string_lossy().as_ref()), "{said}");
     assert!(app.ui.compare.is_none());
     app.restore_status(&ctx);
@@ -603,7 +603,7 @@ fn a_refused_backup_from_the_menu_shows_why() {
         h.step();
     }
     // (read at once: a toast keeps the UI repainting until it expires, so settling would outlive it)
-    let toast = h.app.ui.toast.as_ref().map(|t| t.0.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains(refusal), "the refusal is shown: {toast:?}");
 }
 
@@ -634,7 +634,7 @@ fn find_missing_waited_invalid_folder_returns_error_with_zero_mutations() {
     let bad_dir = dir.join("nonexistent_subdir");
     let err = run_item(&mut app, "file.findMissing", json!({"folder": bad_dir.to_string_lossy(), "wait": true})).unwrap_err();
     assert!(err.contains("not a folder"), "expected 'not a folder' error, got: {err}");
-    assert!(app.ui.toast.as_ref().map(|t| t.0.contains("not a folder")).unwrap_or(false), "toast should reflect failure");
+    assert!(app.ui.toast.as_ref().map(|t| t.text.contains("not a folder")).unwrap_or(false), "toast should reflect failure");
     assert!(app.ui.last_find_missing.is_none(), "last_find_missing must remain None on failure");
 
     // 2. Invalid timeout parameters are rejected cleanly

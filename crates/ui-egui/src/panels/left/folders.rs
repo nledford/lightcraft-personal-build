@@ -46,7 +46,7 @@ pub(super) fn folder_tree(
             && resp.clicked()
             && let Err(e) = app.run("library.browse", json!({"path": path}))
         {
-            app.toast(ui.ctx(), e);
+            app.toast_error(ui.ctx(), e);
         }
         crate::widgets::context_menu(&resp, |ui| {
             // the library actions of the Folders tree, when this folder (or one inside it) holds library photos
@@ -85,7 +85,7 @@ pub(super) fn folder_tree(
                 if let Some(into) = into {
                     match app.run("folder.move", json!({"path": path, "into": into})) {
                         Ok(r) => app.toast(ui.ctx(), crate::i18n::tr_format!("Moved; {} photo(s) relinked", r["relinked"])),
-                        Err(e) => app.toast(ui.ctx(), e),
+                        Err(e) => app.toast_error(ui.ctx(), e),
                     }
                 }
             }
@@ -142,7 +142,7 @@ pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Al
             if b.clicked() {
                 match app.run("album.addPhotos", json!({"id": a.id.0})) {
                     Ok(r) => crate::panels::grid::toast_skipped(app, ui.ctx(), &r),
-                    Err(e) => app.toast(ui.ctx(), e),
+                    Err(e) => app.toast_error(ui.ctx(), e),
                 }
             }
             // File ▸ Import's ways in; the import review opens with this album chosen
@@ -151,7 +151,7 @@ pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Al
                     let r = MenuItem::new(&label).widget(widget).show(ui);
                     if r.clicked() {
                         if let Err(e) = app.run(command, params) {
-                            app.toast(ui.ctx(), e);
+                            app.toast_error(ui.ctx(), e);
                         }
                         ui.close();
                     }
@@ -195,7 +195,7 @@ pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Al
         if a.is_smart() && MenuItem::new(crate::i18n::tr("Update Rules from Current Filter")).show(ui).clicked() {
             // refused when the view would make the album test itself: say why
             if let Err(e) = app.run("album.setRules", json!({"id": a.id.0, "fromView": true})) {
-                app.toast(ui.ctx(), e);
+                app.toast_error(ui.ctx(), e);
             }
         }
         if !a.folder {
@@ -215,7 +215,7 @@ pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Al
                         if MenuItem::new(&p.name).show(ui).clicked() {
                             show_all(app);
                             if let Err(e) = app.run("app.export", json!({"preset": p.name, "background": true})) {
-                                app.toast(ui.ctx(), e);
+                                app.toast_error(ui.ctx(), e);
                             }
                         }
                     }
@@ -245,7 +245,7 @@ pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Al
             delete.on_hover_text(crate::i18n::tr("Photos stay in All Photos. Deleting a folder also deletes its albums. You can undo this."));
         if delete.clicked() {
             if let Err(e) = app.run("album.delete", json!({"id": a.id.0})) {
-                app.toast(ui.ctx(), e);
+                app.toast_error(ui.ctx(), e);
             }
             ui.close();
         }
@@ -502,7 +502,7 @@ pub(crate) fn moved_text(n: u64, name: &str) -> String {
 fn move_photos_here(app: &mut LightcraftApp, ctx: &egui::Context, ids: Option<&[u64]>, path: &str, name: &str) {
     match move_photos(app, ids, path) {
         Ok(n) => app.toast(ctx, moved_text(n, name)),
-        Err(e) => app.toast(ctx, e),
+        Err(e) => app.toast_error(ctx, e),
     }
 }
 
@@ -535,7 +535,7 @@ fn locate_missing_item(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNod
     let r = MenuItem::new(crate::i18n::tr("Locate Missing Files…")).widget("folderLocateMissing").show(ui);
     if r.clicked() {
         if let Err(e) = app.run("file.findMissing", json!({"within": n.path})) {
-            app.toast(ui.ctx(), e);
+            app.toast_error(ui.ctx(), e);
         }
         ui.close();
     }
@@ -583,7 +583,7 @@ fn synchronize_item(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode, 
     if r.clicked() {
         // a disk, or a folder holding disks, was chosen as such
         if let Err(e) = crate::sync::open(app, &n.path, name, n.volume || !n.selectable) {
-            app.toast(ui.ctx(), e);
+            app.toast_error(ui.ctx(), e);
         }
         ui.close();
     }
@@ -595,7 +595,7 @@ fn folder_label_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode)
     MenuItem::new(crate::i18n::tr("Set Color Label")).widget("folderLabelMenu").submenu(ui, |ui| {
         if let Some(l) = crate::panels::grid::label_items(app, ui, n.label, "folderLabel") {
             if let Err(e) = app.run("folder.label", json!({"path": n.path, "label": crate::panels::grid::label_param(l)})) {
-                app.toast(ui.ctx(), e);
+                app.toast_error(ui.ctx(), e);
             }
             ui.close();
         }
@@ -626,7 +626,7 @@ fn folder_menu_for_library(app: &mut LightcraftApp, resp: &egui::Response, n: &F
             if let Some(into) = into {
                 match app.run("folder.move", json!({"path": path, "into": into})) {
                     Ok(r) => app.toast(ui.ctx(), format!("Moved; {} photo(s) relinked", r["relinked"])),
-                    Err(e) => app.toast(ui.ctx(), e),
+                    Err(e) => app.toast_error(ui.ctx(), e),
                 }
             }
             ui.close();

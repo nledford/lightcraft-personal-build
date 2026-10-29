@@ -87,6 +87,7 @@ mod tallies;
 mod temp_slider;
 mod thumb;
 mod titlebar;
+mod toast_timing;
 mod tool_overlay;
 mod unsaved;
 mod view_cost;

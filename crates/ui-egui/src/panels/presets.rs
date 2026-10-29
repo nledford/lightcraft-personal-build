@@ -272,7 +272,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                         if MenuItem::new(crate::i18n::tr("Update with Current Settings")).enabled(app.session.active().is_some()).show(ui).clicked() {
                             match app.run("preset.update", json!({"id": pid})) {
                                 Ok(_) => app.toast(ui.ctx(), crate::i18n::tr_format!("Updated “{name}”", name = name)),
-                                Err(e) => app.toast(ui.ctx(), e),
+                                Err(e) => app.toast_error(ui.ctx(), e),
                             }
                         }
                         if MenuItem::new(crate::i18n::tr("Rename…")).show(ui).clicked() {
