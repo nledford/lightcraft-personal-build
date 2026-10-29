@@ -136,7 +136,7 @@ pub(super) struct Row<'a> {
     sense: Sense,
     /// a colour label's dot, before the count
     mark: Option<egui::Color32>,
-    /// a row that does something when pressed (Browse Folder…, folding an album folder), not one that shows a place
+    /// a row that does something when pressed (Browse Folder…, Show hidden locations), not one that shows a place
     command: bool,
 }
 

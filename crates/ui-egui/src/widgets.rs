@@ -1495,6 +1495,7 @@ pub(crate) fn announce_button(resp: &egui::Response, enabled: bool, name: impl I
         }
     }
 }
+
 /// A photo's thumbnail (grid cell, filmstrip thumbnail) for screen readers: a selectable list
 /// item that is, or is not, selected.
 ///

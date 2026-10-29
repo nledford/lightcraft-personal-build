@@ -362,7 +362,7 @@ fn tool_strip_and_toolbar_buttons_are_named_by_label_with_the_shortcut_as_descri
         .root()
         .children_recursive()
         .map(|n| n.accesskit_node())
-        .filter(|n| n.role() == Role::Button)
+        .filter(|n| matches!(n.role(), Role::Button | Role::RadioButton))
         .filter_map(|n| n.label())
         .filter(|l| ["Edit (E)", "Presets (Shift+P)", "Photo Grid (G)", "Filmstrip (/)"].contains(&l.as_str()))
         .collect();
