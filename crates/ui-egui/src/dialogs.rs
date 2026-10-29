@@ -498,7 +498,7 @@ fn button_row(app: &LightcraftApp, ui: &mut egui::Ui, dlg: &Dialog, close: &mut 
         let line = crate::i18n::tr_format!("Starts after: {what}", what = what);
         ui.allocate_ui_with_layout(egui::vec2(room, row_h), egui::Layout::left_to_right(egui::Align::Center), |ui| {
             ui.set_width(room);
-            let r = ui.add(egui::Label::new(egui::RichText::new(line).size(11.0).color(t.text_dim)).truncate());
+            let r = ui.add(egui::Label::new(egui::RichText::new(line).font(t.caption()).color(t.text_dim)).truncate());
             crate::widgets::register(ui, "dialog:startsAfter", r.rect);
         });
     } else {

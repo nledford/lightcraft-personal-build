@@ -153,6 +153,7 @@ impl Default for Inner {
             waiting: Mutex::default(),
             untried: Mutex::default(),
             reserved: Mutex::default(),
+            line_held: AtomicBool::new(false),
             next: AtomicU64::new(0),
         }
     }
