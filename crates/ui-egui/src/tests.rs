@@ -85,6 +85,7 @@ mod rules_editor;
 mod sam_setup;
 mod samples;
 mod samples_banner;
+mod samples_landing;
 mod scroll;
 mod side_keys;
 mod side_keys_sidebar;
