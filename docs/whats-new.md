@@ -7,6 +7,11 @@
 
 ## 2026-10-27
 
+### Screen readers name the sidebar's disclosure triangles
+- Each triangle in the left sidebar (album folders, local folders, By Date, imported folders, keywords) and in the
+  keyword list now says which row it opens or closes: "Expand Travel", "Collapse 2026". They were all named just
+  "Expand" or "Collapse", so VoiceOver read a list of identical buttons.
+
 ### macOS: the traffic lights are centred on the top bar
 - The red, yellow and green window buttons now sit in the middle of the top bar's height, in line with its buttons and search field. Before, they kept macOS's own title-bar position and sat about 4 points higher. They stay centred when the window is resized, leaves full screen or changes appearance.
 

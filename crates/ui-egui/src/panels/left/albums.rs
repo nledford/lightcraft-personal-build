@@ -78,6 +78,7 @@ fn albums_tree(
                     &mut open,
                     format!("albumToggle:{}", a.id.0),
                     Inside::OpensAndFolds,
+                    &a.name,
                 );
                 folder_menu(app, &tri, a);
             }

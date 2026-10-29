@@ -339,6 +339,11 @@ pub(super) enum Inside {
     Folds,
 }
 
+/// What a disclosure triangle is called: "Expand Travel" / "Collapse Travel".
+pub(crate) fn disclosure_name(open: bool, name: &str) -> String {
+    if open { crate::i18n::tr_format!("Collapse {name}", name = name) } else { crate::i18n::tr_format!("Expand {name}", name = name) }
+}
+
 /// The triangle of a tree row that has rows inside it (Albums' folders, Local, By Date, Folders,
 /// Keywords): a click flips `open` and keeps it for `row` in `trees`, which is kept with the
 /// settings ([`TreeState`]): the tree opens as it was left. With Option (Alt) held, the click
@@ -355,6 +360,7 @@ pub(super) fn tree_toggle(
     open: &mut bool,
     widget: String,
     inside: Inside,
+    name: &str,
 ) -> egui::Response {
     let tri = disclosure_chevron(ui, on, indent, *open, row.id().with("triangle"), widget);
     let with_what_is_inside = tri.clicked() && ui.input(|i| i.modifiers.alt);
@@ -371,7 +377,8 @@ pub(super) fn tree_toggle(
             }
         }
     }
-    let label = if *open { crate::i18n::tr("Collapse") } else { crate::i18n::tr("Expand") };
-    tri.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
+    // (the name of the row it opens: a screen reader lists the triangles one after another)
+    let label = disclosure_name(*open, name);
+    tri.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label.clone()));
     tri
 }
