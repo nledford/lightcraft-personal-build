@@ -250,6 +250,10 @@
   and 2 % edited, a photo takes about 2.8 kB where it took 4.4 kB (285 MB instead of 441 MB). Nothing changes on
   screen, and the library's files are byte for byte what they were, so earlier versions open them as before.
 
+### A right-click while you carry photos opens no menu
+- While you drag photos from the grid, a right-click opens no context menu, on an album, folder or keyword row in
+  the sidebar or anywhere else. Before, the menu opened on the row the photos were over.
+
 ## 2026-10-23
 
 ### Large libraries (#2968)
