@@ -144,6 +144,21 @@ jobs:
           echo "$shim_dir" >> "$GITHUB_PATH"
           PATH="$shim_dir:$PATH" command -v cargo
 
+      # My build never installs a release: releases don't read my catalog (format 11, the backup chain), and the app's
+      # update prompt could install one over this build. The patches live on this repo's main (the source checkout above
+      # is `ref`, which doesn't have them); the step fails when they don't apply, so nothing builds without them.
+      - name: Check out the no-update patches
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: personal-build-main
+          sparse-checkout: patches
+          persist-credentials: false
+      - name: No update installs (patch)
+        run: |
+          set -euo pipefail
+          bash personal-build-main/patches/personal-no-update/apply.sh
+          echo "- no update installs: startup check forced off, the update prompt only links to the release page" >> "$GITHUB_STEP_SUMMARY"
+
       # storytold's own packaging (heif on, fonts required), ad-hoc signed because MACOS_SIGN_IDENTITY is unset.
       # It also writes a DMG and a CLI zip to dist/release; only the app is uploaded.
       - name: Build LightCraft.app

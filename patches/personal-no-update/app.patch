@@ -1,0 +1,27 @@
+diff --git a/crates/ui-egui/src/updates_ui.rs b/crates/ui-egui/src/updates_ui.rs
+index 5e159a0..1a0f72d 100644
+--- a/crates/ui-egui/src/updates_ui.rs
++++ b/crates/ui-egui/src/updates_ui.rs
+@@ -43,7 +43,9 @@ impl LightcraftApp {
+     /// Whether the app asks for a newer release when it starts (off until the desktop app turns it on).
+     #[cfg(not(target_arch = "wasm32"))]
+     pub fn set_startup_update_check(&mut self, on: bool) {
+-        self.updates_rt.startup_check = on;
++        // Personal build: never look for a release at start, whatever the launch asked for.
++        let _ = on;
++        self.updates_rt.startup_check = false;
+     }
+ }
+ 
+@@ -96,9 +98,8 @@ pub(crate) fn tick(app: &mut LightcraftApp, ctx: &egui::Context) {
+ pub(crate) fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
+     #[cfg(not(target_arch = "wasm32"))]
+     {
+-        // The restart helper is scheduled before the app closes, so no update starts over unsaved work.
+-        let clean = app.session.unsaved().is_none();
+-        match app.updates_rt.updater.show_if(ctx, clean) {
++        // Personal build: no release is ever installed, so the prompt only says one exists (can_start is always false).
++        match app.updates_rt.updater.show_if(ctx, false) {
+             Action::OpenUrl(url) => ctx.open_url(egui::OpenUrl::new_tab(url)),
+             Action::Close => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
+             Action::None => {}

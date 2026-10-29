@@ -1,0 +1,14 @@
+diff --git a/crates/update/src/dialog.rs b/crates/update/src/dialog.rs
+index d6bf1dd..fd228cd 100644
+--- a/crates/update/src/dialog.rs
++++ b/crates/update/src/dialog.rs
+@@ -33,7 +33,8 @@ pub struct StartupPrompt {
+ impl StartupPrompt {
+     /// Creates a new prompt dialog state for the given app and newly discovered release.
+     pub fn new(app: &'static App, release: Release, running_version: impl Into<String>) -> Self {
+-        let is_self_updating = crate::self_update::is_self_updating(app);
++        // Personal build: never offer UPDATE AND RESTART; the prompt shows the download link instead.
++        let is_self_updating = false;
+         Self { app, release, running_version: running_version.into(), is_self_updating, open: true, status_message: None, is_installing: false }
+     }
+ 
