@@ -64,6 +64,7 @@ mod menu_item;
 mod menubar;
 mod merge_preview;
 mod model_setup;
+mod move_notice;
 mod offline;
 mod open_lightroom;
 pub(super) mod panels;

@@ -2429,5 +2429,7 @@
   "No tasks are running": "Ei käynnissä olevia tehtäviä",
   "Tasks": "Tehtävät",
   "cancelled": "peruttu",
-  "Stopped: no photo was moved": "Pysäytetty: yhtään kuvaa ei siirretty"
+  "Stopped: no photo was moved": "Pysäytetty: yhtään kuvaa ei siirretty",
+  "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Tämä kirjasto on avattu ilman lukitusta, joten keskeytyneet siirrot jätetään ennalleen, kunnes kirjasto avataan lukituksen kanssa; Etsi puuttuvat kuvat yhdistää siirretyt tiedostot uudelleen.",
+  "Unfinished moves": "Keskeneräiset siirrot"
 }

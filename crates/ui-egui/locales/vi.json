@@ -2339,5 +2339,7 @@
   "No tasks are running": "Không có tác vụ nào đang chạy",
   "Tasks": "Tác vụ",
   "cancelled": "đã hủy",
-  "Stopped: no photo was moved": "Đã dừng: không có ảnh nào được di chuyển"
+  "Stopped: no photo was moved": "Đã dừng: không có ảnh nào được di chuyển",
+  "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Thư viện này được mở mà không có khóa, nên các lần di chuyển bị gián đoạn được giữ nguyên cho đến khi thư viện được mở với khóa; Tìm ảnh bị thiếu sẽ liên kết lại các tệp đã được di chuyển.",
+  "Unfinished moves": "Lần di chuyển chưa hoàn tất"
 }
