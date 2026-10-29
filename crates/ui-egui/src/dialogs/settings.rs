@@ -46,8 +46,8 @@ use performance::performance_tab;
 #[cfg(test)]
 pub(crate) use performance::{gpu_line, smart_folder_default};
 use slideshow::slideshow_tab;
-use widgets::{focus_style, legible_controls};
 pub(crate) use widgets::{ask_first, choices, heading, hint, row};
+use widgets::{focus_style, legible_controls};
 
 pub mod slide_layout;
 pub mod slide_overlays;
