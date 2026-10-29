@@ -43,12 +43,6 @@
   value and range, instead of a button with no value. Increment and Decrement (VoiceOver's Control-Option-Up and Down) and,
   while it has the keyboard focus, the Up and Down arrow keys change it by one step, as the `=` and `-` keys do.
 
-### Screen readers read photo thumbnails as selectable items, not check boxes
-- On macOS, VoiceOver said "checked" or "unchecked" for a photo's thumbnail in the grid, as it does for a check box, and
-  the filmstrip's thumbnails, which began saying whether they are selected on 2026-10-27 ("Screen readers name filmstrip thumbnails like the grid's"), were read the same way.
-  A thumbnail in either place is now a selectable item: VoiceOver says "selected" for the photos you have picked, and
-  says nothing about a state for the others. The name is the same as before (file name, rating, flag, color label).
-
 ### The photo in Detail is named with its file for screen readers
 - With VoiceOver, the photo in Detail view is now announced with its file name, rating, flag and colour label ("Photo:
   IMG_0042.JPG, rating 4 of 5, picked") instead of only "Photo", as the grid names the same photo.
@@ -96,10 +90,13 @@
   LightCraft's row is left; it opens a new issue on the project's GitHub. (A `--memory` session doesn't change that
   setting, so on a Mac where LightCraft only ever ran that way macOS's row stays.)
 
-### Screen readers name filmstrip thumbnails like the grid's
+### Screen readers name filmstrip thumbnails like the grid's and read thumbnails as selectable items
 - A thumbnail in the filmstrip is now named as the grid's cell for the same photo is: the file name, then its rating,
   flag and color label ("LC01207.JPG, 3 stars, picked"), and it says whether it is selected. It was named with the
   file name only, so VoiceOver told you less in Detail than in the grid.
+- A thumbnail, in the grid and in the filmstrip, is also a selectable item now, not a check box: on macOS VoiceOver
+  used to say "checked" or "unchecked" for it; it now reports the photos you have selected as selected and gives no
+  state for the others.
 
 ### Screen readers name a slider's value field "value"
 - The number beside a slider is now named "Exposure value" (the slider's name and "value"), and "Click to type a value,
