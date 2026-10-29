@@ -2551,5 +2551,9 @@
   "Set up face recognition": "Ställ in ansiktsigenkänning",
   "Face recognition needs a model to suggest names: a one-time download, in Settings.": "Ansiktsigenkänning behöver en modell för att föreslå namn: en engångsnedladdning, i Inställningar.",
   "Turn on name suggestions": "Slå på namnförslag",
-  "Set up name suggestions…": "Ställ in namnförslag…"
+  "Set up name suggestions…": "Ställ in namnförslag…",
+  "No photo in this folder is in the library yet": "Inget foto i den här mappen finns i biblioteket än",
+  "Select the photos to move in the grid first": "Markera först de foton som ska flyttas i rutnätet",
+  "This place is kept in Local already": "Den här platsen är redan behållen i Lokalt",
+  "Only a place at the top of Local can be removed from it": "Bara en plats högst upp i Lokalt kan tas bort därifrån"
 }

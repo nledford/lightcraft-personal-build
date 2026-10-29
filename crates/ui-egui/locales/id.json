@@ -2464,5 +2464,9 @@
   "Set up face recognition": "Siapkan pengenalan wajah",
   "Face recognition needs a model to suggest names: a one-time download, in Settings.": "Pengenalan wajah memerlukan model untuk menyarankan nama: sekali unduh, di Pengaturan.",
   "Turn on name suggestions": "Aktifkan saran nama",
-  "Set up name suggestions…": "Siapkan saran nama…"
+  "Set up name suggestions…": "Siapkan saran nama…",
+  "No photo in this folder is in the library yet": "Belum ada foto dari folder ini di pustaka",
+  "Select the photos to move in the grid first": "Pilih dulu foto yang akan dipindahkan di grid",
+  "This place is kept in Local already": "Tempat ini sudah disimpan di Lokal",
+  "Only a place at the top of Local can be removed from it": "Hanya tempat di tingkat teratas Lokal yang bisa dikeluarkan dari Lokal"
 }

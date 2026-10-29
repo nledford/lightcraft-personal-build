@@ -2343,5 +2343,9 @@
   "Set up face recognition": "设置人脸识别",
   "Face recognition needs a model to suggest names: a one-time download, in Settings.": "人脸识别需要一个模型来建议姓名：只需在“设置”中下载一次。",
   "Turn on name suggestions": "开启姓名建议",
-  "Set up name suggestions…": "设置姓名建议…"
+  "Set up name suggestions…": "设置姓名建议…",
+  "No photo in this folder is in the library yet": "此文件夹中还没有照片在图库中",
+  "Select the photos to move in the grid first": "请先在网格视图中选择要移动的照片",
+  "This place is kept in Local already": "此位置已保留在本地",
+  "Only a place at the top of Local can be removed from it": "只有本地最上层的位置才能从本地移除"
 }

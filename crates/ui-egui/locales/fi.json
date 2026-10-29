@@ -2448,5 +2448,9 @@
   "Set up face recognition": "Määritä kasvojentunnistus",
   "Face recognition needs a model to suggest names: a one-time download, in Settings.": "Kasvojentunnistus tarvitsee mallin nimien ehdottamiseen: kertaluonteinen lataus Asetuksissa.",
   "Turn on name suggestions": "Ota nimiehdotukset käyttöön",
-  "Set up name suggestions…": "Määritä nimiehdotukset…"
+  "Set up name suggestions…": "Määritä nimiehdotukset…",
+  "No photo in this folder is in the library yet": "Tämän kansion kuvia ei ole vielä kirjastossa",
+  "Select the photos to move in the grid first": "Valitse ensin siirrettävät kuvat ruudukosta",
+  "This place is kept in Local already": "Tämä paikka on jo säilytetty Paikallisessa",
+  "Only a place at the top of Local can be removed from it": "Paikallisesta voi poistaa vain sen ylimmän tason paikan"
 }

@@ -2857,5 +2857,9 @@
   "Set up face recognition": "სახეების ამოცნობის დაყენება",
   "Face recognition needs a model to suggest names: a one-time download, in Settings.": "სახეების ამოცნობას სახელების შესათავაზებლად მოდელი სჭირდება: ერთჯერადი ჩამოტვირთვა, პარამეტრებში.",
   "Turn on name suggestions": "სახელების შეთავაზებების ჩართვა",
-  "Set up name suggestions…": "სახელების შეთავაზებების დაყენება…"
+  "Set up name suggestions…": "სახელების შეთავაზებების დაყენება…",
+  "No photo in this folder is in the library yet": "ამ საქაღალდის არცერთი ფოტო ჯერ ბიბლიოთეკაში არ არის",
+  "Select the photos to move in the grid first": "ჯერ ბადეში მონიშნეთ გადასატანი ფოტოები",
+  "This place is kept in Local already": "ეს ადგილი უკვე დატოვებულია ლოკალურში",
+  "Only a place at the top of Local can be removed from it": "ლოკალურიდან ამოშლა მხოლოდ მის ზედა დონეზე მყოფ ადგილს შეუძლია"
 }

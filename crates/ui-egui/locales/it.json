@@ -2484,5 +2484,9 @@
   "Set up face recognition": "Configura il riconoscimento dei volti",
   "Face recognition needs a model to suggest names: a one-time download, in Settings.": "Il riconoscimento dei volti ha bisogno di un modello per suggerire i nomi: un download una tantum, in Impostazioni.",
   "Turn on name suggestions": "Attiva i suggerimenti di nomi",
-  "Set up name suggestions…": "Configura i suggerimenti di nomi…"
+  "Set up name suggestions…": "Configura i suggerimenti di nomi…",
+  "No photo in this folder is in the library yet": "Nessuna foto di questa cartella è ancora nella libreria",
+  "Select the photos to move in the grid first": "Seleziona prima nella griglia le foto da spostare",
+  "This place is kept in Local already": "Questo luogo è già tenuto in Locale",
+  "Only a place at the top of Local can be removed from it": "Solo un luogo al primo livello di Locale può esserne rimosso"
 }

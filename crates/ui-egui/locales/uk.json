@@ -2497,5 +2497,9 @@
   "Set up face recognition": "Налаштувати розпізнавання облич",
   "Face recognition needs a model to suggest names: a one-time download, in Settings.": "Для підказок імен розпізнаванню облич потрібна модель: одноразове завантаження в Налаштуваннях.",
   "Turn on name suggestions": "Увімкнути підказки імен",
-  "Set up name suggestions…": "Налаштувати підказки імен…"
+  "Set up name suggestions…": "Налаштувати підказки імен…",
+  "No photo in this folder is in the library yet": "Жодного фото з цієї теки ще немає в бібліотеці",
+  "Select the photos to move in the grid first": "Спершу виберіть у сітці фото, які треба перемістити",
+  "This place is kept in Local already": "Це місце вже залишено в локальних",
+  "Only a place at the top of Local can be removed from it": "Вилучити з локальних можна лише місце верхнього рівня"
 }

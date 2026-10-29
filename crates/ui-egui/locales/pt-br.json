@@ -2345,5 +2345,9 @@
   "Set up face recognition": "Configurar o reconhecimento facial",
   "Face recognition needs a model to suggest names: a one-time download, in Settings.": "O reconhecimento facial precisa de um modelo para sugerir nomes: um download único, em Configurações.",
   "Turn on name suggestions": "Ativar sugestões de nomes",
-  "Set up name suggestions…": "Configurar sugestões de nomes…"
+  "Set up name suggestions…": "Configurar sugestões de nomes…",
+  "No photo in this folder is in the library yet": "Nenhuma foto desta pasta está na biblioteca ainda",
+  "Select the photos to move in the grid first": "Primeiro selecione na grade as fotos que quer mover",
+  "This place is kept in Local already": "Este lugar já é mantido em Local",
+  "Only a place at the top of Local can be removed from it": "Só um lugar no nível superior de Local pode ser removido de Local"
 }
