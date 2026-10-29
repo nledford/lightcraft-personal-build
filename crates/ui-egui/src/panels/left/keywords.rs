@@ -69,6 +69,8 @@ fn keyword_row(
             app.act("photo.setMeta", json!({"removeKeywords": [n.path]}));
         }
         ui.separator();
+        crate::panels::side_select::keyword_clip_items(app, ui, std::slice::from_ref(&n.path));
+        crate::panels::side_select::keyword_paste_item(app, ui, &n.path);
         if MenuItem::new(crate::i18n::tr("Rename Keyword…")).show(ui).clicked() {
             app.ui.dialog = Some(crate::state::Dialog::RenameKeyword { from: n.path.clone(), to: n.path.clone() });
         }
