@@ -149,10 +149,11 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
 fn window_page(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_height: f32) {
     ui.set_width((ui.ctx().content_rect().width() - 64.0).clamp(240.0, PAGE_SIZE.x));
     let top = ui.cursor().top();
-    let t = Tokens::get(ui.ctx());
     // What says where a control is, and what a text box says while it is empty, are made legible
-    // here for everything in the window: a theme's border is 1.6 to 1.7:1 against the window and
-    // its weak text under 4.3:1 in a box (the tokens keep their values for the rest of the app).
+    // here for everything in the window, the filter too (the tab bar draws its own, and its line is
+    // made legible below): a theme's border is 1.6 to 1.7:1 against the window and its weak text
+    // under 4.3:1 in a box (the tokens keep their values for the rest of the app).
+    let t = Tokens::get(ui.ctx());
     legible_controls(ui, &t);
     focus_style(ui, &t);
     // The filter, above the tabs it looks through. What is typed is kept from one frame of the
@@ -242,7 +243,7 @@ fn window_page(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max
         })
     });
     bar.end(ui);
-    let divider = t.divider;
+    let divider = t.legible(t.divider, t.chrome, 3.0);
     for bottom in lines {
         let line = egui::Rect::from_min_max(egui::pos2(ui.min_rect().left(), bottom), egui::pos2(ui.min_rect().right(), bottom + 1.0));
         ui.painter().rect_filled(line, egui::CornerRadius::ZERO, divider);
