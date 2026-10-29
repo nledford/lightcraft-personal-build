@@ -443,7 +443,7 @@ pub fn save_body(
     ui.label(
         egui::RichText::new(crate::i18n::tr("Highlighted: sliders this mask changes. Sliders left out stay as they are when the preset is applied."))
             .color(t.text_dim)
-            .size(11.0),
+            .font(t.caption()),
     );
     check(ui, "effectAmount", amount, "Include Amount");
     check(ui, "effectBrush", brush, "Include brush size, feather and flow");
@@ -569,7 +569,7 @@ pub fn manage_body(
                     if !e.extra.is_empty() {
                         info += &crate::i18n::tr_format!(" · kept, not applied: {}", e.extra.keys().cloned().collect::<Vec<_>>().join(", "));
                     }
-                    ui.add(egui::Label::new(egui::RichText::new(info).color(t.text_dim).size(11.0)).truncate());
+                    ui.add(egui::Label::new(egui::RichText::new(info).color(t.text_dim).font(t.caption())).truncate());
                 });
             }
         }
@@ -668,7 +668,7 @@ pub fn manage_body(
         }
     });
     if mask.is_none() {
-        ui.label(egui::RichText::new(crate::i18n::tr("Select a mask to apply or update presets.")).color(t.text_dim).size(11.0));
+        ui.label(egui::RichText::new(crate::i18n::tr("Select a mask to apply or update presets.")).color(t.text_dim).font(t.caption()));
     }
 }
 
