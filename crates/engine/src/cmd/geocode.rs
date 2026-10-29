@@ -219,8 +219,39 @@ mod download {
         .map_err(|e| e.to_string())
     }
 
-    /// Fetch and unpack the place names into `dir`; the new files replace the old ones only when complete.
-    pub(super) fn run(base: &str, dir: &Path, cancel: &AtomicBool, task: &crate::activity::TaskHandle) -> std::result::Result<usize, String> {
+    /// Fetch the optional files (without them states stay blank and countries are ISO codes) and save the ones that
+    /// came. Returns how many could not be fetched; a failure with the cancel flag set is the cancel (`Err`), not a
+    /// missing file.
+    pub(super) fn fetch_optional(
+        names: &[&str],
+        cancel: &AtomicBool,
+        mut fetch: impl FnMut(&str) -> std::result::Result<Vec<u8>, String>,
+        mut save: impl FnMut(&str, &[u8]) -> std::result::Result<(), String>,
+    ) -> std::result::Result<usize, String> {
+        let mut missing = 0;
+        for name in names {
+            match fetch(name) {
+                Ok(b) => save(name, &b)?,
+                Err(e) => {
+                    if cancel.load(std::sync::atomic::Ordering::Relaxed) {
+                        return Err("cancelled".into());
+                    }
+                    log::warn!("place names: {name}: {e}");
+                    missing += 1;
+                }
+            }
+        }
+        Ok(missing)
+    }
+
+    /// Fetch and unpack the place names into `dir`; the new files replace the old ones only when complete. Returns how
+    /// many places there are and how many optional files could not be fetched.
+    pub(super) fn run(
+        base: &str,
+        dir: &Path,
+        cancel: &AtomicBool,
+        task: &crate::activity::TaskHandle,
+    ) -> std::result::Result<(usize, usize), String> {
         let staging = dir.join(".download");
         std::fs::create_dir_all(&staging).map_err(|e| format!("could not create {}: {e}", staging.display()))?;
         get(GEONAMES_ZIP, base, &staging, cancel, task)?;
@@ -232,17 +263,19 @@ mod download {
         }
         let _ = std::fs::remove_file(staging.join(GEONAMES_ZIP));
         let write = |name: &str, data: &[u8]| std::fs::write(dir.join(name), data).map_err(|e| format!("could not save {name}: {e}"));
-        for name in &GEONAMES_FILES[1..] {
-            // optional: without them states stay blank and countries are ISO codes
-            match get(name, base, &staging, cancel, task).and_then(|()| std::fs::read(staging.join(name)).map_err(|e| e.to_string())) {
-                Ok(b) => write(name, &b)?,
-                Err(e) => log::warn!("place names: {name}: {e}"),
-            }
-            let _ = std::fs::remove_file(staging.join(name));
-        }
+        let missing = fetch_optional(
+            &GEONAMES_FILES[1..],
+            cancel,
+            |name| {
+                let r = get(name, base, &staging, cancel, task).and_then(|()| std::fs::read(staging.join(name)).map_err(|e| e.to_string()));
+                let _ = std::fs::remove_file(staging.join(name));
+                r
+            },
+            write,
+        )?;
         write(GEONAMES_FILES[0], &cities)?;
         let _ = std::fs::remove_dir(&staging);
-        Ok(places)
+        Ok((places, missing))
     }
 
     /// A download base: https, or plain http to this machine's loopback address only (a test
@@ -280,8 +313,10 @@ mod download {
             // the activity row says how it ended when the thread ends, however it ends
             let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(&base, &thread_dir, &cancel, &handle)));
             let panicked = outcome.is_err();
+            // optional files that could not be fetched: the places work, but states stay blank
+            let missing = outcome.as_ref().ok().and_then(|r| r.as_ref().ok()).map_or(0, |&(_, missing)| missing);
             let outcome = match outcome {
-                Ok(Ok(n)) => DownloadOutcome::Done(n),
+                Ok(Ok((n, _))) => DownloadOutcome::Done(n),
                 _ if cancel.load(std::sync::atomic::Ordering::Relaxed) => DownloadOutcome::Cancelled,
                 Ok(Err(e)) => DownloadOutcome::Failed(format!("Could not download the place names: {e}. Check the connection and try again.")),
                 Err(_) => DownloadOutcome::Failed("The place names download stopped unexpectedly. Try again.".into()),
@@ -291,6 +326,9 @@ mod download {
             }
             let ended = match &outcome {
                 _ if panicked => crate::activity::Outcome::ended(crate::activity::Ending::Died),
+                DownloadOutcome::Done(_) if missing > 0 => {
+                    crate::activity::Outcome { ending: crate::activity::Ending::Problems, failed: missing, ..Default::default() }
+                }
                 DownloadOutcome::Done(_) => crate::activity::Outcome::default(),
                 DownloadOutcome::Cancelled => crate::activity::Outcome::ended(crate::activity::Ending::Stopped),
                 DownloadOutcome::Failed(why) => crate::activity::Outcome::failed(why.clone()),
@@ -554,6 +592,10 @@ mod tests {
         }
 
         assert_eq!(download(&mut s, &format!("{base}/good/"), &dir), DownloadOutcome::Done(2));
+        // the optional admin1 file was a 404: the row says the download ended with problems, and how many files
+        let problems: Vec<_> = s.activity.finished().into_iter().filter(|f| f.ending == crate::activity::Ending::Problems).collect();
+        assert_eq!(problems.len(), 1, "{problems:?}");
+        assert_eq!((problems[0].kind, problems[0].failed), ("download", 1));
         let st = s.execute("metadata.placeNamesStatus", &json!({"dataset": dir})).unwrap();
         assert_eq!((st["downloaded"].as_bool(), st["lastError"].is_null(), st["lastDownload"]["places"].as_u64()), (Some(true), true, Some(2)));
         set_gps(&mut s, ids[0], Some((48.86, 2.34)), "");
@@ -572,5 +614,25 @@ mod tests {
         assert!(!download::base_allowed("http://127.0.0.1.example.com/"));
         assert!(!download::base_allowed("http://127.0.0.1@example.com/"));
         assert!(!download::base_allowed("http://download.geonames.org/"));
+    }
+
+    /// Given optional place-name files, when some cannot be fetched, then the others are saved and the misses are
+    /// counted (the download ends with problems, not done); when the cancel flag is set the failure is the cancel.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn optional_place_name_files_that_did_not_come_are_counted_and_a_cancel_is_not_a_miss() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let cancel = AtomicBool::new(false);
+        let mut saved = Vec::new();
+        let fetch = |name: &str| if name == "b" { Err("no route".to_string()) } else { Ok(name.as_bytes().to_vec()) };
+        let missing = download::fetch_optional(&["a", "b", "c"], &cancel, fetch, |n, _| {
+            saved.push(n.to_string());
+            Ok(())
+        });
+        assert_eq!(missing, Ok(1));
+        assert_eq!(saved, ["a", "c"]);
+        assert_eq!(download::fetch_optional(&["a", "c"], &cancel, fetch, |_, _| Ok(())), Ok(0));
+        cancel.store(true, Ordering::Relaxed);
+        assert_eq!(download::fetch_optional(&["b", "a"], &cancel, fetch, |_, _| Ok(())), Err("cancelled".to_string()));
     }
 }

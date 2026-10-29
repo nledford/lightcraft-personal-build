@@ -50,6 +50,13 @@ pub(super) fn library_files(library: &lightcraft_catalog::Catalog, files: &[Stri
     by_path
 }
 
+/// Whether the file of a browsed (Local) record is no longer the one that was browsed: its size on disk is not the
+/// recorded one, the check the probes kept from a scan go by. A record without a size and a file that can't be read
+/// count as unchanged (a file that is gone is the record's own business).
+pub(super) fn local_file_changed(path: &str, recorded: u64) -> bool {
+    !cfg!(target_arch = "wasm32") && recorded > 0 && std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.len() != recorded)
+}
+
 /// Records that photo `id`, whose catalog key is `key`, has the content `key` stands for: the map
 /// is keyed by the content (a Duplicate's `:dup<id>` key is the original's plus a suffix, and a
 /// file's own hash is the plain one). Where several photos have the content, the one with the
@@ -164,7 +171,18 @@ pub fn scan_with(mut input: ScanInput, paths: &[String], progress: &ScanProgress
 /// [`scan_with`] for files that were found already (`paths` expanded, [`expand`]).
 pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &ScanProgress) -> ScanOutput {
     use std::sync::atomic::Ordering::Relaxed;
-    let by_path = library_files(&input.library, &files);
+    let mut by_path = library_files(&input.library, &files);
+    // a browsed file that was replaced since is not the one its record describes: it is read again like a new file
+    // (the record's stored content, kept from the browse, would give the wrong answer against the library), and
+    // its candidate still names the record and says it was only browsed, unless the library has that content
+    let mut replaced: HashMap<PathBuf, PhotoId> = HashMap::new();
+    by_path.retain(|path, (id, c, _)| {
+        let changed = c.local && local_file_changed(&path.to_string_lossy(), c.file_size);
+        if changed {
+            replaced.insert(path.clone(), *id);
+        }
+        !changed
+    });
     let todo: Vec<String> = files.iter().filter(|f| !by_path.contains_key(Path::new(f))).cloned().collect();
     progress.total.store(todo.len(), Relaxed);
     // probes from a preceding `scan` are reused when the file is unchanged (same size); a file that
@@ -234,13 +252,24 @@ pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &Sc
                             c.duplicate = Some("content".into());
                             c.existing = *existing;
                             // (the first copy of a browsed photo that is a file of its own stands in for it when
-                            // copying leaves the browsed one out: said once per content)
-                            if existing.is_none() {
+                            // copying leaves the browsed one out: said once per content; a browsed file doesn't)
+                            if existing.is_none() && !replaced.contains_key(Path::new(&f)) {
                                 c.browsed_twin = browsed_first.remove(h);
                             }
                         }
                         None => {
                             seen_hash.insert(h.clone(), None);
+                        }
+                    }
+                }
+                if let Some(id) = replaced.get(Path::new(&f)) {
+                    // still the browsed record's file, as for one that is as browsed: Copy and Move leave it out, and the
+                    // first twin of its own stands in for it there
+                    c.local = true;
+                    if c.duplicate.is_none() {
+                        c.existing = Some(id.0);
+                        if let Some(h) = &info.content_hash {
+                            browsed_first.insert(h.clone(), f.clone());
                         }
                     }
                 }
