@@ -1723,6 +1723,8 @@ fn show_parent_folder_lists_the_folder_above_and_hide_this_parent_takes_it_away(
     // the parent shown offers the one above it, and going away again
     right_click(&mut h, "source:libfolder:/Users/me");
     assert!(has(&h, "folderShowParent") && has(&h, "folderHideParent"));
+    // (both sit in the label's group, above Remove)
+    in_order(&h, &["folderLabelMenu", "folderShowParent", "folderHideParent", "folderRemove"]);
     click(&mut h, "folderShowParent");
     assert!(has(&h, "source:libfolder:/Users") && has(&h, "source:libfolder:/Users/me"), "two folders up now");
     // only the topmost can go: hiding one in the middle would draw a folder inside one it is not in
@@ -2256,7 +2258,7 @@ fn a_folder_that_cant_be_shown_in_the_file_manager_says_why() {
     right_click(&mut h, "source:libfolder:/pics/trip");
     h.app.ui.toast = None;
     click(&mut h, "folderReveal");
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.0.contains("no file manager")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("no file manager")), "{:?}", h.app.ui.toast);
 }
 
 /// A Local place's menu takes the Folders order: Synchronize first, then the disk, the file

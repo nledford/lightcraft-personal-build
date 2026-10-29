@@ -7,7 +7,7 @@ use crate::menu_item::MenuItem;
 /// A folder on disk with a disclosure triangle: click browses it, the triangle lists its
 /// subfolders. In the tree that holds the folder being browsed (`reveal`), the folders on the
 /// way down to it open whenever the browsed folder changes, so it shows highlighted in place.
-/// `transient`: a top-level row listed for this session only (it offers Keep in Local).
+/// `transient`: a top-level row listed for this session only (its Keep in Local can act).
 /// `place`: the top-level folder this tree hangs from. A folder can be listed in more than one
 /// tree (Pictures on its own and inside Home): each row opens and closes by itself, and their
 /// triangles have ids of their own, else the copy drawn last takes the other's clicks (#1093).
@@ -495,8 +495,8 @@ struct FolderParents<'a> {
 
 /// Show Parent Folder / Hide This Parent of a Folders row (`view.folderParent`; widgets
 /// `folderShowParent`, `folderHideParent`): neither when the row has no folder passed over above
-/// it and was not asked for itself. Returns whether an item was drawn.
-fn folder_parent_items(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode, parents: FolderParents) -> bool {
+/// it and was not asked for itself.
+fn folder_parent_items(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode, parents: FolderParents) {
     let mut run = None;
     if let Some(above) = parents.above {
         let show = MenuItem::new(crate::i18n::tr("Show Parent Folder"))
@@ -524,7 +524,6 @@ fn folder_parent_items(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNod
         app.act("view.folderParent", params);
         ui.close();
     }
-    parents.above.is_some() || parents.asked_for
 }
 
 /// How long photos dragged over a closed Folders row wait before it opens, so a folder inside it
@@ -734,6 +733,12 @@ fn library_node_for(tree: &[FolderNode], path: &str) -> Option<(FolderNode, Stri
     Some((node, name))
 }
 
+/// A menu row's hint, shown only while the row is enabled: a disabled one says why instead
+/// ([`MenuItem::disabled_reason`]).
+fn hint_while(r: egui::Response, enabled: bool, hint: &str) -> egui::Response {
+    if enabled { r.on_hover_text(hint) } else { r }
+}
+
 /// Synchronize Folder… of a folder's menu (widget `folderSynchronize`): opens its dialog, which
 /// scans the folder in the background. `target`: the Folders node it works on and the name its
 /// dialog shows; `None` (a Local folder holding no library photo) draws it grayed out.
@@ -741,9 +746,13 @@ fn synchronize_item(app: &mut LightcraftApp, ui: &mut egui::Ui, target: Option<(
     let r = MenuItem::new(crate::i18n::tr("Synchronize Folder…"))
         .widget("folderSynchronize")
         .enabled(target.is_some())
-        .show(ui)
-        .on_hover_text(crate::i18n::tr("Find photos added to or missing from this folder on disk, and XMP sidecars changed by other apps"))
-        .on_disabled_hover_text(crate::i18n::tr("No photo in this folder is in the library yet"));
+        .disabled_reason(crate::i18n::tr("No photo in this folder is in the library yet"))
+        .show(ui);
+    let r = hint_while(
+        r,
+        target.is_some(),
+        crate::i18n::tr("Find photos added to or missing from this folder on disk, and XMP sidecars changed by other apps"),
+    );
     if r.clicked()
         && let Some((n, name)) = target
     {
@@ -929,12 +938,13 @@ fn folder_item(
             }
         }
         FolderItem::MovePhotosHere => {
+            let any = !app.session.selection.ids.is_empty();
             let r = MenuItem::new(crate::i18n::tr("Move Selected Photos Here"))
                 .widget("folderMovePhotosHere")
-                .enabled(!app.session.selection.ids.is_empty())
-                .show(ui)
-                .on_hover_text(crate::i18n::tr("Moves the files and their XMP sidecars into this folder; never overwrites"))
-                .on_disabled_hover_text(crate::i18n::tr("Select the photos to move in the grid first"));
+                .enabled(any)
+                .disabled_reason(crate::i18n::tr("Select the photos to move in the grid first"))
+                .show(ui);
+            let r = hint_while(r, any, crate::i18n::tr("Moves the files and their XMP sidecars into this folder; never overwrites"));
             if r.clicked() {
                 move_photos_here(app, ui.ctx(), None, path, name);
                 ui.close();
@@ -968,9 +978,9 @@ fn folder_item(
             let r = MenuItem::new(crate::i18n::tr(if top { "Keep in Local" } else { "Add to Local" }))
                 .widget("folderKeepInLocal")
                 .enabled(!top || transient)
-                .show(ui)
-                .on_hover_text(crate::i18n::tr("List this folder in Local from now on"))
-                .on_disabled_hover_text(crate::i18n::tr("This place is kept in Local already"));
+                .disabled_reason(crate::i18n::tr("This place is kept in Local already"))
+                .show(ui);
+            let r = hint_while(r, !top || transient, crate::i18n::tr("List this folder in Local from now on"));
             if r.clicked() {
                 app.act("local.addRoot", json!({"path": path}));
                 ui.close();
@@ -981,9 +991,9 @@ fn folder_item(
             let r = MenuItem::new(crate::i18n::tr("Remove from Local"))
                 .widget("folderRemoveFromLocal")
                 .enabled(top)
-                .show(ui)
-                .on_hover_text(crate::i18n::tr("Hides this shortcut only; the folder and its photos stay as they are"))
-                .on_disabled_hover_text(crate::i18n::tr("Only a place at the top of Local can be removed from it"));
+                .disabled_reason(crate::i18n::tr("Only a place at the top of Local can be removed from it"))
+                .show(ui);
+            let r = hint_while(r, top, crate::i18n::tr("Hides this shortcut only; the folder and its photos stay as they are"));
             if r.clicked() {
                 app.act("local.hide", json!({"path": path}));
                 ui.close();
