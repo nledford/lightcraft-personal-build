@@ -45,7 +45,7 @@ fi
 git bisect start "$bad_sha" "$good_sha" >/dev/null
 git bisect run bash "$once" "$crate" "$test" "$repeat" 2>&1 | tee "$out/bisect-run.log"
 log=$(git bisect log)
-first=$(sed -nE 's/^([0-9a-f]{40}) is the first bad commit$/\1/p' "$out/bisect-run.log" | head -1)
+first=$(sed -nE "s/^([0-9a-f]{40}) is the first '?bad'? commit\$/\\1/p" "$out/bisect-run.log" | head -1)
 {
   echo "### Bisect: $crate $test"
   echo ""

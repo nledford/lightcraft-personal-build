@@ -70,7 +70,8 @@ for ((i = 1; i <= runs; i++)); do
     if [ ! -s "$first" ]; then
       {
         echo "shard $shard, run $i of $runs:"
-        printf '%s\n' "$output" | tail -n 200
+        # from the test run on (the dependency patch warnings above it are noise)
+        printf '%s\n' "$output" | sed -n '/^running [0-9]* test/,$p' | tail -n 200
       } >"$first"
     fi
     echo "run $i FAILED"

@@ -12,6 +12,8 @@
 # conflicts or can't be fetched.
 set -uo pipefail
 members=${1:?members file}
+[ -s "$members" ] || { echo "::error::members file '$members' is missing or empty (run just hosted-members)"; exit 2; }
+members=$(cd "$(dirname "$members")" && pwd)/$(basename "$members")
 origin=${ORIGIN_URL:-https://github.com/storytold/lightcraft.git}
 fork=${FORK_URL:-https://github.com/nledford/lightcraft.git}
 work=${RUNNER_TEMP:-/tmp}/test-merge
@@ -26,6 +28,14 @@ git config merge.conflictstyle merge
 main_sha=$(git rev-parse HEAD)
 git switch -q -c test-merge
 
+# every member head from the fork in one round trip (a sha the fork lacks fails the batch; those are fetched one by one below)
+shas=()
+while read -r _pr s _rest; do
+  case ${_pr:-#} in \#*) continue ;; esac
+  [[ ${s:-} =~ ^[0-9a-f]{40}$ ]] && shas+=("$s")
+done <"$members"
+[ ${#shas[@]} -eq 0 ] || git fetch -q --filter=blob:none "$fork" "${shas[@]}" 2>/dev/null || true
+
 rows=()
 bad=0
 n=0
@@ -39,23 +49,33 @@ while read -r pr sha _note; do
     continue
   fi
   where=fork
-  if ! git fetch -q --filter=blob:none "$fork" "$sha" 2>/dev/null; then
-    where="PR head"
-    if ! git fetch -q --filter=blob:none origin "refs/pull/$pr/head" 2>/dev/null || [ "$(git rev-parse FETCH_HEAD)" != "$sha" ]; then
-      echo "::error::#$pr: $sha is on neither the fork nor the PR's head ref (the PR moved: refresh members.txt)"
-      rows+=("| #$pr | \`${sha:0:10}\` | **not fetchable** (the PR head moved or the fork dropped it) |")
-      bad=$((bad + 1))
-      continue
+  if ! git cat-file -e "$sha^{commit}" 2>/dev/null; then
+    # not in the batch (the fork lacks it): one try on the fork, then the PR's head ref on storytold/lightcraft
+    if ! git fetch -q --filter=blob:none "$fork" "$sha" 2>/dev/null; then
+      where="PR head"
+      if ! git fetch -q --filter=blob:none origin "refs/pull/$pr/head" 2>/dev/null || [ "$(git rev-parse FETCH_HEAD)" != "$sha" ]; then
+        echo "::error::#$pr: $sha is on neither the fork nor the PR's head ref (the PR moved: refresh members.txt)"
+        rows+=("| #$pr | \`${sha:0:10}\` | **not fetchable** (the PR head moved or the fork dropped it) |")
+        bad=$((bad + 1))
+        continue
+      fi
     fi
   fi
   if git merge-base --is-ancestor "$sha" HEAD 2>/dev/null; then
     rows+=("| #$pr | \`${sha:0:10}\` | already in the merge so far (main or an earlier member) |")
     continue
   fi
-  if git merge -q --no-ff --no-edit -m "member #$pr" "$sha" >/dev/null 2>&1; then
+  if mout=$(git merge -q --no-ff --no-edit -m "member #$pr" "$sha" </dev/null 2>&1); then
     rows+=("| #$pr | \`${sha:0:10}\` | merged ($where) |")
   else
-    files=$(git diff --name-only --diff-filter=U)
+    files=$(git ls-files -u | cut -f2 | sort -u)
+    if [ -z "$files" ]; then
+      # not a content conflict: git refused or failed; say what it said
+      git merge --abort >/dev/null 2>&1 || git reset -q --hard HEAD
+      rows+=("| #$pr | \`${sha:0:10}\` | **merge failed**: $(printf '%s' "$mout" | tail -n 2 | tr '\n|' '  ') |")
+      bad=$((bad + 1))
+      continue
+    fi
     code=$(printf '%s\n' "$files" | grep -Evc '^(docs/|.*\.md$|crates/ui-egui/locales/)' || true)
     kind="code conflict"
     [ "$code" -eq 0 ] && kind="docs/locale-only conflict"
@@ -79,4 +99,5 @@ done <"$members"
   echo ""
   echo "Problems: $bad"
 } >>"$summary"
+[ "$n" -gt 0 ] || { echo "::error::members file lists no members"; exit 2; }
 [ "$bad" -eq 0 ]
