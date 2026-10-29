@@ -4,6 +4,7 @@
 //! the scan the dialog showed (see `lightcraft_engine::sync`). Both the scan and the run show a row in the activity
 //! stack (issue #345); its ✕ stops them like the dialog's Cancel.
 
+use crate::check::Check;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
@@ -187,8 +188,13 @@ pub fn body(app: &LightcraftApp, ui: &mut egui::Ui, dlg: &mut Dialog) {
         ui.label(crate::i18n::tr("This folder isn't there: it was moved or renamed, or its disk isn't connected."));
         return;
     }
-    let choice = |ui: &mut egui::Ui, on: &mut bool, n: usize, text: String, widget: &str| {
-        let r = ui.add_enabled(n > 0, egui::Checkbox::new(on, text));
+    // the label is the English key (`Check` translates it); the count is dimmed text inside the same row, so a click
+    // on it is a click on the tick box
+    let choice = |ui: &mut egui::Ui, on: &mut bool, n: usize, text: &str, widget: &str| {
+        // screen readers hear the count too, as the label used to carry it (the count itself is not a node of its own)
+        let name = format!("{} ({n})", crate::i18n::tr(text));
+        let count = format!("({n})");
+        let r = Check::new(&format!("sync.{widget}"), on, text).accessible_name(&name).suffix(&count).enabled(n > 0).show(ui);
         crate::widgets::register(ui, widget, r.rect);
     };
     let count = |text: &str, n: usize| format!("{} ({n})", crate::i18n::tr(text));
@@ -212,7 +218,7 @@ pub fn body(app: &LightcraftApp, ui: &mut egui::Ui, dlg: &mut Dialog) {
     // (the copies of library photos come in with the new ones when the box under is unticked; a copy
     // of a photo in Recently Deleted never does: that photo is restored from there)
     let incoming = c.new.saturating_add(if *import_duplicates { c.copies } else { 0 });
-    choice(ui, import_new, incoming, count("Import new photos", incoming), "syncImportNew");
+    choice(ui, import_new, incoming, "Import new photos", "syncImportNew");
     if c.copies > 0 {
         ui.indent("syncSkipDuplicatesIndent", |ui| {
             let mut skip = !*import_duplicates;
@@ -224,9 +230,9 @@ pub fn body(app: &LightcraftApp, ui: &mut egui::Ui, dlg: &mut Dialog) {
             }
         });
     }
-    choice(ui, relink_moved, c.moved, count("Relink photos whose file was renamed or moved", c.moved), "syncRelinkMoved");
-    choice(ui, remove_missing, c.missing, count("Remove missing photos from the library", c.missing), "syncRemoveMissing");
-    choice(ui, read_metadata, c.metadata, count("Read metadata updates from XMP sidecars", c.metadata), "syncReadMetadata");
+    choice(ui, relink_moved, c.moved, "Relink photos whose file was renamed or moved", "syncRelinkMoved");
+    choice(ui, remove_missing, c.missing, "Remove missing photos from the library", "syncRemoveMissing");
+    choice(ui, read_metadata, c.metadata, "Read metadata updates from XMP sidecars", "syncReadMetadata");
     ui.add_space(6.0);
     if c.nothing_to_do(true, *import_duplicates) {
         dim(ui, crate::i18n::tr("The library is up to date with this folder."));
