@@ -14,6 +14,9 @@
   set of photos from an SMB share, in one measurement on one share). What is imported and the messages for a file
   that can't be read are the same.
 
+### The macOS menu bar shows every row
+- File ▸ Export… no longer reads “Custom…”, File ▸ Export with Preset keeps its Custom… row, and Photo ▸ Add to Album keeps New Album…. When two menu rows ran the same command, the menu bar left the second one out and gave the first one its label; now each row is its own item and a click on either one runs the command. The View menu now also lists its second Layout Image row (without a key), as the in-window menu does.
+
 ## 2026-10-26
 
 ### The sidebar from the keyboard
