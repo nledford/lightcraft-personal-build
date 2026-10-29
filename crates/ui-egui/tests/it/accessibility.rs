@@ -307,3 +307,19 @@ fn the_grid_title_count_and_empty_message_are_read_when_a_filter_hides_every_pho
     assert!(has(Role::Label, "No photos match the active filters"), "the message is text: {nodes:?}");
     assert!(has(Role::Label, "24 photos in All Photos are hidden by the filters above"), "the reason is text: {nodes:?}");
 }
+
+/// A slider's value field is "<slider> value" (the instruction to click, type or drag is its
+/// description, not part of the name VoiceOver reads on every visit).
+#[test]
+fn a_slider_value_field_is_named_value_and_describes_how_to_use_it() {
+    const INSTRUCTION: &str = "Click to type a value, drag to change it";
+    let h = harness(ViewMode::Detail, RightPanel::Edit);
+    let buttons: Vec<_> = h.root().children_recursive().filter(|n| n.accesskit_node().role() == Role::Button).collect();
+    let names: Vec<String> = buttons.iter().filter_map(|n| n.accesskit_node().label()).collect();
+    let field = buttons
+        .iter()
+        .find(|n| n.accesskit_node().label().as_deref() == Some("Exposure value"))
+        .unwrap_or_else(|| panic!("a value field named \"Exposure value\": {names:?}"));
+    assert_eq!(field.accesskit_node().description().as_deref(), Some(INSTRUCTION), "the instruction is its description");
+    assert!(!names.iter().any(|n| n.contains(INSTRUCTION)), "no name carries the instruction: {names:?}");
+}

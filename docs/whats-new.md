@@ -7,6 +7,11 @@
 
 ## 2026-10-27
 
+### Screen readers name a slider's value field "value"
+- The number beside a slider is now named "Exposure value" (the slider's name and "value"), and "Click to type a value,
+  drag to change it" is its description. It was named "Exposure: Click to type a value, drag to change it", so
+  VoiceOver read the whole sentence each time it reached the field, once for every slider in the Edit panel.
+
 ### Screen readers and Voice Control name the grid's date headers as they read
 - A date header in the photo grid is now named with the text it shows ("Sunday, 20 September 2026 · 1 photo"), where
   it was named with the bare date key ("2026-09-20"). VoiceOver reads what a sighted person reads, and Voice Control's
