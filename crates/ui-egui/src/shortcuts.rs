@@ -743,8 +743,9 @@ fn brush_key(app: &mut LightcraftApp, ctx: &egui::Context) -> bool {
     if !library_grid(app) {
         return false;
     }
-    if let Some(r) = app.act("album.toggleTarget", json!({})) {
-        let n = app.session.selected().len();
+    // `added` is null when nothing was left to toggle (the selected photos are gone): nothing to say
+    if let Some(r) = app.act("album.toggleTarget", json!({})).filter(|r| r["added"].is_boolean()) {
+        let n = r["toggled"].as_u64().unwrap_or(0);
         let what = crate::i18n::tr_format!("{n} photo{}", if n == 1 { "" } else { "s" }, n = n);
         let name = r["name"].as_str().unwrap_or("Quick Collection").to_string();
         app.toast(
