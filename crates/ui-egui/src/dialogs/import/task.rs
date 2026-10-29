@@ -67,6 +67,8 @@ pub struct ImportTask {
     /// The files that could not be read, as (path, reason) the engine reported them: the first
     /// [`lightcraft_engine::activity::MAX_FAILURES`] (`failed` counts them all).
     failures: Vec<(String, String)>,
+    /// Why a batch was left alone while photos were being moved to another folder (not counted as failed).
+    refused: Option<String>,
     /// Move: originals moved, and sources left in place (reported by the engine with a reason).
     pub moved: usize,
     pub kept: usize,
@@ -446,6 +448,11 @@ fn commit_batch(app: &mut LightcraftApp, task: &mut ImportTask, prepared: lightc
                 task.first = ["imported", "restored"].iter().find_map(|k| v[*k].as_array().and_then(|a| a.first()).and_then(Value::as_u64));
             }
         }
+        Err(e) if e.kind() == lightcraft_engine::ErrorKind::MoveInProgress => {
+            // a photo the import would replace or restore is being moved: this batch was left alone
+            log::warn!("import: {e}");
+            task.refused = Some(e.to_string());
+        }
         Err(e) => {
             log::warn!("import: {e}");
             task.failed += n;
@@ -546,6 +553,7 @@ fn finish(app: &mut LightcraftApp, ctx: &egui::Context, mut task: ImportTask) {
     let existing_shown = task.imported == 0
         && task.restored == 0
         && task.failed == 0
+        && task.refused.is_none()
         && task.warnings.is_empty()
         && !task.cancelled
         && show_existing(app, ctx, &task.existing);
@@ -565,6 +573,8 @@ fn finish(app: &mut LightcraftApp, ctx: &egui::Context, mut task: ImportTask) {
     } else if task.warnings.is_empty() {
         if task.failed > 0 {
             app.toast_error(ctx, msg);
+        } else if task.refused.is_some() {
+            app.toast_for(ctx, msg, 8.0);
         } else {
             app.toast(ctx, msg);
         }
@@ -595,6 +605,8 @@ fn quiet_finish(app: &mut LightcraftApp, ctx: &egui::Context, task: &mut ImportT
     report(task, summary, detail);
     if !task.warnings.is_empty() {
         app.toast_error_for(ctx, xmp_warnings_text(&task.warnings), 8.0);
+    } else if task.auto && task.refused.is_some() {
+        app.toast_for(ctx, task.refused.clone().unwrap_or_default(), 8.0);
     } else if task.auto && task.imported > 0 {
         app.toast(ctx, crate::i18n::tr_format!("Auto Import: added {} photo{}", task.imported, crate::i18n::plural_s(task.imported)));
     } else if !task.auto && task.failed > 0 {
@@ -631,8 +643,13 @@ fn import_summary(app: &LightcraftApp, task: &ImportTask) -> (String, String, St
     if task.failed > 0 {
         msg.push_str(&crate::i18n::tr_format!(" · {} not readable", task.failed));
     }
+    if let Some(why) = &task.refused {
+        // (the batches it left alone were not imported: the reason, not "not readable")
+        msg.push_str("\n\n");
+        msg.push_str(why);
+    }
     // what was done is the first line of the row the import leaves; the rest is what needs reading under it
-    let detail = msg.get(summary.len()..).unwrap_or_default().trim_start_matches(" · ").to_string();
+    let detail = msg.get(summary.len()..).unwrap_or_default().trim_start_matches(" · ").trim_start().to_string();
     (msg, summary, with_warnings(detail, task))
 }
 

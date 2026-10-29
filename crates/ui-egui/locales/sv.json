@@ -2527,5 +2527,7 @@
   "Imports, exports and other long jobs show here while they run.": "Importer, exporter och andra långa jobb visas här medan de pågår.",
   "No tasks are running": "Inga uppgifter körs",
   "Tasks": "Uppgifter",
-  "cancelled": "avbruten"
+  "cancelled": "avbruten",
+  "Moving photos": "Flyttar foton",
+  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "Flyttningen stoppades av ett fel (se loggen). Biblioteket följer de filer som redan flyttats; en XMP-sidofil kan ha blivit kvar på den gamla platsen."
 }

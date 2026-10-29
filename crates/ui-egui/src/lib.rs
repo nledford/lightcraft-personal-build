@@ -25,6 +25,7 @@ pub mod links;
 pub mod menus;
 mod model_setup;
 pub mod motion;
+pub mod move_task;
 pub mod panels;
 pub mod pick;
 pub mod recheck;
@@ -281,6 +282,8 @@ pub struct LightcraftApp {
     /// How far the backup the library has when LightCraft quits has got in this quit (see
     /// `panels::notices`).
     pub quit_backup: QuitBackup,
+    /// Quit Anyway was chosen while photos were moving: the move (which has no ✕) is cut short.
+    pub quit_cuts_move: bool,
     control_rx: Option<Receiver<ControlRequest>>,
     pending_screenshots: Vec<PendingShot>,
     /// Synthetic-input control requests waiting for a fresh layout and delivery (plan §4.5).
@@ -421,6 +424,10 @@ pub struct LightcraftApp {
     pub sync_ready: Option<sync::SyncReady>,
     /// A Synchronize Folder at work in the background.
     pub sync_run: Option<sync::SyncRun>,
+    /// Photos being moved to another folder in the background (`move_task`).
+    pub move_run: Option<move_task::MoveRun>,
+    /// How the last background move ended (`ui.inspect` → `move.last`).
+    pub last_move: Option<Value>,
     /// A Lightroom catalog inspect/import in progress.
     pub lightroom: Option<lightroom_import::LightroomTask>,
     /// Last terminal Lightroom result, exposed by the command's status/wait response.
