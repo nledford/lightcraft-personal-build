@@ -320,7 +320,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 );
                 // (only the kinds this import reads: the others stay in the file and its sidecar)
                 let sidecar =
-                sidecar.map(|sc| read.of_the_sidecar(sc).resolve_label(&s.catalog)).filter(|sc| *sc != crate::sidecar::SidecarData::default());
+                    sidecar.map(|sc| read.of_the_sidecar(sc).resolve_label(&s.catalog)).filter(|sc| *sc != crate::sidecar::SidecarData::default());
                 // a copy is catalogued under its new name
                 let name = Path::new(&stored).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.clone());
                 let mut p = Photo::new(id, Source::File { path: stored }, &name, &info.format, info.width, info.height, &now);

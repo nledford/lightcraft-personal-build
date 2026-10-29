@@ -1,4 +1,4 @@
-use super::filters::{covers_other_disks, merge_rules, moved_loop_in, smart_loop_in, several_smart_refused, view_rules};
+use super::filters::{covers_other_disks, merge_rules, moved_loop_in, several_smart_refused, smart_loop_in, view_rules};
 use super::gps::parse_gps;
 use super::import::{import_batch_done, import_params, list_auto_import_folder};
 use super::selection::{

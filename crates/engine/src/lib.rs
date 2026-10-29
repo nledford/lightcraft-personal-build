@@ -1171,12 +1171,12 @@ impl Session {
         self.reconcile_view();
         self.reconcile_sources();
         let mut key = (
-        self.catalog.revision,
-        format!(
-            "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
-            self.source, self.filter, self.sort, self.browse, self.library_folder, self.also_albums, self.also_library_folders
-        ),
-    );
+            self.catalog.revision,
+            format!(
+                "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
+                self.source, self.filter, self.sort, self.browse, self.library_folder, self.also_albums, self.also_library_folders
+            ),
+        );
         // What a held view is told apart by: what is shown and how, and for a smart album its rules (rules that were
         // changed ask something else). Not the checks of Missing Photos below: they fill the view in, they are
         // no other view.

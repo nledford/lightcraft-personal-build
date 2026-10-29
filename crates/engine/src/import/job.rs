@@ -381,8 +381,7 @@ impl ImportJob {
             // and names the copy when the file itself has none
             let raw = info.kind == MediaKind::Raw;
             let sidecar_file = found_sidecar;
-            let file_packet = sidecar_file.as_ref()
-                .and_then(|f| std::fs::read_to_string(f).ok());
+            let file_packet = sidecar_file.as_ref().and_then(|f| std::fs::read_to_string(f).ok());
             let from_file = file_packet.is_some();
             let packet = file_packet.or_else(|| info.xmp.clone().filter(|_| raw));
             let target = crate::crs::Target::for_file(info.kind, &info.format, info.preview_only.is_some(), &info.meta.camera);
