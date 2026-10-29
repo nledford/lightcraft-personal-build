@@ -42,7 +42,7 @@ pub(crate) use libraries::{can_switch_library, free_name};
 pub use libraries::{forget_library, library_name, new_library, open_library, open_library_name, recent_libraries, remember_library};
 use performance::performance_tab;
 use slideshow::slideshow_tab;
-pub(crate) use widgets::{choices, heading, hint, row};
+pub(crate) use widgets::{ask_first, choices, heading, hint, row};
 
 pub mod slide_layout;
 pub mod slide_overlays;

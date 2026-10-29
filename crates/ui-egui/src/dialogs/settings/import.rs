@@ -135,6 +135,11 @@ pub(super) fn xmp_sidecars(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Token
     if check(ui, "settings.autoWriteXmp", &mut xmp.auto_write, "Automatically write changes into XMP sidecars").changed() {
         app.act("library.xmpPreferences", json!({"autoWrite": xmp.auto_write}));
     }
+    hint(
+        ui,
+        t,
+        "On, supported changes to a photo's edits or metadata are written to an XMP file beside the photo automatically when possible, for other apps to read. Off, that happens when you choose Save Metadata to File in the Photo menu.",
+    );
     row(ui, t, crate::i18n::tr("Sidecar names"), |ui| {
         use lightcraft_engine::sidecar::SidecarNaming as N;
         let mut n = xmp.naming;

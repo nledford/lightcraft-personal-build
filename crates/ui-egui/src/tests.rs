@@ -26,6 +26,7 @@ mod dialog_settings;
 mod dialog_settings_filter;
 mod dialog_settings_filter_words;
 mod dialog_settings_groups;
+mod dialog_settings_trust;
 mod dialog_tab;
 mod dialogs;
 mod docking_acceptance;
