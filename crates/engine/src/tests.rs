@@ -4,6 +4,7 @@ use crate::{Selection, Session, command_specs};
 
 mod album_folder_source;
 mod album_missing;
+mod album_loops;
 mod album_order;
 mod album_remove;
 mod albums_local;
