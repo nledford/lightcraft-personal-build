@@ -2,6 +2,12 @@
 
 ## 2026-10-28
 
+### A new sort order or a reshuffle keeps your place
+- Choosing another sort, flipping its direction, pressing Reshuffle or changing the date grouping no longer leaves the
+  grid scrolled to where the photos used to be. If the active photo was on screen, the grid scrolls to wherever it
+  landed (the filmstrip follows it too); if you had scrolled away from it, the grid starts at the top of the new
+  arrangement. Rating or editing a photo under a sort it affects still never moves the scroll position.
+
 ### The Sort menus offer only what the view uses
 - In Recently Added, which always shows the newest imports first, the sort keys, Ascending / Descending and Reshuffle in
   the bottom bar's Sort popup and in View ▸ Sort are now off and nothing is checked as the order shown; a dim line says
