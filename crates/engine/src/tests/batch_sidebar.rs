@@ -432,3 +432,15 @@ fn a_copied_folder_keeps_the_order_inside_it_and_its_smart_albums_go_by_the_copi
     assert_eq!(cs.smart.as_ref().and_then(|r| r.album), Some(cx.id), "limited to the copy of X, not to X");
     assert_eq!(s.catalog.album(AlbumId(copy)).unwrap().order, None, "the copy itself is listed by name");
 }
+
+#[test]
+fn a_smart_album_is_not_copied_into_the_folder_its_rules_show_any_more_than_it_is_moved_there() {
+    let mut s = Session::new();
+    photos(&mut s, 1);
+    let folder = album(&mut s, json!({"name": "Trips", "folder": true}));
+    let smart = s.execute("album.createSmart", &json!({"name": "S", "rules": {"album": folder}})).unwrap()["id"].as_u64().unwrap();
+    assert!(s.execute("album.move", &json!({"id": smart, "parent": folder})).is_err(), "a move is refused");
+    let count = s.catalog.albums().count();
+    assert!(s.execute("album.duplicate", &json!({"ids": [smart], "parent": folder})).is_err(), "so is a copy");
+    assert_eq!(s.catalog.albums().count(), count, "nothing was copied");
+}

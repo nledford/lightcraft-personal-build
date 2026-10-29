@@ -15,6 +15,7 @@ use lightcraft_engine::LibrarySource;
 use serde_json::json;
 
 use crate::LightcraftApp;
+use crate::menu_item::MenuItem;
 use crate::multi_select::{Click, ListRows, targets};
 use crate::state::Dialog;
 use crate::widgets::register;
@@ -249,14 +250,12 @@ pub(crate) fn albums_dragged(app: &LightcraftApp, id: AlbumId) -> Vec<u64> {
 
 /// A menu item that is there but can't be used with several rows chosen, saying why.
 fn single_only(ui: &mut egui::Ui, label: &str, why: &str) {
-    ui.add_enabled(false, egui::Button::new(crate::i18n::tr(label))).on_disabled_hover_text(crate::i18n::tr(why));
+    MenuItem::new(crate::i18n::tr(label)).enabled(false).disabled_reason(crate::i18n::tr(why)).show(ui);
 }
 
 /// A menu item of a several-rows menu, registered as `sideMenu:<id>` for the control channel.
 fn item(ui: &mut egui::Ui, id: &str, label: String, enabled: bool) -> egui::Response {
-    let r = ui.add_enabled(enabled, egui::Button::new(label));
-    register(ui, format!("sideMenu:{id}"), r.rect);
-    r
+    MenuItem::new(&label).enabled(enabled).widget(format!("sideMenu:{id}")).show(ui)
 }
 
 /// The context menu for several albums chosen at once.
@@ -289,17 +288,20 @@ pub(crate) fn albums_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, ids: &[u64
     };
     // …nor where they all are
     let all_in = |folder: AlbumId| chosen.iter().all(|a| cat.album(*a).is_some_and(|a| a.parent == Some(folder)));
-    let mut folders: Vec<(u64, String)> =
-        cat.albums().filter(|f| f.folder && !inside_chosen(f.id) && !all_in(f.id)).map(|f| (f.id.0, f.name.clone())).collect();
+    let mut folders: Vec<(u64, String)> = cat
+        .albums()
+        .filter(|f| f.folder && !inside_chosen(f.id) && !all_in(f.id) && chosen.iter().all(|a| cat.album_move_would_loop(*a, f.id).is_none()))
+        .map(|f| (f.id.0, f.name.clone()))
+        .collect();
     folders.sort_by_key(|(_, name)| name.to_lowercase());
     let any_nested = chosen.iter().any(|a| cat.album(*a).is_some_and(|a| a.parent.is_some()));
-    ui.menu_button(crate::i18n::tr_format!("Move {n} Albums to", n = n), |ui| {
+    MenuItem::new(&crate::i18n::tr_format!("Move {n} Albums to", n = n)).submenu(ui, |ui| {
         if item(ui, "albums:moveTop", crate::i18n::tr("Top Level").to_string(), any_nested).clicked() {
             app.act("album.move", json!({"ids": ids, "parent": null}));
             ui.close();
         }
         for (folder, name) in &folders {
-            if ui.button(name).clicked() {
+            if MenuItem::new(name).show(ui).clicked() {
                 app.act("album.move", json!({"ids": ids, "parent": folder}));
                 ui.close();
             }
@@ -352,16 +354,16 @@ pub(crate) fn folder_targets(app: &LightcraftApp, path: &str) -> Vec<String> {
 pub(crate) fn folders_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, paths: &[String]) {
     use lightcraft_catalog::ColorLabel;
     let n = paths.len();
-    ui.menu_button(crate::i18n::tr("Color Label"), |ui| {
+    MenuItem::new(crate::i18n::tr("Color Label")).submenu(ui, |ui| {
         for l in ColorLabel::ALL {
             let name = crate::i18n::color_label(&app.session.catalog, l);
-            if ui.button(name).clicked() {
+            if MenuItem::new(&name).show(ui).clicked() {
                 app.act("folder.label", json!({"paths": paths, "label": format!("{l:?}").to_lowercase()}));
                 ui.close();
             }
         }
         ui.separator();
-        if ui.button(crate::i18n::tr("None")).clicked() {
+        if MenuItem::new(crate::i18n::tr("None")).show(ui).clicked() {
             app.act("folder.label", json!({"paths": paths, "label": "none"}));
             ui.close();
         }

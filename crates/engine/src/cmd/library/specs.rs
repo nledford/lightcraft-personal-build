@@ -124,6 +124,12 @@ fn duplicate_albums(s: &mut Session, p: &Value) -> Result<Value> {
     if tops.is_empty() {
         return Err(bad(C, "cycle in album folders"));
     }
+    // as for `album.move`: a smart album's copy can't go into a folder its rules show
+    if let Some(Some(folder)) = into {
+        for top in &tops {
+            moved_loop_in(&s.catalog, *top, Some(folder)).map_or(Ok(()), |why| Err(bad(C, why)))?;
+        }
+    }
     let mut children = std::collections::BTreeMap::<AlbumId, Vec<AlbumId>>::new();
     for album in s.catalog.albums() {
         if let Some(parent) = album.parent {
