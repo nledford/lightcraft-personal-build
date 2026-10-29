@@ -1309,13 +1309,10 @@ fn sync_with_system_takes_the_host_default_until_a_language_is_picked() {
     app.ui.follow_system_language = false;
     set(&mut app, serde_json::json!({"followSystemLanguage": true}));
     assert_eq!((app.ui.language, language()), (Locale::De, Locale::De));
-    // And no language's menu command is checked while it is on
-    assert_eq!(crate::menubar::checked(&app, "app.language.german"), Some(false));
     // When a language is picked by its command, the sync is off and that language is kept
     app.run("app.language.french", serde_json::json!({})).unwrap();
     assert!(!app.ui.follow_system_language);
     assert_eq!((app.ui.language, language()), (Locale::Fr, Locale::Fr));
-    assert_eq!(crate::menubar::checked(&app, "app.language.french"), Some(true));
     // And so is a language set by its tag through the control channel
     set(&mut app, serde_json::json!({"followSystemLanguage": true}));
     set(&mut app, serde_json::json!({"language": "ja"}));

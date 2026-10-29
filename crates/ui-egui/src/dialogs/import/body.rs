@@ -41,10 +41,7 @@ pub(super) fn dup_counts(d: &ImportDialog) -> (usize, usize, usize) {
     let in_source = d.candidates.iter().filter(|c| c.duplicate.as_deref() == Some("content") && c.existing.is_none()).count() - twins;
     // (a browsed photo isn't offered while copying: it counts as already there)
     let browsed = if d.copy { (0..d.candidates.len()).filter(|i| d.is_browsed(*i)).count() } else { 0 };
-    let dups = (d.candidates.iter().filter(|c| c.duplicate.is_some()).count() + browsed)
-        .saturating_sub(trashed + twins)
-        .saturating_sub(in_source)
-        .saturating_sub(browsed);
+    let dups = (d.candidates.iter().filter(|c| c.duplicate.is_some()).count() + browsed).saturating_sub(trashed + twins).saturating_sub(in_source);
     (dups, in_source, trashed)
 }
 
