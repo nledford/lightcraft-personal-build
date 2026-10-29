@@ -788,7 +788,7 @@ fn cell(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, r: Rect, view: 
     let flags = ThumbFlags { square, selected, active, onscreen, ppp, aspect: photo_aspect(Some(&*photo)) };
     let (photo_rect, failure) = paint_cell_thumbnail(app, p, &t, id, img_rect, flags);
     // labels and badges
-    paint_cell_caption(app, p, &t, &photo, r, square);
+    paint_cell_caption(app, p, &t, &photo, r, CaptionFlags { square, selected });
     // Stars on hover: the decision marks (flag, colour label) always show; the stars and the edited
     // mark only while the photo is hovered or selected, so a mostly rated library stays clean.
     let engaged = resp.hovered() || selected;
@@ -866,7 +866,8 @@ fn paint_cell_thumbnail(
     (photo_rect, failure)
 }
 
-fn paint_cell_caption(app: &LightcraftApp, p: &egui::Painter, t: &Tokens, photo: &lightcraft_catalog::Photo, r: Rect, square: bool) {
+fn paint_cell_caption(app: &LightcraftApp, p: &egui::Painter, t: &Tokens, photo: &lightcraft_catalog::Photo, r: Rect, flags: CaptionFlags) {
+    let CaptionFlags { square, selected } = flags;
     if square && app.ui.show_filenames {
         let m = &photo.meta;
         let name = match app.ui.grid_info.as_str() {
@@ -888,13 +889,21 @@ fn paint_cell_caption(app: &LightcraftApp, p: &egui::Painter, t: &Tokens, photo:
             _ => photo.file_name.rsplit_once('.').map(|(n, _)| n.to_string()).unwrap_or(photo.file_name.clone()),
         };
         let fmt = photo.format.clone();
-        let g = p.layout_no_wrap(fmt, t.micro_strong(), t.text_label);
+        // (the format's chip is dark in every theme, so its letters are light in every theme: in
+        // the light themes they were the label colour, dark on dark)
+        let chip = Color32::from_gray(26);
+        let ink = t.ink_on(chip);
+        let g = p.layout_no_wrap(fmt, t.micro_strong(), ink);
         let br = Rect::from_min_size(pos2(r.right() - g.size().x - 14.0, r.top() + 5.0), g.size() + vec2(8.0, 3.0));
+        // (a chosen cell is lighter than the cell the dim text is made for, or darker, and a
+        // colour label tints either: the line is made legible on the cell as it is)
+        let base = if selected { t.cell_selected } else { t.cell };
+        let dim = t.legible(t.text_dim, crate::theme::label_background(base, photo.label, selected), 4.5);
         // (the line ends before the format: it used to run on under it)
-        let line = crate::widgets::one_line(p, &name, t.caption(), t.text_dim, br.left() - 6.0 - (r.left() + 8.0));
-        p.galley(pos2(r.left() + 8.0, r.top() + 12.0 - line.size().y / 2.0), line, t.text_dim);
-        p.rect_filled(br, 2.0, Color32::from_gray(26));
-        p.galley(br.min + vec2(4.0, 1.5), g, t.text_label);
+        let line = crate::widgets::one_line(p, &name, t.caption(), dim, br.left() - 6.0 - (r.left() + 8.0));
+        p.galley(pos2(r.left() + 8.0, r.top() + 12.0 - line.size().y / 2.0), line, dim);
+        p.rect_filled(br, 2.0, chip);
+        p.galley(br.min + vec2(4.0, 1.5), g, ink);
     }
 }
 
@@ -954,6 +963,12 @@ struct ThumbFlags {
     onscreen: bool,
     ppp: f32,
     aspect: f32,
+}
+
+/// What [`paint_cell_caption`] needs to know about the cell.
+struct CaptionFlags {
+    square: bool,
+    selected: bool,
 }
 
 /// How `cell` is drawn: the layout, whether it is on screen, the pixel scale, and the photo's stack position.

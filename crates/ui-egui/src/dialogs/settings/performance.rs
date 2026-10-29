@@ -112,7 +112,7 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
             "settingsSmartFolder",
             &path,
             egui::TextStyle::Body.resolve(ui.style()),
-            if available { t.text } else { t.reject },
+            if available { t.text } else { t.text_error() },
             if custom { 0.0 } else { label_width(ui, "(library default)", egui::TextStyle::Body) },
         );
         if !custom {
