@@ -264,6 +264,9 @@ pub struct LightcraftApp {
     /// A text field had the keyboard at the end of the last frame. egui drops the focus as Esc
     /// arrives, before the shortcuts are read, so this is how Esc there stays the field's own.
     pub text_focus: bool,
+    /// A plain button (the welcome's, a sample thumbnail, the banner's) had the keyboard at the end of the last frame: not a
+    /// text field, so shortcuts act, but Esc there only lets go of the button, as with a text field.
+    pub(crate) plain_button_focus: bool,
     /// The host is [`headless::Headless`] (it answers viewport screenshot commands itself).
     pub headless_host: bool,
     /// The library is backed up by itself when its schedule says a backup is due
@@ -488,6 +491,8 @@ pub struct LightcraftApp {
     pub(crate) welcome_samples: Option<panels::empty_library::SampleStrip>,
     /// The welcome was drawn this frame (its thumbnails go the frame after it isn't).
     pub(crate) welcome_drawn: bool,
+    /// The new library's welcome has put the keyboard on Import Photos… (once per library opened).
+    pub(crate) welcome_focused: bool,
     /// The list of running tasks under the top bar's bell is open (as of the last frame).
     pub activity_open: bool,
     /// `view.tasks` asked for the list to be opened or closed; the top bar does it on its next frame.

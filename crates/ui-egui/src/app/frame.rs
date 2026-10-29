@@ -289,16 +289,18 @@ impl LightcraftApp {
         // (a row's id in the last library may name another row in this one)
         self.ui.sidebar_cursor = None;
         panels::side_keys::forget_rows(ctx);
+        // a new library's welcome puts the keyboard on Import Photos… once for each library
+        self.welcome_focused = false;
         if let Some(l) = self.session.library.as_ref().filter(|l| l.on_disk) {
-            let path = l.dir.to_string_lossy().into_owned();
-            panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);
-            // it is open: whatever an earlier check said about it is over
-            self.recent_checks.opened(&path);
-            // when, for the launch window (issue #1290); only the listed libraries keep a time
-            let settings = &mut self.ui.settings;
-            settings.recent_opened.insert(path, (self.session.clock)());
-            settings.recent_opened.retain(|p, _| settings.recent_libraries.contains(p));
-        }
+        let path = l.dir.to_string_lossy().into_owned();
+        panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);
+        // it is open: whatever an earlier check said about it is over
+        self.recent_checks.opened(&path);
+        // when, for the launch window (issue #1290); only the listed libraries keep a time
+        let settings = &mut self.ui.settings;
+        settings.recent_opened.insert(path, (self.session.clock)());
+        settings.recent_opened.retain(|p, _| settings.recent_libraries.contains(p));
+    }
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
     }
 
@@ -424,6 +426,7 @@ impl LightcraftApp {
                 panels::notices::restore_prompt_pointer(self, &ctx);
             }
             (self.next_widgets, self.next_widget_hits) = widgets::take_registries(&ctx);
+            self.note_keyboard_owner(&ctx);
             self.end_frame(&ctx, t0);
             return;
         }
@@ -471,7 +474,7 @@ impl LightcraftApp {
             panels::notices::restore_prompt_pointer(self, &ctx);
         }
         (self.next_widgets, self.next_widget_hits) = widgets::take_registries(&ctx);
-        self.text_focus = ctx.egui_wants_keyboard_input();
+        self.note_keyboard_owner(&ctx);
         self.end_frame(&ctx, t0);
     }
 }

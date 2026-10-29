@@ -112,6 +112,7 @@ mod unsaved;
 mod view_cost;
 mod wb_selector;
 mod welcome;
+mod welcome_access;
 mod zoom;
 mod zoom_keys;
 

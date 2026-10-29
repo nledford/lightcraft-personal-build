@@ -48,6 +48,7 @@ impl LightcraftApp {
             native_shortcuts: Default::default(),
             recording_shortcut: None,
             text_focus: false,
+            plain_button_focus: false,
             headless_host: false,
             backs_up_by_itself: true,
             notices: vec![],
@@ -151,6 +152,7 @@ impl LightcraftApp {
             welcome_seen: None,
             welcome_samples: None,
             welcome_drawn: false,
+            welcome_focused: false,
             model_setup: Default::default(),
         }
     }
@@ -762,6 +764,20 @@ impl LightcraftApp {
         panels::left::follow_shown(self, ctx);
         self.logic_background(ctx);
         self.perf.logic_ms = monotonic_ms() - t0;
+    }
+
+    /// Who has the keyboard as the frame ends: a text field (`text_focus`: the native menu leaves it its letters and edit
+    /// keys) or a plain button (not a text field the person is typing in, but Esc there still only lets go).
+    /// The native menu reads `text_focus` in the next frame's `logic`, and egui draws no frame until the next
+    /// input when nothing asks for one: a change asks for it, so the menu's letters follow the focus now, not at
+    /// the key's release (Shift+Tab from a plain button into a field).
+    pub(crate) fn note_keyboard_owner(&mut self, ctx: &egui::Context) {
+        let before = self.text_focus;
+        self.plain_button_focus = widgets::plain_button_has_focus(ctx);
+        self.text_focus = ctx.egui_wants_keyboard_input() && !self.plain_button_focus;
+        if self.text_focus != before {
+            ctx.request_repaint();
+        }
     }
 
     /// Frame timings once layout is done (`t0`: when layout started).
