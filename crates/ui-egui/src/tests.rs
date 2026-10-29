@@ -12,6 +12,7 @@ mod button_migration;
 mod canvas_keys;
 mod canvas_pan;
 mod capture_time;
+mod carried_text_field_menu;
 mod check;
 mod compare;
 mod copy_paste_dialogs;
