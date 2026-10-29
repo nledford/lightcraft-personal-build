@@ -171,6 +171,7 @@ fn filmstrip_rings_the_active_placeholder_in_the_themes_colors() {
         h.step();
         h.step();
         assert!(h.app.renderer.thumb(active).is_none(), "the thumbnail is still loading");
+        assert_eq!(crate::theme::current(&h.view.ctx).map(|k| k.id()), Some(theme), "the theme took effect");
         let t = crate::theme::Tokens::get(&h.view.ctx);
         assert_eq!(rings_in(&h, active, t.ring_active).len(), 1, "the active cell has the theme's ring in {theme}");
         assert_eq!(rings_in(&h, active, t.ring_inner).len(), 1, "and its inner line in {theme}");
