@@ -1447,9 +1447,9 @@ fn nodes_ui(ui: &mut egui::Ui, nodes: &[MenuNode], clicked: &mut Option<(String,
         if long && let Some(h) = row_h {
             let clip = ui.clip_rect();
             if top + h < clip.top() || top > clip.bottom() {
-                // the row's place, and its one auto id, so the rows after it keep theirs
+                // the row's place and the auto ids a drawn row uses, so the rows after it keep theirs
                 ui.add_space(h);
-                ui.skip_ahead_auto_ids(1);
+                ui.skip_ahead_auto_ids(crate::menu_item::MenuItem::AUTO_IDS);
                 continue;
             }
         }

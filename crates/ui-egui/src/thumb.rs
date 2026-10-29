@@ -527,7 +527,11 @@ fn marks_row(ctx: &egui::Context, p: &Painter, t: &Tokens, m: &Metrics, th: &Thu
         x += m.flag;
     }
     let shade = |from: f32, to: f32| {
-        egui::Shape::rect_filled(Rect::from_min_max(pos2(from, bar.top() + 1.0), pos2(to, bar.bottom() - 1.0)), 3.0, crate::transparency::hud(p.ctx(), 200))
+        egui::Shape::rect_filled(
+            Rect::from_min_max(pos2(from, bar.top() + 1.0), pos2(to, bar.bottom() - 1.0)),
+            3.0,
+            crate::transparency::hud(p.ctx(), 200),
+        )
     };
     if x > left_start + m.pad / 2.0 {
         p.set(left_shade, shade(left_start, (x + m.pad / 2.0).min(bar.right())));

@@ -460,7 +460,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, photo: PhotoId, lead: Le
     }
 }
 
-/// Run a row: like the menu bar's, and a command that refuses says why.
+/// Run a row as a click in the menu bar does, and a command that refuses says why.
 fn run(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, params: Value) {
     if id == "photo.moveToFolder" {
         move_to_folder(app, ctx);
@@ -468,9 +468,9 @@ fn run(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, params: Value) {
     }
     let preset = params.get("preset").is_some();
     let applied = (id == "preset.apply").then(|| params["id"].as_str().map(str::to_string)).flatten();
-    match menubar::run_item(app, id, params) {
-        Ok(r) => after_run(app, ctx, id, &r, (preset, applied.as_deref())),
-        Err(e) => app.toast_error(ctx, e),
+    // (a command that refuses says why in the person's words, as a click in the menu bar does)
+    if let Some(r) = menubar::act_item(app, id, params) {
+        after_run(app, ctx, id, &r, (preset, applied.as_deref()));
     }
 }
 
