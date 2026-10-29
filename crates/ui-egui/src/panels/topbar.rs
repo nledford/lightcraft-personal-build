@@ -184,6 +184,11 @@ fn right_icons(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, full: Rec
         // (the tooltip names the key the command has now; screen readers hear the name alone)
         crate::widgets::announce(&resp, crate::i18n::tr(tip));
         let resp = crate::kbd::tooltip_with_shortcut(resp, crate::i18n::tr(tip), cmd, &app.ui.settings.keymap, mac);
+        // (a screen reader hears the label as the name and, after a pause, the key alone as the description, not the whole tooltip)
+        if let Some(sc) = crate::shortcuts::shortcut_of(&app.ui.settings.keymap, cmd) {
+            let key = crate::menubar::shortcut_text(sc, mac);
+            resp.ctx.accesskit_node_builder(resp.id, |node| node.set_description(key));
+        }
         register(ui, format!("icon:{id}"), r);
         let warn = id == "cloud" && unsaved.is_some();
         let colour = if warn {

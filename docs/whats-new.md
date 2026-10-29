@@ -2,6 +2,14 @@
 
 ## 2026-10-28
 
+### Screen readers no longer read the shortcut with every button name
+- Icon-only buttons (the tool strip, the view buttons and Before/After and Filmstrip in the bottom bar, the top bar's
+  Import Photos…, the mask overlay and White Balance Selector buttons, the slideshow controls) are now announced by
+  their label alone ("Edit", "Presets", "Photo Grid"), and the shortcut is the button's description ("E", "Shift+P",
+  "G"), which VoiceOver reads after a pause or on request. Before, it read "Edit (E)" every time it landed on the
+  button. This holds in every language, including Japanese and Traditional Chinese, which write the shortcut in
+  full-width brackets. The tooltip you see on hover is unchanged.
+
 ### The empty photo grid names Import Photos' shortcut as it is bound
 - When a view is empty and the way in is File ▸ Import Photos…, the message under "No photos" used a fixed "Cmd+Shift+I" (or a translation's fixed copy of it) whatever the platform or the binding. It now shows the key as the menu bar writes it (on a Mac its glyphs, elsewhere Ctrl+Shift+I) on its own line under the sentence, follows a remapped key, and names no key when Import Photos has none. The sentence now wraps in a narrow window instead of running off its edge.
 
