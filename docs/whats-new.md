@@ -22,6 +22,9 @@
   Shortcuts dialog now lists its modifiers in the order macOS menus use, Control, Option, Shift, Command: `⇧⌘I`
   where it used to say `⌘⇧I`. Windows and Linux are unchanged.
 
+### The Edit menu loses its Language submenu
+- Choose the interface language in Settings ▸ General ▸ Language, which already lists every language. Edit no longer carries 18 more rows for it, on any platform.
+
 ## 2026-10-26
 
 ### The sidebar from the keyboard
