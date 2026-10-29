@@ -294,7 +294,7 @@ fn backups(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     // a folder someone chose that turns out to be on the same drive is said in the caution colour.
     let aside = |ui: &mut egui::Ui, text: &str, color: egui::Color32| {
         row(ui, t, "", |ui| {
-            ui.add(egui::Label::new(RichText::new(crate::i18n::tr(text)).size(11.0).color(color)).wrap());
+            ui.add(egui::Label::new(RichText::new(crate::i18n::tr(text)).font(t.caption()).color(color)).wrap());
         });
     };
     if !away && look.shares_the_drive == Some(true) {
