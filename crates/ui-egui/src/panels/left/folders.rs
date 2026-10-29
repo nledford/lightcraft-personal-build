@@ -713,7 +713,7 @@ fn folder_drop_target(
     };
     let count = files_moved(&photos, &n.path);
     let all_here = !photos.is_empty() && photos.iter().all(|p| is_in_folder(p, &n.path));
-    let released = ui.input(|i| i.pointer.any_released());
+    let released = ui.input(|i| i.pointer.primary_released());
     if let Some(why) = refused {
         crate::panels::grid::refuse_drop(app, ui.ctx(), crate::i18n::tr("Can't be moved here").to_string(), why, released);
         return;

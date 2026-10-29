@@ -44,6 +44,7 @@ mod folder_move_message;
 mod grading;
 mod grid;
 mod grid_badges;
+mod grid_drag;
 mod guided_guides;
 mod histogram_drag;
 mod import_read;
