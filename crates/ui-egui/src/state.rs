@@ -6,7 +6,7 @@ mod dialog;
 mod settings;
 mod view;
 
-pub use dialog::{Dialog, NameEdit, SyncCounts, default_preset_groups};
+pub use dialog::{Dialog, MoveProblem, MoveProblemKind, NameEdit, SyncCounts, default_preset_groups};
 pub use settings::{
     AppSettings, AppearanceMode, DarkTheme, EditFile, EditFormat, EditSpace, GridBadges, KeywordChips, LOUPE_EDGE_CEILING, LOUPE_EDGE_STEP,
     LaunchLibrary, LightTheme, LightroomImport, MIN_TEXTURE_SIDE, PHOTOCRAFT, PREVIEW_LIMITS, RECENT_LIBRARIES, STANDARD_PREVIEW_EDGE, StartupView,
@@ -248,6 +248,13 @@ pub struct UiState {
     /// An album or folder row being dragged in the sidebar (dropped on a folder to move it there).
     #[serde(skip)]
     pub dragging_album: Option<u64>,
+    /// A Folders row being dragged in the sidebar (its path; dropped on another row to move the
+    /// folder there on disk).
+    #[serde(skip)]
+    pub dragging_folder: Option<String>,
+    /// The library `dragging_folder` was picked up in (`Session::library_generation`).
+    #[serde(skip)]
+    pub dragging_folder_library: u64,
     /// A sidebar section being dragged by its header (dropped between sections to move it there).
     #[serde(skip)]
     pub dragging_section: Option<crate::sidebar::SidebarSection>,
@@ -334,6 +341,10 @@ pub struct UiState {
     /// A keyword being dragged in the Keyword List (onto another to nest it).
     #[serde(skip)]
     pub dragging_keyword: Option<String>,
+    /// Choosing several rows of a sidebar list: the rows drawn and the anchor of each list, and
+    /// the other keywords picked in the Keyword List.
+    #[serde(skip)]
+    pub side: crate::panels::side_select::SideState,
     /// A running slideshow (full screen; see [`crate::panels::slideshow`]).
     #[serde(skip)]
     pub slideshow: Option<Box<crate::panels::slideshow::Run>>,
@@ -365,6 +376,11 @@ pub struct UiState {
     /// [`LightcraftApp::act`] reads to tell whether a command made a toast of its own.
     #[serde(skip)]
     pub toasts_shown: u64,
+    /// The toast that offers Undo: its text, how many undo steps the session had committed, and how many the undo
+    /// stack held, when the action it tells of finished. The toast shows the button only while its text is still on
+    /// screen and the stacks are as that action left them, so Undo can only reach that action ([`crate::LightcraftApp::toast_undoable`]).
+    #[serde(skip)]
+    pub toast_undo: Option<(String, u64, usize)>,
     /// The result of the last Find Missing Photos (it searches in the background).
     #[serde(skip)]
     pub last_find_missing: Option<serde_json::Value>,
@@ -478,6 +494,8 @@ impl Default for UiState {
             reveal_keyword: None,
             reveal_folder: None,
             dragging_album: None,
+            dragging_folder: None,
+            dragging_folder_library: 0,
             dragging_section: None,
             curve_channel: "parametric".into(),
             mixer_mode: "hue".into(),
@@ -514,6 +532,7 @@ impl Default for UiState {
             sidebar_trees: Default::default(),
             keyword_list_selected: None,
             dragging_keyword: None,
+            side: Default::default(),
             info_overlay: InfoOverlay::Off,
             brief_info: BriefInfo::default(),
             layout_image: LayoutImage::default(),
@@ -527,6 +546,7 @@ impl Default for UiState {
             reference: None,
             toasts: Vec::new(),
             toasts_shown: 0,
+            toast_undo: None,
             last_find_missing: None,
             last_find_missing_result: None,
             #[cfg(test)]

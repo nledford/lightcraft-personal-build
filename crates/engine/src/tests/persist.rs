@@ -407,10 +407,11 @@ fn an_undo_step_that_cannot_be_rolled_back_whole_is_journaled_and_can_be_taken_b
     s.undo.push(crate::UndoEntry {
         label: "Broken".into(),
         op: torn,
-        folder: None,
+        folders: Vec::new(),
         retry_inverse: Vec::new(),
         retry_sidecars: Vec::new(),
         trash: None,
+        folders_done: Vec::new(),
     });
     let (undo_len, redo_len) = (s.undo.len(), s.redo.len());
 
@@ -440,17 +441,17 @@ fn a_partly_applied_folder_step_keeps_its_folder_move() {
         || Op::Batch { ops: vec![Op::RemovePhoto { id: ids[0] }, Op::RemoveStack { id: stack }, Op::SetRating { id: PhotoId(9_999), rating: 1 }] };
 
     // the folder was renamed before the commit: the step that takes the change back renames it back
-    let folder = crate::FolderMove { from: "/new".into(), to: "/old".into() };
+    let folder = crate::FolderMove { from: "/new".into(), to: "/old".into(), on_disk: true };
     let e = s.commit_with_folder("Rename Folder", torn(), folder.clone()).unwrap_err();
     assert!(matches!(e, EngineError::Catalog(CatalogError::PartlyApplied { .. })), "{e:?}");
-    assert_eq!(s.undo.last().and_then(|u| u.folder.clone()), Some(folder));
+    assert_eq!(s.undo.last().map(|u| u.folders.clone()), Some(vec![folder]));
     // (a failure that changed nothing leaves no step, so no folder to put on one)
     let steps = s.undo.len();
     assert!(
         s.commit_with_folder(
             "Rename Folder",
             Op::SetRating { id: PhotoId(9_999), rating: 1 },
-            crate::FolderMove { from: "/a".into(), to: "/b".into() }
+            crate::FolderMove { from: "/a".into(), to: "/b".into(), on_disk: true }
         )
         .is_err()
     );
@@ -473,10 +474,11 @@ fn a_partly_applied_undo_step_keeps_its_retry_inverses() {
     s.undo.push(crate::UndoEntry {
         label: "Broken".into(),
         op: step,
-        folder: None,
+        folders: Vec::new(),
         retry_inverse: vec![fix.clone()],
         retry_sidecars: Vec::new(),
         trash: None,
+        folders_done: Vec::new(),
     });
     assert!(s.execute("edit.undo", &json!({})).is_err());
     let Some(Op::Batch { ops }) = s.redo.last().map(|r| r.op.clone()) else { panic!("the step that takes it back is a batch") };

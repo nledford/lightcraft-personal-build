@@ -5,9 +5,9 @@ use super::{
     AiModel, Caches, CommandError, ControlRequest, ControlResponse, ERROR_TOAST_SECONDS, ErrorKind, GESTURE_TIMEOUT_MS, LightcraftApp,
     MAX_PENDING_GESTURES, MAX_PENDING_SHOTS, MAX_SHOT_BYTES, MAX_SHOT_TOTAL_BYTES, MAX_TEXTURE_SIDE, PendingGesture, PendingShot, Perf, QuitBackup,
     REFUSAL_SECONDS, Receiver, Refusal, SCREEN_PROFILE, SCREENSHOT_FALLBACK_MS, SCREENSHOT_SETTLE_MS, SHOT_FORCE_BUSY_MS, SHOT_SETTLE_FRAMES,
-    SHOT_SETTLE_MS, Sender, Session, ShotGeometry, TOAST_SECONDS, UiState, Value, docking, drop_overlay, export_task, focus_scan, frame_rate,
-    headless, i18n, import, lightroom_import, menus, merge, model_setup, panels, pick, recheck, refusal_toast, render, shortcuts, slideshow_export,
-    state, sync, tasks, theme, trash_run, updates_ui, widgets,
+    SHOT_SETTLE_MS, Sender, Session, ShotGeometry, TOAST_SECONDS, UNDO_TOAST_SECONDS, UiState, Value, docking, drop_overlay, export_task, focus_scan,
+    frame_rate, headless, i18n, import, lightroom_import, menus, merge, model_setup, panels, pick, recheck, refusal_toast, render, shortcuts,
+    slideshow_export, state, sync, tasks, theme, trash_run, updates_ui, widgets,
 };
 
 mod control;
@@ -44,11 +44,13 @@ impl LightcraftApp {
             backs_up_by_itself: true,
             notices: vec![],
             updates_rt: Default::default(),
+            move_notice: None,
             quit_prompt: None,
             notice_input: Default::default(),
             switch_prompt: None,
             quit_confirmed: false,
             quit_backup: QuitBackup::default(),
+            quit_cuts_move: false,
             control_rx: None,
             pending_screenshots: vec![],
             pending_gestures: vec![],
@@ -119,6 +121,13 @@ impl LightcraftApp {
             trash_run: None,
             trash_erase_later: None,
             sync_queued: None,
+            move_run: None,
+            last_move: None,
+            relocate: None,
+            relocate_left_behind: Vec::new(),
+            relocate_asked: None,
+            relocate_library: 0,
+            relocate_last: None,
             lightroom: None,
             lightroom_last: None,
             lightroom_result: None,
@@ -245,6 +254,19 @@ impl LightcraftApp {
     pub fn quiet(&mut self, id: &str, params: Value) -> Option<Value> {
         self.run_told(id, params).ok()
     }
+    /// [`Self::act`] for a caller that hands the refusal on (a dialog's confirm, which the control
+    /// channel answers with it): the toast says the reason, the `Err` is the whole error.
+    pub(crate) fn act_told(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        let shown = self.ui.toasts_shown;
+        self.run_told(id, params).map_err(|refusal| {
+            let now = self.tick_now();
+            // (a toast the command made itself says what did happen: kept ahead of the reason, as in `act`)
+            let made = (self.ui.toasts_shown != shown).then(|| self.ui.toasts.pop()).flatten().map(|t| t.text);
+            let said = refusal_toast(made, &refusal);
+            self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
+            refusal.error
+        })
+    }
 
     /// [`Self::run`], keeping what a refusal says to a person apart from the whole error.
     fn run_told(&mut self, id: &str, params: Value) -> Result<Value, Refusal> {
@@ -334,6 +356,12 @@ impl LightcraftApp {
                 // no detector yet: offer it (its terms first) instead of only saying so
                 if id == "faces.detect" && refusal.kind == ErrorKind::ModelMissing(AiModel::FaceDetector) {
                     panels::faces::offer_detector(self);
+                }
+                // a move running in the background is in the way: said wherever the command came from (a menu, a key, a
+                // button), since the status line isn't drawn
+                if refusal.kind == ErrorKind::MoveInProgress {
+                    let text = refusal.error.clone();
+                    self.toast_move_in_progress(&text);
                 }
             }
             Ok(v) if id == "faces.detect" => self.ui.status = detect_summary(v),
@@ -704,6 +732,7 @@ impl LightcraftApp {
     pub fn toast_for(&mut self, _ctx: &egui::Context, text: impl Into<String>, secs: f64) {
         let t = self.tick_now();
         self.ui.show_toast(t, text.into(), secs, None);
+        self.ui.toast_undo = None;
     }
 
     /// Reverse geocoding: say how a place-names download ended (a failure stays readable, with what to do).
@@ -797,6 +826,7 @@ impl LightcraftApp {
     pub fn toast_error_for(&mut self, _ctx: &egui::Context, text: impl Into<String>, secs: f64) {
         let t = self.tick_now();
         self.ui.show_toast(t, text.into(), secs.max(ERROR_TOAST_SECONDS), None);
+        self.ui.toast_undo = None;
     }
 
     /// The toast for what a drop of photos came to (`library.import`'s report, via
@@ -809,6 +839,21 @@ impl LightcraftApp {
         } else {
             self.toast(ctx, notice);
         }
+    }
+
+    /// Tell the person that a background move of photos is in the way of what they asked (stays 6 s). The time is the
+    /// app clock's, which a menu click that arrives before the next frame reads as well.
+    fn toast_move_in_progress(&mut self, text: &str) {
+        let now = self.tick_now();
+        self.ui.show_toast(now, text.to_string(), 6.0, None);
+    }
+
+    /// Called as the app exits, before the library is saved and closed: a move whose worker has
+    /// already finished (its result waiting for the next frame) is applied now, so the catalog
+    /// matches the files. A worker still running is abandoned, as quitting always did.
+    pub fn finish_ready_move(&mut self) {
+        let ctx = self.tasks.repaint.clone().unwrap_or_default();
+        crate::move_task::poll(self, &ctx);
     }
 
     /// The process is about to end (settings and library are saved by then): make sure nothing is
@@ -900,6 +945,32 @@ impl LightcraftApp {
         self.ui.dragging_photos = None;
         self.ui.dragging_section = None;
         self.ui.dragging_keyword = None;
+    }
+
+    /// A toast for an action that has just committed one undo step (a drop or a menu move that moved, added or tagged
+    /// photos): it carries an Undo button for [`UNDO_TOAST_SECONDS`], until the next step is committed or
+    /// the toast is replaced, whichever comes first.
+    pub fn toast_undoable(&mut self, ctx: &egui::Context, text: impl Into<String>) {
+        let text = text.into();
+        self.toast_for(ctx, text.clone(), UNDO_TOAST_SECONDS);
+        self.ui.toast_undo = Some((text, self.session.commits(), self.session.undo.len()));
+    }
+
+    /// Whether the newest toast on screen offers Undo: it is the one [`Self::toast_undoable`] showed, nothing has been
+    /// committed since (a later step would make Undo reach that instead), the undo stack is as the drop left it
+    /// (Edit > Undo from the menu or a new library would change it, and a click would then undo something else),
+    /// and no dialog is open over the toast.
+    pub fn toast_offers_undo(&self) -> bool {
+        match (self.ui.toast(), &self.ui.toast_undo) {
+            (Some(shown), Some((text, commits, steps))) => {
+                shown.text == *text
+                    && *commits == self.session.commits()
+                    && *steps == self.session.undo.len()
+                    && self.session.redo.is_empty()
+                    && self.ui.dialog.is_none()
+            }
+            _ => false,
+        }
     }
 
     /// Lay out the whole window: input/setup for the known UI phase, then presentation, then the

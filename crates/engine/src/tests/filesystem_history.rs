@@ -583,8 +583,15 @@ fn a_partly_applied_step_whose_files_cannot_be_moved_back_keeps_what_is_left_of_
                 Op::SetRating { id: PhotoId(9_999), rating: 1 },
             ],
         };
-        let entry =
-            crate::UndoEntry { label: "Broken".into(), op: step, folder: None, retry_inverse: Vec::new(), retry_sidecars: Vec::new(), trash: None };
+        let entry = crate::UndoEntry {
+            label: "Broken".into(),
+            op: step,
+            folders: Vec::new(),
+            retry_inverse: Vec::new(),
+            retry_sidecars: Vec::new(),
+            trash: None,
+            folders_done: Vec::new(),
+        };
         if redo {
             s.redo.push(entry);
         } else {
@@ -631,8 +638,15 @@ fn what_is_left_of_a_rollback_moves_no_file_that_is_already_back() {
                 Op::SetRating { id: PhotoId(9_999), rating: 1 },
             ],
         };
-        let entry =
-            crate::UndoEntry { label: "Broken".into(), op: step, folder: None, retry_inverse: Vec::new(), retry_sidecars: Vec::new(), trash: None };
+        let entry = crate::UndoEntry {
+            label: "Broken".into(),
+            op: step,
+            folders: Vec::new(),
+            retry_inverse: Vec::new(),
+            retry_sidecars: Vec::new(),
+            trash: None,
+            folders_done: Vec::new(),
+        };
         if redo {
             s.redo.push(entry);
         } else {
@@ -731,8 +745,15 @@ fn three_photos_whose_old_names_are_empty(redo: bool, through_rename: bool) {
                 Op::SetRating { id: PhotoId(9_999), rating: 1 },
             ],
         };
-        let entry =
-            crate::UndoEntry { label: "Broken".into(), op: step, folder: None, retry_inverse: Vec::new(), retry_sidecars: Vec::new(), trash: None };
+        let entry = crate::UndoEntry {
+            label: "Broken".into(),
+            op: step,
+            folders: Vec::new(),
+            retry_inverse: Vec::new(),
+            retry_sidecars: Vec::new(),
+            trash: None,
+            folders_done: Vec::new(),
+        };
         if redo {
             s.redo.push(entry);
         } else {

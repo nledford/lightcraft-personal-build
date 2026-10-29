@@ -53,7 +53,7 @@ pub(super) fn section(
 
 /// Where what the panel shows of the sidebar's content ends (screen x): the content is wider
 /// than the panel while the sidebar scrolls sideways.
-fn visible_right(ui: &egui::Ui) -> f32 {
+pub(super) fn visible_right(ui: &egui::Ui) -> f32 {
     ui.data(|d| d.get_temp(egui::Id::unique("left-visible-right"))).unwrap_or(f32::MAX)
 }
 
@@ -434,6 +434,8 @@ fn new_album_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     if MenuItem::new(crate::i18n::tr("Create Folder…")).show(ui).clicked() {
         app.ui.dialog = Some(crate::state::Dialog::NewAlbum { name: String::new(), folder: true, parent: None, include_selected: false });
     }
+    // albums taken with Cut or Copy go to the top level from here
+    crate::panels::side_select::album_paste_item(app, ui, None);
     // only once the albums were put in an order by hand
     if app.session.catalog.album_children_are_ordered(None) {
         ui.separator();

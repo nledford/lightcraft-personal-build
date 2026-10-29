@@ -57,17 +57,21 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             app.ui.dialog = Some(create_dialog(app));
         }
         let library = app.session.library_generation();
-        let picked = app.ui.keyword_list_selected.clone().filter(|k| in_tree(&app.caches.keyword_tree(&app.session.catalog, library), k));
+        let tree = app.caches.keyword_tree(&app.session.catalog, library);
+        let picked: Vec<String> = super::side_select::list_picked(app).into_iter().filter(|k| in_tree(&tree, k)).collect();
         let minus = crate::button::Button::icon_only(Icon::Minus, "Delete Keyword")
             .ghost()
             .small()
-            .enabled(picked.is_some())
+            .enabled(!picked.is_empty())
             .widget("keywordList:delete")
             .show(ui);
-        if minus.clicked()
-            && let Some(k) = picked
-        {
-            app.ui.dialog = Some(delete_dialog(app, &k));
+        if minus.clicked() {
+            // several picked: they all go, after one question
+            app.ui.dialog = match picked.as_slice() {
+                [] => None,
+                [one] => Some(delete_dialog(app, one)),
+                many => Some(super::side_select::delete_keywords_dialog(app, many)),
+            };
         }
     });
     ui.data_mut(|d| d.insert_temp(fid, filter.clone()));
@@ -84,7 +88,9 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     }
     let selection = app.session.selected();
     let ticks = app.caches.keyword_ticks(&app.session.catalog, &selection);
+    app.ui.side.keyword_list.begin_frame();
     for r in &rows {
+        app.ui.side.keyword_list.saw(r.path.clone());
         row(app, ui, r, &selection, &ticks, filter.trim().is_empty());
     }
     ui.add_space(12.0);
@@ -99,6 +105,11 @@ pub(crate) fn follow(app: &mut LightcraftApp, from: &str, to: &str) {
         && is_under(&k, from)
     {
         app.ui.keyword_list_selected = Some(reparent(&k, from, &to));
+    }
+    for k in &mut app.ui.side.keyword_list_also {
+        if is_under(k, from) {
+            *k = reparent(k, from, &to);
+        }
     }
     for o in &mut app.ui.keyword_list_open {
         if is_under(o, from) {
@@ -139,9 +150,15 @@ pub fn drag_feedback(app: &mut LightcraftApp, ctx: &egui::Context) {
     if ctx.output(|o| o.cursor_icon) != egui::CursorIcon::NotAllowed {
         ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
     }
+    // picked up as one of several keywords picked: they all go
+    let several = super::side_select::list_targets(app, &keyword).len();
     let frame = ctx.cumulative_frame_nr();
     let hint = ctx.data(|d| d.get_temp::<(u64, String)>(egui::Id::unique(KEYWORD_HINT))).filter(|(f, _)| *f == frame).map(|(_, text)| text);
-    let name = hint.unwrap_or_else(|| keyword.rsplit('|').next().unwrap_or(&keyword).to_string());
+    let name = if several > 1 {
+        crate::i18n::tr_format!("{n} keywords", n = several)
+    } else {
+        hint.unwrap_or_else(|| keyword.rsplit('|').next().unwrap_or(&keyword).to_string())
+    };
     egui::Area::new(egui::Id::unique("drag-keyword")).order(egui::Order::Tooltip).interactable(false).fixed_pos(at + vec2(14.0, 10.0)).show(
         ctx,
         |ui| {
@@ -156,6 +173,11 @@ pub fn drag_feedback(app: &mut LightcraftApp, ctx: &egui::Context) {
 /// already, ask before merging the two; where it is already, nothing happens.
 fn drop_keyword(app: &mut LightcraftApp, ctx: &egui::Context, keyword: &str, parent: Option<&str>) {
     app.ui.dragging_keyword = None;
+    // picked up as one of several keywords picked: they all go, as one step
+    let several = super::side_select::list_targets(app, keyword);
+    if several.len() > 1 {
+        return drop_keywords(app, &several, parent);
+    }
     let cat = &app.session.catalog;
     let leaf = keyword.rsplit('|').next().unwrap_or(keyword);
     let parent = parent.map(|p| cat.keyword_path(p).unwrap_or_else(|| p.to_string()));
@@ -176,6 +198,28 @@ fn drop_keyword(app: &mut LightcraftApp, ctx: &egui::Context, keyword: &str, par
     }
 }
 
+/// Drop several keywords inside `parent` (`None`: the top level), as one undo step. Nothing
+/// merges here: where one of their names is taken the move is refused, and says so.
+fn drop_keywords(app: &mut LightcraftApp, keywords: &[String], parent: Option<&str>) {
+    let cat = &app.session.catalog;
+    let parent = parent.map(|p| cat.keyword_path(p).unwrap_or_else(|| p.to_string()));
+    // dropped on one of themselves, or on something inside one: nothing to do
+    if parent.as_deref().is_some_and(|p| keywords.iter().any(|k| lightcraft_catalog::keywords::is_under(p, k))) {
+        return;
+    }
+    if app.act("keyword.move", json!({"keywords": keywords, "parent": parent})).is_none() {
+        return;
+    }
+    // the upper ones moved, and what is below them with them
+    let upper: Vec<&String> =
+        keywords.iter().filter(|k| !keywords.iter().any(|o| !same(o, k) && lightcraft_catalog::keywords::is_under(k, o))).collect();
+    for k in upper {
+        let leaf = k.rsplit('|').next().unwrap_or(k);
+        let to = parent.as_deref().map_or_else(|| leaf.to_string(), |p| format!("{p}|{leaf}"));
+        follow(app, k, &to);
+    }
+}
+
 /// One keyword's row: the triangle, the tick box, the name, the count, and on hover the arrow.
 /// `can_fold`: the triangle opens and closes the level (not while a filter opens it).
 fn row(app: &mut LightcraftApp, ui: &mut egui::Ui, r: &Row, selection: &[PhotoId], ticks: &Ticks, can_fold: bool) {
@@ -187,10 +231,12 @@ fn row(app: &mut LightcraftApp, ui: &mut egui::Ui, r: &Row, selection: &[PhotoId
         app.ui.dragging_keyword = Some(r.path.clone());
     }
     drop_target(app, ui, rect, &r.path);
-    let picked = app.ui.keyword_list_selected.as_deref().is_some_and(|k| same(k, &r.path));
+    let picked = super::side_select::list_is_picked(app, &r.path);
     let inner = Rect::from_min_max(rect.min + vec2(16.0, 0.0), rect.max - vec2(16.0, 0.0));
     if picked {
         ui.painter().rect_filled(inner, 4.0, t.canvas);
+        register(ui, format!("keywordPicked:{}", r.path), inner);
+        super::side_select::outline(app, ui, super::side_select::SideList::KeywordList, true, rect, 16.0);
     } else if resp.hovered() {
         ui.painter().rect_filled(inner, 4.0, t.hover.gamma_multiply(0.6));
     }
@@ -280,7 +326,7 @@ fn row(app: &mut LightcraftApp, ui: &mut egui::Ui, r: &Row, selection: &[PhotoId
     }
     if ar.on_hover_text(crate::i18n::tr("Show Photos with Keyword")).clicked() {
         super::left::browse_all_photos(app, true);
-        app.act("library.filter", json!({"keyword": r.path}));
+        app.act("library.filter", json!({"keyword": r.path, "keywords": []}));
     }
     // the name, cut short before the arrow
     let room = (arrow.left() - 4.0 - (x + 34.0)).max(0.0);
@@ -296,9 +342,10 @@ fn row(app: &mut LightcraftApp, ui: &mut egui::Ui, r: &Row, selection: &[PhotoId
     }
     let resp = resp.on_hover_text(r.path.replace('|', " › "));
     if resp.clicked() {
-        app.ui.keyword_list_selected = Some(r.path.clone());
+        super::side_select::list_clicked(app, ui, &r.path);
     }
-    if resp.double_clicked() {
+    // (not with Cmd or Shift held: those clicks pick rows)
+    if resp.double_clicked() && ui.input(|i| !i.modifiers.command && !i.modifiers.shift) {
         app.ui.dialog = Some(edit_dialog(app, &r.path));
     }
     crate::widgets::context_menu(&resp, |ui| menu(app, ui, &r.path, selection));
@@ -319,7 +366,9 @@ fn inside_said(inside: &[String]) -> Option<String> {
 /// do something (a keyword never goes inside itself), and a release there does it: nests the
 /// keyword inside this one, or gives this keyword to the photos.
 fn drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, rect: Rect, path: &str) {
-    let (pointer, released) = ui.input(|i| (i.pointer.latest_pos(), i.pointer.any_released()));
+    // a dragged keyword drops on any button's release (it began with any button); photos only on the primary's
+    let (pointer, released) =
+        ui.input(|i| (i.pointer.latest_pos(), i.pointer.primary_released() || (app.ui.dragging_keyword.is_some() && i.pointer.any_released())));
     if !shown_under(ui, rect, pointer) {
         return;
     }
@@ -348,9 +397,10 @@ fn drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, rect: Rect, path: &st
 /// Photos dragged over the keyword row `path`: only the photos that don't have it get it. `outline`
 /// marks the row when a release would give it to some.
 fn drop_photos_on_keyword(app: &mut LightcraftApp, ui: &mut egui::Ui, ids: &[u64], path: &str, outline: &dyn Fn(&egui::Ui)) {
-    let released = ui.input(|i| i.pointer.any_released());
+    let released = ui.input(|i| i.pointer.primary_released());
     let lacking = |id: &u64| {
-        app.session.catalog.photo(PhotoId(*id)).is_some_and(|p| !p.meta.keywords.iter().any(|k| same(&lightcraft_catalog::keywords::clean(k), path)))
+        // (as `photo.setMeta` compares: the stored keyword as it is, with the cleaned name)
+        app.session.catalog.photo(PhotoId(*id)).is_some_and(|p| !p.meta.keywords.iter().any(|k| same(k, &lightcraft_catalog::keywords::clean(path))))
     };
     let n = ids.iter().filter(|id| lacking(id)).count();
     if n == 0 {
@@ -376,13 +426,25 @@ fn drop_photos_on_keyword(app: &mut LightcraftApp, ui: &mut egui::Ui, ids: &[u64
 fn give_keyword(app: &mut LightcraftApp, ctx: &egui::Context, ids: &[u64], path: &str, n: usize) {
     let keyword = path.replace('|', " › ");
     match app.run("photo.setMeta", json!({"ids": ids, "addKeywords": [path]})) {
-        Ok(_) => app.toast(ctx, crate::i18n::tr_format!("Added “{keyword}” to {n} photo{}", if n == 1 { "" } else { "s" }, keyword = keyword, n = n)),
+        Ok(_) => {
+            let text = crate::i18n::tr_format!("Added “{keyword}” to {n} photo{}", if n == 1 { "" } else { "s" }, keyword = keyword, n = n);
+            if n > 0 {
+                app.toast_undoable(ctx, text);
+            } else {
+                app.toast(ctx, text);
+            }
+        }
         Err(e) => app.toast_error(ctx, e),
     }
 }
 
 /// A keyword's context menu.
 fn menu(app: &mut LightcraftApp, ui: &mut egui::Ui, path: &str, selection: &[PhotoId]) {
+    // one of several keywords picked: what can be done to them all
+    let several = super::side_select::list_targets(app, path);
+    if several.len() > 1 {
+        return super::side_select::keywords_menu(app, ui, &several, true);
+    }
     let name = path.replace('|', " › ");
     let item = |ui: &mut egui::Ui, id: &str, label: &str, enabled: bool| {
         MenuItem::new(label).check_slot(true).enabled(enabled).widget(format!("keywordMenu:{id}")).show(ui).clicked()
@@ -413,8 +475,11 @@ fn menu(app: &mut LightcraftApp, ui: &mut egui::Ui, path: &str, selection: &[Pho
     }
     if item(ui, "show", crate::i18n::tr("Show Photos with Keyword"), true) {
         super::left::browse_all_photos(app, true);
-        app.act("library.filter", json!({"keyword": path}));
+        app.act("library.filter", json!({"keyword": path, "keywords": []}));
     }
+    ui.separator();
+    super::side_select::keyword_clip_items(app, ui, &[path.to_string()]);
+    super::side_select::keyword_paste_item(app, ui, path);
     ui.separator();
     if item(ui, "purge", crate::i18n::tr("Purge Unused Keywords"), true) {
         app.act("keyword.purgeUnused", json!({}));
@@ -602,7 +667,7 @@ impl Ticks {
 }
 
 /// The keyword is in the tree (any case).
-fn in_tree(tree: &[KeywordNode], path: &str) -> bool {
+pub(crate) fn in_tree(tree: &[KeywordNode], path: &str) -> bool {
     tree.iter().any(|n| same(&n.path, path) || (lightcraft_catalog::keywords::is_under(path, &n.path) && in_tree(&n.children, path)))
 }
 

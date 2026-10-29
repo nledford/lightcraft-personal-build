@@ -857,6 +857,10 @@ impl Session {
             return Err(EngineError::Other(format!("{} is a virtual copy: its settings live only in the library", p.file_name)));
         }
         let orig = file_path(p).ok_or_else(|| EngineError::Other(format!("{} is not a file on disk", p.file_name)))?;
+        if self.is_moving(orig) {
+            // the file and its sidecar are on their way: a write now would land behind them
+            return Err(EngineError::Other(format!("{} is being moved: its sidecar is written once it arrives", p.file_name)));
+        }
         // A relative path would be taken from the working directory.
         if Path::new(orig).is_relative() || !Path::new(orig).is_file() {
             return Err(EngineError::Other(format!("{}: the original {orig} is missing; no XMP sidecar is written", p.file_name)));
@@ -902,9 +906,19 @@ impl Session {
 
     /// Like [`Session::read_sidecar_op`], retaining transient diagnostics for the command report.
     pub fn read_sidecar_op_with_warnings(&self, id: PhotoId) -> Result<Option<(Op, PathBuf, Vec<crate::import::ImportWarning>)>> {
+        self.read_sidecar_op_named(id, self.sidecar_naming(id))
+    }
+
+    /// [`Session::read_sidecar_op_with_warnings`] with the sidecar naming already worked out ([`StemOwners::naming`]): a
+    /// folder of photos knows its owners once, instead of one pass over the catalog per photo.
+    pub(crate) fn read_sidecar_op_named(
+        &self,
+        id: PhotoId,
+        naming: SidecarNaming,
+    ) -> Result<Option<(Op, PathBuf, Vec<crate::import::ImportWarning>)>> {
         let p = self.catalog.photo(id).ok_or(lightcraft_catalog::CatalogError::NoPhoto(id))?;
         let Some(orig) = file_path(p) else { return Ok(None) };
-        let Some((packet, from)) = read_packet(orig, p.kind, self.sidecar_naming(id)) else { return Ok(None) };
+        let Some((packet, from)) = read_packet(orig, p.kind, naming) else { return Ok(None) };
         let sc = parse_sidecar(&packet, crate::crs::Target::for_photo(p)).map_err(|e| EngineError::Other(format!("{}: {e}", from.display())))?;
         let mut warnings = sc.warnings.clone();
         for warning in &mut warnings {
@@ -952,16 +966,24 @@ impl Session {
         self.auto_write_sidecar_ids(ids);
     }
 
-    fn auto_write_sidecar_ids(&mut self, ids: Vec<PhotoId>) {
+    pub(crate) fn auto_write_sidecar_ids(&mut self, ids: Vec<PhotoId>) {
         if ids.is_empty() {
             return;
         }
         let owners = StemOwners::among(&self.catalog, &ids);
+        let held = self.held_sidecars.len();
+        // a write that failed before is made now: a list of held writes may name it
+        let mut made_late = false;
         for id in ids {
+            // on its way to another folder: written once it arrives (`move_job`), not a failure
+            if self.catalog.photo(id).and_then(|p| file_path(p)).is_some_and(|f| self.is_moving(f)) {
+                self.held_sidecars.insert(id);
+                continue;
+            }
             if self.catalog.photo(id).is_some_and(|p| file_path(p).is_some() && p.copy_of.is_none()) {
                 match self.save_sidecar_with(id, &owners) {
                     Ok(_) => {
-                        self.unsaved_sidecars.remove(&id);
+                        made_late |= self.unsaved_sidecars.remove(&id);
                     }
                     Err(e) => {
                         // kept for a retry once the file is reachable: a network share that dropped out mustn't leave
@@ -971,6 +993,11 @@ impl Session {
                     }
                 }
             }
+        }
+        if self.held_sidecars.len() > held || made_late {
+            // kept on disk too: a run that ends before the move does still writes them, and
+            // one made since leaves the list
+            self.save_held_sidecars();
         }
     }
 
@@ -993,6 +1020,7 @@ impl Session {
                 None => {
                     self.unsaved_sidecars.remove(&id);
                 }
+                Some(path) if self.is_moving(&path) => {}
                 Some(path) if self.media.availability.exists(&path) == Some(true) => ready.push(id),
                 Some(_) => {}
             }
@@ -1010,6 +1038,10 @@ impl Session {
                 }
                 Err(e) => log::debug!("retry XMP: {e}"),
             }
+        }
+        if written > 0 {
+            // a list of held writes may name them: the next open mustn't make them again
+            self.save_held_sidecars();
         }
         written
     }

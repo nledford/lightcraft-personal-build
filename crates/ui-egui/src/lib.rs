@@ -10,6 +10,7 @@ pub mod brush_live;
 pub mod canvas_keys;
 mod command_error;
 pub mod control;
+pub mod destination;
 pub mod dialogs;
 pub mod docking;
 mod drop_overlay;
@@ -29,11 +30,14 @@ pub mod missing_count;
 mod missing_sweep;
 mod model_setup;
 pub mod motion;
+pub mod move_task;
+pub mod multi_select;
 pub mod panels;
 pub mod pick;
 pub mod recheck;
 pub mod region;
 pub mod reload;
+pub mod relocate;
 pub mod render;
 pub mod shortcuts;
 pub mod sidebar;
@@ -180,6 +184,8 @@ impl From<lightcraft_engine::EngineError> for Refusal {
     }
 }
 
+/// How long a toast that offers Undo stays: time to read it and reach the button.
+const UNDO_TOAST_SECONDS: f64 = 6.0;
 /// The `path` of a display profile read from the screen rather than chosen as a file.
 pub const SCREEN_PROFILE: &str = "screen";
 
@@ -290,6 +296,9 @@ pub struct LightcraftApp {
     /// Warnings to show one at a time (damaged settings files…, issue #103).
     pub notices: Vec<String>,
     pub(crate) updates_rt: updates_ui::Runtime,
+    /// What following moves an earlier run cut short came to, shown once under its own title
+    /// ([`panels::notices::recovered_text`]); not a settings problem.
+    pub move_notice: Option<String>,
     /// Quitting was stopped to ask first: changes couldn't be saved, or tasks are running.
     pub quit_prompt: Option<QuitPrompt>,
     /// Keyboard/focus/input state for the prompt above, including its one-frame creation barrier.
@@ -301,6 +310,8 @@ pub struct LightcraftApp {
     /// How far the backup the library has when LightCraft quits has got in this quit (see
     /// `panels::notices`).
     pub quit_backup: QuitBackup,
+    /// Quit Anyway was chosen while a move was still finishing the file in hand: quitting doesn't wait for it.
+    pub quit_cuts_move: bool,
     control_rx: Option<Receiver<ControlRequest>>,
     pending_screenshots: Vec<PendingShot>,
     /// Synthetic-input control requests waiting for a fresh layout and delivery (plan §4.5).
@@ -455,6 +466,24 @@ pub struct LightcraftApp {
     pub trash_erase_later: Option<(Vec<u64>, u64)>,
     /// A Synchronize Folder that waited in line, scanning its folder again before it runs.
     pub sync_queued: Option<sync::SyncRescan>,
+    /// Photos being moved to another folder in the background (`move_task`).
+    pub move_run: Option<move_task::MoveRun>,
+    /// How the last background move ended (`ui.inspect` → `move.last`).
+    pub last_move: Option<Value>,
+    /// A folder's files being looked for where the person said the folder is now.
+    pub relocate: Option<relocate::RelocateTask>,
+    /// Lookings of a library that was left whose workers have not answered yet (a share that does
+    /// not), at most [`relocate::MAX_LEFT_BEHIND`]; a looking is refused beyond that.
+    pub relocate_left_behind: Vec<relocate::RelocateTask>,
+    /// What was found when only some of them are there, for the dialog that asks about it (and
+    /// whether that dialog was shown yet: it waits for another dialog to be done with).
+    pub relocate_asked: Option<(relocate::Request, lightcraft_engine::relocate::Located, bool)>,
+    /// The library (`Session::library_generation`) `relocate` / `relocate_asked` were started in;
+    /// [`relocate::poll`] drops them once another library is open.
+    pub relocate_library: u64,
+    /// How the latest locating of a folder went (`ui.inspect` → `relocate.last`, see
+    /// [`relocate::status`]).
+    pub relocate_last: Option<Value>,
     /// A Lightroom catalog inspect/import in progress.
     pub lightroom: Option<lightroom_import::LightroomTask>,
     /// Last terminal Lightroom result, exposed by the command's status/wait response.

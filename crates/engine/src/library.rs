@@ -84,6 +84,37 @@ pub fn default_dir() -> Option<PathBuf> {
     Some(PathBuf::from(home).join("Pictures").join(DEFAULT_NAME))
 }
 
+/// The user's home folder (`%USERPROFILE%` on Windows, `$HOME` elsewhere); `None` when the host has
+/// none or it is empty. The one place the home path is read for Local's built-in places, in the
+/// engine's rename/move guard and in the sidebar.
+pub fn home_folder() -> Option<PathBuf> {
+    home_folder_from(cfg!(windows), |name| std::env::var_os(name))
+}
+
+fn home_folder_from(windows: bool, var: impl Fn(&str) -> Option<std::ffi::OsString>) -> Option<PathBuf> {
+    var(if windows { "USERPROFILE" } else { "HOME" }).filter(|h| !h.is_empty()).map(PathBuf::from)
+}
+
+#[cfg(test)]
+mod home_tests {
+    use super::home_folder_from;
+    use std::ffi::OsString;
+
+    #[test]
+    fn windows_reads_userprofile_and_the_rest_read_home() {
+        let env = |name: &str| match name {
+            "HOME" => Some(OsString::from("/home/example")),
+            "USERPROFILE" => Some(OsString::from("C:\\Users\\example")),
+            _ => None,
+        };
+        assert_eq!(home_folder_from(true, env).as_deref(), Some(std::path::Path::new("C:\\Users\\example")));
+        assert_eq!(home_folder_from(false, env).as_deref(), Some(std::path::Path::new("/home/example")));
+        // only the other platform's variable is set: no home, never a guess from it
+        assert_eq!(home_folder_from(true, |n| (n == "HOME").then(|| OsString::from("/home/example"))), None);
+        assert_eq!(home_folder_from(false, |_| Some(OsString::new())), None);
+    }
+}
+
 pub struct Library {
     /// The library directory, or a descriptive pseudo-path when the library isn't on disk.
     pub dir: PathBuf,
@@ -114,6 +145,12 @@ pub struct Library {
     /// `settingsWarnings`; shown by the UI once, see [`Session::take_library_warnings`]).
     pub settings_warnings: Vec<String>,
     warnings_reported: usize,
+    /// What following moves an earlier run cut short came to when the library opened
+    /// (`library.info` → `recoveredMoves`; handed out once, see
+    /// [`Session::take_recovered_moves`]: the app shows it in its own window). Not a settings
+    /// problem: kept apart from those.
+    pub recovered_moves: Option<crate::move_intent::Recovered>,
+    moves_reported: bool,
     /// Settings files that couldn't be read or set aside: never overwritten this session.
     pub(crate) blocked: Vec<&'static str>,
     /// Why nothing is written to the catalog any more: a restore stopped while it was moving the
@@ -288,6 +325,11 @@ struct ViewFile {
 }
 
 impl Library {
+    /// Open without the lock that keeps a second program out (its file system can't lock
+    /// `catalog.lock`): another program may be working on the same files.
+    pub(crate) fn is_unprotected(&self) -> bool {
+        self.lock.as_ref().is_some_and(|l| !l.held())
+    }
     pub fn journal(&self) -> &Journal {
         &self.journal
     }
@@ -521,6 +563,9 @@ impl Session {
     /// Nothing is created; a library folder that exists gets its lock taken and released again.
     /// Opening can still fail afterwards (a damaged catalog, a disk going away).
     pub fn check_library(&self, dir: impl AsRef<Path>) -> Result<PathBuf> {
+        // a switch checks first and only then closes this library: a move running in it is
+        // refused here, before anything is closed (closing itself stays open to quitting)
+        self.refuse_while_moving()?;
         let dir = dir.as_ref().to_path_buf();
         if let Some(place) = crate::lightroom_folder::lightroom_catalog_at(&dir) {
             return Err(EngineError::LightroomCatalog { path: dir, catalog: place.catalog });
@@ -566,6 +611,9 @@ impl Session {
 
     /// `drop_waiting`: the line empties when the library opens.
     fn open_library_dropping(&mut self, dir: &Path, seed_demo: bool, drop_waiting: bool) -> Result<&LoadReport> {
+        // a move in progress belongs to the open library: refused before the target is touched
+        // (no folder or lock file made, and a lock held elsewhere doesn't hide the reason)
+        self.refuse_while_moving()?;
         let dir = dir.to_path_buf();
         if let Some(place) = crate::lightroom_folder::lightroom_catalog_at(&dir) {
             return Err(EngineError::LightroomCatalog { path: dir, catalog: place.catalog });
@@ -637,6 +685,8 @@ impl Session {
     fn open_stores(&mut self, stores: LibraryStores, seed_demo: bool, lock: &mut Option<LibraryLock>, drop_waiting: bool) -> Result<()> {
         let LibraryStores { dir, catalog, files, on_disk } = stores;
         let mut files: Box<dyn Store> = Box::new(Listed(files));
+        // a move in progress belongs to the open library: it finishes (or is stopped) first
+        self.refuse_while_moving()?;
         self.media.smart_dir = on_disk.then(|| crate::smart::dir(&dir));
         // the current library may be these same files: let its background snapshot land first
         if let Some(old) = self.library.as_mut()
@@ -644,7 +694,8 @@ impl Session {
         {
             log::error!("library: {e}");
         }
-        // Photo ids belong to one library; denoise work must not carry into the next.
+        // Photo ids belong to one library; a folder's metadata job and denoise work must not carry into the next.
+        self.folder_metadata = None;
         self.denoise.library_changed();
         self.media.denoise.clear();
         // what was learned about the old library's faces is saved, and none of it carries over (photo ids are per library)
@@ -678,6 +729,12 @@ impl Session {
         }
         self.undo.clear();
         self.redo.clear();
+        // photo ids are per library: none held back for a move carries over
+        self.held_sidecars.clear();
+        self.held_listed.clear();
+        // the records of moves this session had settled belong to the library it leaves: they stay
+        // on disk for the open that follows them (forgetting them here deletes none)
+        self.settled_moves.clear();
         self.interaction = None;
         self.pending_log.clear();
         self.selection = Selection::default();
@@ -835,10 +892,20 @@ impl Session {
             view_written,
             settings_warnings: unlocked_warning(lock.as_ref()).into_iter().chain(kept).chain(settings.warnings).collect(),
             warnings_reported: 0,
+            recovered_moves: None,
+            moves_reported: false,
             blocked: settings.blocked,
             stuck: None,
             lock: lock.take(),
         });
+        // moves an earlier run left unfinished (stopped part-way: a force-quit, a crash)
+        let recovered = self.recover_moves();
+        if let Some(text) = recovered.notice() {
+            log::warn!("library: {text}");
+            if let Some(lib) = self.library.as_mut() {
+                lib.recovered_moves = Some(recovered);
+            }
+        }
         // forget untouched Local records of folders not browsed for a while (journaled at once)
         if self.forget_local_days > 0 {
             let plan = self.forget_local(false, None);
@@ -1109,6 +1176,18 @@ impl Session {
         let new = lib.settings_warnings[lib.warnings_reported..].to_vec();
         lib.warnings_reported = lib.settings_warnings.len();
         new
+    }
+
+    /// What following moves cut short came to when the library opened, handed out once (the CLI
+    /// prints [`Recovered::notice`] on stderr; the app shows it in its own window).
+    ///
+    /// [`Recovered::notice`]: crate::move_intent::Recovered::notice
+    pub fn take_recovered_moves(&mut self) -> Option<crate::move_intent::Recovered> {
+        let lib = self.library.as_mut()?;
+        if std::mem::replace(&mut lib.moves_reported, true) {
+            return None;
+        }
+        lib.recovered_moves.clone()
     }
 
     /// The thumbnail disk cache budget in bytes ([`Session::cache_mb`], else the default).

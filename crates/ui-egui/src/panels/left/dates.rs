@@ -24,7 +24,8 @@ pub(super) fn date_rows(app: &mut LightcraftApp, ui: &mut egui::Ui) {
 fn date_row(app: &mut LightcraftApp, ui: &mut egui::Ui, key: &str, label: &str, count: usize, indent: f32, above: Option<Said>) -> bool {
     let branch = Branch::date(key);
     let mut open = app.ui.sidebar_trees.is_open_under(&branch, above);
-    let sel = app.session.filter.date.as_deref() == Some(key);
+    let sel = crate::panels::side_select::date_shown(app, key);
+    app.ui.side.dates.saw(key.to_string());
     let resp = Row::new(&format!("date:{key}"), Icon::Clock, label).count(Some(count)).selected(sel).indent(indent).show(app, ui);
     if key.len() < 10 {
         // (a year's months open and fold with it; a month's days have nothing to open)
@@ -32,9 +33,7 @@ fn date_row(app: &mut LightcraftApp, ui: &mut egui::Ui, key: &str, label: &str, 
         tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, &branch, &mut open, format!("dateToggle:{key}"), inside);
     }
     if super::side_keys::chosen(ui, &resp) {
-        let v = if sel { serde_json::Value::Null } else { json!(key) };
-        browse_all_photos(app, !sel);
-        app.act("library.filter", json!({"date": v}));
+        crate::panels::side_select::date_clicked(app, ui, key);
     }
     open
 }

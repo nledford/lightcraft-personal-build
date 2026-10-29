@@ -27,6 +27,7 @@ pub mod profiles;
 pub mod right;
 pub mod second;
 pub(crate) mod side_keys;
+pub mod side_select;
 pub mod slideshow;
 pub mod strip;
 pub mod topbar;
@@ -41,6 +42,7 @@ pub use crate::dialogs::faces;
 pub use crate::dialogs::keymap;
 pub use crate::dialogs::rules_editor;
 pub use crate::dialogs::rules_editor::rules_move;
+pub use crate::dialogs::rules_editor::rules_reorder;
 pub use crate::dialogs::settings;
 pub use crate::dialogs::settings::slide_layout;
 pub use crate::dialogs::settings::slide_overlays;
@@ -91,9 +93,15 @@ pub fn resizable_side(ui: &mut egui::Ui, side: SidePanel, add: impl FnOnce(&mut 
 /// The space between two toasts on screen.
 const TOAST_GAP: f32 = 8.0;
 
+/// A toast that offers Undo: the gap between its text and the button, and the button's height.
+const TOAST_UNDO_GAP: f32 = 16.0;
+const TOAST_UNDO_HEIGHT: f32 = 26.0;
+
 /// The HUD toasts at the bottom centre of the canvas: the newest where a toast always was, the older ones above it,
 /// each fading in, holding while the pointer rests on it, and fading out at its own time (widgets `toast:0` for the
-/// newest, `toast:1` above it…); it only reads the pointer position and never takes a click.
+/// newest, `toast:1` above it…); it only reads the pointer position, and takes a click only on the Undo button of the
+/// newest toast when that offers it (an action just done: a drop that moved, added or tagged photos,
+/// [`LightcraftApp::toast_undoable`]).
 pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
     use crate::toast::{HOVER_HOLD, toast_alpha};
     let now = app.tick_now();
@@ -101,8 +109,10 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
     // that sees the pointer leave has started its hold)
     app.ui.expire_toasts(now);
     if app.ui.toasts.is_empty() {
+        app.ui.toast_undo = None;
         return;
     }
+    let undo = app.toast_offers_undo();
     let Some(canvas) = app.canvas_rect else {
         // a hidden canvas cannot pin a toast
         for shown in &mut app.ui.toasts {
@@ -112,8 +122,8 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
     };
     let t = Tokens::get(ctx);
     let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::unique("toast")));
+    let button_w = if undo { painter.layout_no_wrap(crate::i18n::tr("Undo").to_string(), t.semibold(13.0), t.text).size().x + 28.0 } else { 0.0 };
     // long messages (a save warning, the web build's notices) wrap within the canvas
-    let wrap = (canvas.width() - 80.0).clamp(200.0, 720.0);
     // a slideshow's playback controls sit at the bottom: the toasts go to the top there, clear of them, the newest
     // on top; elsewhere the newest is at the bottom and the older ones stack above it
     let top = app.ui.slideshow.is_some();
@@ -122,11 +132,16 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
     let mut repaint = false;
     // the widget ids count the toasts drawn, so `toast:1` is always the one above `toast:0` even when one between is skipped
     let mut drawn = 0;
+    // the Undo button's place, its opacity and its colors, when the newest toast offers it
+    let mut undo_at: Option<(Rect, f32, egui::Color32)> = None;
     let x = canvas.center().x;
     for (i, shown) in app.ui.toasts.iter_mut().rev().enumerate() {
+        let offers = undo && i == 0;
         let (background, foreground) = shown.label.map(crate::theme::label_toast_colors).unwrap_or((Tokens::photo_shade(), Tokens::on_photo()));
+        let wrap = (canvas.width() - 80.0 - if offers { button_w + TOAST_UNDO_GAP } else { 0.0 }).clamp(200.0, 720.0);
         let galley = painter.layout(shown.text.clone(), t.font(14.0), foreground, wrap);
-        let size = vec2(galley.size().x + 40.0, (galley.size().y + 22.0).max(40.0));
+        let extra = if offers { button_w + TOAST_UNDO_GAP - 8.0 } else { 0.0 };
+        let size = vec2(galley.size().x + 40.0 + extra, (galley.size().y + 22.0).max(40.0));
         let r = match (edge, top) {
             (None, true) => Rect::from_center_size(pos2(x, canvas.top() + 60.0), size),
             (None, false) => Rect::from_center_size(pos2(x, canvas.bottom() - 60.0), size),
@@ -151,18 +166,65 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
         shown.hovered = hovered;
         let alpha = toast_alpha(now, shown.shown_at, shown.until);
         painter.rect_filled(r, 6.0, background.gamma_multiply(alpha));
-        painter.galley_with_override_text_color(r.center() - galley.size() / 2.0, galley, foreground.gamma_multiply(alpha));
+        let text_at = if offers { pos2(r.left() + 20.0, r.center().y - galley.size().y / 2.0) } else { r.center() - galley.size() / 2.0 };
+        painter.galley_with_override_text_color(text_at, galley, foreground.gamma_multiply(alpha));
         crate::widgets::register_geometry(ctx, format!("toast:{drawn}"), r);
         drawn += 1;
+        if offers {
+            undo_at = Some((r, alpha, foreground));
+        }
         // a toast held under the pointer is static once faded in: no timer, the pointer leaving wakes the app
         repaint |= crate::toast::needs_repaint(hovered, now, shown.shown_at);
     }
     if repaint {
         ctx.request_repaint_after(std::time::Duration::from_millis(30));
     }
+    if let Some((r, alpha, foreground)) = undo_at {
+        let button =
+            Rect::from_min_size(pos2(r.right() - 12.0 - button_w, r.center().y - TOAST_UNDO_HEIGHT / 2.0), vec2(button_w, TOAST_UNDO_HEIGHT));
+        // (above the toast's own layer, whose backdrop would otherwise dim it)
+        let clicked = egui::Area::new(egui::Id::unique("toast-undo"))
+            .order(egui::Order::Tooltip)
+            .fixed_pos(button.min)
+            .show(ctx, |ui| {
+                ui.set_opacity(alpha);
+                // drawn in the toast's own colors (it is dark whatever the theme): a theme's button fills
+                // would not read on it
+                let resp = ui.interact(button, egui::Id::unique("toast-undo-button"), egui::Sense::click());
+                resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, crate::i18n::tr("Undo")));
+                crate::widgets::register_response("button:toastUndo", button, &resp);
+                if resp.hovered() {
+                    ctx.set_cursor_icon(egui::CursorIcon::PointingHand);
+                }
+                let wash = if resp.is_pointer_button_down_on() {
+                    0.3
+                } else if resp.hovered() {
+                    0.16
+                } else {
+                    0.0
+                };
+                let p = ui.painter();
+                p.rect_filled(button, 4.0, foreground.gamma_multiply(wash));
+                p.rect_stroke(button, 4.0, egui::Stroke::new(1.0, foreground.gamma_multiply(0.6)), egui::StrokeKind::Inside);
+                if resp.has_focus() {
+                    p.rect_stroke(button.expand(2.0), 6.0, egui::Stroke::new(2.0, t.accent), egui::StrokeKind::Outside);
+                }
+                p.text(button.center(), egui::Align2::CENTER_CENTER, crate::i18n::tr("Undo"), t.semibold(13.0), foreground);
+                resp.clicked()
+            })
+            .inner;
+        if clicked {
+            app.ui.toast_undo = None;
+            match app.run("edit.undo", serde_json::json!({})) {
+                Ok(_) => app.toast(ctx, crate::i18n::tr("Undo")),
+                Err(e) => app.toast_error(ctx, e),
+            }
+        }
+    }
 }
 
-/// Paint a centred, dimmed message (empty states).
+/// Paint a centred, dimmed message (empty states). Each line wraps to the area, so a long one (a
+/// translation, an album named in it) is not cut off at its edges.
 pub fn empty_message(ui: &egui::Ui, rect: Rect, title: &str, body: &str) {
     let t = Tokens::get(ui.ctx());
     let p = ui.painter();

@@ -39,12 +39,12 @@ mod sidecar;
 mod tokens;
 
 #[cfg(test)]
-use fs::{LIST_FOLDER_AT, ListedSources, folded_path, same_contents};
-pub(crate) use fs::{MoveFs, RealFs};
+use fs::{LIST_FOLDER_AT, ListedSources};
+pub(crate) use fs::{MoveFs, RealFs, folded_path, same_contents};
 #[cfg(test)]
 pub(crate) use moves::move_file_with;
+pub(crate) use moves::{BatchMoveError, finish_sidecars, move_all, move_all_with, rest_after_move_back, set_file_ops_where};
 pub use moves::{MoveError, move_file};
-pub(crate) use moves::{move_all, rest_after_move_back};
 pub use plan::{plan_rename_photos, rename_photos};
 #[cfg(test)]
 pub(crate) use sidecar::PacketVersion;

@@ -21,6 +21,7 @@ mod face_models;
 mod face_recognize;
 pub mod filters;
 mod focus;
+pub mod folder_metadata;
 pub mod geocode;
 pub mod keywords;
 pub mod library;
@@ -187,6 +188,7 @@ pub fn command_specs() -> &'static [CommandSpec] {
         v.extend(face_detect::specs());
         v.extend(face_recognize::specs());
         v.extend(focus::specs());
+        v.extend(folder_metadata::specs());
         v.extend(activity::specs());
         v
     })
@@ -201,6 +203,20 @@ pub fn find_command(id: &str) -> Option<&'static CommandSpec> {
 /// The call names its target photos (`ids` or `id`, not null) instead of using the selection.
 pub(crate) fn names_photos(p: &Value) -> bool {
     ["ids", "id"].iter().any(|k| p.get(k).is_some_and(|v| !v.is_null()))
+}
+
+/// The call names its target photos in `ids`, whatever else it carries in `id` (`album.addPhotos`'s `id` is the album).
+pub(crate) fn names_photo_ids(p: &Value) -> bool {
+    p.get("ids").is_some_and(|v| !v.is_null())
+}
+
+/// For a command that opts into `explicit_targets` but whose `id` isn't a photo: [`Session::execute`] skipped the
+/// selection check because the call carries an `id`, so the command makes it itself unless `ids` names the photos.
+pub(crate) fn enabled_unless_ids(s: &Session, p: &Value, id: &str, enabled: Enabled) -> Result<()> {
+    if names_photo_ids(p) {
+        return Ok(());
+    }
+    enabled(s).map_err(|why| EngineError::Disabled(id.to_string(), why))
 }
 
 /// The photos `ids` names: `None` when it is missing or null (the command then falls back to the

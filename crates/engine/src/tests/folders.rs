@@ -674,7 +674,25 @@ fn a_move_leaves_a_row_saying_it_was_done() {
     let b = add_file(&mut s, &dir.path("in/b.jpg"), "B");
     s.execute("photo.moveToFolder", &json!({"ids": [a.0, b.0], "folder": dir.path("out")})).unwrap();
     let row = s.activity.finished().into_iter().next().expect("a row for the move");
-    assert_eq!((row.kind, row.label.as_str(), row.ending), ("move", "Moving 2 photos", crate::activity::Ending::Done));
+    assert_eq!((row.kind, row.label.as_str(), row.ending), ("move", "Moving photos", crate::activity::Ending::Done));
+}
+
+#[test]
+fn a_move_counts_photos_as_the_person_sees_them_not_files() {
+    let dir = Scratch::new("move-count");
+    std::fs::create_dir_all(dir.0.join("in")).unwrap();
+    std::fs::create_dir_all(dir.0.join("out")).unwrap();
+    let mut s = Session::new();
+    let a = add_file(&mut s, &dir.path("in/a.jpg"), "A");
+    let b = add_file(&mut s, &dir.path("in/b.jpg"), "B");
+    // a virtual copy shares its master's file: two photos, one file
+    let vc = s.catalog.alloc_photo_id();
+    let p = Photo::new(vc, Source::File { path: dir.path("in/a.jpg") }, "a.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
+    s.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    let r = s.execute("photo.moveToFolder", &json!({"ids": [a.0, vc.0, b.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!(r["files"], 2, "the toast says files: two files moved for three photos: {r}");
+    assert_eq!(r["moved"], 3, "{r}");
+    assert_eq!(file_of(&s, vc), dir.path("out/a.jpg"));
 }
 
 #[test]
@@ -687,7 +705,9 @@ fn a_name_taken_in_the_destination_refuses_the_move_and_overwrites_nothing() {
     let b = add_file(&mut s, &dir.path("in/b.jpg"), "B");
     std::fs::write(dir.path("out/b.jpg"), "OTHER").unwrap();
     let e = s.execute("photo.moveToFolder", &json!({"ids": [a.0, b.0], "folder": dir.path("out")})).unwrap_err().to_string();
-    assert!(e.contains("b.jpg already in") && e.contains("nothing was moved"), "{e}");
+    assert!(e.contains("b.jpg is already in") && e.contains("Nothing was moved"), "{e}");
+    assert!(!e.contains("invalid parameters") && !e.contains('`'), "plain words for the person: {e}");
+    assert!(e.contains("leave these photos out of the move"), "it says what can be done: {e}");
     assert_eq!(std::fs::read_to_string(dir.path("out/b.jpg")).unwrap(), "OTHER");
     assert!(dir.0.join("in/a.jpg").is_file() && !dir.0.join("out/a.jpg").exists(), "all or nothing");
     assert_eq!(file_of(&s, a), dir.path("in/a.jpg"));
@@ -700,12 +720,241 @@ fn moving_to_a_missing_folder_or_a_missing_original_is_refused() {
     let mut s = Session::new();
     let a = add_file(&mut s, &dir.path("in/a.jpg"), "A");
     let e = s.execute("photo.moveToFolder", &json!({"ids": [a.0], "folder": dir.path("nope")})).unwrap_err().to_string();
-    assert!(e.contains("not a folder"), "{e}");
+    assert!(e.contains("not a folder") && !e.contains("invalid parameters") && !e.contains('`'), "{e}");
+    assert!(e.contains("“nope”") && !e.contains(&dir.path("nope")), "the folder is named, not shown as a path: {e}");
     std::fs::create_dir_all(dir.0.join("out")).unwrap();
     std::fs::remove_file(dir.path("in/a.jpg")).unwrap();
     let e = s.execute("photo.moveToFolder", &json!({"ids": [a.0], "folder": dir.path("out")})).unwrap_err().to_string();
-    assert!(e.contains("missing or offline"), "{e}");
+    assert!(e.contains("a.jpg is missing or offline"), "{e}");
+    assert!(e.contains("use File → Find Missing Photos…") && !e.contains('▸'), "the menu path uses → (no UI font has ▸, which draws as a box): {e}");
+    assert!(!e.contains("invalid parameters") && !e.contains('`'), "plain words for the person: {e}");
     assert_eq!(file_of(&s, a), dir.path("in/a.jpg"));
+}
+
+/// in/{a,b,c}.jpg, out/b.jpg already taken; ids a, b, c.
+fn clash_setup(name: &str) -> (Scratch, Session, [lightcraft_catalog::PhotoId; 3]) {
+    let dir = Scratch::new(name);
+    std::fs::create_dir_all(dir.0.join("in")).unwrap();
+    std::fs::create_dir_all(dir.0.join("out")).unwrap();
+    let mut s = Session::new();
+    let a = add_file(&mut s, &dir.path("in/a.jpg"), "A");
+    let b = add_file(&mut s, &dir.path("in/b.jpg"), "B");
+    let c = add_file(&mut s, &dir.path("in/c.jpg"), "C");
+    std::fs::write(dir.path("out/b.jpg"), "OTHER").unwrap();
+    (dir, s, [a, b, c])
+}
+
+#[test]
+fn the_photos_told_to_skip_stay_and_the_rest_move_in_one_undo_step() {
+    let (dir, mut s, [a, b, c]) = clash_setup("move-skip");
+    let r = s.execute("photo.moveToFolder", &json!({"ids": [a.0, b.0, c.0], "skip": [b.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!(r["moved"], 2);
+    assert_eq!(r["skipped"], json!([{"id": b.0, "name": "b.jpg", "kind": "clash"}]));
+    assert_eq!(file_of(&s, a), dir.path("out/a.jpg"));
+    assert_eq!(file_of(&s, c), dir.path("out/c.jpg"));
+    assert_eq!(file_of(&s, b), dir.path("in/b.jpg"), "the skipped photo stays");
+    assert_eq!(std::fs::read_to_string(dir.path("out/b.jpg")).unwrap(), "OTHER");
+    assert!(dir.0.join("in/b.jpg").is_file());
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert!(dir.0.join("in/a.jpg").is_file() && dir.0.join("in/c.jpg").is_file() && !dir.0.join("out/a.jpg").exists());
+}
+
+#[test]
+fn a_problem_that_was_not_skipped_still_refuses_the_whole_move() {
+    let (dir, mut s, [a, b, c]) = clash_setup("move-skip-other");
+    std::fs::remove_file(dir.path("in/c.jpg")).unwrap();
+    // b is skipped; c went missing since the check, and nobody said to skip it
+    let e = s.execute("photo.moveToFolder", &json!({"ids": [a.0, b.0, c.0], "skip": [b.0], "folder": dir.path("out")})).unwrap_err().to_string();
+    assert!(e.contains("c.jpg is missing or offline") && !e.contains("b.jpg"), "{e}");
+    assert!(dir.0.join("in/a.jpg").is_file() && !dir.0.join("out/a.jpg").exists(), "all or nothing for the rest");
+}
+
+#[test]
+fn a_missing_file_is_skipped_like_a_clash_and_skipping_everything_moves_nothing() {
+    let (dir, mut s, [a, b, c]) = clash_setup("move-skip-missing");
+    std::fs::remove_file(dir.path("in/c.jpg")).unwrap();
+    let r = s.execute("photo.moveToFolder", &json!({"ids": [a.0, b.0, c.0], "skip": [c.0, b.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!(r["moved"], 1);
+    let kinds: Vec<_> = r["skipped"].as_array().unwrap().iter().map(|x| (x["name"].as_str().unwrap(), x["kind"].as_str().unwrap())).collect();
+    assert_eq!(kinds, [("b.jpg", "clash"), ("c.jpg", "missing")]);
+    // nothing left to move: no undo step, no activity row
+    let (undo, journal) = (s.undo.len(), s.journal.len());
+    let r = s.execute("photo.moveToFolder", &json!({"ids": [b.0, c.0], "skip": [c.0, b.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!(r["moved"], 0);
+    assert_eq!(r["skipped"].as_array().unwrap().len(), 2);
+    assert_eq!(s.undo.len(), undo, "no undo step for a move of nothing");
+    assert!(s.activity.list().is_empty());
+    assert_eq!(file_of(&s, a), dir.path("out/a.jpg"));
+    assert_eq!(s.journal.len(), journal + 1, "the move is journaled, as a command that changed something");
+    assert!(s.execute("photo.moveToFolder", &json!({"ids": [a.0], "skip": "a", "folder": dir.path("out")})).is_err(), "skip is a list of ids");
+}
+
+#[test]
+fn skipping_one_of_two_photos_with_the_same_name_lets_the_other_go() {
+    let dir = Scratch::new("move-skip-batch-clash");
+    for d in ["x", "y", "out"] {
+        std::fs::create_dir_all(dir.0.join(d)).unwrap();
+    }
+    let mut s = Session::new();
+    let first = add_file(&mut s, &dir.path("x/a.jpg"), "X");
+    let second = add_file(&mut s, &dir.path("y/a.jpg"), "Y");
+    let ids = json!([first.0, second.0]);
+    let e = s.execute("photo.moveToFolder", &json!({"ids": ids, "folder": dir.path("out")})).unwrap_err().to_string();
+    assert!(e.contains("More than one photo being moved is named a.jpg") && !e.contains("already in"), "{e}");
+    let r = s.execute("photo.moveToFolder", &json!({"ids": ids, "skip": [first.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!(r["moved"], 1, "a skipped photo doesn't keep its name taken");
+    assert_eq!(r["skipped"], json!([{"id": first.0, "name": "a.jpg", "kind": "clash"}]), "a clash whichever of the two is skipped");
+    assert_eq!(std::fs::read_to_string(dir.path("out/a.jpg")).unwrap(), "Y");
+    assert_eq!(file_of(&s, first), dir.path("x/a.jpg"));
+}
+
+#[test]
+fn a_local_photo_refuses_the_move_unless_it_is_skipped() {
+    let (dir, mut s, [a, b, _]) = clash_setup("move-skip-local");
+    std::fs::write(dir.path("in/l.jpg"), "L").unwrap();
+    let local = s.catalog.alloc_photo_id();
+    let mut p = Photo::new(local, Source::File { path: dir.path("in/l.jpg") }, "l.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
+    p.local = true;
+    s.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    let mv = |s: &mut Session, skip: Vec<u64>| {
+        s.execute("photo.moveToFolder", &json!({"ids": [a.0, b.0, local.0], "skip": skip, "folder": dir.path("out")}))
+    };
+    let e = mv(&mut s, vec![b.0]).unwrap_err().to_string();
+    assert!(e.contains("l.jpg is not in the library"), "{e}");
+    // left out like any other photo that was told to be skipped
+    let r = mv(&mut s, vec![b.0, local.0]).unwrap();
+    assert_eq!(r["moved"], 1);
+    let kinds: Vec<_> =
+        r["skipped"].as_array().unwrap().iter().map(|x| (x["name"].as_str().unwrap().to_string(), x["kind"].as_str().unwrap().to_string())).collect();
+    assert_eq!(kinds, [("b.jpg".to_string(), "clash".to_string()), ("l.jpg".to_string(), "asked".to_string())]);
+    assert!(dir.0.join("in/l.jpg").is_file() && dir.0.join("out/a.jpg").is_file());
+}
+
+#[test]
+fn skipping_a_local_photo_leaves_out_a_library_photo_of_the_same_file_and_a_photo_without_a_file_can_be_skipped() {
+    let (dir, mut s, [a, _, _]) = clash_setup("move-skip-shared");
+    let lib = add_file(&mut s, &dir.path("in/l.jpg"), "L");
+    let local = s.catalog.alloc_photo_id();
+    let mut p = Photo::new(local, Source::File { path: dir.path("in/l.jpg") }, "l.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
+    p.local = true;
+    s.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    // the check says up front what skipping the Local photo will do to the library photo of the same file
+    let c = s.execute("photo.checkMove", &json!({"ids": [lib.0, local.0], "folder": dir.path("out")})).unwrap();
+    let listed: Vec<_> = c["problems"].as_array().unwrap().iter().map(|x| (x["id"].as_u64().unwrap(), x["kind"].as_str().unwrap())).collect();
+    assert_eq!((c["movable"].as_u64(), listed), (Some(0), vec![(lib.0, "unmovable"), (local.0, "unmovable")]), "{c}");
+    let r = s.execute("photo.moveToFolder", &json!({"ids": [lib.0, local.0], "skip": [local.0], "folder": dir.path("out")})).unwrap();
+    // the file is one: leaving the Local photo out leaves the library photo of it out too, so it can't move unreported
+    assert_eq!(r["moved"], 0);
+    assert_eq!(r["skipped"].as_array().unwrap().len(), 2);
+    assert!(dir.0.join("in/l.jpg").is_file() && !dir.0.join("out/l.jpg").exists());
+    assert_eq!(file_of(&s, lib), dir.path("in/l.jpg"));
+    // a photo with no file (a demo scene) can't move: it refuses the move unless it is skipped
+    let demo = s.catalog.alloc_photo_id();
+    let p = Photo::new(demo, Source::Demo { scene: 0 }, "d.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
+    s.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    let e = s.execute("photo.moveToFolder", &json!({"ids": [a.0, demo.0], "folder": dir.path("out")})).unwrap_err().to_string();
+    assert!(e.contains("d.jpg has no file on disk"), "{e}");
+    let r = s.execute("photo.moveToFolder", &json!({"ids": [a.0, demo.0], "skip": [demo.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!(r["moved"], 1);
+    assert_eq!(r["skipped"], json!([{"id": demo.0, "name": "d.jpg", "kind": "asked"}]));
+}
+
+#[test]
+fn a_photo_skipped_for_sharing_a_name_with_another_of_the_move_is_reported_as_a_clash() {
+    let dir = Scratch::new("move-skip-twin");
+    for d in ["x", "y", "out"] {
+        std::fs::create_dir_all(dir.0.join(d)).unwrap();
+    }
+    let mut s = Session::new();
+    let first = add_file(&mut s, &dir.path("x/a.jpg"), "X");
+    let second = add_file(&mut s, &dir.path("y/a.jpg"), "Y");
+    let r = s.execute("photo.moveToFolder", &json!({"ids": [first.0, second.0], "skip": [second.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!(r["moved"], 1);
+    assert_eq!(r["skipped"], json!([{"id": second.0, "name": "a.jpg", "kind": "clash"}]));
+    assert_eq!(std::fs::read_to_string(dir.path("out/a.jpg")).unwrap(), "X");
+}
+
+#[test]
+fn checking_a_move_marks_two_photos_of_one_name_as_twins_and_a_name_taken_in_the_folder_as_not() {
+    let dir = Scratch::new("move-check-twin");
+    for d in ["x", "y", "out"] {
+        std::fs::create_dir_all(dir.0.join(d)).unwrap();
+    }
+    let mut s = Session::new();
+    let first = add_file(&mut s, &dir.path("x/a.jpg"), "X");
+    let second = add_file(&mut s, &dir.path("y/a.jpg"), "Y");
+    let taken = add_file(&mut s, &dir.path("x/t.jpg"), "T");
+    std::fs::write(dir.path("out/t.jpg"), "other").unwrap();
+    let r = s.execute("photo.checkMove", &json!({"ids": [first.0, second.0, taken.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!(
+        r["problems"],
+        json!([{"id": second.0, "name": "a.jpg", "kind": "clash", "twin": true}, {"id": taken.0, "name": "t.jpg", "kind": "clash"}]),
+        "{r}"
+    );
+}
+
+#[test]
+fn the_refusal_names_a_file_once_even_when_a_virtual_copy_shares_it() {
+    let (dir, mut s, [_, _, c]) = clash_setup("move-refusal-names");
+    let vc = s.catalog.alloc_photo_id();
+    let p = Photo::new(vc, Source::File { path: dir.path("in/c.jpg") }, "c.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
+    s.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    std::fs::remove_file(dir.path("in/c.jpg")).unwrap();
+    let e = s.execute("photo.moveToFolder", &json!({"ids": [c.0, vc.0], "folder": dir.path("out")})).unwrap_err().to_string();
+    assert!(e.contains("c.jpg is missing or offline") && !e.contains("c.jpg, c.jpg") && !e.contains("are missing"), "{e}");
+}
+
+#[test]
+fn checking_a_move_lists_a_local_photo_and_one_without_a_file_so_they_can_be_skipped() {
+    let (dir, mut s, [a, _, _]) = clash_setup("move-check-unmovable");
+    std::fs::write(dir.path("in/l.jpg"), "L").unwrap();
+    let local = s.catalog.alloc_photo_id();
+    let mut p = Photo::new(local, Source::File { path: dir.path("in/l.jpg") }, "l.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
+    p.local = true;
+    s.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    let demo = s.catalog.alloc_photo_id();
+    let p = Photo::new(demo, Source::Demo { scene: 0 }, "d.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
+    s.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    let ids = json!([a.0, local.0, demo.0]);
+    // the check lists them, it doesn't fail: that is how the person (or an agent) learns what to skip
+    let r = s.execute("photo.checkMove", &json!({"ids": ids, "folder": dir.path("out")})).unwrap();
+    assert_eq!((r["photos"].as_u64(), r["movable"].as_u64()), (Some(3), Some(1)), "{r}");
+    let problems: Vec<_> = r["problems"].as_array().unwrap().iter().map(|x| (x["id"].as_u64().unwrap(), x["kind"].as_str().unwrap())).collect();
+    assert_eq!(problems, [(local.0, "unmovable"), (demo.0, "unmovable")]);
+    // the move without a skip still refuses, and with exactly those skipped it goes
+    assert!(s.execute("photo.moveToFolder", &json!({"ids": ids, "folder": dir.path("out")})).is_err());
+    let r = s.execute("photo.moveToFolder", &json!({"ids": ids, "skip": [local.0, demo.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!(r["moved"], 1);
+}
+
+#[test]
+fn checking_a_move_lists_the_problems_and_touches_nothing() {
+    let (dir, mut s, [a, b, c]) = clash_setup("move-check");
+    let d = add_file(&mut s, &dir.path("out/d.jpg"), "D"); // in the folder already
+    // a virtual copy of the clashing photo has the same problem
+    let vc = s.catalog.alloc_photo_id();
+    let p = Photo::new(vc, Source::File { path: dir.path("in/b.jpg") }, "b.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
+    s.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    std::fs::remove_file(dir.path("in/c.jpg")).unwrap();
+    let r = s.execute("photo.checkMove", &json!({"ids": [a.0, b.0, c.0, d.0, vc.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!((r["photos"].as_u64(), r["movable"].as_u64(), r["here"].as_u64()), (Some(5), Some(1), Some(1)), "{r}");
+    let problems: Vec<_> = r["problems"].as_array().unwrap().iter().map(|x| (x["id"].as_u64().unwrap(), x["kind"].as_str().unwrap())).collect();
+    assert_eq!(problems, [(b.0, "clash"), (c.0, "missing"), (vc.0, "clash")]);
+    assert!(dir.0.join("in/a.jpg").is_file() && !dir.0.join("out/a.jpg").exists(), "nothing moved");
+    assert_eq!(file_of(&s, a), dir.path("in/a.jpg"));
+    assert!(s.activity.list().is_empty(), "no activity row for a look");
+    assert!(s.journal.is_empty(), "a look isn't a recorded command");
+    // an id the library doesn't have names the command that was asked for
+    let e = s.execute("photo.checkMove", &json!({"ids": [999_999], "folder": dir.path("out")})).unwrap_err().to_string();
+    assert!(e.contains("photo.checkMove") && e.contains("no photo 999999"), "{e}");
+    // the move with exactly those skipped goes through
+    let r =
+        s.execute("photo.moveToFolder", &json!({"ids": [a.0, b.0, c.0, d.0, vc.0], "skip": [b.0, c.0, vc.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!(r["moved"], 1);
+    assert_eq!(r["skipped"].as_array().unwrap().len(), 3);
+    // a folder that isn't there is said in plain words too
+    let e = s.execute("photo.checkMove", &json!({"ids": [a.0], "folder": dir.path("nope")})).unwrap_err().to_string();
+    assert!(e.contains("not a folder") && !e.contains('`'), "{e}");
 }
 
 #[cfg(unix)]
@@ -727,4 +976,370 @@ fn a_destination_without_write_permission_reports_an_error_and_keeps_everything(
         assert!(s.execute("folder.create", &json!({"parent": dir.path("ro"), "name": "x"})).is_err());
     }
     std::fs::set_permissions(dir.0.join("ro"), std::fs::Permissions::from_mode(0o755)).unwrap();
+}
+
+// ── Moving a folder refuses what it can't do, in plain words ─────────────────────────────────
+//
+// * A folder goes into a folder that is there: a missing one is refused and never created.
+// * A folder or destination on a disk that isn't connected says so, rather than "not a folder".
+// * No permission, another disk and other OS errors name the folder, with no `os error` number.
+// * A folder that is, or holds, the open library says which.
+
+/// A folder to move (`trip`, with a photo in it) and the session that knows it.
+fn trip_session(dir: &Scratch) -> Session {
+    std::fs::create_dir_all(dir.0.join("trip")).unwrap();
+    std::fs::write(dir.0.join("trip/a.jpg"), b"x").unwrap();
+    let mut s = Session::new();
+    add(&mut s, &format!("{}/a.jpg", dir.path("trip")));
+    s
+}
+
+/// A refusal: the words the person reads, which never show the command or an OS error number.
+fn refusal(s: &mut Session, command: &str, params: serde_json::Value) -> String {
+    let e = s.execute(command, &params).unwrap_err().to_string();
+    assert!(!e.contains("invalid parameters") && !e.contains('`') && !e.contains("os error"), "plain words for the person: {e}");
+    assert!(e.contains("Nothing was moved"), "{e}");
+    e
+}
+
+/// A path on a disk that is not there (`/Volumes/<name>` on every platform's reading of it).
+fn absent_disk() -> String {
+    format!("/Volumes/lc-absent-disk-{}", std::process::id())
+}
+
+#[test]
+fn a_move_into_a_folder_that_is_not_there_is_refused_and_creates_nothing() {
+    let dir = Scratch::new("nodest");
+    let mut s = trip_session(&dir);
+    let undo = s.undo.len();
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("trip"), "into": dir.path("Archive")}));
+    assert!(e.contains("“Archive” isn't there") && e.contains("is its disk connected?"), "{e}");
+    assert!(!dir.0.join("Archive").exists(), "nothing is created");
+    assert!(dir.0.join("trip/a.jpg").exists(), "nothing is moved");
+    assert_eq!(s.undo.len(), undo, "and no undo step is left");
+    // however deep the missing folders go
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("trip"), "into": dir.path("Archive/2026")}));
+    assert!(e.contains("“2026” isn't there"), "{e}");
+    assert!(!dir.0.join("Archive").exists());
+}
+
+#[test]
+fn a_folder_that_is_not_there_is_not_called_offline() {
+    let dir = Scratch::new("nosrc");
+    let mut s = trip_session(&dir);
+    std::fs::create_dir_all(dir.0.join("Archive")).unwrap();
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("gone"), "into": dir.path("Archive")}));
+    assert!(e.contains("“gone” isn't there (moved or deleted?)") && !e.contains("connected"), "{e}");
+    // a file is not a folder either
+    let e = refusal(&mut s, "folder.rename", json!({"path": dir.path("trip/a.jpg"), "name": "b"}));
+    assert!(e.contains("“a.jpg” is not a folder"), "{e}");
+}
+
+#[test]
+fn a_folder_on_a_disk_that_is_not_connected_says_so() {
+    let dir = Scratch::new("offsrc");
+    let mut s = trip_session(&dir);
+    std::fs::create_dir_all(dir.0.join("Archive")).unwrap();
+    let off = absent_disk();
+    let e = refusal(&mut s, "folder.move", json!({"path": format!("{off}/photos/Trip"), "into": dir.path("Archive")}));
+    assert!(e.contains("“Trip” is on “lc-absent-disk-") && e.contains("which isn't connected") && e.contains("connect it"), "{e}");
+    assert!(!e.contains("not a folder"), "{e}");
+    let e = refusal(&mut s, "folder.rename", json!({"path": format!("{off}/photos/Trip"), "name": "Holiday"}));
+    assert!(e.contains("which isn't connected"), "{e}");
+}
+
+#[test]
+fn a_destination_on_a_disk_that_is_not_connected_says_so() {
+    let dir = Scratch::new("offdest");
+    let mut s = trip_session(&dir);
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("trip"), "into": format!("{}/Archive", absent_disk())}));
+    assert!(e.contains("“Archive” is on “lc-absent-disk-") && e.contains("which isn't connected"), "{e}");
+    assert!(!e.contains("isn't there"), "{e}");
+    assert!(dir.0.join("trip/a.jpg").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn a_destination_without_permission_is_refused_naming_both_folders() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = Scratch::new("perm");
+    let mut s = trip_session(&dir);
+    std::fs::create_dir_all(dir.0.join("Archive")).unwrap();
+    std::fs::set_permissions(dir.0.join("Archive"), std::fs::Permissions::from_mode(0o555)).unwrap();
+    let writable = std::fs::write(dir.0.join("Archive/probe"), b"").is_ok();
+    let r = s.execute("folder.move", &json!({"path": dir.path("trip"), "into": dir.path("Archive")}));
+    std::fs::set_permissions(dir.0.join("Archive"), std::fs::Permissions::from_mode(0o755)).unwrap();
+    if writable {
+        return; // running as root: nothing is denied
+    }
+    let e = r.unwrap_err().to_string();
+    assert!(e.contains("isn't allowed to move “trip” into “Archive”") && e.contains("permissions") && e.contains("Nothing was moved"), "{e}");
+    assert!(!e.contains("os error") && !e.contains("invalid parameters"), "{e}");
+    assert!(dir.0.join("trip/a.jpg").exists());
+}
+
+#[test]
+fn a_move_to_another_disk_is_refused_and_says_what_to_do() {
+    let dir = Scratch::new("exdev");
+    std::fs::create_dir_all(dir.0.join("trip")).unwrap();
+    std::fs::create_dir_all(dir.0.join("Archive")).unwrap();
+    let denied = |_: &std::path::Path, _: &std::path::Path| Err(std::io::Error::from(std::io::ErrorKind::CrossesDevices));
+    let e = crate::cmd::browse::rename_folder_with(&dir.path("trip"), &dir.path("Archive/trip"), &denied).unwrap_err();
+    assert!(e.contains("“trip” is on a different disk than “Archive”") && e.contains("doesn't copy"), "{e}");
+    assert!(e.contains("Finder") && e.contains("copy it there yourself") && e.contains("Nothing was moved"), "{e}");
+    assert!(!e.contains("os error") && !e.contains("→"), "{e}");
+}
+
+#[test]
+fn another_os_error_becomes_a_sentence_without_its_number() {
+    let dir = Scratch::new("oserr");
+    std::fs::create_dir_all(dir.0.join("trip")).unwrap();
+    let fail = |_: &std::path::Path, _: &std::path::Path| Err(std::io::Error::from_raw_os_error(2));
+    let e = crate::cmd::browse::rename_folder_with(&dir.path("trip"), &dir.path("holiday"), &fail).unwrap_err();
+    assert!(e.starts_with("LightCraft couldn't rename “trip” to “holiday”: ") && e.ends_with(". Nothing was moved."), "{e}");
+    assert!(!e.contains("os error") && !e.contains('→'), "{e}");
+    // a reason that already ends in a full stop (Windows spells its errors so) doesn't double it
+    let sentence = |_: &std::path::Path, _: &std::path::Path| Err(std::io::Error::other("The system cannot find the file specified."));
+    let e = crate::cmd::browse::rename_folder_with(&dir.path("trip"), &dir.path("holiday"), &sentence).unwrap_err();
+    assert!(e.ends_with("the system cannot find the file specified. Nothing was moved.") && !e.contains(".."), "{e}");
+}
+
+#[test]
+fn a_folder_that_holds_the_open_library_names_the_library() {
+    let dir = Scratch::new("holds");
+    std::fs::create_dir_all(dir.0.join("Pictures/Lib")).unwrap();
+    std::fs::create_dir_all(dir.0.join("Archive")).unwrap();
+    let mut s = Session::new();
+    s.open_library(dir.0.join("Pictures/Lib"), false).unwrap();
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("Pictures"), "into": dir.path("Archive")}));
+    assert!(e.contains("“Pictures” holds the open library “Lib”"), "{e}");
+    assert!(dir.0.join("Pictures/Lib").exists());
+}
+
+#[test]
+fn a_folder_inside_the_open_library_is_said_to_be_part_of_it() {
+    let dir = Scratch::new("inside");
+    std::fs::create_dir_all(dir.0.join("Lib")).unwrap();
+    std::fs::create_dir_all(dir.0.join("Archive")).unwrap();
+    let mut s = Session::new();
+    s.open_library(dir.0.join("Lib"), false).unwrap();
+    std::fs::create_dir_all(dir.0.join("Lib/extra")).unwrap();
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("Lib/extra"), "into": dir.path("Archive")}));
+    assert!(e.contains("“extra” is part of the open library “Lib”"), "{e}");
+}
+
+#[test]
+fn the_library_folder_itself_and_a_rename_to_the_same_name_are_told_apart() {
+    let dir = Scratch::new("same");
+    std::fs::create_dir_all(dir.0.join("Lib")).unwrap();
+    let mut s = Session::new();
+    s.open_library(dir.0.join("Lib"), false).unwrap();
+    let e = refusal(&mut s, "folder.rename", json!({"path": dir.path("Lib"), "name": "Renamed"}));
+    assert!(e.contains("“Lib” is the open library's own folder") && e.contains("open another library first"), "{e}");
+    // renaming a folder to the name it has says it is taken, not that it can't go into itself
+    std::fs::create_dir_all(dir.0.join("trip")).unwrap();
+    let e = s.execute("folder.rename", &json!({"path": dir.path("trip"), "name": "trip"})).unwrap_err().to_string();
+    assert!(e.contains("already exists") && !e.contains("into itself"), "{e}");
+}
+
+#[test]
+fn a_destination_that_is_a_file_or_a_whole_offline_disk_is_worded_for_what_it_is() {
+    let dir = Scratch::new("dest-kinds");
+    let mut s = trip_session(&dir);
+    std::fs::write(dir.0.join("note.txt"), b"x").unwrap();
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("trip"), "into": dir.path("note.txt")}));
+    assert!(e.contains("“note.txt” is not a folder") && !e.contains("isn't there"), "{e}");
+    let off = absent_disk();
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("trip"), "into": off}));
+    assert!(e.contains("lc-absent-disk-") && e.contains("” isn't connected.") && !e.contains("is on"), "{e}");
+    // a folder in the disk that is named like the disk is a folder, not the disk
+    let same = format!("{off}/{}", off.rsplit('/').next().unwrap());
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("trip"), "into": same}));
+    assert!(e.contains("is on “lc-absent-disk-") && e.contains("which isn't connected"), "{e}");
+}
+
+#[test]
+fn a_missing_folder_on_a_disk_that_answers_with_an_error_is_not_called_deleted() {
+    use crate::cmd::browse::source_refusal;
+    let from = format!("{}/photos/Trip", absent_disk());
+    // the mount point is there but the folder isn't (or the mount is stale and answers with an error):
+    // it may be gone or its disk may not be answering, and the sentence says both
+    for answer in [Some(true), None] {
+        let e = source_refusal(&from, &|_| answer);
+        assert!(e.contains("“Trip” isn't there (moved or deleted, or is its disk connected?)") && !e.contains("which isn't connected"), "{e}");
+    }
+    // only the file system saying "not there" for the mount point makes the disk offline
+    let e = source_refusal(&from, &|_| Some(false));
+    assert!(e.contains("“Trip” is on “lc-absent-disk-") && e.contains("which isn't connected"), "{e}");
+    // a folder that is not on a disk or share keeps the short wording
+    let e = source_refusal(&Scratch::new("plainsrc").path("gone"), &|_| None);
+    assert!(e.contains("isn't there (moved or deleted?)"), "{e}");
+}
+
+#[test]
+fn a_folder_moved_into_itself_is_named_in_the_refusal() {
+    let dir = Scratch::new("itself");
+    let mut s = trip_session(&dir);
+    std::fs::create_dir_all(dir.0.join("trip/inner")).unwrap();
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("trip"), "into": dir.path("trip/inner")}));
+    assert!(e.contains("“trip” can't be moved into itself"), "{e}");
+}
+
+#[cfg(unix)]
+#[test]
+fn a_path_through_a_link_to_the_open_librarys_folder_is_refused_like_the_real_one() {
+    let dir = Scratch::new("alias");
+    std::fs::create_dir_all(dir.0.join("real/Lib")).unwrap();
+    std::fs::create_dir_all(dir.0.join("Archive")).unwrap();
+    std::os::unix::fs::symlink(dir.0.join("real"), dir.0.join("alias")).unwrap();
+    let mut s = Session::new();
+    s.open_library(dir.0.join("real/Lib"), false).unwrap();
+    // the library's own folder, and the folder that holds it, spelled through the link
+    let e = refusal(&mut s, "folder.rename", json!({"path": dir.path("alias/Lib"), "name": "Renamed"}));
+    assert!(e.contains("is the open library's own folder"), "{e}");
+    std::os::unix::fs::symlink(&dir.0, dir.0.join("up")).unwrap();
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("up/real"), "into": dir.path("Archive")}));
+    assert!(e.contains("holds the open library"), "{e}");
+    assert!(dir.0.join("real/Lib").is_dir(), "the library stayed where it is");
+}
+
+#[test]
+fn a_case_only_rename_that_cannot_be_put_back_says_where_the_folder_is() {
+    let dir = Scratch::new("caseback");
+    std::fs::create_dir_all(dir.0.join("trip")).unwrap();
+    let calls = std::cell::Cell::new(0);
+    // the first step (to the temporary name) works; the second and the way back fail
+    let flaky = |a: &std::path::Path, b: &std::path::Path| {
+        calls.set(calls.get() + 1);
+        if calls.get() == 1 { std::fs::rename(a, b) } else { Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied)) }
+    };
+    let e = crate::cmd::browse::rename_folder_with(&dir.path("trip"), &dir.path("TRIP"), &flaky).unwrap_err();
+    assert!(!e.contains("Nothing was moved") && !e.contains("os error"), "{e}");
+    let tmp = dir.0.join(format!(".lc-rename-{}", std::process::id()));
+    assert!(tmp.is_dir(), "the folder is under the temporary name");
+    assert!(e.contains(&tmp.display().to_string()) && e.contains("rename it by hand"), "{e}");
+}
+
+#[test]
+fn a_folder_that_cannot_be_looked_at_is_not_called_missing() {
+    // the disk answers with an error (a stale share): not "isn't there"
+    let e = crate::cmd::browse::look_refusal("/Volumes/nas/Trip", &std::io::Error::from(std::io::ErrorKind::TimedOut)).unwrap();
+    assert!(e.contains("“Trip” can't be reached right now") && e.contains("check that its disk is connected") && !e.contains("isn't there"), "{e}");
+    assert!(!e.contains("os error"), "{e}");
+    // no permission to look
+    let e = crate::cmd::browse::look_refusal("/x/Trip", &std::io::Error::from(std::io::ErrorKind::PermissionDenied)).unwrap();
+    assert!(e.contains("isn't allowed to open “Trip”") && e.contains("permissions"), "{e}");
+    // simply not there
+    assert!(crate::cmd::browse::look_refusal("/x/Trip", &std::io::Error::from(std::io::ErrorKind::NotFound)).is_none());
+    // or runs through a file
+    assert!(crate::cmd::browse::look_refusal("/x/Trip", &std::io::Error::from(std::io::ErrorKind::NotADirectory)).is_none());
+}
+
+#[cfg(unix)]
+#[test]
+fn a_source_or_destination_without_permission_to_look_is_not_called_missing() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = Scratch::new("nolook");
+    let mut s = trip_session(&dir);
+    std::fs::create_dir_all(dir.0.join("locked/Trip")).unwrap();
+    std::fs::create_dir_all(dir.0.join("locked/Archive")).unwrap();
+    std::fs::set_permissions(dir.0.join("locked"), std::fs::Permissions::from_mode(0o000)).unwrap();
+    let readable = std::fs::metadata(dir.0.join("locked/Trip")).is_ok();
+    let src = s.execute("folder.move", &json!({"path": dir.path("locked/Trip"), "into": dir.path("trip")}));
+    let dst = s.execute("folder.move", &json!({"path": dir.path("trip"), "into": dir.path("locked/Archive")}));
+    std::fs::set_permissions(dir.0.join("locked"), std::fs::Permissions::from_mode(0o755)).unwrap();
+    if readable {
+        return; // running as root: nothing is denied
+    }
+    for (what, r) in [("source", src), ("destination", dst)] {
+        let e = r.unwrap_err().to_string();
+        assert!(e.contains("isn't allowed to open") && e.contains("Nothing was moved") && !e.contains("isn't there"), "{what}: {e}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn a_link_the_library_was_opened_through_cannot_be_renamed_away_from_it() {
+    let dir = Scratch::new("openlink");
+    std::fs::create_dir_all(dir.0.join("real/Lib")).unwrap();
+    std::os::unix::fs::symlink(dir.0.join("real"), dir.0.join("lnk")).unwrap();
+    let mut s = Session::new();
+    s.open_library(dir.0.join("lnk/Lib"), false).unwrap();
+    let e = refusal(&mut s, "folder.rename", json!({"path": dir.path("lnk"), "name": "gone"}));
+    assert!(e.contains("“lnk” holds the open library “Lib”"), "{e}");
+    assert!(dir.0.join("lnk").exists(), "the link stayed");
+}
+
+#[test]
+fn a_destination_that_runs_through_a_file_is_not_called_unreachable() {
+    let dir = Scratch::new("thruFile");
+    let mut s = trip_session(&dir);
+    std::fs::write(dir.0.join("notes.txt"), b"x").unwrap();
+    let e = refusal(&mut s, "folder.move", json!({"path": dir.path("trip"), "into": dir.path("notes.txt/sub")}));
+    assert!(e.contains("“sub” isn't there") && !e.contains("can't be reached"), "{e}");
+}
+
+#[cfg(unix)]
+#[test]
+fn a_link_the_library_was_opened_through_is_found_when_reached_through_another_link() {
+    let dir = Scratch::new("twolinks");
+    std::fs::create_dir_all(dir.0.join("real/Lib")).unwrap();
+    std::os::unix::fs::symlink(dir.0.join("real"), dir.0.join("lnk")).unwrap();
+    std::os::unix::fs::symlink(&dir.0, dir.0.join("up")).unwrap();
+    let mut s = Session::new();
+    s.open_library(dir.0.join("lnk/Lib"), false).unwrap();
+    let e = refusal(&mut s, "folder.rename", json!({"path": dir.path("up/lnk"), "name": "gone"}));
+    assert!(e.contains("holds the open library"), "{e}");
+    assert!(dir.0.join("lnk").exists(), "the link stayed");
+}
+
+#[cfg(unix)]
+#[test]
+fn a_folder_reached_through_a_link_moves_the_photos_stored_under_its_real_path() {
+    let dir = Scratch::new("srclink");
+    std::fs::create_dir_all(dir.0.join("real/Trip")).unwrap();
+    std::fs::write(dir.0.join("real/Trip/a.jpg"), b"x").unwrap();
+    std::os::unix::fs::symlink(dir.0.join("real"), dir.0.join("alias")).unwrap();
+    let mut s = Session::new();
+    // (the scratch folder itself may sit behind a link, as /var does on a Mac: the photo is stored as the disk spells it)
+    let real = dir.0.canonicalize().unwrap().join("real");
+    let at = |rel: &str| real.join(rel).to_string_lossy().to_string();
+    // the photo was added through the real path; the folder is moved through the link
+    add(&mut s, &at("Trip/a.jpg"));
+    s.execute("folder.rename", &json!({"path": dir.path("alias/Trip"), "name": "Holiday"})).unwrap();
+    assert!(dir.0.join("real/Holiday/a.jpg").is_file());
+    let photo = s.catalog.photos().next().unwrap();
+    assert_eq!(photo.source, Source::File { path: at("Holiday/a.jpg") }, "the library follows the folder");
+    // undo and redo keep it
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(s.catalog.photos().next().unwrap().source, Source::File { path: at("Trip/a.jpg") });
+    s.execute("edit.redo", &json!({})).unwrap();
+    assert_eq!(s.catalog.photos().next().unwrap().source, Source::File { path: at("Holiday/a.jpg") });
+}
+
+#[cfg(unix)]
+#[test]
+fn a_label_carried_through_a_link_survives_an_old_record_at_the_destination() {
+    let dir = Scratch::new("linklabel");
+    // the disk's own spelling, so both passes over the folder's records name the destination alike
+    let root = dir.0.canonicalize().unwrap();
+    let at = |rel: &str| root.join(rel).to_string_lossy().to_string();
+    std::fs::create_dir_all(root.join("real/Trip")).unwrap();
+    std::fs::create_dir_all(root.join("real/Archive/Trip")).unwrap();
+    std::os::unix::fs::symlink(root.join("real"), root.join("alias")).unwrap();
+    std::fs::write(root.join("real/Trip/a.jpg"), b"x").unwrap();
+    std::fs::write(root.join("real/Archive/Trip/b.jpg"), b"x").unwrap();
+    let mut s = Session::new();
+    // Given a folder labeled through a link, and an old record left where it is going
+    add(&mut s, &at("alias/Trip/a.jpg"));
+    add(&mut s, &at("real/Archive/Trip/b.jpg"));
+    s.execute("folder.label", &json!({"path": at("alias/Trip"), "label": "red"})).unwrap();
+    s.execute("folder.label", &json!({"path": at("real/Archive/Trip"), "label": "blue"})).unwrap();
+    s.execute("library.removeFolder", &json!({"path": at("real/Archive/Trip")})).unwrap();
+    std::fs::remove_dir_all(root.join("real/Archive/Trip")).unwrap();
+    // When it is moved there through the link
+    s.execute("folder.move", &json!({"path": at("alias/Trip"), "into": at("real/Archive")})).unwrap();
+    // Then it keeps its own label, not the old record's, and not none
+    assert!(root.join("real/Archive/Trip/a.jpg").is_file());
+    assert_eq!(listed_label(&mut s, &at("real/Archive/Trip")).as_deref(), Some("red"));
 }

@@ -26,11 +26,18 @@ pub use albums::{album_drag_feedback, auto_scroll_speed};
 use albums::{albums_rows, drag_auto_scroll};
 pub(crate) use dates::browse_all_photos;
 use dates::date_rows;
+pub use folders::folder_drag_feedback;
+#[cfg(test)]
+pub(crate) use folders::folder_drop_refusal;
 pub(crate) use folders::follow_shown;
-pub(crate) use folders::{FolderPlace, folder_place, folder_row_of, move_photos, moved_text};
+#[cfg(test)]
+pub(crate) use folders::move_folder_to;
+pub(crate) use folders::{FolderPlace, folder_place, folder_row_of, moved_skipping_text, moved_text, run_folder_move, toast_folder_moved};
 use folders::{folder_rows, reveal_chosen};
 use keywords::keyword_rows;
-pub(crate) use local::{fs_cached, fs_cached_running, fs_running_counter, same_folder};
+#[cfg(test)]
+pub(crate) use local::CHECKED_ON;
+pub(crate) use local::{fs_cached, fs_cached_running, fs_running_counter, keep_local_root, local_root_path, same_folder};
 use local::{local_now, local_rows};
 #[cfg(test)]
 pub(crate) use rows::{INDENT_STEP, MIN_INDENT_STEP};
@@ -50,6 +57,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let frame = egui::Frame::NONE.fill(t.chrome).stroke(egui::Stroke::new(1.0, t.divider));
     // (a library opened since the frame began is known before its rows are shown)
+    super::side_select::begin_left(app);
     follow_shown(app, ui.ctx());
     frame.show(ui, |ui| {
         ui.spacing_mut().item_spacing.y = 0.0;

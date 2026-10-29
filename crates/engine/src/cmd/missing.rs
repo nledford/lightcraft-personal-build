@@ -144,7 +144,7 @@ fn relink(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 /// The stored content hash of a photo, without the `:dupN` suffix duplicates get.
-fn stored_hash(p: &Photo) -> Option<&str> {
+pub(crate) fn stored_hash(p: &Photo) -> Option<&str> {
     p.content_hash.as_deref().map(|h| h.split(':').next().unwrap_or(h)).filter(|h| !h.is_empty())
 }
 
@@ -155,7 +155,7 @@ pub(crate) fn file_hash(path: &str) -> Option<String> {
 }
 
 /// The content hash of what `r` gives, read in pieces (the hash import computes of the whole).
-fn hash_reader(mut r: impl std::io::Read) -> Option<String> {
+pub(crate) fn hash_reader(mut r: impl std::io::Read) -> Option<String> {
     let mut hasher = lightcraft_preview::Hasher128::new();
     let mut piece = vec![0u8; 1 << 16];
     loop {

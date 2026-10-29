@@ -398,9 +398,30 @@ pub fn source_label(source: lightcraft_engine::LibrarySource, catalog: &lightcra
 /// two names (`photos/travel`; the folder's name is the user's and stays verbatim).
 pub fn source_title(session: &lightcraft_engine::Session) -> String {
     match (session.source, session.library_folder.as_deref()) {
+        // several chosen at once in the sidebar
+        (lightcraft_engine::LibrarySource::Album(_), _) if !session.also_albums.is_empty() => {
+            tr_format!("{n} albums", n = session.source_albums().len())
+        }
+        (lightcraft_engine::LibrarySource::LibraryFolder, Some(_)) if !session.also_library_folders.is_empty() => {
+            tr_format!("{n} folders", n = session.source_library_folders().len())
+        }
         (lightcraft_engine::LibrarySource::LibraryFolder, Some(path)) => lightcraft_catalog::folders::folder_label(path),
         (source, _) => source_label(source, &session.catalog),
     }
+}
+
+/// For a smart album on a loop (it includes itself through the albums it tests, so it holds no
+/// photos): what the album's empty view says, as its title and what to do about it, naming the
+/// album the loop goes through. `None` for an album that is not on a loop.
+pub fn album_loop_note(catalog: &lightcraft_catalog::Catalog, id: lightcraft_catalog::AlbumId) -> Option<(String, String)> {
+    let through = catalog.album_loops_through(id)?;
+    let body = if through == id {
+        tr("It tests itself: change its rules (Edit Smart Album…)").to_string()
+    } else {
+        let name = catalog.album(through).map(|a| a.name.clone()).unwrap_or_default();
+        tr_format!("It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)", name)
+    };
+    Some((tr("This album is in a loop, so it shows nothing").to_string(), body))
 }
 
 /// A date group heading (`2026-09-20`, `2026-09`, `2026`) in the UI language: the grid's full

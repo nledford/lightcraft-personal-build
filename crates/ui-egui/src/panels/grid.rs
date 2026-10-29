@@ -19,6 +19,9 @@ use crate::state::ViewMode;
 use crate::theme::Tokens;
 use crate::widgets::register;
 
+/// How dark (alpha of black) the photos being dragged are painted: as dark as a rejected photo's thumbnail.
+const DRAGGED_DIM: u8 = 110;
+
 /// Thumbnail render size (pixels, long edge) for a cell of `pts` points.
 fn thumb_px(pts: f32, ppp: f32) -> usize {
     let px = (pts * ppp).ceil() as usize;
@@ -327,7 +330,14 @@ fn show_inner(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     }
     app.canvas_rect = Some(ui.max_rect());
     if ids.is_empty() {
-        if !chips.is_empty() {
+        // an album on a loop is empty because of the loop, whatever filters are on
+        let loop_note = match app.session.source {
+            lightcraft_engine::LibrarySource::Album(id) => crate::i18n::album_loop_note(&app.session.catalog, id),
+            _ => None,
+        };
+        if let Some((title, body)) = loop_note {
+            super::empty_message(ui, ui.max_rect(), &title, &body);
+        } else if !chips.is_empty() {
             let body = match total {
                 Some(n) if n > 0 => {
                     crate::i18n::tr_format!("{n} photos in {} are hidden by the filters above", crate::i18n::source_title(&app.session), n = n)
@@ -412,6 +422,8 @@ fn show_inner(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         }
         // only the rows on screen and a screen above and below it (their thumbnails are prefetched)
         let prefetch = viewport.expand2(vec2(0.0, viewport.height()));
+        // the photos a drag carries, as a set once per frame: a cell asks about itself, and a large selection mustn't be scanned for each
+        let dragged: Option<HashSet<u64>> = app.ui.dragging_photos.as_ref().map(|d| d.iter().copied().collect());
         for row in rows_between(&lay.rows, prefetch.top(), prefetch.bottom()) {
             for i in row.start..row.end {
                 let (Some(&id), Some(&rect)) = (ids.get(i), lay.cells.get(i)) else { continue };
@@ -422,7 +434,7 @@ fn show_inner(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 visible_ids.insert(id);
                 let r = rect.translate(origin.to_vec2());
                 let onscreen = rect.intersects(viewport);
-                cell(app, ui, id, r, CellView { square, onscreen, ppp, stack: stacks.get(&id).copied() });
+                cell(app, ui, id, r, CellView { square, onscreen, ppp, stack: stacks.get(&id).copied() }, dragged.as_ref());
             }
         }
         // date headers (top to bottom); the current group's header sticks to the top while its
@@ -766,7 +778,7 @@ pub(crate) fn skips_the_real_render(embedded_is_final: bool, from_embedded: bool
 /// Rendered thumbnails replacing embedded previews: after everything on screen.
 pub const BACKGROUND_THUMB_PRIORITY: u32 = 3;
 
-fn cell(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, r: Rect, view: CellView) {
+fn cell(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, r: Rect, view: CellView, dragged: Option<&HashSet<u64>>) {
     let CellView { square, onscreen, ppp, stack } = view;
     let t = Tokens::get(ui.ctx());
     let Some(photo) = app.session.catalog.photo(id).cloned() else { return };
@@ -785,7 +797,14 @@ fn cell(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, r: Rect, view: 
     } else {
         r
     };
-    let flags = ThumbFlags { square, selected, active, onscreen, ppp, aspect: photo_aspect(Some(&*photo)) };
+    // the photos being dragged step back while the drag lasts: what moves is the label at the pointer, and a drop's
+    // target is the thing to look at. Those are the photos a drop would carry (`drag_started` below takes the
+    // selection of that moment), whatever the selection becomes before the button is let go. The dimming goes
+    // right over the thumbnail, under the selection ring, labels and badges, so those stay as bright as ever; a
+    // rejected photo already has its own dimming (the same shade, painted further down, over its marks), so a
+    // dragged one keeps that one and is dimmed once, not twice.
+    let dim = photo.flag != lightcraft_catalog::Flag::Reject && dragged.is_some_and(|dragged| dragged.contains(&id.0));
+    let flags = ThumbFlags { square, selected, active, onscreen, ppp, aspect: photo_aspect(Some(&*photo)), dim };
     let (photo_rect, failure) = paint_cell_thumbnail(app, p, &t, id, img_rect, flags);
     // labels and badges
     paint_cell_caption(app, p, &t, &photo, r, CaptionFlags { square, selected });
@@ -836,7 +855,12 @@ fn paint_cell_thumbnail(
     img_rect: Rect,
     flags: ThumbFlags,
 ) -> (Rect, Option<String>) {
-    let ThumbFlags { square, selected, active, onscreen, ppp, aspect } = flags;
+    let ThumbFlags { square, selected, active, onscreen, ppp, aspect, dim } = flags;
+    let dim_dragged = |p: &egui::Painter, rect: Rect| {
+        if dim {
+            p.rect_filled(rect, 0.0, Color32::from_black_alpha(DRAGGED_DIM));
+        }
+    };
     let size = thumb_px(img_rect.width().max(img_rect.height()), ppp);
     request_thumb(app, id, size, if onscreen { 10 } else { 5 });
     let (photo_rect, failure) = if let Some(tex) = app.renderer.thumb(id) {
@@ -844,6 +868,7 @@ fn paint_cell_thumbnail(
         // Preserve the decoded preview's ratio when it differs from the catalog dimensions.
         let fit = super::detail::fit_texture_rect(img_rect, [tw, th]);
         p.image(tex.tex.id(), fit, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+        dim_dragged(p, fit);
         if active {
             p.rect_stroke(fit.expand(if square { 2.0 } else { 0.0 }), 0.0, Stroke::new(2.0, Color32::WHITE), StrokeKind::Outside);
         } else if selected {
@@ -853,6 +878,7 @@ fn paint_cell_thumbnail(
     } else {
         let ph = crate::thumb::placeholder_rect(img_rect, aspect);
         crate::thumb::paint_placeholder(p, ph, t);
+        dim_dragged(p, ph);
         // not drawn yet (or unreadable): the selection is still visible
         if active {
             p.rect_stroke(ph, 0.0, Stroke::new(2.0, Color32::WHITE), StrokeKind::Outside);
@@ -929,12 +955,9 @@ fn cell_interaction(
         app.act("library.select", json!({"ids": [id.0]}));
         app.act("view.detail", json!({}));
     }
-    // drag the selection (this photo joins it, or replaces it when it wasn't selected)
-    if resp.drag_started() {
-        if !app.session.selection.contains(id) {
-            app.act("library.select", json!({"ids": [id.0]}));
-        }
-        app.ui.dragging_photos = Some(app.session.selection.ids.iter().map(|p| p.0).collect());
+    // only the primary button drags, so a right-button drag leaves the selection alone
+    if resp.drag_started_by(egui::PointerButton::Primary) {
+        begin_photo_drag(app, id);
     }
     crate::widgets::context_menu(resp, |ui| context_menu(app, ui, id));
     // (the stack badge covers part of the cell: it opens the same menu)
@@ -950,6 +973,8 @@ struct ThumbFlags {
     onscreen: bool,
     ppp: f32,
     aspect: f32,
+    /// a photo being dragged: painted darker
+    dim: bool,
 }
 
 /// What [`paint_cell_caption`] needs to know about the cell.
@@ -1076,6 +1101,15 @@ fn folder_breadcrumbs(app: &mut LightcraftApp, ui: &mut egui::Ui, path: &str) {
     }
 }
 
+/// A drag of photo `id` began (grid cell or filmstrip cell): the photos it carries are the selection,
+/// which this photo joins, or replaces when it wasn't part of it.
+pub(crate) fn begin_photo_drag(app: &mut LightcraftApp, id: PhotoId) {
+    if !app.session.selection.contains(id) {
+        app.act("library.select", json!({"ids": [id.0]}));
+    }
+    app.ui.dragging_photos = Some(app.session.selection.ids.iter().map(|p| p.0).collect());
+}
+
 /// While photos are dragged: a badge at the pointer; the drag ends when the button is up
 /// (drop targets act on the release frame, before this runs).
 /// What the label following dragged photos says this frame instead of how many there are: where a
@@ -1098,7 +1132,7 @@ pub fn refuse_drop(app: &mut LightcraftApp, ctx: &egui::Context, hint: String, w
 
 pub fn drag_feedback(app: &mut LightcraftApp, ctx: &egui::Context) {
     let Some(ids) = &app.ui.dragging_photos else { return };
-    let (released, down, pos) = ctx.input(|i| (i.pointer.any_released(), i.pointer.any_down(), i.pointer.latest_pos()));
+    let (released, down, pos) = ctx.input(|i| (i.pointer.primary_released(), i.pointer.primary_down(), i.pointer.latest_pos()));
     if released || !down {
         app.ui.dragging_photos = None;
         return;
@@ -1308,7 +1342,9 @@ fn context_menu_albums(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) 
         register(ui, "button:contextAddToAlbum", add.response.rect);
     }
     // in a (non-smart) album: take the selection out of it, or make this photo its cover
+    // (with several albums shown there is no telling which one is meant)
     if let lightcraft_engine::LibrarySource::Album(aid) = app.session.source
+        && app.session.also_albums.is_empty()
         && app.session.catalog.album(aid).is_some_and(|a| !a.folder && !a.is_smart())
     {
         if MenuItem::new(crate::i18n::tr("Remove from Album")).show(ui).clicked() {
@@ -1327,17 +1363,16 @@ fn context_menu_file_actions(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     let can_pick = app.services.pick_folder.is_some() || app.services.picker.is_some();
     if can_pick && MenuItem::new(crate::i18n::tr("Move to Folder…")).show(ui).clicked() {
         // the folder dialog goes through the shared picker (off the UI thread where the host has
-        // one: then photo.moveToFolder runs when it closes)
+        // one: then photo.moveToFolder runs when it closes); the move itself runs in the background
         let req = crate::pick::PickRequest::folder(crate::i18n::tr("Move to Folder…"));
-        let picked =
-            crate::pick::ask(app, "photo.moveToFolder", &json!({}), "folder", req, |s| s.pick_folder.as_mut().and_then(|f| f()).map(|x| vec![x]));
+        let picked = crate::pick::ask(app, "photo.moveToFolder", &json!({"background": true}), "folder", req, |s| {
+            s.pick_folder.as_mut().and_then(|f| f()).map(|x| vec![x])
+        });
         if let crate::pick::Picked::Now(v) = picked
             && let Some(into) = v.into_iter().next()
         {
-            match app.run("photo.moveToFolder", json!({"folder": into})) {
-                Ok(r) => app.toast(ui.ctx(), crate::i18n::tr_format!("Moved {} photo(s)", r["moved"])),
-                Err(e) => app.toast_error(ui.ctx(), e),
-            }
+            // (a refusal is told in a toast by `start`)
+            let _ = crate::move_task::start(app, ui.ctx(), &json!({"folder": into}));
         }
     }
     if MenuItem::new(crate::i18n::tr("Reload from Disk")).show(ui).clicked() {

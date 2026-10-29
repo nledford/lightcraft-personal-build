@@ -154,6 +154,8 @@ impl LightcraftApp {
         sync::poll_rescan(self, ctx);
         sync::poll_run(self, ctx);
         trash_run::poll(self, ctx);
+        crate::move_task::poll(self, ctx);
+        crate::relocate::poll(self, ctx);
         // Import commits batches and must not run twice in one host frame. The first layout pass
         // and a hidden logic tick both report pass index 0; a second pass reports 1. A wall-clock
         // gate cannot express that (a slow discarded first pass would re-run it).
@@ -322,6 +324,7 @@ impl LightcraftApp {
         // Recent-library checks and launch-list keys read focus/time/keys: they belong to the UI
         // phase, not the hidden-capable `logic` tick (plan §4.5 / migration input contract).
         panels::library_problem::logic(self, ctx);
+        panels::side_select::keys_frame(self, ctx);
         if self.fonts_ready && !updates_ui::blocks_input(self) {
             shortcuts::handle(self, ctx);
         }
@@ -469,6 +472,8 @@ impl LightcraftApp {
         // Freeze this frame's notice barrier before `notices::show` can dismiss a prompt: the same
         // click or key must never be acted on again by the dialog drawn after it.
         let notice_blocks = panels::notices::blocks_input(self);
+        // what the panels below read to refuse a right-click's menu while photos are carried
+        widgets::set_carrying(&ctx, self.ui.dragging_photos.is_some() && ctx.input(|i| i.pointer.primary_down()));
         if std::mem::take(&mut self.ui.quit) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
@@ -534,6 +539,7 @@ impl LightcraftApp {
         if !self.drawing_offscreen {
             panels::grid::drag_feedback(self, &ctx);
             panels::left::album_drag_feedback(self, &ctx);
+            panels::left::folder_drag_feedback(self, &ctx);
             panels::left::section_drag_feedback(self, &ctx);
             panels::keyword_list::drag_feedback(self, &ctx);
         }

@@ -1,5 +1,15 @@
 # What's new in LightCraft
 
+## 2026-10-28
+
+### Local's standard places can't be renamed by mistake
+- The Pictures, Desktop, Downloads and Home rows of Local no longer offer Rename Folder… or Move Folder To…. Before,
+  the Rename prompt began with the row's translated label rather than the folder's name, so in German pressing OK
+  on “Bilder” renamed your real Pictures folder to “Bilder”, and Home could be renamed the same way. Folders inside
+  them, and folders you keep in Local with Browse Folder…, rename as before, starting from their real name. The
+  `folder.rename` and `folder.move` commands now refuse the home folder and its Pictures, Desktop and Downloads too,
+  so a script or an agent can't do it either.
+
 ## 2026-10-27
 
 ### Reading a photo from a network share asks the server less
@@ -126,6 +136,55 @@
 - A browsed file that another application replaced since (its size on disk is no longer the one that was browsed) is
   read again: it is compared with the library by what it is now, and importing it brings its record up to date (size,
   dimensions, content) as it joins the library.
+
+### A move cut short is followed at the next open
+- If LightCraft is force-quit or crashes part-way through a move, or you choose Quit Anyway, the next time the
+  library opens, the photos whose files reached the new folder point there (their sidecars follow), the others stay,
+  and an "Unfinished moves" window says what was found. Edits made while the files were moving reach their XMP
+  sidecars then too. A file that was half copied to another disk leaves a hidden `.lc-partial` file in the new folder,
+  which that open removes; a copy that reached the new folder while the original stayed is removed only when it is the
+  same file or holds the same bytes. In a library that was opened without its lock (some network shares can't lock
+  it), nothing is followed or removed, because another program may be making the move: use File ▸ Find Missing
+  Photos… to relink files that moved.
+
+### Choose several albums, folders, keywords or dates in the sidebars
+- In the left panel, Cmd+click (Ctrl+click on Windows and Linux) adds an album, a folder, a keyword or a date to the
+  ones chosen, or takes it away; Shift+click takes every row between the last one clicked and this one, except rows
+  inside a folder that is closed. The grid shows the photos of any of them, each once, and the title says how many
+  albums or folders are shown. A plain click chooses one row alone, as before.
+- In the Keyword List (right panel, Keywords) the same clicks pick several keywords. Picking does not change the grid.
+- With several albums shown, Remove from Album is not offered and the Delete key is the photos' Delete once you click
+  elsewhere (it asks first while Settings ▸ Confirm before moving photos to Recently Deleted is on), because there is no
+  telling which album is meant.
+- Right-click one of several rows chosen to act on them all, as one step to undo: move albums into a folder, export
+  them, or delete them; give folders a color label or remove them from the library; give keywords to the selected
+  photos, take them away, merge them or delete them. Deleting or removing several asks first and says what goes.
+  Right-click a row that is not among them and you get that row's own menu; the others stay chosen.
+- Dragging one of several albums or keywords moves them all (albums go into the folder they are dropped in or
+  beside; dropped beside a row, the one you dragged is placed there and the others come into that folder).
+- Right after choosing several rows with Cmd or Shift, the Delete key asks about those rows. Click anywhere else,
+  or select photos or change what is shown in any other way, and Delete is about the photos again; after a plain
+  click on an album it always was.
+- For agents: `album.delete` and `album.move` take `ids`, `keyword.delete` and `keyword.move` take `keywords`,
+  `library.removeFolder` and `folder.label` take `paths`, as one undo step each; `album.reorder` takes `with`, the
+  albums chosen beside the one it places, which come to the same folder in the same step.
+
+### Cut, Copy and Paste for albums and keywords
+- In the menus of albums and keywords in the left panel and the Keyword List, Cut and Copy take the rows (one or
+  several chosen) and Paste puts them down: cut albums move into the folder where you choose Paste (the Albums +
+  menu pastes at the top level), copied albums are duplicated there with their photos, a copied smart album keeps its
+  rules and a copied folder everything inside it; cut keywords are nested inside the keyword where you choose Paste;
+  copied keywords are text you can paste in a keyword box. Paste is grayed out where it can't work, such as a
+  folder inside itself, and one Edit ▸ Undo takes back a paste.
+- For agents: the new `album.duplicate` takes `id` or `ids` and an optional `parent` (null: the top level).
+
+### Save or read the metadata of a whole folder from a script
+- `folder.saveMetadata {path}` and `folder.readMetadata {path}` (CLI and MCP) do what Save Metadata to File and Read
+  Metadata from File do for the selection, for every library photo imported from a folder and the folders inside it.
+  Each run shows a row in the activity stack. With `background: true` the work only advances while the caller runs
+  `folder.metadataPump` again and again (the app doesn't yet), and then the row's ✕ stops it between photos: a stopped
+  save keeps the sidecars it wrote, a stopped read commits what it read as one undo step. A photo whose file can't be
+  written or read is listed in `failed` and the rest go on. The Folders menu items that use them come later.
 
 ## 2026-10-24
 
@@ -315,6 +374,29 @@
   names them; after a switch that dropped them, a message says how many ("Waiting tasks dropped: 2").
 - A full waiting line is refused in the window's language ("Too many tasks are waiting (100): wait for some to finish").
 
+### Stop a move that is under way
+- ✕ on the "Moving photos" row stops the move after the file in hand. The photos that moved stay moved, as one step
+  Edit ▸ Undo takes back, and the rest stay where they were. A toast says how far it got.
+
+### A refused move no longer switches the Move Photos question off
+- Ticking Don't ask again in the question that appears when you drop photos on a Folders row used to be remembered even when the move was then refused (for example because a file of the same name is already in that folder). The choice is now kept only once the move has started, so a refused move leaves the question on.
+
+### Locate a folder that moved
+- A folder of the library that is somewhere else now can be pointed at its new place (issue #1112): it was moved or
+  renamed outside LightCraft, its disk is mounted under another name, or its catalog came from another computer (a
+  Lightroom catalog from Windows names `D:\Photos\…`, which is nowhere on Linux or macOS). **Synchronize Folder…**
+  on a folder that isn't there now offers **Locate Missing Folder…**, and every Folders row has **Update Folder
+  Location…**. Choose the folder: its photos, those in the folders inside it too, point at the same places below it,
+  colour labels follow, and when you started from Synchronize Folder, it then scans the folder there. Only the
+  library changes, no file is touched, and it is one undo step.
+- The photos' files are looked for in the chosen folder first, in the background (a row in the activity stack; ✕
+  stops it). A folder with none of them is not taken; one with only some asks before going on. A file counts when
+  it is the size the library recorded; files of another size are said in the question. A file that is another
+  photo's of the same folder (the chosen folder is inside the old one, or the reverse) is never taken for it, unless
+  its content is the photo's.
+- Agents and the CLI: `folder.updateLocation {folder, path}`. In the running app it looks for the files in the
+  background too and answers at once; `ui.inspect` → `relocate` says how it went.
+
 ### Relative-date filters and smart albums follow the clock
 - A current view or source count using “in the last” rules now refreshes when the session clock moves into a new
   minute, even when no catalog edit occurred. This fixes stale photos remaining in the grid and stale counts for
@@ -340,6 +422,43 @@
   and 2 % edited, a photo takes about 2.8 kB where it took 4.4 kB (285 MB instead of 441 MB). Nothing changes on
   screen, and the library's files are byte for byte what they were, so earlier versions open them as before.
 
+### A right-click while you carry photos opens no menu
+- While you drag photos from the grid, a right-click opens no context menu, on an album, folder or keyword row in
+  the sidebar or on any other row or thumbnail that has one. Before, the menu opened on the row the photos were over.
+  The menu of a text field (Cut, Copy, Paste) is not held back.
+
+### Adding photos that are already in an album no longer costs an undo step
+- Add to Album and dragging photos to an album now leave the album, the undo history and Redo alone when every
+  photo was in the album already. Before, they still recorded an undo step, so Redo was lost and Undo had a step
+  that changed nothing. Photos the library no longer has (a selection kept after an Undo took them away) are also
+  left out of a new album made from the selection, out of Add to Album, and out of the target album (B), which does
+  nothing and says nothing when none of them is left, and counts only the photos it changed.
+
+### Reorder rules and groups in the smart album editor
+- Every rule and every group in the New / Edit Smart Album window has a grip (six dots) at the start of its row. Drag it
+  to move the row: a line shows where it will land, the row's name follows the pointer, and Esc gives the drag up. Drop
+  on a rule inside a group to put it in that group, beside the group's frame to take it out; drag a whole group to
+  nest it in another. A group can't go inside itself or deeper than three levels: the pointer shows a not-allowed
+  cursor and says why, and nothing moves. A group a move leaves empty goes away.
+- With the keyboard, Tab to a grip and press ↑ or ↓ to move the row one place (at the end of a group it moves out of
+  the group), → to move it into the group above it (or below it, if that is the one next to it) and ← to move it out
+  of its group. The focus stays on the moved row's grip, and a screen reader says where the row is: "Rule 2 of 4:
+  Rating is ≥ 3. Move with the arrow keys".
+- OK saves the rules in the order shown, in one undo step like any other change to the rules.
+
+### An album caught in a loop is empty, and says so
+- A smart album that tests another album, which tests it back (or that tests itself), used to show a share of
+  its photos, and which photos depended on the album you asked about. Now every album on such a loop shows no
+  photos, however you look at it: in the grid, in the count beside it in the sidebar, and in an Album rule of
+  another smart album.
+- The empty album says why instead of "No photos": "This album is in a loop, so it shows nothing", then the album it
+  loops through and where to fix it (Edit Smart Album…). The row in the sidebar keeps its ⚠, and hovering it says the
+  same.
+- An album that only tests a looping album is not on the loop: it keeps working, and sees the looping album as empty
+  (so an Album rule set to "isn't" that album matches every photo). Change the rules of one album on the loop and its albums hold
+  their photos again.
+- A library that already holds such a loop opens as before; only what the albums on it show changes.
+
 ## 2026-10-23
 
 ### Large libraries (#2968)
@@ -359,6 +478,11 @@
   every tab id from before still opens its tab (`display` and `interface` are Monitor and Appearance).
 - Each section of Settings can be found by scripts as `heading:<its English name>` in `ui.widgets`, whatever the
   interface language.
+
+### Right-button drags no longer pick up photos in the grid
+- Dragging with the right mouse button over a photo in the grid used to pick up the photos and, on a photo that wasn't
+  selected, replace the selection with it. Now only the left button drags photos, and a right-button release while you
+  are dragging photos no longer drops them on an album, folder or keyword. Right-click still opens the photo menu.
 
 ### Messages no longer hide each other
 - The short messages at the bottom of the photo view used to replace one another: a label set right after an export
@@ -405,6 +529,21 @@
   import adds some, others are removed, moved to Recently Deleted or relinked), the answer leaves out the photos that
   no longer apply, a photo added meanwhile is not part of that check, and the answer is not kept for a later request.
 
+### A refused move to another folder says what is wrong
+- When photos can't be moved into another folder, the message now names the photos and what to do (rename them,
+  reconnect the disk, or leave them out of the move), in plain words, instead of an "invalid parameters" error that
+  named an internal command. Moving the photos you chose with Move Selected Photos Here still stops as a whole when one
+  of them can't go, and then nothing is moved.
+- Agents get the same details: `photo.checkMove` lists, without moving anything, the photos that can go, the ones
+  already in the folder, and those that can't go: a name taken there, a file that is missing or offline, or a photo
+  that can't move as it is (a Local photo, until it is added to the library, or one with no file).
+  `photo.moveToFolder` takes `skip`, the ids of photos to leave where they are while the rest move (a Local photo
+  can be skipped too), and reports each skipped photo with the reason.
+- Dropping photos on a folder in the sidebar now checks the move first. The question names the photos that can't go
+  (up to five, then a count) and why: the name is taken in the folder, two photos being moved share a name, the file is
+  missing or offline, or the photo has no file. It says what to do and offers to move the rest, and it asks even when
+  you turned off the confirmation. Dropping a Local photo is still refused on the row, with its own reason.
+
 ### Choose where a Lightroom catalog goes
 - File ▸ Import Lightroom Catalog… now asks first: merge the catalog's photos, collections and edits into the
   library open now, or create a new library for them, named after the catalog and placed next to the open library
@@ -449,6 +588,55 @@
   a click from what is underneath it.
 - A toast fades in over a fraction of a second, as it already faded out.
 
+### Editing a smart album made from an album keeps the album
+- A smart album saved from the view of an album stays limited to that album when you edit its rules and press OK. It used to match the whole library afterwards, because the rules dialog has no album field and replaced the album along with the rules.
+
+### Drag photos from the filmstrip
+- You can now drag a photo from the filmstrip onto the sidebar, as you can from the grid: onto an
+  album, a folder or a keyword. Dragging a selected photo takes the whole selection; dragging one that isn't selected
+  takes just that photo and selects it. In the Compare view, a photo that isn't selected is dragged alone and the
+  selection, the active photo and the two photos on screen stay as they were. Clicking a filmstrip photo works as
+  before: outside Compare it selects the photo, and in Compare a plain click puts the photo into the active side.
+
+### Dragged photos step back in the grid
+- While you drag photos from the grid, their thumbnails are dimmed (as dark as a rejected photo's), so the label at
+  the pointer and the row it is over are what stands out. They return to normal when you let go of them.
+
+### Dropping photos on a folder or album that shares its name
+- When photos are dragged onto a Folders row and another folder has the same name (two folders called `Home` on
+  different disks), the label at the pointer, the Move Photos question and the message afterwards name the folder
+  it is in, for example `Home (/Volumes/Archive/Photos)`, so you can tell which one you are about to move them
+  into. Long parent paths keep their last names behind `…/`, unless that would read like another folder's path of the
+  same name (a mirror on another disk): then the whole path is shown. A name that nothing else uses stays as it was, except that a network share's row is now
+  named as the Folders list shows it (`photos on tokyo`) instead of by the last part of its mount path.
+- Photos dropped on an album that shares its name with an album in another folder say so too (`Garden (Travel
+  2026)`). Two albums with the same name in the same place have nothing to tell them apart by and keep the plain
+  name.
+
+### Undo from the toast after a drop
+- After photos dragged from the grid are moved to a folder, added to an album or given a keyword, the message that
+  names the result has an Undo button, and so does the message after Move Selected Photos Here in a folder's menu.
+  One click takes the move back, as Edit ▸ Undo would. The button stays for six seconds and goes away sooner if you do
+  something else meanwhile (or take the drop back from the Edit menu), so it can only undo the drop. A drop that
+  changed nothing (photos already in the album, already in the folder) has no button.
+
+### Moving a folder says plainly why it can't
+- Moving a folder into a folder that isn't there is refused ("“Archive” isn't there (is its disk connected?)"); it no
+  longer creates the missing folders. A folder, or a destination, on a disk or share that isn't connected says so
+  instead of "is not a folder". No permission, a move to another disk (still refused: LightCraft never copies a
+  folder and deletes the original; use Finder or your file manager) and other disk errors are sentences that name the
+  folder, with no `os error` number. Refusing to move a folder that holds the open library names the library.
+
+### Drag a Folders row onto another to move that folder
+- A folder in the sidebar's Folders section can be dragged onto another Folders row to move it there on disk, with
+  its photos, as the row's Move Folder To… menu item does. The row under the pointer lights up (a closed one opens after a
+  moment, so a folder inside it can be reached) and the dragged label says "Move “trip” into “archive”". A row that
+  can't take the folder (the folder itself, one inside it, the folder it is in already, a row that covers several
+  disks, the library's own folder) shows the not-allowed cursor and says why in the label. A drop asks first, naming
+  both folders and how many photos go along; "Don't ask again" (Settings → Confirm before moving photos to another
+  folder on disk) moves it at once. Esc gives the drag up, and Edit ▸ Undo moves the folder back. A click on a row
+  still chooses it.
+
 ## 2026-10-22
 
 ### Reliability
@@ -468,6 +656,24 @@
 - Photo Grid and Square Grid now show the grid-cycle shortcut (G by default) in the View menu. The hints follow
   shortcut changes; clicking a menu row still selects that grid (issue #2500).
 
+### Moving a folder says where it went
+- After Move Folder To…, the message now says where the folder went in plain words, for example Moved “Trip” into
+  “Archive”. Edit → Undo moves it back. When library photos went with the folder, it adds “Photos: 12”. The Folders
+  tree and Local say the same, in every language; before, the Folders tree showed an English “Moved; 12 photo(s)
+  relinked” in every language, and Local a translated version of it.
+
+### Move several folders into one in a single step
+- For agents: `folder.move {paths, into}` moves several folders on disk into one folder, with the photos in them
+  following, as one undo step: Undo moves them all back and Redo moves them all again. If any one can't move (a folder
+  into itself or into one inside it, a name already taken in the destination, one folder inside another of the list,
+  two folders with the same name, a folder that isn't there; or more than 200 folders) the whole move is refused with a plain sentence and
+  nothing moves. `folder.move {path, into}` still moves one folder, but it and `folder.rename` now spell the folder
+  plainly first: `.` and `..` in `path` are resolved (`/a/../b` is `/b`), and only the separators of the platform
+  are trimmed from its end (on macOS and Linux a trailing backslash stays part of the folder's name). The photos that
+  go along with a moved folder are those whose stored path, spelled plainly, lies inside it: a photo stored as
+  `a/../b/x` goes with folder `b`, not with `a`.
+- Move Folder To… in the folder menus now has a tooltip, and a widget id for agents and tests (`folderMove:<path>`
+  in Folders, `localFolderMove:<path>` in Local).
 
 ## 2026-10-21
 
@@ -575,6 +781,18 @@
   percentage or the count, and the bell's tooltip says the rest). Click the bell (or Window ▸ Tasks) for the list,
   with ✕ to stop a task; it shows every task, the newest first, and scrolls. Esc or a click elsewhere closes it.
 - The bell used to open History. History is in the Window menu and on the tool strip, as before.
+
+### Moving photos to a NAS no longer freezes the window
+- Moving photos to another folder (dropping them on a Folders row, Move Selected Photos Here, Move to Folder…) now
+  runs in the background. The activity stack shows "Moving photos" with how many have moved and the file in hand,
+  and a toast says how it ended. The photos move as one step Edit ▸ Undo takes back.
+- While a move runs, editing, rating and keywording go on as usual; the moving photos' XMP sidecars are written once
+  they arrive. Another move, a rename, Undo or Redo of a file move and opening another library are refused until it
+  ends, and so is anything that would take a moving photo out of the library or point it at another file: Delete
+  Permanently, Empty Recently Deleted, importing a file again as a new photo over its trashed record, Convert to DNG,
+  Find Missing Photos, Locate and the Undo of those steps. A message pops up saying how many photos are moving, and
+  nothing is changed; try again once the move is done.
+- Quitting while photos are moving asks first, also while a stopped move is finishing its file.
 
 ### Settings window
 - Settings is one size on every tab and stays where it is as you go through them; before, each tab made its own
@@ -828,6 +1046,16 @@
 - For scripts: `ui.set` takes `sidebarTrees`, the whole list of up to 2,000 rows such as
   `[["album:12", false], ["date:2026", true]]` (it replaces the rows that were kept), and says what is wrong with
   anything else.
+
+### A count never covers a name in the sidebar
+- In the left panel, the count of a deeply indented row (a folder, keyword or album) no longer prints over its icon
+  and name when the panel is narrow. It follows the name, wholly past the panel's edge, and scrolling sideways
+  reaches it; so does the colour dot of a labelled folder. A row with room for its name keeps its count at the edge, as before.
+
+### Local says where its listing stops
+- In the left panel's Local, a folder eight levels below its place used to open onto nothing. It now says **Go Deeper**:
+  click it to add that folder to Local as a place of its own (a message says so), where it opens further. A folder
+  that is already a place of its own says "Opens as its own place" there instead, where the listing stops.
 
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a
@@ -1670,6 +1898,10 @@
 - A folder's view can be saved as a smart album that follows the folder, also after its rules are edited (editing
   the rules of a saved album view used to drop the album). It can't be made in, or moved into, the folder it shows
   (it would include itself): that folder is no drop target and isn't offered under Move to, and commands say why.
+- No edit can make a smart album include itself any more, whichever command, importer or task makes it: the library
+  itself refuses it and names the album. A library that already holds such a loop still opens; each album on the loop
+  is marked ⚠ and holds nothing (it used to hold different photos depending on which album was looked at first, and
+  many of them in one folder made the folder slow to show), and moving it out or changing its rules mends it.
 - Agents show a folder with `library.source {"kind": "album", "id": <folder id>}`; `albums.list` reports a folder's
   `count`.
 

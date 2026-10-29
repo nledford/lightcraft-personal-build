@@ -91,7 +91,8 @@ fn albums_tree(
                 albums_tree(app, ui, all, Some(a.id), indent + INDENT_STEP, open_to, inside);
             }
         } else {
-            let sel = app.session.source == LibrarySource::Album(a.id);
+            let sel = crate::panels::side_select::album_shown(app, a.id);
+            app.ui.side.albums.saw(a.id.0);
             let icon = if a.is_smart() { Icon::SmartAlbum } else { Icon::Album };
             // cached: a smart album's count scans the catalog (in the background: no number until it is known)
             let now = (app.session.clock)();
@@ -102,6 +103,9 @@ fn albums_tree(
             let label = if target == Some(a.id) { format!("{} +", a.name) } else { a.name.clone() };
             // a smart album whose rules no longer check (an album they test was deleted) says so
             let problems = app.caches.smart_album_problems(&app.session.catalog).get(&a.id).cloned().unwrap_or_default();
+            // an album on a loop holds nothing: its tooltip says so, and through which album (the ⚠ is
+            // there already: a loop is one of the problems it reports)
+            let loop_note = crate::i18n::album_loop_note(&app.session.catalog, a.id);
             let label = if problems.is_empty() { label } else { format!("⚠ {label}") };
             let mut resp = Row::new(&format!("album:{}", a.id.0), icon, &label)
                 .count(n)
@@ -109,6 +113,7 @@ fn albums_tree(
                 .indent(indent)
                 .sense(Sense::click_and_drag())
                 .show(app, ui);
+            crate::panels::side_select::outline(app, ui, crate::panels::side_select::SideList::Albums, sel, resp.rect, 8.0);
             if !problems.is_empty() {
                 crate::widgets::register(ui, format!("albumProblem:{}", a.id.0), resp.rect);
             }
@@ -138,10 +143,13 @@ fn albums_tree(
                         tip.push_str(&crate::i18n::problem_line(p));
                     }
                 }
+                if let Some((title, body)) = &loop_note {
+                    tip.push_str(&format!("\n\n{title}\n{body}"));
+                }
                 resp = resp.on_hover_text(tip);
             }
             if super::side_keys::chosen(ui, &resp) {
-                app.act("library.source", json!({"kind": "album", "id": a.id.0}));
+                crate::panels::side_select::album_clicked(app, ui, a.id);
             }
             folder_menu(app, &resp, a);
         }
@@ -188,7 +196,7 @@ pub fn auto_scroll_speed(y: f32, top: f32, bottom: f32) -> f32 {
 /// pointer is near its top or bottom edge, so rows beyond the visible part can be reached. Call
 /// inside the scroll area.
 pub(super) fn drag_auto_scroll(app: &LightcraftApp, ui: &egui::Ui) {
-    if app.ui.dragging_album.is_none() && app.ui.dragging_photos.is_none() && app.ui.dragging_section.is_none() {
+    if app.ui.dragging_album.is_none() && app.ui.dragging_photos.is_none() && app.ui.dragging_folder.is_none() && app.ui.dragging_section.is_none() {
         return;
     }
     let view = ui.clip_rect();
@@ -216,19 +224,23 @@ pub(super) const MARK_W: f32 = 12.0;
 /// How long a dragged album must rest on a closed folder before it opens.
 const HOVER_OPEN_SECS: f64 = 0.6;
 
-/// Whether the album `dragged` may be dropped into the folder `target` (`None`: the top level):
-/// a folder other than where it already is, not itself or something inside it, and not one a
-/// smart album that moves with it shows (it would include itself).
+/// Whether the album `dragged`, with the albums chosen beside it when it is one of several, may be
+/// dropped into the folder `target` (`None`: the top level): at least one of them has to move
+/// there (it is not in that folder already), none may go into itself or something inside it, and
+/// none may carry a smart album that shows it (it would include itself).
 fn can_drop_album(app: &LightcraftApp, dragged: AlbumId, target: Option<AlbumId>) -> bool {
     let cat = &app.session.catalog;
-    let Some(d) = cat.album(dragged) else { return false };
+    if cat.album(dragged).is_none() {
+        return false;
+    }
+    let group: Vec<AlbumId> = crate::panels::side_select::albums_dragged(app, dragged).into_iter().map(AlbumId).collect();
     match target {
-        None => d.parent.is_some(),
+        None => group.iter().any(|id| cat.album(*id).is_some_and(|a| a.parent.is_some())),
         Some(t) => {
             cat.album(t).is_some_and(|f| f.folder)
-                && d.parent != Some(t)
-                && !is_within(app, t, dragged)
-                && cat.album_move_would_loop(dragged, t).is_none()
+                && group.iter().any(|id| cat.album(*id).is_some_and(|a| a.parent != Some(t)))
+                && !group.iter().any(|id| is_within(app, t, *id))
+                && group.iter().all(|id| cat.album_move_would_loop(*id, t).is_none())
         }
     }
 }
@@ -258,14 +270,27 @@ pub(crate) fn forget_hover(app: &LightcraftApp, ctx: &egui::Context) {
 
 /// Moves the dragged album into a folder (`album.move`, one undo step; `None`: the top level).
 fn drop_album(app: &mut LightcraftApp, ui: &egui::Ui, dragged: AlbumId, target: Option<AlbumId>) {
-    let r = app.run("album.move", json!({"id": dragged.0, "parent": target.map(|t| t.0)}));
+    // picked up as one of several albums chosen: they all go, as one step
+    let several = crate::panels::side_select::albums_dragged(app, dragged);
+    let r = if several.len() > 1 {
+        app.run("album.move", json!({"ids": several, "parent": target.map(|t| t.0)}))
+    } else {
+        app.run("album.move", json!({"id": dragged.0, "parent": target.map(|t| t.0)}))
+    };
     finish_drop(app, ui, dragged, r);
 }
 
 /// Places the dragged album in `parent` before the sibling `before` (`None`: last of its kind), by
 /// hand (`album.reorder`, one undo step).
 fn place_album(app: &mut LightcraftApp, ui: &egui::Ui, dragged: AlbumId, parent: Option<AlbumId>, before: Option<AlbumId>) {
-    let r = app.run("album.reorder", json!({"id": dragged.0, "parent": parent.map(|p| p.0), "before": before.map(|b| b.0)}));
+    // picked up as one of several albums chosen: the others that are elsewhere come into that folder
+    // in the same step (`with`); the one dragged is placed
+    let several = crate::panels::side_select::albums_dragged(app, dragged);
+    let mut params = json!({"id": dragged.0, "parent": parent.map(|p| p.0), "before": before.map(|b| b.0)});
+    if several.len() > 1 {
+        params["with"] = json!(several);
+    }
+    let r = app.run("album.reorder", params);
     finish_drop(app, ui, dragged, r);
 }
 
@@ -306,11 +331,14 @@ fn album_drop_at(app: &LightcraftApp, dragged: AlbumId, target: &Album, frac: f3
     let sibs = cat.album_children(parent);
     let at = sibs.iter().position(|a| a.id == target.id)?;
     let was = sibs.iter().position(|a| a.id == dragged);
+    // (placed where it already is is nothing, unless an album chosen with it is elsewhere: `place_album` moves those here)
+    let group = crate::panels::side_select::albums_dragged(app, dragged);
+    let others_move = group.iter().any(|id| cat.album(AlbumId(*id)).is_some_and(|a| a.parent != parent));
     if !after {
-        (was.map(|w| w + 1) != Some(at)).then_some(AlbumDrop::Place { parent, before: Some(target.id), above: true })
+        (others_move || was.map(|w| w + 1) != Some(at)).then_some(AlbumDrop::Place { parent, before: Some(target.id), above: true })
     } else {
         let next = sibs.iter().skip(at + 1).find(|a| a.id != dragged).filter(|a| a.folder == target.folder).map(|a| a.id);
-        (was != Some(at + 1)).then_some(AlbumDrop::Place { parent, before: next, above: false })
+        (others_move || was != Some(at + 1)).then_some(AlbumDrop::Place { parent, before: next, above: false })
     }
 }
 
@@ -373,9 +401,9 @@ fn album_drag_over(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::Resp
     opened
 }
 
-/// While an album that sits in a folder is dragged: the "Albums" header takes it back to the top
-/// level (outlined, with a hint). The header stays in view however long the tree is, and nothing
-/// moves when it appears.
+/// While an album that sits in a folder, or chosen with one that does, is dragged: the "Albums"
+/// header takes it back to the top level (outlined, with a hint). The header stays in view however
+/// long the tree is, and nothing moves when it appears.
 pub(super) fn top_level_drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, header: Rect) {
     let Some(dragged) = app.ui.dragging_album.map(AlbumId) else { return };
     if !can_drop_album(app, dragged, None) {
@@ -406,6 +434,9 @@ pub fn album_drag_feedback(app: &mut LightcraftApp, ctx: &egui::Context) {
         return;
     }
     let (Some(pos), Some(name)) = (pos, app.session.catalog.album(AlbumId(id)).map(|a| a.name.clone())) else { return };
+    // picked up as one of several albums chosen: they all go
+    let several = crate::panels::side_select::albums_dragged(app, AlbumId(id)).len();
+    let name = if several > 1 { crate::i18n::tr_format!("{n} albums", n = several) } else { name };
     let t = Tokens::get(ctx);
     ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
     egui::Area::new(egui::Id::unique("drag-album")).order(egui::Order::Tooltip).interactable(false).fixed_pos(pos + vec2(14.0, 10.0)).show(
@@ -464,7 +495,7 @@ fn drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::Response
     if !over {
         return;
     }
-    let released = ui.input(|i| i.pointer.any_released());
+    let released = ui.input(|i| i.pointer.primary_released());
     // albums hold library photos (issue #684): Local ones can't be dropped in; the row doesn't
     // light up, and a release says why
     let photos: Vec<lightcraft_catalog::PhotoId> = ids.iter().map(|id| lightcraft_catalog::PhotoId(*id)).collect();
@@ -494,16 +525,25 @@ fn drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::Response
 /// Adds the dragged photos to the album and toasts how many went in (and how many Local ones were skipped).
 fn drop_photos_on_album(app: &mut LightcraftApp, ui: &egui::Ui, a: &Album, ids: Vec<u64>, there: usize) {
     match app.run("album.addPhotos", json!({"id": a.id.0, "ids": ids})) {
-        Ok(r) => app.toast(ui.ctx(), added_message(a, &r, there)),
+        Ok(r) => {
+            let name = crate::destination::album(&app.session.catalog, a);
+            let msg = added_message(&name, &r, there);
+            // an Undo button only when something was added (the drop is then one undo step)
+            if r.get("added").and_then(serde_json::Value::as_u64).unwrap_or(0) > 0 {
+                app.toast_undoable(ui.ctx(), msg);
+            } else {
+                app.toast(ui.ctx(), msg);
+            }
+        }
         Err(e) => app.toast_error(ui.ctx(), e),
     }
 }
 
 /// "Added N photos to “album”", plus a note when some were there already and when Local photos were skipped.
-fn added_message(a: &Album, r: &serde_json::Value, there: usize) -> String {
+fn added_message(name: &str, r: &serde_json::Value, there: usize) -> String {
     let n = r.get("added").and_then(serde_json::Value::as_u64).unwrap_or(0);
     let skipped = r.get("skipped").and_then(serde_json::Value::as_u64).unwrap_or(0);
-    let mut msg = crate::i18n::tr_format!("Added {n} photo{} to “{}”", if n == 1 { "" } else { "s" }, a.name, n = n);
+    let mut msg = crate::i18n::tr_format!("Added {n} photo{} to “{}”", if n == 1 { "" } else { "s" }, name, n = n);
     if there > 0 {
         msg.push_str(" · ");
         msg.push_str(&crate::i18n::tr_format!("{n} already there", n = there));

@@ -19,12 +19,10 @@ pub(super) fn local_now(app: &mut LightcraftApp, ui: &egui::Ui) -> Option<LocalN
     if !SidebarSection::Local.available() {
         return None;
     }
-    let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).unwrap_or_default();
+    let home = home_folder();
     let mut builtin = app.services.local_places.clone().unwrap_or_default();
-    if app.services.local_places.is_none() && !home.is_empty() {
-        for (name, sub) in [("Pictures", "Pictures"), ("Desktop", "Desktop"), ("Downloads", "Downloads"), ("Home", "")] {
-            // joined with the platform's separator, like the paths browsing gives back
-            let p = if sub.is_empty() { home.clone() } else { std::path::Path::new(&home).join(sub).to_string_lossy().to_string() };
+    if app.services.local_places.is_none() {
+        for (name, p) in default_places(&home) {
             // (checked off the UI thread: a home folder can be on a network share)
             if fs_cached(ui, "is-dir", &p, 5.0, |p| std::path::Path::new(p).is_dir()) == Some(true) {
                 builtin.push((crate::i18n::tr(name).to_string(), p));
@@ -54,13 +52,49 @@ pub(super) fn local_now(app: &mut LightcraftApp, ui: &egui::Ui) -> Option<LocalN
     Some(LocalNow { places, current, hidden })
 }
 
+/// The user's home folder, the engine's own reading of it (so the menu and the rename/move guard
+/// agree); empty when the host has none.
+fn home_folder() -> String {
+    lightcraft_engine::library::home_folder().map(|h| h.to_string_lossy().into_owned()).unwrap_or_default()
+}
+
+/// Local's built-in places under `home` as (English name, path), in order. The names are keys for
+/// `tr`, never folder names: the folders on disk keep their own (Pictures, not "Bilder").
+fn default_places(home: &str) -> Vec<(&'static str, String)> {
+    if home.is_empty() {
+        return Vec::new();
+    }
+    [("Pictures", "Pictures"), ("Desktop", "Desktop"), ("Downloads", "Downloads"), ("Home", "")]
+        .into_iter()
+        // joined with the platform's separator, like the paths browsing gives back
+        .map(|(name, sub)| (name, if sub.is_empty() { home.to_string() } else { std::path::Path::new(home).join(sub).to_string_lossy().to_string() }))
+        .collect()
+}
+
+/// Whether `path` is one of Local's built-in places (the home folder, Pictures, Desktop,
+/// Downloads, or a place the host listed itself). They are the computer's own folders, shown under
+/// a translated label, so Local offers no Rename or Move for them.
+pub(super) fn is_builtin_place(app: &LightcraftApp, path: &str) -> bool {
+    builtin_place_in(app.services.local_places.as_deref(), &home_folder(), path)
+}
+
+/// [`is_builtin_place`] for the places the host listed (`injected`, which replace the defaults) or,
+/// without them, the ones under `home`.
+fn builtin_place_in(injected: Option<&[(String, String)]>, home: &str, path: &str) -> bool {
+    match injected {
+        Some(places) => places.iter().any(|(_, p)| same_folder(p, path)),
+        None => default_places(home).iter().any(|(_, p)| same_folder(p, path)),
+    }
+}
+
 /// Local's rows: each place as a folder tree, Browse Folder…, and the way back for hidden places.
 pub(super) fn local_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, now: &LocalNow) {
     let (local, current) = (&now.places, now.current.as_deref());
+    let view = LocalView { places: &local.places, current };
     for (i, (name, path)) in local.places.iter().enumerate() {
         let transient = local.browse_root.as_deref() == Some(path.as_str());
         let reveal = local.owner == Some(i);
-        folder_tree(app, ui, path, name, path, 0.0, current, reveal, transient, None);
+        folder_tree(app, ui, path, name, path, 0.0, &view, reveal, transient, None);
     }
     if app.services.pick_folder.is_some() && {
         let resp = Row::new("local:browse", Icon::Plus, crate::i18n::tr("Browse Folder…")).show(app, ui);
@@ -121,6 +155,69 @@ fn hidden_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, hidden: &[(String, St
 /// slash, `.`/`..`, drive-letter case; see `lightcraft_catalog::query::folder_key`).
 pub(crate) fn same_folder(a: &str, b: &str) -> bool {
     a == b || lightcraft_catalog::query::folder_key(a) == lightcraft_catalog::query::folder_key(b)
+}
+
+/// The folder as Local keeps it: absolute, without a trailing separator. No disk access.
+pub(crate) fn local_root_path(path: &str) -> String {
+    let abs = std::path::absolute(path).map(|a| a.to_string_lossy().trim_end_matches(['/', '\\']).to_string()).unwrap_or(path.into());
+    if abs.is_empty() { path.to_string() } else { abs }
+}
+
+/// Keeps the folder `abs` ([`local_root_path`]) in Local, and brings it back if it was hidden. The caller
+/// has checked it is a folder.
+pub(crate) fn keep_local_root(app: &mut LightcraftApp, abs: &str) {
+    if !app.ui.local_roots.iter().any(|r| same_folder(r, abs)) {
+        app.ui.local_roots.push(abs.to_string());
+    }
+    app.ui.hidden_locations.retain(|h| !same_folder(h, abs));
+}
+
+/// `local.addRoot` for a click: whether `path` is a folder is asked on a worker thread (it can lie on a network
+/// share that has stopped answering, and the stat would freeze the window), then the folder is kept in Local and
+/// `then` runs on the UI thread; a folder that is none says "not a folder" in a message and Local stays as it is.
+pub(super) fn add_local_root_checked(
+    app: &mut LightcraftApp,
+    ctx: &egui::Context,
+    path: &str,
+    then: impl FnOnce(&mut LightcraftApp, &egui::Context) + Send + 'static,
+) {
+    let (shown, abs) = (path.to_string(), local_root_path(path));
+    let label = format!("Add “{abs}” to Local");
+    if app.tasks.is_running(&label) {
+        return;
+    }
+    let checked = abs.clone();
+    let done = move |app: &mut LightcraftApp, ctx: &egui::Context, is_dir: bool| {
+        if is_dir {
+            keep_local_root(app, &abs);
+            then(app, ctx);
+        } else {
+            app.toast_error(ctx, format!("{shown}: not a folder"));
+        }
+        // (no row in the activity stack: nothing to say of how it ended)
+        lightcraft_engine::activity::Outcome::default()
+    };
+    if let Err(e) = crate::tasks::spawn(app, &label, None, move || is_folder(&checked), done) {
+        app.toast_error(ctx, e);
+    }
+}
+
+fn is_folder(path: &str) -> bool {
+    #[cfg(test)]
+    CHECKED_ON.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push((path.to_string(), std::thread::current().id()));
+    std::path::Path::new(path).is_dir()
+}
+
+/// Which thread asked whether each path is a folder (tests: never the UI thread's).
+#[cfg(test)]
+pub(crate) static CHECKED_ON: std::sync::Mutex<Vec<(String, std::thread::ThreadId)>> = std::sync::Mutex::new(Vec::new());
+
+/// What a Local tree is drawn against: the places Local lists (the built-in ones and the saved ones, those
+/// taken out with Remove from Local left out) and the folder being browsed.
+#[derive(Default)]
+pub(super) struct LocalView<'a> {
+    pub places: &'a [(String, String)],
+    pub current: Option<&'a str>,
 }
 
 /// Local's top-level folders and how the folder being browsed sits among them.
@@ -310,6 +407,24 @@ mod tests {
     use crate::widgets::elide_head;
 
     #[test]
+    fn the_standard_places_under_a_home_are_built_in_and_nothing_else_is() {
+        let home = "/home/example";
+        for path in [home, "/home/example/", "/home/example/Pictures", "/home/example/Pictures/", "/home/example/Desktop", "/home/example/Downloads"]
+        {
+            assert!(super::builtin_place_in(None, home, path), "{path}");
+        }
+        for path in ["/home/example/Pictures/Trip", "/home/example/Documents", "/home/other", "/home", "Pictures"] {
+            assert!(!super::builtin_place_in(None, home, path), "{path}");
+        }
+        // no home: no standard places, and no relative ones
+        assert!(!super::builtin_place_in(None, "", "Pictures") && !super::builtin_place_in(None, "", ""));
+        // places the host listed replace the standard ones
+        let injected = vec![("Sandbox".to_string(), "/lightcraft-test/home".to_string())];
+        assert!(super::builtin_place_in(Some(&injected), home, "/lightcraft-test/home"));
+        assert!(!super::builtin_place_in(Some(&injected), home, "/home/example/Pictures"));
+    }
+
+    #[test]
     fn injected_places_replace_the_machine_home() {
         let places = vec![("Sandbox".to_string(), "/lightcraft-test/home".to_string())];
         let services = crate::Services { local_places: Some(places.clone()), ..Default::default() };
@@ -358,7 +473,18 @@ mod tests {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     for index in 0..500 {
                         let path = format!("/lightcraft-test/folder-{index:04}");
-                        super::folder_tree(&mut app, ui, &path, &format!("Folder {index}"), &path, 0.0, None, false, false, None);
+                        super::folder_tree(
+                            &mut app,
+                            ui,
+                            &path,
+                            &format!("Folder {index}"),
+                            &path,
+                            0.0,
+                            &super::LocalView::default(),
+                            false,
+                            false,
+                            None,
+                        );
                     }
                 });
             });
@@ -546,7 +672,7 @@ mod tests {
             let raw = HeadlessView::raw_input(egui::vec2(300.0, 200.0), 1.0, frame as f64 / 60.0, vec![]);
             view.run(raw, |ui| {
                 super::Row::new("all", super::Icon::Photos, "All Photos").show(&mut app, ui);
-                super::folder_tree(&mut app, ui, path, "Pictures", path, 0.0, None, false, false, None);
+                super::folder_tree(&mut app, ui, path, "Pictures", path, 0.0, &super::LocalView::default(), false, false, None);
             });
             widgets = crate::widgets::take_registry(&view.ctx);
         }

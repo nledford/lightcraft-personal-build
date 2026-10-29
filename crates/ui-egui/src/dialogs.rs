@@ -25,10 +25,12 @@ use export::{
     LIMIT_KB, QUALITY, START_NUMBER, WM_IMAGE_WIDTH, WM_INSET_X, WM_INSET_Y, WM_OPACITY, WM_POSITIONS, WM_SIZE, export_dialog_params, export_size,
     group_checklist, watermark_preview,
 };
+#[cfg(test)]
+pub(crate) use frame::move_problem_line;
 pub use frame::{ConfirmStyle, confirm_style, list_height, prompt};
 use frame::{
-    DIALOG_CHROME_GUESS, DIALOG_MIN_BODY, DIALOG_SCREEN_MARGIN, choices, clicked_backdrop, dialog_body, dialog_field, field, just_opened, num,
-    only_shows, return_confirms, trailing_button_row,
+    DIALOG_CHROME_GUESS, DIALOG_MIN_BODY, DIALOG_SCREEN_MARGIN, choices, clicked_backdrop, dialog_body, dialog_field, field, just_opened,
+    move_problems_body, num, only_shows, return_confirms, trailing_button_row,
 };
 pub(crate) use rename::rename_preview;
 use rename::{RENAME_PREVIEW_ROWS, person_rename_plan};
@@ -302,6 +304,7 @@ fn dialog_title(app: &LightcraftApp, dlg: &Dialog) -> String {
         Dialog::ConfirmDelete { .. } => "Delete Photos",
         Dialog::MovePhotos { .. } => "Move Photos",
         Dialog::TrashFiles(ask) => crate::panels::trash_files::title(ask),
+        Dialog::MoveFolder { .. } => "Move Folder",
         Dialog::LightroomCatalog { .. } => "Lightroom Classic Catalog",
         Dialog::LightroomDestination { .. } => "Import Lightroom Catalog",
         Dialog::SaveEffect { .. } => "New Effect Preset",
@@ -311,12 +314,14 @@ fn dialog_title(app: &LightcraftApp, dlg: &Dialog) -> String {
         Dialog::RemoveFolder { disk: true, .. } => "Remove Disk from Library",
         Dialog::RemoveFolder { .. } => "Remove Folder from Library",
         Dialog::SynchronizeFolder { .. } => "Synchronize Folder",
+        Dialog::LocateFolder { .. } => "Locate Missing Folder",
         // (nothing to download from in this build: the dialog explains the manual install)
         Dialog::SamModel { .. } if sam_by_hand(&app.session.segmenter) => "Install the SAM 3 Model",
         Dialog::SamModel { .. } => "Download the SAM 3 Model?",
         Dialog::About => "About LightCraft",
         Dialog::Shortcuts => "Keyboard Shortcuts",
         Dialog::ViewOptions => "View Options",
+        Dialog::Several(s) => crate::panels::side_select::several_title(s),
     }
     .to_string()
 }
@@ -394,7 +399,8 @@ fn ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, sam: &SamSta
         Dialog::FaceModel { .. } if !informational => "Install",
         Dialog::ConfirmDelete { .. } | Dialog::DeleteKeyword { .. } | Dialog::DeleteEffects { .. } => "Delete",
         Dialog::SaveEffect { .. } => "Create",
-        Dialog::MovePhotos { .. } => "Move",
+        Dialog::MovePhotos { problems, movable, .. } => return move_photos_ok_label(problems.len(), *movable),
+        Dialog::MoveFolder { .. } => "Move",
         // (not "Merge": that is photo merging, HDR / panorama, in some languages)
         Dialog::MoveKeyword { .. } => "Merge Keywords",
         Dialog::KeywordSet { .. } => "Save",
@@ -403,19 +409,32 @@ fn ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, sam: &SamSta
         Dialog::RemoveFolder { .. } => "Remove",
         Dialog::RestoreBackup { .. } => "Restore",
         Dialog::TrashFiles(ask) => crate::panels::trash_files::button(ask),
+        Dialog::Several(s) => crate::panels::side_select::several_button(s),
         Dialog::LightroomCatalog { .. } => "Import Lightroom Catalog…",
         d @ Dialog::LightroomDestination { .. } => crate::lightroom_destination::ok_label(d),
         Dialog::SynchronizeFolder { .. } if informational => "Close",
         // the scan need not be waited for
         Dialog::SynchronizeFolder { counts: None, .. } => "Continue in Background",
+        // a folder that isn't there can't be synchronized, only located (#1112)
+        Dialog::SynchronizeFolder { counts: Some(c), .. } if c.offline => "Locate Missing Folder…",
         Dialog::SynchronizeFolder { .. } if queues => "Queue Synchronize",
         Dialog::SynchronizeFolder { .. } => "Synchronize",
+        Dialog::LocateFolder { .. } => "Locate Anyway",
         Dialog::SamModel { .. } => return sam_ok_label(dlg, sam).to_string(),
         Dialog::RenamePerson { from, to, .. } if person_rename_plan(&app.session.catalog, from, to).needs_merge => "Merge",
         _ if informational => "Close",
         _ => "OK",
     };
     label.to_string()
+}
+
+/// The confirm button of the Move Photos dialog: nothing that can go: only Cancel (empty); some can: Move those, skip the others.
+fn move_photos_ok_label(problems: usize, movable: usize) -> String {
+    match (problems, movable) {
+        (0, _) => "Move".to_string(),
+        (_, 0) => String::new(),
+        _ => crate::i18n::tr_format!("Move {n}, skip {m}", n = movable, m = problems),
+    }
 }
 
 /// The label of the SAM 3 dialog's confirm button.
@@ -557,6 +576,9 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
             app.toast_for(ctx, e, 12.0);
             closed = true;
         }
+        // several rows: one that can't be deleted or removed refuses them all; `several_run`
+        // already toasted the reason, which says which
+        Err(_) if matches!(dlg, Dialog::Several(_)) => closed = true,
         // the SAM 3 dialog stays open to show the download (or why it can't start)
         Err(e) if matches!(dlg, Dialog::SamModel { .. }) => {
             if let Dialog::SamModel { error, .. } = dlg {
@@ -568,16 +590,16 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
             crate::panels::grid::toast_skipped(app, ctx, &r);
             closed = true;
         }
-        // a move says how it went, or why nothing moved
-        Ok(r) if matches!(dlg, Dialog::MovePhotos { .. }) => {
-            if let Dialog::MovePhotos { name, .. } = dlg {
-                let text = crate::panels::left::moved_text(r["moved"].as_u64().unwrap_or(0), name);
-                app.toast(ctx, text);
-            }
+        // a move that began says how it went when it ends (`move_task`); one that can't, why now
+        Ok(_) if matches!(dlg, Dialog::MovePhotos { .. }) => closed = true,
+        Err(e) if matches!(dlg, Dialog::MovePhotos { .. } | Dialog::MoveFolder { .. }) => {
+            app.toast_error(ctx, e);
             closed = true;
         }
-        Err(e) if matches!(dlg, Dialog::MovePhotos { .. }) => {
-            app.toast_error(ctx, e);
+        Ok(r) if matches!(dlg, Dialog::MoveFolder { .. }) => {
+            if let Dialog::MoveFolder { path, into, .. } = dlg {
+                crate::panels::left::toast_folder_moved(app, ctx, path, into, &r);
+            }
             closed = true;
         }
         // photos whose capture time doesn't read are left as they were: say so
@@ -609,6 +631,9 @@ const BACKDROP_SHOWN: &str = "dialog-backdrop-shown";
 /// downloads).
 pub fn keeps_open(app: &LightcraftApp, dlg: &Dialog) -> bool {
     matches!(dlg, Dialog::SamModel { .. }) && !app.session.segmenter.installed()
+        // Locate Missing Folder… of a folder that isn't there: the dialog waits for the answer
+        // (a folder that turns out not to be it leaves the person here, to choose again)
+        || matches!(dlg, Dialog::SynchronizeFolder { counts: Some(c), .. } if c.offline)
 }
 
 /// The body of the AutoStack dialog.
@@ -809,13 +834,20 @@ fn smart_rules_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg:
     );
     crate::widgets::register(ui, "field:smartName", r.rect);
     ui.add_space(6.0);
-    // the folder an album made from a folder view carries is not in the editor, but it counts
-    let folder = id
+    // the albums and folders an album made from a view of several carries are not in the editor, but they count
+    let carried: lightcraft_catalog::Filter = id
         .and_then(|id| app.session.catalog.album(lightcraft_catalog::AlbumId(id)))
-        .and_then(|a| a.smart.as_deref().and_then(|f| f.library_folder.clone()));
+        .and_then(|a| a.smart.as_deref())
+        .map(|f| lightcraft_catalog::Filter {
+            library_folders: f.library_folder.iter().chain(&f.library_folders).cloned().collect(),
+            album: f.album,
+            albums: f.albums.clone(),
+            ..Default::default()
+        })
+        .unwrap_or_default();
     // problems, count and albums: cached until the catalog or the rules change (not per frame)
     let now = (app.session.clock)();
-    let view = app.caches.rules_view(&app.session.catalog, rules, *id, folder, &now);
+    let view = app.caches.rules_view(&app.session.catalog, rules, *id, carried, &now);
     let env = crate::panels::rules_editor::Env { problems: view.problems.clone(), today: now, albums: view.albums.clone() };
     egui::ScrollArea::vertical().max_height(list_height(ui, 360.0)).auto_shrink([false, true]).show(ui, |ui| {
         crate::panels::rules_editor::edit(ui, rules, "rules", 0, &[], &env);
@@ -1767,6 +1799,20 @@ fn move_photos_body(ui: &mut egui::Ui, t: &Tokens, dlg: &mut Dialog) {
         .show(ui);
 }
 
+/// The body of the MoveFolder dialog.
+fn move_folder_body(ui: &mut egui::Ui, t: &Tokens, dlg: &mut Dialog) {
+    let Dialog::MoveFolder { name, into_name, count, dont_ask, .. } = dlg else { return };
+    ui.label(crate::i18n::tr_format!("Move “{name}” into “{into}”?", name = name, into = into_name));
+    ui.label(egui::RichText::new(crate::i18n::tr_format!("Photos in it and in the folders inside it: {count}", count = count)).color(t.text_dim));
+    ui.label(
+        egui::RichText::new(crate::i18n::tr("The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.")).color(t.text_dim),
+    );
+    ui.add_space(4.0);
+    let c = ui.checkbox(dont_ask, crate::i18n::tr("Don't ask again"));
+    crate::widgets::register(ui, "check:moveDontAsk", c.rect);
+    c.on_hover_text(crate::i18n::tr("Settings → Confirm before moving photos to another folder on disk turns it back on"));
+}
+
 /// The body of the LightroomCatalog dialog.
 fn lightroom_catalog_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut Dialog) {
     let Dialog::LightroomCatalog { folder, catalog } = dlg else { return };
@@ -1934,10 +1980,14 @@ fn dialog_content(
             ui.label(crate::i18n::tr_format!("Move {what} to Recently Deleted?", what = what));
             ui.label(egui::RichText::new(crate::i18n::tr("They can be restored from Recently Deleted until it is emptied.")).color(t.text_dim));
         }
+        Dialog::MovePhotos { name, problems, .. } if !problems.is_empty() => move_problems_body(ui, name, problems, t),
         Dialog::MovePhotos { .. } => move_photos_body(ui, t, dlg),
+        Dialog::MoveFolder { .. } => move_folder_body(ui, t, dlg),
         d @ Dialog::SynchronizeFolder { .. } => crate::sync::body(app, ui, d),
+        d @ Dialog::LocateFolder { .. } => crate::relocate::body(ui, d),
         Dialog::LightroomCatalog { .. } => lightroom_catalog_body(app, ui, t, dlg),
         d @ Dialog::LightroomDestination { .. } => crate::lightroom_destination::body(app, ui, d),
+        Dialog::Several(s) => crate::panels::side_select::several_body(ui, s, &app.session.catalog),
         Dialog::RemoveFolder { .. } => remove_folder_body(ui, t, dlg),
         Dialog::About => about_body(app, ui, t, dlg),
         Dialog::Shortcuts => crate::panels::keymap::body(app, ui, t),
