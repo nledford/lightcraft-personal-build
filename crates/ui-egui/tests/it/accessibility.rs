@@ -345,7 +345,7 @@ fn tool_strip_and_toolbar_buttons_are_named_by_label_with_the_shortcut_as_descri
         ("Crop & Rotate", "C"),
         ("Masking", "M"),
         ("Versions", "Shift+V"),
-        ("History & Activity", "Y"),
+        // (History & Activity has no key: nothing to describe)
         ("Keywords", "K"),
         ("Info", "I"),
         ("Photo Grid", "G"),
