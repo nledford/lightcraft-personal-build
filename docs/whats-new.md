@@ -78,6 +78,7 @@
 
 ### A stack badge's tooltip names the stack key as it is bound
 - Hovering a stack's badge in the grid said "(S)" even after you had remapped the key that expands and collapses stacks. It now shows the key you set for Expand/Collapse Stack, written as the menu bar writes it. With that unbound, it shows Soft Proofing's key (which a grid reads as the stack toggle) unless the native menu takes that key, and then no key. In the filmstrip, where S is Soft Proofing, the tooltip names a key only when Expand/Collapse Stack has one of its own.
+
 ### Local's standard places can't be renamed by mistake
 - The Pictures, Desktop, Downloads and Home rows of Local no longer offer Rename Folder… or Move Folder To…. Before,
   the Rename prompt began with the row's translated label rather than the folder's name, so in German pressing OK
@@ -274,6 +275,7 @@
   languages that LightCraft has a catalog for (Russian for `ru-SK`, German for `de-AT`), as the web build follows the
   browser's languages. Before, it opened in English unless `LIGHTCRAFT_LANGUAGE` was set. A language chosen in
   Settings ▸ General ▸ Language is kept as before.
+
 ### The macOS menu bar shows every row
 - File ▸ Export… no longer reads “Custom…”, File ▸ Export with Preset keeps its Custom… row, and Photo ▸ Add to Album keeps New Album…. When two menu rows ran the same command, the menu bar left the second one out and gave the first one its label; now each row is its own item and a click on either one runs the command. The View menu now also lists its second Layout Image row (without a key), as the in-window menu does.
 
@@ -450,6 +452,7 @@
   path on the clipboard, as your system spells it, and a toast says so.
 - A disk's row now offers Show in Finder and New Folder on Disk…, and a folder in Local offers New Folder on Disk…,
   whose new folder is listed in Local.
+
 ### A photo's right-click menu offers what the Photo menu does, grouped by task
 - Right-clicking a photo in the grid, the filmstrip, the loupe, Compare or Survey opens one menu, built like the menu
   bar's Photo menu: the same names ("Delete 3 Photos"), keyboard shortcuts, check marks on the photo's rating, flag and
@@ -768,6 +771,7 @@
   (so an Album rule set to "isn't" that album matches every photo). Change the rules of one album on the loop and its albums hold
   their photos again.
 - A library that already holds such a loop opens as before; only what the albums on it show changes.
+
 ### Damaged JPEGs are marked, and can be found
 - A JPEG that was cut short now says so. Info shows "Damaged file: cut short, shown from the data present"; the
   import review puts a "Damaged" badge on it; the message after an import counts them ("· 2 damaged"); and a
@@ -836,6 +840,7 @@
   the text back and stays in Settings; in the first three it used to save what was typed, and in all of them it
   closed the window. Those three now have the Cut / Copy / Paste menu too, and what is typed in Copyright or
   Creator is saved when another tab is clicked, where it used to be dropped.
+
 ### The filmstrip rings the selected photos before their thumbnails load
 - A selected photo's cell in the filmstrip shows its ring (the heavier ring for the active photo, the lighter one for the others) on the
   placeholder while its thumbnail is still loading, as the grid already did. Before, the active photo's cell looked
@@ -901,6 +906,7 @@
   program that has the library open, stayed behind after Quit and the window's close button, pointing at a process
   that no longer existed. The library's lock is now released as soon as everything is saved, as it already was on
   the other systems.
+
 ### JPEGs that were cut short now import
 - A JPEG that stops before its end (an interrupted download or copy) used to be refused as "not readable". It now
   imports and shows what is there: a progressive JPEG from the scans that arrived (blurry, then sharper the more
@@ -1457,6 +1463,7 @@
   photos is the same as before.
   Photos added or removed (an import, an undone import) go into or out of that order, even after more changes than
   LightCraft remembers one by one, instead of sorting the whole library again.
+
 ### Sample photos, when you want them
 - Help ▸ Add Sample Photos adds 24 procedural sample photos with their keywords and their albums, to try LightCraft on.
   The albums come in one folder, "Sample Photos" (named in the interface's language), apart from the ones you make, and
