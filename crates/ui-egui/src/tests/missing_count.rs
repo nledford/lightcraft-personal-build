@@ -117,6 +117,13 @@ fn a_rating_or_an_album_asks_about_no_file_and_a_photo_moved_to_a_missing_file_i
     let log = Arc::new(Mutex::new(Vec::new()));
     h.app.session.media.availability.set_probe(logging(&log));
     assert!(h.step_until(T, |h| h.file_checks_done()));
+    // (the grid's cells ask about their files as they are drawn, a failed thumbnail's mark among them since #2164:
+    // they get their frames before it is told which photos nobody asked about)
+    for _ in 0..20 {
+        h.step();
+        missing(&mut h);
+    }
+    assert!(h.step_until(T, |h| h.file_checks_done()));
     let seen: std::collections::HashSet<String> = log.lock().unwrap_or_else(PoisonError::into_inner).iter().cloned().collect();
     let quiet = h
         .app
