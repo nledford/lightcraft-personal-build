@@ -9,6 +9,18 @@
   set of photos from an SMB share, in one measurement on one share). What is imported and the messages for a file
   that can't be read are the same.
 
+### Text typed in a box is kept however you leave it
+- Text typed in a box that saves when you finish (the Info panel's fields, Copyright and Creator in Settings, the Auto
+  Import album, the slideshow's title, overlay and template-name boxes, and Manage Effect Presets' rename) is now saved
+  however you leave the box, except with Esc, which still gives it up. Before, it was kept only while the box was still
+  on screen when you left it: a click on another Settings tab, a menu item or command that opened another tab or dialog,
+  hiding the Info panel, opening another library, and closing the window or quitting could drop what you had typed.
+- If the text can't be saved (a place that isn't coordinates, say), the window, Quit or the other library stays where it
+  was, the box keeps the text and the error is shown. Closing, quitting or switching again, with that text still in the
+  box, gives it up.
+- Copyright, Creator and the Auto Import album in Settings now have the same right-click Cut, Copy, Paste and Select
+  All menu as the other text boxes, and Esc in them gives the text back.
+
 ## 2026-10-26
 
 ### The sidebar from the keyboard

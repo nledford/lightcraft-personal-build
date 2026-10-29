@@ -78,14 +78,20 @@ pub(super) fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens)
         [("copyright", "Copyright", "© 2026 Your Name", d.copyright.clone()), ("creator", "Creator", "Your Name", d.creator.clone())]
     {
         row(ui, t, label, |ui| {
-            let id = egui::Id::unique(("settingsMeta", key));
+            let id = egui::Id::unique(("settingsMeta", key, app.session.library_generation()));
             let mut text: String = ui.data(|m| m.get_temp(id)).unwrap_or(value.clone());
             // (the project's text field: Esc gives the text back and stays in Settings, and with
             // the text back the line below has nothing to save)
             let widget = format!("field:settings.{key}");
-            let shown = field(ui, crate::text_field::TextField::singleline(&widget, &mut text).hint(hint_text).width(240.0));
-            if shown.committed() && text.trim() != value {
-                app.act("library.preferences", json!({"import": {key: text.trim()}}));
+            let shown = field(
+                ui,
+                crate::text_field::TextField::singleline(&widget, &mut text).hint(hint_text).width(240.0).saves_with(|typed| {
+                    let typed = typed.trim();
+                    (typed != value).then(|| crate::text_field::Save { command: "library.preferences", params: json!({"import": {key: typed}}) })
+                }),
+            );
+            if let Some(save) = shown.save {
+                app.act(save.command, save.params);
             }
             if shown.editing {
                 ui.data_mut(|m| m.insert_temp(id, text));
@@ -198,14 +204,21 @@ fn auto_import(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             });
             row(ui, t, crate::i18n::tr("Album"), |ui| {
                 // (per library: a name left here by one library is not another's)
-                let id = egui::Id::unique(("auto-album", app.session.library.as_ref().map(|l| l.dir.clone())));
+                let id = egui::Id::unique(("auto-album", app.session.library_generation()));
                 let mut name = ui.data(|m| m.get_temp::<String>(id)).unwrap_or_else(|| d.auto_album.clone().unwrap_or_default());
+                let current = d.auto_album.clone().unwrap_or_default();
                 let shown = field(
                     ui,
-                    crate::text_field::TextField::singleline("field:settingsAutoAlbum", &mut name).hint(crate::i18n::tr("None")).width(180.0),
+                    crate::text_field::TextField::singleline("field:settingsAutoAlbum", &mut name)
+                        .hint(crate::i18n::tr("None"))
+                        .width(180.0)
+                        .saves_with(|typed| {
+                            let typed = typed.trim();
+                            (typed != current).then(|| crate::text_field::Save { command: "library.autoImport", params: json!({"album": typed}) })
+                        }),
                 );
-                if shown.committed() {
-                    app.act("library.autoImport", json!({"album": name.trim()}));
+                if let Some(save) = shown.save {
+                    app.act(save.command, save.params);
                 }
                 ui.data_mut(|m| m.insert_temp(id, name));
             });

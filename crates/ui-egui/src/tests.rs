@@ -101,6 +101,7 @@ mod sync;
 mod tallies;
 mod temp_slider;
 mod thumb;
+mod text_field_saves;
 mod titlebar;
 mod toast_timing;
 mod tool_overlay;
