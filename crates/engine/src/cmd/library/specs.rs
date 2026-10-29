@@ -98,7 +98,7 @@ fn duplicate_albums(s: &mut Session, p: &Value) -> Result<Value> {
         CopyOf(AlbumId),
     }
     let ids = match p.get("ids") {
-        Some(v) if !v.is_null() => album_ids(v, C)?,
+        Some(v) if !v.is_null() => album_ids(v, "ids", C)?,
         _ => vec![album_param(p, "id", C)?],
     };
     if ids.is_empty() {
@@ -207,11 +207,6 @@ fn duplicate_albums(s: &mut Session, p: &Value) -> Result<Value> {
 /// chooses in a sidebar, and a bound on what one call can make the engine check.
 pub(crate) const MAX_SOURCES: usize = 1000;
 
-/// `library.source`'s `ids`: album ids, each once (named twice, the last naming counts).
-fn source_album_ids(v: &Value) -> Result<Vec<AlbumId>> {
-    album_ids(v, "ids", "library.source")
-}
-
 /// A command's list of album ids (`name`, `ids` or `with`): each once (named twice, the last naming counts).
 fn album_ids(v: &Value, name: &str, c: &str) -> Result<Vec<AlbumId>> {
     let list = v.as_array().ok_or_else(|| bad(c, format!("`{name}` must be a list of album ids")))?;
@@ -290,7 +285,7 @@ pub fn specs() -> Vec<CommandSpec> {
                     "album" => {
                         let mut albums = match p.get("ids") {
                             None | Some(Value::Null) => vec![album_param(p, "id", C)?],
-                            Some(v) => album_ids(v, C)?,
+                            Some(v) => album_ids(v, "ids", C)?,
                         };
                         // a folder of albums is a source too: what the albums inside it hold
                         if let Some(gone) = albums.iter().find(|a| s.catalog.album(**a).is_none()) {
