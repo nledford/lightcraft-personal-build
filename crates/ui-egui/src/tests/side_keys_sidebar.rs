@@ -258,7 +258,15 @@ fn esc_during_a_drag_is_the_drags() {
     let mut h = app();
     let album = h.app.session.catalog.albums().find(|a| !a.folder).map(|a| a.id.0).expect("a demo album");
     toggle(&mut h);
+    // a drag lives while its button is down (`end_drags` ends one that outlives it): hold the primary button in the panel
+    let at = rect(&h, "panel:left_panel").expect("the panel").center();
+    h.app.synthetic.push(egui::Event::PointerMoved(at));
+    h.app.synthetic.push(egui::Event::PointerButton { pos: at, button: egui::PointerButton::Primary, pressed: true, modifiers: Default::default() });
+    h.step();
     h.app.ui.dragging_album = Some(album);
+    h.step();
+    h.step();
+    assert_eq!(h.app.ui.dragging_album, Some(album), "the drag goes on while its button is down");
     key(&mut h, "escape");
     assert_eq!(h.app.ui.dragging_album, None, "the drag saw its Esc");
     assert!(h.app.ui.sidebar_keys, "and the keys stay in the sidebar");
