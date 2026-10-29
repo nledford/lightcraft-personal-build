@@ -43,7 +43,7 @@ use fs::{LIST_FOLDER_AT, ListedSources};
 pub(crate) use fs::{MoveFs, RealFs, folded_path, same_contents};
 #[cfg(test)]
 pub(crate) use moves::move_file_with;
-pub(crate) use moves::{BatchMoveError, finish_sidecars, move_all, move_all_with};
+pub(crate) use moves::{BatchMoveError, finish_sidecars, move_all, move_all_with, set_file_ops_where};
 pub use moves::{MoveError, move_file};
 pub use plan::{plan_rename_photos, rename_photos};
 #[cfg(test)]
