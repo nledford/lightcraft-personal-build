@@ -594,3 +594,441 @@ fn a_restore_stuck_half_way_writes_nothing_until_the_library_is_opened_again() {
     assert_eq!(open(&dir.join("Replaced").join("before")).catalog.photo(id).unwrap().rating, 1);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Finish a restore that runs in the background as the app's frame loop does: `None` if it
+/// doesn't end.
+fn pump(s: &mut Session) -> Option<Value> {
+    let t0 = std::time::Instant::now();
+    while t0.elapsed() < std::time::Duration::from_secs(20) {
+        s.persist_if_dirty();
+        let status = s.execute("library.restoreStatus", &json!({})).unwrap();
+        if status["running"] == json!(false) {
+            return Some(status);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(2));
+    }
+    None
+}
+
+/// With `background`, the backup is copied and checked on a worker while the library stays in
+/// use; its files are moved into place afterwards, between commands. A change made while the
+/// copy was under way is in what the restore replaced.
+#[test]
+fn a_restore_in_the_background_leaves_the_library_in_use_until_the_copy_is_made() {
+    let dir = temp_dir("background");
+    let mut s = open(&dir);
+    let id = s.selection.active.unwrap();
+    s.execute("photo.rate", &json!({"rating": 4})).unwrap();
+    let made = back_up(&mut s);
+    let then = s.catalog.to_snapshot();
+    assert!(s.execute("library.restoreStatus", &json!({})).unwrap().is_null());
+    s.restore_hold.store(true, Ordering::SeqCst);
+    let r = s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    assert_eq!((r["running"].as_bool(), r["restored"].is_null(), r["error"].is_null()), (Some(true), true, true));
+    assert_eq!(r["backup"].as_str(), Some(made.to_string_lossy().as_ref()));
+    let rows = s.activity.list();
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert_eq!((rows[0].kind, rows[0].label.as_str(), rows[0].cancellable), ("restore", "Restoring the library", true));
+    // the library is in use meanwhile, and nothing of it has moved
+    s.execute("photo.rate", &json!({"rating": 1})).unwrap();
+    s.persist_if_dirty();
+    assert_eq!(s.catalog.photo(id).unwrap().rating, 1);
+    assert!(dir.join("catalog.snap").is_file() && !dir.join("Replaced").exists());
+    // one at a time
+    let e = s.execute("library.restore", &json!({"dir": made.to_string_lossy()})).unwrap_err().to_string();
+    assert!(e.contains("a restore of this library is under way"), "{e}");
+    s.restore_hold.store(false, Ordering::SeqCst);
+    let done = pump(&mut s).expect("the restore ends");
+    assert!(done["error"].is_null() && done["cancelled"] == json!(false), "{done}");
+    assert_eq!(done["restored"]["library"].as_str(), Some(dir.to_string_lossy().as_ref()));
+    assert_eq!(s.catalog.to_snapshot(), then);
+    assert!(s.activity.list().is_empty());
+    let aside = PathBuf::from(done["restored"]["aside"].as_str().unwrap());
+    drop(s);
+    assert_eq!(open(&aside).catalog.photo(id).unwrap().rating, 1, "the change made during the copy is kept");
+    assert_eq!(open(&dir).catalog.photo(id).unwrap().rating, 4);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A restore in the background can be stopped while the backup is copied (its row's ✕): the
+/// library is untouched, nothing of the copy is left, and it says so. One of a backup that is
+/// not sound ends the same way, with the reason.
+#[test]
+fn a_restore_in_the_background_can_be_stopped_and_says_why_it_failed() {
+    let dir = temp_dir("background-stop");
+    let mut s = open(&dir);
+    let made = back_up(&mut s);
+    s.execute("photo.rate", &json!({"rating": 2})).unwrap();
+    let now = s.catalog.to_snapshot();
+    let before = names(&dir);
+    s.restore_hold.store(true, Ordering::SeqCst);
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    let row = s.activity.list()[0].id;
+    s.activity.cancel(row).unwrap();
+    s.restore_hold.store(false, Ordering::SeqCst);
+    let done = pump(&mut s).expect("the restore ends");
+    assert_eq!(done["cancelled"], json!(true), "{done}");
+    assert!(done["restored"].is_null() && done["error"].as_str().is_some_and(|e| e.contains("was stopped")), "{done}");
+    assert_eq!(names(&dir), before);
+    assert_eq!(s.catalog.to_snapshot(), now);
+    assert!(s.activity.list().is_empty());
+    // a backup that was edited
+    let snap = made.join("catalog.snap");
+    std::fs::write(&snap, std::fs::read_to_string(&snap).unwrap().replacen("\"seq\":", "\"seq\": ", 1)).unwrap();
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    let done = pump(&mut s).expect("the restore ends");
+    assert!(done["cancelled"] == json!(false) && done["error"].as_str().is_some_and(|e| e.contains("catalog.snap")), "{done}");
+    assert_eq!(names(&dir), before);
+    assert_eq!(s.catalog.to_snapshot(), now);
+    // and the next one is made
+    std::fs::remove_dir_all(&made).unwrap();
+    let made = back_up(&mut s);
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    assert!(pump(&mut s).expect("the restore ends")["error"].is_null());
+    drop(s);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The backup's files are not moved in while other work is under way in the library, or a
+/// slider is held: the restore waits, and is made once that is over.
+#[test]
+fn a_restore_in_the_background_waits_for_other_work_to_end() {
+    let dir = temp_dir("background-waits");
+    let mut s = open(&dir);
+    let made = back_up(&mut s);
+    let then = s.catalog.to_snapshot();
+    s.execute("photo.rate", &json!({"rating": 3})).unwrap();
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    let other = s.activity.start("import", "Importing photos", crate::activity::Cancel::No);
+    let t0 = std::time::Instant::now();
+    while t0.elapsed() < std::time::Duration::from_millis(400) {
+        s.persist_if_dirty();
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    let waiting = s.execute("library.restoreStatus", &json!({})).unwrap();
+    assert_eq!(waiting["running"], json!(true), "{waiting}");
+    assert_ne!(s.catalog.to_snapshot(), then);
+    assert!(dir.join("restore.partial").is_dir() && !dir.join("Replaced").exists());
+    drop(other);
+    assert!(pump(&mut s).expect("the restore ends")["error"].is_null());
+    assert_eq!(s.catalog.to_snapshot(), then);
+    drop(s);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A restore belongs to the library it is of: when another library is opened before the copy is
+/// moved into place, it is given up, the first library is as it was (nothing of the copy left),
+/// and the other library is not touched.
+#[test]
+fn a_restore_in_the_background_is_given_up_when_another_library_is_opened() {
+    let (a, b) = (temp_dir("background-a"), temp_dir("background-b"));
+    let mut s = open(&a);
+    let made = back_up(&mut s);
+    s.execute("photo.rate", &json!({"rating": 3})).unwrap();
+    let now = s.catalog.to_snapshot();
+    s.restore_hold.store(true, Ordering::SeqCst);
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    s.close_library().unwrap();
+    s.open_library(&b, true).unwrap();
+    let other = s.catalog.to_snapshot();
+    assert!(s.execute("library.restoreStatus", &json!({})).unwrap().is_null());
+    // given up as the other library was opened, not when somebody next asks
+    assert_eq!(s.restore.as_ref().map(|r| r.running()), Some(false));
+    s.restore_hold.store(false, Ordering::SeqCst);
+    // the copy stops: its row goes, and it leaves nothing in the library that is no longer open
+    let t0 = std::time::Instant::now();
+    while !s.activity.list().is_empty() && t0.elapsed() < std::time::Duration::from_secs(20) {
+        assert!(!a.join("restore.partial").join("catalog.snap").exists(), "the backup was copied all the same");
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    assert!(s.activity.list().is_empty());
+    // and the library that is open is not held up by it
+    let of_b = back_up(&mut s);
+    restore(&mut s, &of_b);
+    assert!(!a.join("restore.partial").exists() && !a.join("Replaced").exists() && !a.join("restore.json").exists());
+    assert_eq!(s.catalog.to_snapshot(), other);
+    assert_eq!(s.library.as_ref().map(|l| l.dir.clone()), Some(b.clone()));
+    drop(s);
+    assert_eq!(open(&a).catalog.to_snapshot(), now);
+    for d in [a, b] {
+        let _ = std::fs::remove_dir_all(&d);
+    }
+}
+
+/// Wait until the backup of a restore in the background is copied (its row says so).
+fn copied(s: &Session) {
+    let t0 = std::time::Instant::now();
+    while t0.elapsed() < std::time::Duration::from_secs(20) {
+        if s.activity.list().iter().any(|t| t.kind == "restore" && t.detail == "copied") {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(2));
+    }
+    panic!("the backup is never copied");
+}
+
+/// The app's frame loop alone sees a restore in the background through (nobody asks for its
+/// status), and so does asking for its status alone (where there is no frame loop).
+#[test]
+fn a_restore_in_the_background_is_seen_through_by_the_frame_loop_or_by_asking() {
+    for frames in [true, false] {
+        let dir = temp_dir(if frames { "background-frames" } else { "background-asked" });
+        let mut s = open(&dir);
+        let made = back_up(&mut s);
+        let then = s.catalog.to_snapshot();
+        s.execute("photo.rate", &json!({"rating": 3})).unwrap();
+        s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+        let job = s.restore.clone().unwrap();
+        let t0 = std::time::Instant::now();
+        while job.running() && t0.elapsed() < std::time::Duration::from_secs(20) {
+            if frames {
+                s.persist_if_dirty();
+            } else {
+                s.execute("library.restoreStatus", &json!({})).unwrap();
+            }
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+        assert!(job.outcome().is_some_and(|o| o.is_ok()), "frames: {frames}: {:?}", job.outcome());
+        assert_eq!(s.catalog.to_snapshot(), then, "frames: {frames}");
+        assert!(s.activity.list().is_empty());
+        drop(s);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+/// Once the backup is copied, the restore waits while a slider is held (its row says the copy
+/// is made, and can still stop it), and goes on when it is let go. Stopped then, the library is
+/// as it was and nothing of the copy is left.
+#[test]
+fn a_copied_backup_waits_for_a_held_slider_and_can_still_be_stopped() {
+    let dir = temp_dir("background-held");
+    let mut s = open(&dir);
+    let made = back_up(&mut s);
+    let then = s.catalog.to_snapshot();
+    s.execute("photo.rate", &json!({"rating": 3})).unwrap();
+    let now = s.catalog.to_snapshot();
+    let before = names(&dir);
+    s.begin_interaction("Exposure").unwrap();
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    copied(&s);
+    for _ in 0..20 {
+        s.persist_if_dirty();
+    }
+    let rows = s.activity.list();
+    assert_eq!((rows.len(), rows[0].done, rows[0].cancellable), (1, rows[0].total, true), "{rows:?}");
+    assert!(rows[0].total > 0 && dir.join("restore.partial").join("catalog.snap").is_file());
+    assert_eq!(s.catalog.to_snapshot(), now);
+    // stopped while it waits
+    s.activity.cancel(rows[0].id).unwrap();
+    s.persist_if_dirty();
+    let done = s.execute("library.restoreStatus", &json!({})).unwrap();
+    assert!(done["cancelled"] == json!(true) && done["error"].as_str().is_some_and(|e| e.contains("was stopped")), "{done}");
+    assert!(s.activity.list().is_empty());
+    assert_eq!(s.catalog.to_snapshot(), now);
+    // and one that is let go on
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    copied(&s);
+    s.persist_if_dirty();
+    assert_eq!(s.execute("library.restoreStatus", &json!({})).unwrap()["running"], json!(true));
+    s.end_interaction().unwrap();
+    assert!(pump(&mut s).expect("the restore ends")["error"].is_null());
+    assert_eq!(s.catalog.to_snapshot(), then);
+    drop(s);
+    let _ = (before, std::fs::remove_dir_all(&dir));
+}
+
+/// A backup that is copied and waiting is given up when its library is opened again, or another
+/// is: the copy is removed there and then. And a copy that a program that ended left behind is
+/// cleared away when the library is opened.
+#[test]
+fn a_copy_of_a_backup_does_not_outlive_its_restore() {
+    let (dir, other) = (temp_dir("background-copy"), temp_dir("background-copy-other"));
+    let mut s = open(&dir);
+    let made = back_up(&mut s);
+    s.execute("photo.rate", &json!({"rating": 3})).unwrap();
+    let now = s.catalog.to_snapshot();
+    let before = names(&dir);
+    for again in [true, false] {
+        s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+        let blocker = s.activity.start("import", "Importing photos", crate::activity::Cancel::No);
+        copied(&s);
+        assert!(dir.join("restore.partial").is_dir());
+        drop(blocker);
+        s.close_library().unwrap();
+        s.open_library(if again { &dir } else { &other }, true).unwrap();
+        assert!(!dir.join("restore.partial").exists(), "again: {again}");
+        assert!(s.activity.list().is_empty());
+        s.close_library().unwrap();
+        s.open_library(&dir, false).unwrap();
+        let status = s.execute("library.restoreStatus", &json!({})).unwrap();
+        assert!(status["running"] == json!(false) && status["error"].as_str().is_some_and(|e| e.contains("as it was")), "{status}");
+        assert_eq!(s.catalog.to_snapshot(), now);
+        assert_eq!(names(&dir), before);
+    }
+    // left by a program that ended while it copied
+    drop(s);
+    std::fs::create_dir_all(dir.join("restore.partial").join("segments")).unwrap();
+    std::fs::copy(made.join("catalog.snap"), dir.join("restore.partial").join("catalog.snap")).unwrap();
+    let s = open(&dir);
+    assert!(!dir.join("restore.partial").exists());
+    assert_eq!(s.catalog.to_snapshot(), now);
+    drop(s);
+    for d in [dir, other] {
+        let _ = std::fs::remove_dir_all(&d);
+    }
+}
+
+/// The command is not offered while it can't run: a restore or a backup of the library is under
+/// way.
+#[test]
+fn restore_is_not_offered_while_a_restore_or_backup_runs() {
+    let dir = temp_dir("offered");
+    let mut s = open(&dir);
+    let made = back_up(&mut s);
+    let enabled = |s: &Session| (crate::cmd::command_specs().iter().find(|c| c.id == "library.restore").unwrap().enabled)(s);
+    assert_eq!(enabled(&s), Ok(()));
+    s.backup_hold.store(true, Ordering::SeqCst);
+    s.execute("library.backup", &json!({"background": true})).unwrap();
+    assert!(enabled(&s).is_err_and(|e| e.contains("backup")));
+    s.backup_hold.store(false, Ordering::SeqCst);
+    let t0 = std::time::Instant::now();
+    while !s.activity.list().is_empty() && t0.elapsed() < std::time::Duration::from_secs(20) {
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    s.restore_hold.store(true, Ordering::SeqCst);
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    assert!(enabled(&s).is_err_and(|e| e.contains("restore")));
+    s.restore_hold.store(false, Ordering::SeqCst);
+    pump(&mut s).expect("the restore ends");
+    assert_eq!(enabled(&s), Ok(()));
+    drop(s);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A restore that was given up has a worker that is still at work in the library folder until it
+/// sees so. It must not clear away what another restore of the library copied there meanwhile:
+/// no other restore is started (or its copy cleared as a leftover) while it is, and the worker
+/// that was given up before it began copies nothing.
+#[test]
+fn given_up_worker_must_not_remove_the_next_restores_copy() {
+    let dir = temp_dir("given-up-worker");
+    let mut s = open(&dir);
+    let made = back_up(&mut s);
+    s.execute("photo.rate", &json!({"rating": 3})).unwrap();
+    let enabled = |s: &Session| (crate::cmd::command_specs().iter().find(|c| c.id == "library.restore").unwrap().enabled)(s);
+    s.restore_hold.store(true, Ordering::SeqCst);
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    // the library is opened again: the restore is given up, its worker is held where it is
+    s.close_library().unwrap();
+    s.open_library(&dir, false).unwrap();
+    assert_eq!(s.restore.as_ref().map(|r| r.running()), Some(false));
+    // another restore is refused while the worker of the first is there (it would share `restore.partial`)
+    let e = s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap_err();
+    assert!(e.to_string().contains("still being stopped"), "{e}");
+    assert!(enabled(&s).is_err_and(|e| e.contains("stopped")));
+    // its status stays `running` while the worker is at work, so that whoever waits for it to end
+    // (the command line) does not start another restore into the refusal
+    let status = s.execute("library.restoreStatus", &json!({})).unwrap();
+    assert_eq!(status["running"], json!(true), "{status}");
+    s.restore_hold.store(false, Ordering::SeqCst);
+    let t0 = std::time::Instant::now();
+    while !s.activity.list().is_empty() && t0.elapsed() < std::time::Duration::from_secs(20) {
+        std::thread::sleep(std::time::Duration::from_millis(2));
+    }
+    assert!(s.activity.list().is_empty());
+    // the worker that was given up copied nothing, and left nothing
+    assert!(!dir.join("restore.partial").exists() && !dir.join("Replaced").exists());
+    // and a restore is possible again once it is over
+    assert_eq!(enabled(&s), Ok(()));
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    assert!(pump(&mut s).expect("the restore ends")["error"].is_null());
+    drop(s);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// An open that fails leaves a restore that is under way alone: it is given up only once another
+/// library is open (or this one again), not by an attempt that came to nothing.
+#[test]
+fn a_failed_open_does_not_give_up_a_restore() {
+    let dir = temp_dir("failed-open");
+    let mut s = open(&dir);
+    let made = back_up(&mut s);
+    s.execute("photo.rate", &json!({"rating": 3})).unwrap();
+    let then = s.catalog.to_snapshot();
+    s.restore_hold.store(true, Ordering::SeqCst);
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    // (a file that is none of a library's own: a library is a folder)
+    let file = dir.join("not-a-library.txt");
+    std::fs::write(&file, b"x").unwrap();
+    assert!(s.open_library(&file, false).is_err());
+    assert_eq!(s.restore.as_ref().map(|r| r.running()), Some(true), "the restore was given up by an open that failed");
+    s.restore_hold.store(false, Ordering::SeqCst);
+    let done = pump(&mut s).expect("the restore ends");
+    assert!(done["error"].is_null(), "{done}");
+    assert_ne!(s.catalog.to_snapshot(), then);
+    drop(s);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A restore that was given up has a worker in the library folder that wakes after another
+/// session took the folder over (the first one let go of its lock) and copied a backup into it:
+/// the worker sees it was given up before it clears or makes anything, so the other session's
+/// copy is still there and its restore is made.
+#[test]
+fn a_given_up_worker_that_wakes_late_leaves_the_next_sessions_copy_alone() {
+    let (dir, other) = (temp_dir("late-worker"), temp_dir("late-worker-other"));
+    let mut first = open(&dir);
+    let made = back_up(&mut first);
+    let then = first.catalog.to_snapshot();
+    first.execute("photo.rate", &json!({"rating": 3})).unwrap();
+    first.persist_if_dirty();
+    first.restore_hold.store(true, Ordering::SeqCst);
+    first.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    // given up as another library is opened: the folder's lock is let go, the worker is still held
+    first.close_library().unwrap();
+    first.open_library(&other, true).unwrap();
+    assert_eq!(first.restore.as_ref().map(|r| r.running()), Some(false));
+    // another session has the folder, and its restore has copied the backup in
+    let mut second = open(&dir);
+    second.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    copied(&second);
+    assert!(dir.join("restore.partial").join("catalog.snap").is_file());
+    // the first worker wakes
+    first.restore_hold.store(false, Ordering::SeqCst);
+    let t0 = std::time::Instant::now();
+    while !first.activity.list().is_empty() && t0.elapsed() < std::time::Duration::from_secs(20) {
+        std::thread::sleep(std::time::Duration::from_millis(2));
+    }
+    assert!(first.activity.list().is_empty());
+    assert!(dir.join("restore.partial").join("catalog.snap").is_file(), "the other session's copy was removed");
+    assert!(pump(&mut second).expect("the restore ends")["error"].is_null());
+    assert_eq!(second.catalog.to_snapshot(), then);
+    drop((first, second));
+    for d in [dir, other] {
+        let _ = std::fs::remove_dir_all(&d);
+    }
+}
+
+/// A restore into another folder (`to`) is refused as well while the worker of a given-up
+/// restore of that folder is still at work in it.
+#[test]
+fn a_restore_into_a_folder_whose_given_up_worker_still_runs_is_refused() {
+    let (dir, other) = (temp_dir("to-late"), temp_dir("to-late-other"));
+    let mut s = open(&dir);
+    let made = back_up(&mut s);
+    s.restore_hold.store(true, Ordering::SeqCst);
+    s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+    s.close_library().unwrap();
+    s.open_library(&other, true).unwrap();
+    let e = s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "to": dir.to_string_lossy()})).unwrap_err();
+    assert!(e.to_string().contains("still being stopped"), "{e}");
+    s.restore_hold.store(false, Ordering::SeqCst);
+    let t0 = std::time::Instant::now();
+    while !s.activity.list().is_empty() && t0.elapsed() < std::time::Duration::from_secs(20) {
+        std::thread::sleep(std::time::Duration::from_millis(2));
+    }
+    drop(s);
+    for d in [dir, other] {
+        let _ = std::fs::remove_dir_all(&d);
+    }
+}
