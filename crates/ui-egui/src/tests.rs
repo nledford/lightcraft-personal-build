@@ -77,6 +77,7 @@ mod quit_unsaved;
 mod rating;
 mod recheck;
 mod reduce_motion;
+mod refusals;
 mod rename_person;
 mod restore_list;
 mod rules_editor;

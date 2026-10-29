@@ -20,7 +20,7 @@ const WIDE: f32 = 1240.0;
 pub use crate::theme::label_color;
 
 fn filter(app: &mut LightcraftApp, patch: Value) {
-    let _ = app.run("library.filter", patch);
+    app.act("library.filter", patch);
 }
 
 /// A small label before a group of controls.
@@ -250,12 +250,12 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     let filtering = app.session.filter != Default::default();
     let save = crate::button::Button::new("Save as Smart Album…").small().enabled(filtering).widget("button:filterSave").show(ui);
     if save.clicked() {
-        let _ = app.run("dialog.newSmartAlbum", json!({}));
+        app.act("dialog.newSmartAlbum", json!({}));
     }
     let clear = crate::button::Button::new("Clear").small().enabled(filtering).widget("button:filterClear").show(ui);
     if clear.clicked() {
         app.ui.search.clear();
-        let _ = app.run("library.clearFilter", json!({}));
+        app.act("library.clearFilter", json!({}));
     }
     // filter presets: apply one, save the current filter, delete
     let presets = crate::widgets::dropdown(ui, "filterPresets", crate::i18n::tr("Presets"), t.font(12.5), t.text);
@@ -265,11 +265,11 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         for n in &names {
             let r = MenuItem::new(n).show(ui);
             if r.clicked() {
-                let _ = app.run("filter.applyPreset", json!({"name": n}));
+                app.act("filter.applyPreset", json!({"name": n}));
             }
             crate::widgets::context_menu(&r, |ui| {
                 if MenuItem::new(crate::i18n::tr("Delete Preset")).show(ui).clicked() {
-                    let _ = app.run("filter.deletePreset", json!({"name": n}));
+                    app.act("filter.deletePreset", json!({"name": n}));
                 }
             });
         }

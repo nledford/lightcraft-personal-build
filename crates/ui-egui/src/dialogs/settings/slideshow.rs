@@ -35,7 +35,7 @@ fn export_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         ] {
             let r = Button::new(label).enabled(!running).widget(format!("button:{id}")).show(ui);
             if r.clicked() {
-                let _ = app.run("dialog.slideshowExport", json!({"format": format}));
+                app.act("dialog.slideshowExport", json!({"format": format}));
             }
         }
     });
@@ -48,7 +48,7 @@ fn playback_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     let s = app.session.slideshow.clone();
     let mut v = s.manual;
     if check(ui, "settings.slideshowManual", &mut v, "Manual slideshow").changed() {
-        let _ = app.run("slideshow.playback", json!({"manual": v}));
+        app.act("slideshow.playback", json!({"manual": v}));
     }
     hint(ui, t, crate::i18n::tr("A manual slideshow shows each slide until → or ← changes it. Exports still use the slide duration."));
     row(ui, t, crate::i18n::tr("Slide duration"), |ui| {
@@ -80,7 +80,7 @@ fn playback_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
                 Fade::White => json!("#ffffff"),
                 Fade::Color => json!([64, 64, 64]),
             };
-            let _ = app.run("slideshow.playback", json!({"fadeColor": c}));
+            app.act("slideshow.playback", json!({"fadeColor": c}));
         }
         if f == Fade::Color
             && let Some(mut c) = s.fade_color
@@ -88,21 +88,21 @@ fn playback_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             let r = egui::color_picker::color_edit_button_srgb(ui, &mut c);
             register(ui, "button:slideshowFadeColor", r.rect);
             if r.changed() {
-                let _ = app.run("slideshow.playback", json!({"fadeColor": c}));
+                app.act("slideshow.playback", json!({"fadeColor": c}));
             }
         }
     });
     let mut v = s.random_order;
     if check(ui, "settings.slideshowRandom", &mut v, "Random order").changed() {
-        let _ = app.run("slideshow.playback", json!({"randomOrder": v}));
+        app.act("slideshow.playback", json!({"randomOrder": v}));
     }
     let mut v = s.repeat;
     if check(ui, "settings.slideshowRepeat", &mut v, "Repeat (off: the slideshow ends after the last photo)").changed() {
-        let _ = app.run("slideshow.playback", json!({"repeat": v}));
+        app.act("slideshow.playback", json!({"repeat": v}));
     }
     let mut v = s.prepare_previews;
     if check(ui, "settings.slideshowPrepare", &mut v, "Prepare previews in advance").changed() {
-        let _ = app.run("slideshow.playback", json!({"preparePreviews": v}));
+        app.act("slideshow.playback", json!({"preparePreviews": v}));
     }
     hint(
         ui,

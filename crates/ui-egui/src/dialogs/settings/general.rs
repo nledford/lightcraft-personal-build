@@ -62,11 +62,11 @@ fn library_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         let can = app.services.pick_folder.is_some();
         let r = Button::new("Open Library…").enabled(can).widget("button:settingsOpenLibrary").show(ui);
         if r.clicked() {
-            let _ = app.run("app.openLibrary", json!({}));
+            app.act("app.openLibrary", json!({}));
         }
         let r = Button::new("New Library…").enabled(can).widget("button:settingsNewLibrary").show(ui);
         if r.clicked() {
-            let _ = app.run("app.newLibrary", json!({}));
+            app.act("app.newLibrary", json!({}));
         }
         if !can {
             hint(ui, t, crate::i18n::tr("not available here"));

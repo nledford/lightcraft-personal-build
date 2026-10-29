@@ -54,7 +54,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                                 crate::kbd::is_mac(ui.ctx()),
                             );
                             if icon_button(ui, id, icon, vec2(32.0, 32.0), app.ui.view == mode, true, &tip).clicked() {
-                                let _ = app.run(&format!("view.{id}"), json!({}));
+                                app.act(&format!("view.{id}"), json!({}));
                             }
                         }
                         ui.add_space(10.0);
@@ -81,7 +81,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                                     item = item.shortcut(k);
                                 }
                                 if item.show(ui).clicked() {
-                                    let _ = app.run(&format!("view.{id}"), json!({}));
+                                    app.act(&format!("view.{id}"), json!({}));
                                     ui.close();
                                 }
                             }
@@ -131,7 +131,7 @@ fn centre(app: &mut LightcraftApp, ui: &mut egui::Ui, full: Rect, from: f32, to:
     if let Some(r) = crate::rating::Rating::new("bottom", rating).show(&mut pill_ui) {
         let mut params = json!({"rating": r});
         crate::panels::compare::target_active(app, &mut params);
-        let _ = app.run("photo.rate", params);
+        app.act("photo.rate", params);
     }
     pill_ui.add_space(6.0);
     let flag = active.as_ref().map(|p| p.flag).unwrap_or_default();
@@ -161,7 +161,7 @@ fn centre(app: &mut LightcraftApp, ui: &mut egui::Ui, full: Rect, from: f32, to:
         if resp.clicked() {
             let mut params = json!({"flag": match f { Flag::Pick => "pick", Flag::Reject => "reject", Flag::None => "none" }});
             crate::panels::compare::target_active(app, &mut params);
-            let _ = app.run("photo.flag", params);
+            app.act("photo.flag", params);
         }
     }
     // copy / paste settings
@@ -174,8 +174,8 @@ fn centre(app: &mut LightcraftApp, ui: &mut egui::Ui, full: Rect, from: f32, to:
     register(ui, "button:copySettings", copy_r);
     ui.painter().rect_filled(copy_r, 15.0, if cresp.hovered() { t.hover } else { t.canvas });
     ui.painter().text(copy_r.center(), Align2::CENTER_CENTER, label, t.font(13.0), if active.is_some() { t.text_label } else { t.text_disabled });
-    if cresp.clicked() && active.is_some() {
-        let _ = if has_clip { app.run("develop.paste", json!({})) } else { app.run("develop.copy", json!({})) };
+    // the success only when it went through: refused, `act` said why
+    if cresp.clicked() && active.is_some() && app.act(if has_clip { "develop.paste" } else { "develop.copy" }, json!({})).is_some() {
         let msg = if has_clip { "Settings pasted" } else { "Edit settings copied" };
         app.toast(ui.ctx(), crate::i18n::tr(msg));
     }
@@ -186,7 +186,7 @@ fn centre(app: &mut LightcraftApp, ui: &mut egui::Ui, full: Rect, from: f32, to:
     ui.painter().rect_filled(gear_r, 15.0, if gresp.hovered() { t.hover } else { t.canvas });
     paint(ui.painter(), gear_r.shrink(7.0), Icon::Gear, t.icon);
     if gresp.clicked() {
-        let _ = app.run("dialog.copySettings", json!({}));
+        app.act("dialog.copySettings", json!({}));
     }
 }
 
@@ -211,7 +211,7 @@ fn right_side(app: &mut LightcraftApp, ui: &mut egui::Ui, full: Rect, compact_zo
         )
         .clicked()
     {
-        let _ = app.run("view.autoAdvance", json!({}));
+        app.act("view.autoAdvance", json!({}));
     }
     if app.ui.view == ViewMode::Survey {
         // no zoom or thumbnail size in Survey
@@ -219,16 +219,16 @@ fn right_side(app: &mut LightcraftApp, ui: &mut egui::Ui, full: Rect, compact_zo
         let mac = crate::kbd::is_mac(child.ctx());
         let tip = crate::kbd::tip_with_shortcut(crate::i18n::tr("Before/After"), "view.beforeAfter", &app.ui.settings.keymap, mac);
         if icon_button(&mut child, "beforeAfter", Icon::BeforeAfter, vec2(30.0, 30.0), app.ui.before_after.is_layout(), true, &tip).clicked() {
-            let _ = app.run("view.beforeAfter", json!({}));
+            app.act("view.beforeAfter", json!({}));
         }
         if app.ui.view == ViewMode::Detail
             && icon_button(&mut child, "faceBoxes", Icon::FaceBox, vec2(30.0, 30.0), app.ui.face_boxes, true, "Face boxes").clicked()
         {
-            let _ = app.run("view.faceBoxes", json!({}));
+            app.act("view.faceBoxes", json!({}));
         }
         let tip = crate::kbd::tip_with_shortcut(crate::i18n::tr("Filmstrip"), "view.filmstrip", &app.ui.settings.keymap, mac);
         if icon_button(&mut child, "filmstrip", Icon::Filmstrip, vec2(30.0, 30.0), app.ui.filmstrip, true, &tip).clicked() {
-            let _ = app.run("view.filmstrip", json!({}));
+            app.act("view.filmstrip", json!({}));
         }
         child.add_space(10.0);
         let zoom_label = match app.ui.zoom {
@@ -287,7 +287,7 @@ fn right_side(app: &mut LightcraftApp, ui: &mut egui::Ui, full: Rect, compact_zo
 fn click_zoom_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     for pct in crate::state::CLICK_ZOOMS {
         if MenuItem::new(&format!("{}:1", pct / 100)).selected(app.ui.click_zoom == pct).show(ui).clicked() {
-            let _ = app.run("view.clickZoom", json!({"ratio": pct / 100}));
+            app.act("view.clickZoom", json!({"ratio": pct / 100}));
         }
     }
 }
@@ -307,27 +307,27 @@ fn sort_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         ("Random", Random, "random"),
     ] {
         if MenuItem::new(crate::i18n::tr(label)).selected(cur.key == key).show(ui).clicked() {
-            let _ = app.run("library.sort", json!({"key": k}));
+            app.act("library.sort", json!({"key": k}));
         }
     }
     if cur.key == Random && MenuItem::new(crate::i18n::tr("Reshuffle")).show(ui).clicked() {
-        let _ = app.run("library.shuffle", json!({}));
+        app.act("library.shuffle", json!({}));
     }
     // a view that holds its photos shows what matches now when asked to
     if app.session.hold_view {
         let r = MenuItem::new(crate::i18n::tr("Refresh View")).widget("button:refreshView").show(ui);
         if r.clicked() {
-            let _ = app.run("library.refresh", json!({}));
+            app.act("library.refresh", json!({}));
         }
     }
     ui.separator();
     // a shuffle has no direction worth choosing
     ui.add_enabled_ui(cur.key != Random, |ui| {
         if MenuItem::new(crate::i18n::tr("Ascending")).selected(cur.key != Random && cur.ascending).show(ui).clicked() {
-            let _ = app.run("library.sort", json!({"ascending": true}));
+            app.act("library.sort", json!({"ascending": true}));
         }
         if MenuItem::new(crate::i18n::tr("Descending")).selected(cur.key != Random && !cur.ascending).show(ui).clicked() {
-            let _ = app.run("library.sort", json!({"ascending": false}));
+            app.act("library.sort", json!({"ascending": false}));
         }
     });
     ui.separator();
@@ -340,7 +340,7 @@ fn sort_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         ("None", GroupBy::None, "none"),
     ] {
         if MenuItem::new(crate::i18n::tr(label)).selected(cur.group == g).show(ui).clicked() {
-            let _ = app.run("library.sort", json!({"group": k}));
+            app.act("library.sort", json!({"group": k}));
         }
     }
 }

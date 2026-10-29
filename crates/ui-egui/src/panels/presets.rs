@@ -117,11 +117,11 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             }
             ui.separator();
             if MenuItem::new(crate::i18n::tr("Import Presets…")).check_slot(true).show(ui).clicked() {
-                let _ = app.run("file.importPresets", json!({}));
+                app.act("file.importPresets", json!({}));
             }
             let any_user = app.session.presets.iter().any(|p| !p.builtin);
             if MenuItem::new(crate::i18n::tr("Export User Presets…")).check_slot(true).enabled(any_user).show(ui).clicked() {
-                let _ = app.run("file.exportPresets", json!({}));
+                app.act("file.exportPresets", json!({}));
             }
         });
         divider(ui);
@@ -141,15 +141,17 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 track: Track::Plain,
             };
             let out = slider(ui, &spec, last.amount, true, None);
+            // (`run`: when the undo is refused there is nothing to re-apply, and nothing to say)
             if let Some(v) = out.value
                 && app.run("edit.undo", json!({})).is_ok()
             {
                 // Only replace the most recent preset; never undo intervening edits.
-                if app.run("preset.apply", json!({"id": &last.id, "amount": v})).is_ok() {
+                if app.act("preset.apply", json!({"id": &last.id, "amount": v})).is_some() {
                     AppliedByPhoto::remember(ui.ctx(), &app.session, &last.id);
                     ui.data_mut(|d| d.insert_temp(amt_id, AppliedPreset::new(&app.session, last.id, v)));
                 } else {
-                    let _ = app.run("edit.redo", json!({}));
+                    // (quiet: it puts back the step just undone; `act` already said why the preset was refused)
+                    app.quiet("edit.redo", json!({}));
                     ui.data_mut(|d| d.remove::<AppliedPreset>(amt_id));
                 }
             }
@@ -198,7 +200,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 if !favorites {
                     crate::widgets::context_menu(&resp, |ui| {
                         if MenuItem::new(crate::i18n::tr("Export Group…")).show(ui).clicked() {
-                            let _ = app.run("file.exportPresets", json!({"group": g}));
+                            app.act("file.exportPresets", json!({"group": g}));
                         }
                     });
                 }
@@ -254,7 +256,8 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                             ui.data_mut(|d| d.insert_temp(egui::Id::unique("last-preset-hover"), (id, pr.clone(), label)));
                         }
                     }
-                    if resp.clicked() && app.run("preset.apply", json!({"id": pid, "amount": 100})).is_ok() {
+                    // only when it went through: refused (nothing selected…), `act` said why
+                    if resp.clicked() && app.act("preset.apply", json!({"id": pid, "amount": 100})).is_some() {
                         AppliedByPhoto::remember(ui.ctx(), &app.session, &pid);
                         ui.data_mut(|d| d.insert_temp(amt_id, AppliedPreset::new(&app.session, pid.clone(), 100.0)));
                         ui.data_mut(|d| d.remove::<(lightcraft_catalog::PhotoId, Preset, String)>(egui::Id::unique("last-preset-hover")));
@@ -263,7 +266,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                     let (builtin, group) = (pr.builtin, pr.group.clone());
                     crate::widgets::context_menu(&resp, |ui| {
                         if MenuItem::new(crate::i18n::tr(if fav { "Remove from Favorites" } else { "Add to Favorites" })).show(ui).clicked() {
-                            let _ = app.run("preset.favorite", json!({"id": pid}));
+                            app.act("preset.favorite", json!({"id": pid}));
                         }
                         if builtin {
                             return;
@@ -281,7 +284,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                         MenuItem::new(crate::i18n::tr("Move to Group")).submenu(ui, |ui| {
                             for g in groups.iter().filter(|x| x.user && x.name != group).map(|x| &x.name) {
                                 if MenuItem::new(g).show(ui).clicked() {
-                                    let _ = app.run("preset.move", json!({"id": pid, "group": g}));
+                                    app.act("preset.move", json!({"id": pid, "group": g}));
                                 }
                             }
                             if MenuItem::new(crate::i18n::tr("New Group…")).show(ui).clicked() {
@@ -298,7 +301,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                         });
                         ui.separator();
                         if MenuItem::new(crate::i18n::tr("Delete Preset")).show(ui).clicked() {
-                            let _ = app.run("preset.delete", json!({"id": pid}));
+                            app.act("preset.delete", json!({"id": pid}));
                         }
                     });
                 }

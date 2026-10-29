@@ -7,7 +7,7 @@ pub(super) fn versions(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) 
     let t = Tokens::get(ui.ctx());
     padded(ui, |ui| {
         if Button::new("Create Version").small().widget("button:versionCreate").show(ui).clicked() {
-            let _ = app.run("version.create", json!({}));
+            app.act("version.create", json!({}));
         }
         ui.add_space(8.0);
         // Named (made by you) and Auto (made by LightCraft) versions
@@ -66,7 +66,7 @@ pub(super) fn versions(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) 
             if resp.double_clicked() {
                 crate::panels::dialogs::prompt(app, "Rename Version", "Version name", &v.name, "version.rename", json!({"index": i}), "name");
             } else if resp.clicked() && !current {
-                let _ = app.run("version.restore", json!({"index": i}));
+                app.act("version.restore", json!({"index": i}));
             }
             let resp = resp.on_hover_text(crate::i18n::tr(if current {
                 "The photo has these settings"
@@ -75,20 +75,20 @@ pub(super) fn versions(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) 
             }));
             crate::widgets::context_menu(&resp, |ui| {
                 if MenuItem::new(crate::i18n::tr("Restore")).show(ui).clicked() {
-                    let _ = app.run("version.restore", json!({"index": i}));
+                    app.act("version.restore", json!({"index": i}));
                 }
                 if MenuItem::new(crate::i18n::tr("Update with Current Settings")).show(ui).clicked() {
-                    let _ = app.run("version.update", json!({"index": i}));
+                    app.act("version.update", json!({"index": i}));
                 }
                 if MenuItem::new(crate::i18n::tr("Rename…")).show(ui).clicked() {
                     crate::panels::dialogs::prompt(app, "Rename Version", "Version name", &v.name, "version.rename", json!({"index": i}), "name");
                 }
                 if MenuItem::new(crate::i18n::tr("Set as Before")).show(ui).clicked() {
-                    let _ = app.run("beforeAfter.setBefore", json!({"source": "version", "name": v.name}));
+                    app.act("beforeAfter.setBefore", json!({"source": "version", "name": v.name}));
                 }
                 ui.separator();
                 if MenuItem::new(crate::i18n::tr("Delete")).show(ui).clicked() {
-                    let _ = app.run("version.delete", json!({"index": i}));
+                    app.act("version.delete", json!({"index": i}));
                 }
             });
         }
@@ -160,19 +160,21 @@ pub(super) fn activity(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) 
                 text,
             );
             if resp.clicked() {
-                let _ = app.run("history.restore", json!({"index": i}));
+                app.act("history.restore", json!({"index": i}));
             }
             crate::widgets::context_menu(&resp, |ui| {
                 if MenuItem::new(crate::i18n::tr("Copy History Step Settings to Before")).show(ui).clicked() {
-                    let _ = app.run("beforeAfter.setBefore", json!({"source": "history", "index": i}));
+                    app.act("beforeAfter.setBefore", json!({"source": "history", "index": i}));
                 }
                 if MenuItem::new(crate::i18n::tr("Create Version from Step")).show(ui).clicked() {
-                    let _ = app.run("history.restore", json!({"index": i}));
-                    let _ = app.run("version.create", json!({"name": h.label}));
+                    // refused: `act` said why, and a version of the current step would be wrong
+                    if app.act("history.restore", json!({"index": i})).is_some() {
+                        app.act("version.create", json!({"name": h.label}));
+                    }
                 }
                 ui.separator();
                 if MenuItem::new(crate::i18n::tr("Clear History")).show(ui).clicked() {
-                    let _ = app.run("history.clear", json!({}));
+                    app.act("history.clear", json!({}));
                 }
             });
         }

@@ -58,7 +58,7 @@ pub(super) fn folder_tree(
                     .on_hover_text(crate::i18n::tr("List this folder in Local from now on"))
                     .clicked()
             {
-                let _ = app.run("local.addRoot", json!({"path": path}));
+                app.act("local.addRoot", json!({"path": path}));
                 ui.close();
             }
             if indent == 0.0
@@ -67,7 +67,7 @@ pub(super) fn folder_tree(
                     .on_hover_text(crate::i18n::tr("Hides this shortcut only; the folder and its photos stay as they are"))
                     .clicked()
             {
-                let _ = app.run("local.hide", json!({"path": path}));
+                app.act("local.hide", json!({"path": path}));
                 ui.close();
             }
             if MenuItem::new(crate::i18n::tr("Rename Folder…")).show(ui).clicked() {
@@ -119,7 +119,7 @@ pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Al
                     ("Create Folder…", "dialog.newFolder"),
                 ] {
                     if MenuItem::new(crate::i18n::tr(label)).show(ui).clicked() {
-                        let _ = app.run(command, json!({"parent": a.id.0}));
+                        app.act(command, json!({"parent": a.id.0}));
                         ui.close();
                     }
                 }
@@ -130,7 +130,7 @@ pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Al
                     .on_hover_text(crate::i18n::tr("Go back to listing them by name"))
                     .clicked()
             {
-                let _ = app.run("album.sort", json!({"parent": a.id.0}));
+                app.act("album.sort", json!({"parent": a.id.0}));
                 ui.close();
             }
             ui.separator();
@@ -180,19 +180,19 @@ pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Al
             let target = app.session.target_album.filter(|t| app.session.catalog.album(*t).is_some());
             let is_target = target == Some(a.id) || (target.is_none() && a.quick);
             if !is_target && MenuItem::new(crate::i18n::tr("Set as Target Album (B adds to it)")).show(ui).clicked() {
-                let _ = app.run("album.setTarget", json!({"id": if a.quick { serde_json::Value::Null } else { json!(a.id.0) }}));
+                app.act("album.setTarget", json!({"id": if a.quick { serde_json::Value::Null } else { json!(a.id.0) }}));
             }
             if is_target && !a.quick && MenuItem::new(crate::i18n::tr("Stop Using as Target Album")).show(ui).clicked() {
-                let _ = app.run("album.setTarget", json!({"id": null}));
+                app.act("album.setTarget", json!({"id": null}));
             }
         }
         if a.quick && MenuItem::new(crate::i18n::tr("Clear Quick Collection")).show(ui).clicked() {
-            let _ = app.run("album.clearQuick", json!({}));
+            app.act("album.clearQuick", json!({}));
         }
         if a.is_smart() && MenuItem::new(crate::i18n::tr("Edit Smart Album…")).show(ui).clicked() {
             // the same editor as `dialog.smartAlbum` (older smart albums keep their filter fields;
             // it works on the rule set, upgraded)
-            let _ = app.run("dialog.smartAlbum", json!({"id": a.id.0}));
+            app.act("dialog.smartAlbum", json!({"id": a.id.0}));
         }
         if a.is_smart() && MenuItem::new(crate::i18n::tr("Update Rules from Current Filter")).show(ui).clicked() {
             // refused when the view would make the album test itself: say why
@@ -203,13 +203,13 @@ pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Al
         if !a.folder {
             // export: show the album, select its photos, then the dialog / a preset
             let show_all = |app: &mut LightcraftApp| {
-                let _ = app.run("library.source", json!({"kind": "album", "id": a.id.0}));
-                let _ = app.run("library.selectAll", json!({}));
+                app.act("library.source", json!({"kind": "album", "id": a.id.0}));
+                app.act("library.selectAll", json!({}));
             };
             let has_photos = app.session.catalog.album_count(a.id) > 0;
             if MenuItem::new(crate::i18n::tr("Export Album…")).enabled(has_photos).show(ui).clicked() {
                 show_all(app);
-                let _ = app.run("dialog.export", json!({}));
+                app.act("dialog.export", json!({}));
             }
             ui.add_enabled_ui(has_photos, |ui| {
                 MenuItem::new(crate::i18n::tr("Export Album with Preset")).submenu(ui, |ui| {
@@ -236,14 +236,11 @@ pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Al
         folders.sort_by_key(|(_, n)| n.to_lowercase());
         MenuItem::new(crate::i18n::tr("Move to")).submenu(ui, |ui| {
             if MenuItem::new(crate::i18n::tr("Top Level")).enabled(a.parent.is_some()).show(ui).clicked() {
-                let _ = app.run("album.move", json!({"id": a.id.0, "parent": null}));
+                app.act("album.move", json!({"id": a.id.0, "parent": null}));
             }
             for (fid, name) in &folders {
                 if MenuItem::new(name).enabled(a.parent.map(|p| p.0) != Some(*fid)).show(ui).clicked() {
-                    // refused for a smart album that would then include itself: say so
-                    if let Err(e) = app.run("album.move", json!({"id": a.id.0, "parent": fid})) {
-                        app.toast(ui.ctx(), e);
-                    }
+                    app.act("album.move", json!({"id": a.id.0, "parent": fid}));
                 }
             }
         });
@@ -364,7 +361,7 @@ fn folder_row(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode, id: &s
     if resp.clicked() && !toggled {
         if n.selectable {
             // a source like an album or a Local folder: it replaces what the grid showed
-            let _ = app.run("library.source", json!({"kind": "libraryFolder", "path": n.path}));
+            app.act("library.source", json!({"kind": "libraryFolder", "path": n.path}));
         } else {
             *open = !*open;
             set_tree_open(ui, open_id, *open);

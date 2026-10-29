@@ -69,7 +69,7 @@ pub(super) fn local_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, now: &Local
                 // the picked folder stays in Local (and comes back if it was hidden)
                 Ok(r) => {
                     let dir = r["path"].as_str().unwrap_or(&path).to_string();
-                    let _ = app.run("local.addRoot", json!({"path": dir}));
+                    app.act("local.addRoot", json!({"path": dir}));
                 }
                 Err(e) => app.toast_error(ui.ctx(), e),
             }
@@ -85,7 +85,7 @@ pub(super) fn local_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, now: &Local
             .on_hover_text(crate::i18n::tr("Put the locations you removed from Local back (no files change)"));
         if let [(_, only)] = now.hidden.as_slice() {
             if resp.clicked() {
-                let _ = app.run("local.restoreHidden", json!({"path": only}));
+                app.act("local.restoreHidden", json!({"path": only}));
             }
         } else {
             egui::Popup::menu(&resp).show(|ui| hidden_menu(app, ui, &now.hidden));
@@ -99,14 +99,14 @@ fn hidden_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, hidden: &[(String, St
     for (name, path) in hidden {
         let r = MenuItem::new(name).widget(format!("local:restoreHidden:{path}")).show(ui).on_hover_text(path);
         if r.clicked() {
-            let _ = app.run("local.restoreHidden", json!({"path": path}));
+            app.act("local.restoreHidden", json!({"path": path}));
             ui.close();
         }
     }
     ui.separator();
     let r = MenuItem::new(crate::i18n::tr("Restore All")).widget("local:restoreHidden:all").show(ui);
     if r.clicked() {
-        let _ = app.run("local.restoreHidden", json!({}));
+        app.act("local.restoreHidden", json!({}));
         ui.close();
     }
 }

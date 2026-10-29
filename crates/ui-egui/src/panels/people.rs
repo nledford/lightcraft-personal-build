@@ -79,7 +79,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             .widget("people:last");
         let r = Rect::from_min_size(pos2(title.right() + 14.0, head.center().y - 12.0), button.desired_size(ui));
         if button.show_at(ui, r).clicked() {
-            let _ = app.run("view.person", json!({"name": last}));
+            app.act("view.person", json!({"name": last}));
         }
     }
     ui.painter().text(pos2(head.right() - PAD, head.center().y), Align2::RIGHT_CENTER, people.len().to_string(), t.font(13.0), t.text_dim);
@@ -195,7 +195,7 @@ fn card(app: &mut LightcraftApp, ui: &mut egui::Ui, person: &Person, r: Rect, ed
         }
     });
     if resp.clicked() {
-        let _ = app.run("view.person", json!({"name": person.name}));
+        app.act("view.person", json!({"name": person.name}));
     }
 }
 
