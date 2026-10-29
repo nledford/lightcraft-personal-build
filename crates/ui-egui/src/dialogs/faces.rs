@@ -189,7 +189,7 @@ fn gpu_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, gpu: &Val
             (crate::i18n::tr("CPU").to_string(), st["why"].as_str())
         };
         ui.horizontal(|ui| {
-            ui.label(RichText::new(crate::i18n::tr(label)).color(t.text_dim));
+            ui.label(RichText::new(crate::i18n::tr(label)).color(t.legible(t.text_dim, t.chrome, 4.5)));
             if st["checking"] == true {
                 crate::progress::spinner(ui, 12.0);
             }
@@ -295,7 +295,7 @@ pub fn settings_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         if r.clicked() {
             app.act("dialog.faceModel", json!({}));
         }
-        ui.label(RichText::new(crate::i18n::tr("or drop a .onnx file on the window")).color(t.text_dim));
+        ui.label(RichText::new(crate::i18n::tr("or drop a .onnx file on the window")).color(t.legible(t.text_dim, t.chrome, 4.5)));
     });
     // what is wrong with the user's own catalog (catalog.json in the models folder), if anything
     for e in list["catalog"]["errors"].as_array().into_iter().flatten().filter_map(Value::as_str).take(3) {
@@ -322,6 +322,8 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
     let id = m["id"].as_str().unwrap_or("").to_string();
     let detector = m["role"] == "detector";
     let (installed, selected) = (m["installed"].as_bool() == Some(true), m["selected"].as_bool() == Some(true));
+    // (the quiet and the warning colors, brought to read on the Settings window, as its other tabs do)
+    let (dim, caution) = (t.legible(t.text_dim, t.chrome, 4.5), t.text_caution());
     let dl_state = if installed { None } else { dl.and_then(|d| d["state"].as_str()) };
     // a build that cannot run recognition models has no use for a download
     let host = if can_run { m["downloadHost"].as_str().unwrap_or("").to_string() } else { String::new() };
@@ -332,18 +334,18 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                     ui.label(RichText::new(m["name"].as_str().unwrap_or("")).color(t.text));
                     let size = mb(m["sizeBytes"].as_u64());
                     if !size.is_empty() {
-                        ui.label(RichText::new(size).color(t.text_dim));
+                        ui.label(RichText::new(size).color(dim));
                     }
                     if selected {
                         ui.label(RichText::new(crate::i18n::tr("in use")).color(t.text_link()));
                     } else if installed {
-                        ui.label(RichText::new(crate::i18n::tr("installed")).color(t.text_dim));
+                        ui.label(RichText::new(crate::i18n::tr("installed")).color(dim));
                     }
                 });
                 ui.label(RichText::new(licence_line(m)).font(t.caption()).color(if m["licence"]["commercial"] == "yes" {
-                    t.text_dim
+                    dim
                 } else {
-                    t.text_caution()
+                    caution
                 }));
                 // how fast it is, as times faster than a ResNet-100 model (milliseconds would depend on the computer),
                 // with whether it passed its test when it has been installed
@@ -356,7 +358,7 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                     None => (speed.map(str::to_string), true),
                 };
                 if let Some(line) = line {
-                    ui.label(RichText::new(line).font(t.caption()).color(if ok { t.text_dim } else { t.text_caution() }));
+                    ui.label(RichText::new(line).font(t.caption()).color(if ok { dim } else { caution }));
                 }
                 match (dl_state, dl) {
                     (Some("running"), Some(d)) => {
@@ -375,12 +377,12 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                     (Some("done"), _) => {
                         ui.horizontal(|ui| {
                             crate::progress::spinner(ui, 12.0);
-                            ui.label(RichText::new(crate::i18n::tr("Downloaded and checked. Installing…")).font(t.caption()).color(t.text_dim));
+                            ui.label(RichText::new(crate::i18n::tr("Downloaded and checked. Installing…")).font(t.caption()).color(dim));
                         });
                     }
                     (Some("failed"), Some(d)) => {
                         let why = crate::panels::denoise::download_failure(d);
-                        ui.add(egui::Label::new(RichText::new(why).font(t.caption()).color(t.text_caution())).wrap());
+                        ui.add(egui::Label::new(RichText::new(why).font(t.caption()).color(caution)).wrap());
                     }
                     _ => {}
                 }

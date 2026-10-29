@@ -349,15 +349,16 @@
   left standing when Settings is closed or another library is opened.
 - Automatically write changes into XMP sidecars says what is written where.
 
-### Settings text can be read in every theme
+### Settings text can be read in more themes
 
-- What Settings says can be read in every theme. Its explanations, the text a box shows while it is empty, "In Use"
-  on a theme's card and the lines that warn or refuse now stand at least 4.5:1 against what they are on (the
+- What Settings says can be read in more themes. Its explanations, the text a box shows while it is empty, "In Use"
+  on a theme's card and the warnings and refusals on the AI Denoise and Faces tabs now stand at least 4.5:1 against what they are on (the
   explanations were 4.2:1 in Charcoal and 4.3:1 in Silver, "In Use" 2.9:1 in Charcoal); the borders of text boxes,
   checkboxes, radio buttons, buttons and each choice of a row, and the line under the tabs, stand 3:1, where they
-  were 1.2 to 1.7:1; so do the buttons of a question a button asks. The AI Denoise page's own lines,
+  were 1.2 to 1.7:1; so do the buttons of a question a button asks. The AI Denoise and Faces tabs' own lines,
   the GPU line under Rendering and the star that marks a favourite theme are read the same way. The colours of the rest of
-  LightCraft are as they were, but for the Info row's choices in View Options, which are outlined the same way.
+  LightCraft are as they were (so are the warnings and group labels on the Slideshow tab and the dialogs that add a
+  face model), but for the Info row's choices in View Options, which are outlined the same way.
 - The hint under External Editing drew two empty boxes where its menu path had arrows; it reads "Photo > Edit In >
   Edit in PhotoCraft" now.
 - Photo ▸ Edit In, Edit in PhotoCraft and Edit in Other Editor have names in all seventeen languages, the ones the

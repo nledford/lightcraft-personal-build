@@ -42,9 +42,11 @@ use general::{files_tab, general_tab, library_tab};
 use import::import_tab;
 pub(crate) use libraries::{can_switch_library, free_name};
 pub use libraries::{forget_library, library_name, new_library, open_library, open_library_name, recent_libraries, remember_library};
-use performance::performance_tab;
 #[cfg(test)]
-pub(crate) use performance::{gpu_line, smart_folder_default};
+pub(crate) use performance::gpu_line;
+use performance::performance_tab;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+pub(crate) use performance::smart_folder_default;
 use slideshow::slideshow_tab;
 pub(crate) use widgets::{ask_first, choices, heading, hint, row};
 use widgets::{focus_style, legible_controls};
