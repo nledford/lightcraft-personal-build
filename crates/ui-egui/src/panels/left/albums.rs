@@ -65,7 +65,7 @@ fn albums_tree(app: &mut LightcraftApp, ui: &mut egui::Ui, all: &AlbumKids, pare
                 folder_menu(app, &tri, a);
             }
             // the row itself is the source: the photos of the albums inside the folder
-            if resp.clicked() {
+            if super::side_keys::chosen(ui, &resp) {
                 app.act("library.source", json!({"kind": "album", "id": a.id.0}));
             }
             folder_menu(app, &resp, a);
@@ -122,7 +122,7 @@ fn albums_tree(app: &mut LightcraftApp, ui: &mut egui::Ui, all: &AlbumKids, pare
                 }
                 resp = resp.on_hover_text(tip);
             }
-            if resp.clicked() {
+            if super::side_keys::chosen(ui, &resp) {
                 app.act("library.source", json!({"kind": "album", "id": a.id.0}));
             }
             folder_menu(app, &resp, a);
@@ -380,8 +380,9 @@ pub(super) fn top_level_drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, 
 /// button is up (the drop targets act on the release frame, before this runs).
 pub fn album_drag_feedback(app: &mut LightcraftApp, ctx: &egui::Context) {
     let Some(id) = app.ui.dragging_album else { return };
-    let (released, down, pos) = ctx.input(|i| (i.pointer.primary_released(), i.pointer.primary_down(), i.pointer.latest_pos()));
-    if released || !down {
+    let (released, down, pos, esc) =
+        ctx.input(|i| (i.pointer.primary_released(), i.pointer.primary_down(), i.pointer.latest_pos(), i.key_pressed(egui::Key::Escape)));
+    if released || !down || esc {
         app.ui.dragging_album = None;
         forget_hover(app, ctx);
         return;

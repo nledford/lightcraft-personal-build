@@ -321,7 +321,7 @@ impl Sidebar {
     }
 
     fn said(&self) -> String {
-        self.app.ui.toast.as_ref().map(|t| t.0.clone()).unwrap_or_default()
+        self.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default()
     }
 
     fn open_rename_of(&mut self, id: &str) -> Option<Dialog> {
