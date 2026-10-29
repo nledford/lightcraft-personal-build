@@ -388,7 +388,7 @@ struct Section {
 
 /// The filter's state between frames: what is typed, and the sections of every tab with their
 /// text, read once for the language, library and display profile they were read in. (What is
-/// typed is kept only from one pass to the next: a pass in which Settings is not drawn loses it.)
+/// typed is kept only from one frame to the next.)
 #[derive(Clone, Default)]
 struct Filter {
     frame: u64,
