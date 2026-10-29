@@ -7,6 +7,9 @@
 
 ## 2026-10-27
 
+### macOS: the traffic lights are centred on the top bar
+- The red, yellow and green window buttons now sit in the middle of the top bar's height, in line with its buttons and search field. Before, they kept macOS's own title-bar position and sat about 4 points higher. They stay centred when the window is resized, leaves full screen or changes appearance.
+
 ### macOS: the Window menu lists the open windows
 - The Window menu now shows a row for each open window (the main window, and the second one from Window ▸ Second Window while it is open), below Bring All to Front. Before, the menu ended at Bring All to Front and listed no window. macOS also adds its own window items there: Fill, Center, Move & Resize and Full Screen Tile on macOS 15 and later, and Minimize All, Zoom All and Arrange in Front while Option is held.
 
