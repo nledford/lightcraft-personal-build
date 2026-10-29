@@ -361,5 +361,6 @@
   "Waiting tasks dropped: {n}": "Tác vụ chờ đã bị bỏ: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Có quá nhiều tác vụ đang chờ ({n}): hãy đợi một số tác vụ hoàn tất",
   "{n} waiting": "{n} đang chờ",
-  "{n} tasks waiting in line won't run.": "{n} tác vụ đang chờ trong hàng đợi sẽ không chạy."
+  "{n} tasks waiting in line won't run.": "{n} tác vụ đang chờ trong hàng đợi sẽ không chạy.",
+  "Without review: copy to {destination}": "Không xem lại: sao chép tới {destination}"
 }

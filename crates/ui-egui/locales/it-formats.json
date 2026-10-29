@@ -361,5 +361,6 @@
   "Waiting tasks dropped: {n}": "Attività in coda scartate: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Troppe attività in coda ({n}): attendi che alcune finiscano",
   "{n} waiting": "{n} in attesa",
-  "{n} tasks waiting in line won't run.": "{n} attività in coda non verranno eseguite."
+  "{n} tasks waiting in line won't run.": "{n} attività in coda non verranno eseguite.",
+  "Without review: copy to {destination}": "Senza revisione: copia in {destination}"
 }

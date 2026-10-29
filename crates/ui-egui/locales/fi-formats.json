@@ -361,5 +361,6 @@
   "Waiting tasks dropped: {n}": "Hylättyjä odottavia tehtäviä: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Liian monta tehtävää odottaa: {n}. Odota, että osa valmistuu",
   "{n} waiting": "{n} odottaa",
-  "{n} tasks waiting in line won't run.": "{n} jonossa odottavaa tehtävää ei suoriteta."
+  "{n} tasks waiting in line won't run.": "{n} jonossa odottavaa tehtävää ei suoriteta.",
+  "Without review: copy to {destination}": "Ilman tarkistusta: kopioi kohteeseen {destination}"
 }

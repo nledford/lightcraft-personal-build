@@ -361,5 +361,6 @@
   "Waiting tasks dropped: {n}": "Väntande uppgifter som togs bort: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "För många uppgifter väntar ({n}): vänta tills några är klara",
   "{n} waiting": "{n} väntar",
-  "{n} tasks waiting in line won't run.": "{n} uppgifter som väntar i kön kommer inte att köras."
+  "{n} tasks waiting in line won't run.": "{n} uppgifter som väntar i kön kommer inte att köras.",
+  "Without review: copy to {destination}": "Utan granskning: kopiera till {destination}"
 }

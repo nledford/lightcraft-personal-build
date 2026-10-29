@@ -361,5 +361,6 @@
   "Waiting tasks dropped: {n}": "Скасовано завдань із черги: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "У черзі забагато завдань: {n}. Зачекайте, поки частина завершиться",
   "{n} waiting": "Очікують: {n}",
-  "{n} tasks waiting in line won't run.": "Завдання в черзі ({n}) не буде запущено."
+  "{n} tasks waiting in line won't run.": "Завдання в черзі ({n}) не буде запущено.",
+  "Without review: copy to {destination}": "Без перевірки: копіювати до {destination}"
 }

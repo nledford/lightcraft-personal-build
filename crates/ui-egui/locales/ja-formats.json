@@ -361,5 +361,6 @@
   "Waiting tasks dropped: {n}": "破棄した待機中のタスク：{n}件",
   "Too many tasks are waiting ({n}): wait for some to finish": "待機中のタスクが多すぎます（{n}件）：いくつか完了するまでお待ちください",
   "{n} waiting": "待機中 {n} 件",
-  "{n} tasks waiting in line won't run.": "待機中の {n} 件は実行されません。"
+  "{n} tasks waiting in line won't run.": "待機中の {n} 件は実行されません。",
+  "Without review: copy to {destination}": "確認なし: {destination} にコピー"
 }

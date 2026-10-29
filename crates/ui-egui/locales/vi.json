@@ -2373,5 +2373,10 @@
   "Waiting": "Đang chờ",
   "Remove from Queue": "Xóa khỏi hàng đợi",
   "Retry": "Thử lại",
-  "1 task waiting in line won't run.": "1 tác vụ đang chờ trong hàng đợi sẽ không chạy."
+  "1 task waiting in line won't run.": "1 tác vụ đang chờ trong hàng đợi sẽ không chạy.",
+  "Queue without review": "Đưa vào hàng đợi không xem lại",
+  "A folder is already being scanned": "Một thư mục đang được quét",
+  "Without review: add in place": "Không xem lại: thêm tại chỗ",
+  "Without review: copy into the library": "Không xem lại: sao chép vào thư viện",
+  "Close the open dialog, then choose Review… again": "Hãy đóng hộp thoại đang mở, rồi chọn lại Xem lại…"
 }

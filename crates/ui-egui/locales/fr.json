@@ -2528,5 +2528,10 @@
   "Waiting": "En attente",
   "Remove from Queue": "Retirer de la file",
   "Retry": "Réessayer",
-  "1 task waiting in line won't run.": "1 tâche en file d’attente ne sera pas lancée."
+  "1 task waiting in line won't run.": "1 tâche en file d’attente ne sera pas lancée.",
+  "Queue without review": "Mettre en file sans vérifier",
+  "A folder is already being scanned": "Un dossier est déjà en cours d'analyse",
+  "Without review: add in place": "Sans vérification : ajouter sur place",
+  "Without review: copy into the library": "Sans vérification : copier dans la bibliothèque",
+  "Close the open dialog, then choose Review… again": "Fermez la boîte de dialogue ouverte, puis choisissez à nouveau Vérifier…"
 }

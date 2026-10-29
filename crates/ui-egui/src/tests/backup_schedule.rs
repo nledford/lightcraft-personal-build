@@ -423,9 +423,7 @@ fn the_app_says_when_a_backup_removed_older_ones() {
         *now.lock().unwrap() = format!("2025-01-{day}T09:00:00");
         h.app.run("library.backup", json!({"background": false})).unwrap();
     }
-    assert!(
-        h.step_until(T, |h| h.app.ui.toast().is_some_and(|t| t.text.contains("Backed up the library") && !t.text.contains("Older backups")))
-    );
+    assert!(h.step_until(T, |h| h.app.ui.toast().is_some_and(|t| t.text.contains("Backed up the library") && !t.text.contains("Older backups"))));
     prefs(&mut h, json!({"keepDays": 30}));
     *now.lock().unwrap() = "2026-01-10T09:00:00".into();
     h.app.run("library.backup", json!({"background": false})).unwrap();

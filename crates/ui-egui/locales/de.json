@@ -3576,5 +3576,10 @@
   "Waiting": "Wartet",
   "Remove from Queue": "Aus der Warteschlange entfernen",
   "Retry": "Erneut versuchen",
-  "1 task waiting in line won't run.": "1 Aufgabe in der Warteschlange wird nicht ausgeführt."
+  "1 task waiting in line won't run.": "1 Aufgabe in der Warteschlange wird nicht ausgeführt.",
+  "Queue without review": "Ohne Prüfung einreihen",
+  "A folder is already being scanned": "Ein Ordner wird bereits durchsucht",
+  "Without review: add in place": "Ohne Prüfung: am Speicherort hinzufügen",
+  "Without review: copy into the library": "Ohne Prüfung: in die Bibliothek kopieren",
+  "Close the open dialog, then choose Review… again": "Schließe den geöffneten Dialog und wähle dann erneut Prüfen…"
 }

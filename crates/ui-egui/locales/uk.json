@@ -2492,5 +2492,10 @@
   "Waiting": "Очікує",
   "Remove from Queue": "Прибрати з черги",
   "Retry": "Повторити",
-  "1 task waiting in line won't run.": "1 завдання в черзі не буде запущено."
+  "1 task waiting in line won't run.": "1 завдання в черзі не буде запущено.",
+  "Queue without review": "Поставити в чергу без перевірки",
+  "A folder is already being scanned": "Тека вже сканується",
+  "Without review: add in place": "Без перевірки: додати на місці",
+  "Without review: copy into the library": "Без перевірки: копіювати до бібліотеки",
+  "Close the open dialog, then choose Review… again": "Закрийте відкрите вікно та ще раз виберіть «Перевірити…»"
 }

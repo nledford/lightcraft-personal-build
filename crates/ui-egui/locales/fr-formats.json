@@ -361,5 +361,6 @@
   "Waiting tasks dropped: {n}": "Tâches en attente abandonnées : {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Trop de tâches attendent ({n}) : patientez jusqu'à ce que certaines se terminent",
   "{n} waiting": "{n} en attente",
-  "{n} tasks waiting in line won't run.": "{n} tâches en file d’attente ne seront pas lancées."
+  "{n} tasks waiting in line won't run.": "{n} tâches en file d’attente ne seront pas lancées.",
+  "Without review: copy to {destination}": "Sans vérification : copier vers {destination}"
 }

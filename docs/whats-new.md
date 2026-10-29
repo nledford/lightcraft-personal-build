@@ -21,6 +21,18 @@
 - Agents queue a build with `queue: true`, see it in `activity.list` (`waiting`, `place`, `lane`), take it out with
   `activity.cancel` and ask again for one that did not go well with `activity.retry`.
 
+### Queue a folder without waiting for its review
+- While an import or Synchronize Folder runs (or waits), the "Scanning folder" row in the activity stack has Queue
+  without review. It stops the scan, which on a network share can take minutes, and puts the folder in line to be
+  imported the way your last import review was confirmed: added in place, or copied with the same destination, folders,
+  file names and DNG conversion. Before any review it is added in place; a camera or card is copied into the library. An album chosen
+  by Import into this album is kept. Keywords, presets and other albums are not: they belong to one batch.
+- It never moves files. After a review that moved its originals the folder is copied instead, and the originals stay.
+- The waiting row says how the folder comes in ("Without review: add in place", "…copy to <folder>") and has Review…:
+  it takes the folder out of the line and scans it for the usual review. Review… is refused (the row stays) while
+  another folder is being scanned, or a finished scan's review waits for a dialog to close. With the library free there is nothing to queue: the review opens when the scan is in.
+- What your last review chose is kept until you quit or open another library.
+
 ## 2026-10-26
 
 ### The sidebar from the keyboard

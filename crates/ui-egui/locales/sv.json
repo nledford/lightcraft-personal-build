@@ -2565,5 +2565,10 @@
   "Waiting": "Väntar",
   "Remove from Queue": "Ta bort från kön",
   "Retry": "Försök igen",
-  "1 task waiting in line won't run.": "1 uppgift som väntar i kön kommer inte att köras."
+  "1 task waiting in line won't run.": "1 uppgift som väntar i kön kommer inte att köras.",
+  "Queue without review": "Köa utan granskning",
+  "A folder is already being scanned": "En mapp skannas redan",
+  "Without review: add in place": "Utan granskning: lägg till på plats",
+  "Without review: copy into the library": "Utan granskning: kopiera till biblioteket",
+  "Close the open dialog, then choose Review… again": "Stäng den öppna dialogrutan och välj sedan Granska… igen"
 }

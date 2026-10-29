@@ -99,11 +99,9 @@ pub fn ask(app: &mut LightcraftApp, reply: Sender<Value>) -> Outcome {
     };
     let done = move |app: &mut LightcraftApp, _ctx: &egui::Context, checked: Result<Option<Vec<(PhotoId, String)>>, String>| {
         let (answer, complete, outcome) = match checked {
-            _ if app.session.library_generation() != library => (
-                control::failure("Missing Photos: another library was opened before the check ended"),
-                false,
-                TaskOutcome::ended(Ending::Stopped),
-            ),
+            _ if app.session.library_generation() != library => {
+                (control::failure("Missing Photos: another library was opened before the check ended"), false, TaskOutcome::ended(Ending::Stopped))
+            }
             Err(e) => (control::failure(e.clone()), false, TaskOutcome::failed(e)),
             Ok(None) => (control::failure("Missing Photos: the check was stopped"), false, TaskOutcome::ended(Ending::Stopped)),
             Ok(Some(gone)) if missing::fingerprint(&app.session.catalog) == snapshot => {

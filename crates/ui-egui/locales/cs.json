@@ -2544,5 +2544,10 @@
   "Waiting": "Čeká",
   "Remove from Queue": "Odebrat z fronty",
   "Retry": "Zkusit znovu",
-  "1 task waiting in line won't run.": "1 úloha čekající ve frontě se nespustí."
+  "1 task waiting in line won't run.": "1 úloha čekající ve frontě se nespustí.",
+  "Queue without review": "Zařadit do fronty bez kontroly",
+  "A folder is already being scanned": "Jiná složka se již prohledává",
+  "Without review: add in place": "Bez kontroly: přidat ze současného umístění",
+  "Without review: copy into the library": "Bez kontroly: kopírovat do knihovny",
+  "Close the open dialog, then choose Review… again": "Zavřete otevřené okno, pak znovu zvolte Zkontrolovat…"
 }

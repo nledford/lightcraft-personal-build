@@ -283,6 +283,8 @@ impl LightcraftApp {
         // (a row's id in the last library may name another row in this one)
         self.ui.sidebar_cursor = None;
         panels::side_keys::forget_rows(ctx);
+        // (how a review of another library was confirmed is no guide for this one)
+        self.last_import = None;
         if let Some(l) = self.session.library.as_ref().filter(|l| l.on_disk) {
             let path = l.dir.to_string_lossy().into_owned();
             panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);

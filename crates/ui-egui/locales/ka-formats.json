@@ -361,5 +361,6 @@
   "Waiting tasks dropped: {n}": "გაუქმებული მოლოდინის ამოცანები: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "ძალიან ბევრი ამოცანა ელოდება ({n}): დაელოდეთ, სანამ ზოგი დასრულდება",
   "{n} waiting": "{n} ელოდება",
-  "{n} tasks waiting in line won't run.": "რიგში მყოფი {n} ამოცანა არ გაეშვება."
+  "{n} tasks waiting in line won't run.": "რიგში მყოფი {n} ამოცანა არ გაეშვება.",
+  "Without review: copy to {destination}": "გადახედვის გარეშე: კოპირება: {destination}"
 }
