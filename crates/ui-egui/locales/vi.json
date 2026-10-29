@@ -2398,5 +2398,7 @@
   "Paste at Top Level": "Dán ở cấp cao nhất",
   "Drag to move, or use the arrow keys": "Kéo để di chuyển, hoặc dùng phím mũi tên",
   "A group can't go inside itself": "Nhóm không thể nằm trong chính nó",
-  "Groups can't nest any deeper": "Không thể lồng nhóm sâu hơn"
+  "Groups can't nest any deeper": "Không thể lồng nhóm sâu hơn",
+  "This album is in a loop, so it shows nothing": "Album này nằm trong một vòng lặp nên không hiển thị gì",
+  "It tests itself: change its rules (Edit Smart Album…)": "Album này tự kiểm tra chính nó: hãy đổi quy tắc của nó (Chỉnh sửa album thông minh…)"
 }

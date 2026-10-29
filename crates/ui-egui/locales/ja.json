@@ -2520,5 +2520,7 @@
   "Paste at Top Level": "最上位に貼り付け",
   "Drag to move, or use the arrow keys": "ドラッグして移動、または矢印キーを使います",
   "A group can't go inside itself": "グループを自分自身の中に入れることはできません",
-  "Groups can't nest any deeper": "グループはこれ以上深く入れ子にできません"
+  "Groups can't nest any deeper": "グループはこれ以上深く入れ子にできません",
+  "This album is in a loop, so it shows nothing": "このアルバムは循環しているため、何も表示されません",
+  "It tests itself: change its rules (Edit Smart Album…)": "自分自身を条件にしています。条件を変更してください（スマートアルバムを編集…）"
 }

@@ -2518,5 +2518,7 @@
   "Paste at Top Level": "Вставити на верхній рівень",
   "Drag to move, or use the arrow keys": "Перетягніть, щоб перемістити, або скористайтеся стрілками",
   "A group can't go inside itself": "Групу не можна помістити саму в себе",
-  "Groups can't nest any deeper": "Групи не можна вкладати глибше"
+  "Groups can't nest any deeper": "Групи не можна вкладати глибше",
+  "This album is in a loop, so it shows nothing": "Цей альбом потрапив у цикл, тому нічого не показує",
+  "It tests itself: change its rules (Edit Smart Album…)": "Він перевіряє сам себе: змініть його правила (Редагувати смарт-альбом…)"
 }

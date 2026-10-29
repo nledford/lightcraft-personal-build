@@ -366,5 +366,6 @@
   "…and {n} more": "…і ще {n}",
   "{n} keywords": "Ключові слова: {n}",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Правило {n} з {m}: {what}. Переміщення стрілками",
-  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Група {n} з {m}: збіг {mode}, усередині {count}. Переміщення стрілками"
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Група {n} з {m}: збіг {mode}, усередині {count}. Переміщення стрілками",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Він повертається до себе через альбом «{}»: змініть правила одного з альбомів у циклі (Редагувати смарт-альбом…)"
 }

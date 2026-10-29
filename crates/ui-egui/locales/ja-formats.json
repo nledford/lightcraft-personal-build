@@ -366,5 +366,6 @@
   "…and {n} more": "…ほか{n}個",
   "{n} keywords": "{n}個のキーワード",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "条件 {n}/{m}：{what}。矢印キーで移動",
-  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "グループ {n}/{m}：一致条件 {mode}、中に {count} 件。矢印キーで移動"
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "グループ {n}/{m}：一致条件 {mode}、中に {count} 件。矢印キーで移動",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "アルバム「{}」を通じて自分自身に戻っています。循環しているアルバムのどれかの条件を変更してください（スマートアルバムを編集…）"
 }

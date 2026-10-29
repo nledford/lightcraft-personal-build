@@ -2590,5 +2590,7 @@
   "Paste at Top Level": "Klistra in på översta nivån",
   "Drag to move, or use the arrow keys": "Dra för att flytta, eller använd piltangenterna",
   "A group can't go inside itself": "En grupp kan inte läggas inuti sig själv",
-  "Groups can't nest any deeper": "Grupper kan inte nästlas djupare"
+  "Groups can't nest any deeper": "Grupper kan inte nästlas djupare",
+  "This album is in a loop, so it shows nothing": "Det här albumet ingår i en loop och visar därför ingenting",
+  "It tests itself: change its rules (Edit Smart Album…)": "Det testar sig självt: ändra dess regler (Redigera smart album…)"
 }

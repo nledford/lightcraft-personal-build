@@ -366,5 +366,6 @@
   "…and {n} more": "…và {n} mục nữa",
   "{n} keywords": "{n} từ khóa",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Quy tắc {n}/{m}: {what}. Di chuyển bằng phím mũi tên",
-  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Nhóm {n}/{m}: khớp {mode}, bên trong: {count}. Di chuyển bằng phím mũi tên"
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Nhóm {n}/{m}: khớp {mode}, bên trong: {count}. Di chuyển bằng phím mũi tên",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Album này quay lại chính nó qua album «{}»: hãy đổi quy tắc của một album trong vòng lặp (Chỉnh sửa album thông minh…)"
 }

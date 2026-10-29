@@ -2364,5 +2364,7 @@
   "Paste at Top Level": "粘贴到顶层",
   "Drag to move, or use the arrow keys": "拖动以移动，或使用方向键",
   "A group can't go inside itself": "组不能放入它自己里面",
-  "Groups can't nest any deeper": "组不能再嵌套得更深"
+  "Groups can't nest any deeper": "组不能再嵌套得更深",
+  "This album is in a loop, so it shows nothing": "此相册处于循环中，因此不显示任何内容",
+  "It tests itself: change its rules (Edit Smart Album…)": "它引用了自身：请更改其规则（编辑智能相册…）"
 }

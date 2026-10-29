@@ -2522,5 +2522,7 @@
   "Paste at Top Level": "Pegar en el nivel superior",
   "Drag to move, or use the arrow keys": "Arrastra para mover, o usa las teclas de flecha",
   "A group can't go inside itself": "Un grupo no puede ir dentro de sí mismo",
-  "Groups can't nest any deeper": "Los grupos no se pueden anidar más"
+  "Groups can't nest any deeper": "Los grupos no se pueden anidar más",
+  "This album is in a loop, so it shows nothing": "Este álbum está en un bucle, así que no muestra nada",
+  "It tests itself: change its rules (Edit Smart Album…)": "Se comprueba a sí mismo: cambia sus reglas (Editar álbum inteligente…)"
 }

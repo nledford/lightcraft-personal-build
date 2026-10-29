@@ -2488,5 +2488,7 @@
   "Paste at Top Level": "Liitä ylimmälle tasolle",
   "Drag to move, or use the arrow keys": "Siirrä vetämällä tai käytä nuolinäppäimiä",
   "A group can't go inside itself": "Ryhmää ei voi siirtää itsensä sisään",
-  "Groups can't nest any deeper": "Ryhmiä ei voi sisentää syvemmälle"
+  "Groups can't nest any deeper": "Ryhmiä ei voi sisentää syvemmälle",
+  "This album is in a loop, so it shows nothing": "Tämä albumi on silmukassa, joten se ei näytä mitään",
+  "It tests itself: change its rules (Edit Smart Album…)": "Se testaa itseään: muuta sen sääntöjä (Muokkaa älyalbumia…)"
 }

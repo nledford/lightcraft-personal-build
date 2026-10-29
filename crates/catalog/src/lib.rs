@@ -569,6 +569,31 @@ impl Catalog {
         !p.deleted && rules::smart_album_holds(id, p.id, || rules.matches_in(p, self, prepared))
     }
 
+    /// Whether album `id` is on a loop: a smart album that includes itself, through the albums it
+    /// tests and the folders those are in. Such an album holds no photos ([`Self::album_photos`],
+    /// [`Self::album_count`], [`Self::album_contains`] and the grid all agree) until its rules or
+    /// those of an album on the loop change. An album that only tests a looping album is not on
+    /// the loop: it is worked out as usual, seeing the looping album as empty.
+    pub fn album_on_a_loop(&self, id: AlbumId) -> bool {
+        self.album_is_on_a_loop(id)
+    }
+
+    /// For an album on a loop, the smart album to name when saying why it is empty: one it tests
+    /// (directly, or inside a folder it tests) that is on the loop and leads back to it, or itself
+    /// when it tests itself. `None` for an album that is not on a loop.
+    pub fn album_loops_through(&self, id: AlbumId) -> Option<AlbumId> {
+        if !self.album_is_on_a_loop(id) {
+            return None;
+        }
+        let tested = self.albums.get(&id)?.smart.as_deref()?.albums_tested();
+        let members: Vec<AlbumId> = tested.iter().flat_map(|t| self.album_members(*t)).collect();
+        members
+            .iter()
+            .copied()
+            .find(|b| *b != id && self.album_is_on_a_loop(*b) && self.album_reaches(*b, id))
+            .or_else(|| members.contains(&id).then_some(id))
+    }
+
     /// Whether smart album `id` would include itself ([`Self::albums_on_a_loop`]).
     fn album_is_on_a_loop(&self, id: AlbumId) -> bool {
         self.looping().contains(&id)
@@ -578,6 +603,12 @@ impl Catalog {
     /// every pass asks, and only an op that changes the albums gives another answer.
     fn looping(&self) -> &std::collections::BTreeSet<AlbumId> {
         self.loops.0.get_or_init(|| self.album_graph().on_a_loop())
+    }
+
+    /// Whether the albums on a loop are worked out and kept now (what the tests look at).
+    #[cfg(test)]
+    pub(crate) fn loops_known(&self) -> bool {
+        self.loops.0.get().is_some()
     }
 
     /// A damaged library, for tests: `change` an album as no op would, and forget what was
@@ -1890,6 +1921,8 @@ mod tests_local;
 mod tests_lock;
 #[cfg(test)]
 mod tests_policy;
+#[cfg(test)]
+mod tests_looping_albums;
 #[cfg(test)]
 mod tests_repair;
 #[cfg(test)]

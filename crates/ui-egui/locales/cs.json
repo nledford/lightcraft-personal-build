@@ -2569,5 +2569,7 @@
   "Paste at Top Level": "Vložit na nejvyšší úroveň",
   "Drag to move, or use the arrow keys": "Přetažením přesunete, nebo použijte šipky",
   "A group can't go inside itself": "Skupinu nelze vložit do sebe samé",
-  "Groups can't nest any deeper": "Skupiny nelze vnořovat hlouběji"
+  "Groups can't nest any deeper": "Skupiny nelze vnořovat hlouběji",
+  "This album is in a loop, so it shows nothing": "Toto album je ve smyčce, a proto nic nezobrazuje",
+  "It tests itself: change its rules (Edit Smart Album…)": "Testuje samo sebe: změňte jeho pravidla (Upravit inteligentní album…)"
 }

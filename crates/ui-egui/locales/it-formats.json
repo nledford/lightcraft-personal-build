@@ -366,5 +366,6 @@
   "…and {n} more": "…e altri {n}",
   "{n} keywords": "{n} parole chiave",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Regola {n} di {m}: {what}. Sposta con le frecce",
-  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Gruppo {n} di {m}: corrispondenza {mode}, {count} all’interno. Sposta con le frecce"
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Gruppo {n} di {m}: corrispondenza {mode}, {count} all’interno. Sposta con le frecce",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Ritorna su se stesso attraverso l'album “{}”: modifica le regole di un album del ciclo (Modifica album smart…)"
 }

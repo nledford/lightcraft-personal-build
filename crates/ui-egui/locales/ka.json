@@ -2897,5 +2897,7 @@
   "Paste at Top Level": "ზედა დონეზე ჩასმა",
   "Drag to move, or use the arrow keys": "გადასატანად გადაიტანეთ ან გამოიყენეთ ისრები",
   "A group can't go inside itself": "ჯგუფს საკუთარ თავში ვერ ჩადებთ",
-  "Groups can't nest any deeper": "ჯგუფების უფრო ღრმად ჩადგმა შეუძლებელია"
+  "Groups can't nest any deeper": "ჯგუფების უფრო ღრმად ჩადგმა შეუძლებელია",
+  "This album is in a loop, so it shows nothing": "ეს ალბომი ციკლშია, ამიტომ არაფერს აჩვენებს",
+  "It tests itself: change its rules (Edit Smart Album…)": "ის საკუთარ თავს ამოწმებს: შეცვალეთ მისი წესები (სმარტ-ალბომის რედაქტირება…)"
 }

@@ -366,5 +366,6 @@
   "…and {n} more": "…y {n} más",
   "{n} keywords": "{n} palabras clave",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Regla {n} de {m}: {what}. Mover con las teclas de flecha",
-  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Grupo {n} de {m}: coincidir con {mode}, {count} dentro. Mover con las teclas de flecha"
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Grupo {n} de {m}: coincidir con {mode}, {count} dentro. Mover con las teclas de flecha",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Vuelve a sí mismo a través del álbum “{}”: cambia las reglas de uno de los álbumes del bucle (Editar álbum inteligente…)"
 }

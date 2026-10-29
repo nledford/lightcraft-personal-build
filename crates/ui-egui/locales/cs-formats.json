@@ -366,5 +366,6 @@
   "…and {n} more": "…a dalších {n}",
   "{n} keywords": "Klíčová slova: {n}",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Pravidlo {n} z {m}: {what}. Přesun pomocí šipek",
-  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Skupina {n} z {m}: shoda {mode}, uvnitř {count}. Přesun pomocí šipek"
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Skupina {n} z {m}: shoda {mode}, uvnitř {count}. Přesun pomocí šipek",
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Vede zpět samo na sebe přes album „{}“: změňte pravidla jednoho alba ve smyčce (Upravit inteligentní album…)"
 }
