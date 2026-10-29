@@ -572,8 +572,9 @@ fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fi
         up_down_key(app, ctx, f);
         return;
     }
-    // a command that can't run (an export with no folder, nothing to undo…) says why
-    // instead of doing nothing; its success is said only when it went through
+    // a command that can't run (an export with no folder, a view that can't be saved as a smart
+    // album, nothing to undo…) says why instead of doing nothing; its success is said only when
+    // it went through
     let mut params = json!({});
     crate::menubar::menu_defaults(f, &mut params);
     if app.act(f, params).is_some() {

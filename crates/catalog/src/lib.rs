@@ -671,14 +671,14 @@ impl Catalog {
     /// gone (a view of an album, saved as a smart album, after that album was deleted), or, for
     /// smart album `owner`, itself or an album that leads back to it.
     pub fn album_filter_problem(&self, filter: &Filter, owner: Option<AlbumId>) -> Option<rules::Problem> {
-        let a = filter.album?;
+        let wanted = filter.albums_wanted();
         let problem = |issue, message| rules::Problem { path: Vec::new(), field: Some("album".into()), issue, message };
-        if !self.albums.contains_key(&a) {
+        if let Some(a) = wanted.iter().find(|a| !self.albums.contains_key(a)) {
             return Some(problem(rules::Issue::NoSuchAlbum, format!("its album filter names album {}, which is gone", a.0)));
         }
         let owner = owner?;
-        (a == owner || self.album_reaches(a, owner))
-            .then(|| problem(rules::Issue::AlbumLoop, format!("its album filter (album {}) would make this album include itself", a.0)))
+        let a = wanted.into_iter().find(|a| *a == owner || self.album_reaches(*a, owner))?;
+        Some(problem(rules::Issue::AlbumLoop, format!("its album filter (album {}) would make this album include itself", a.0)))
     }
 
     /// The photos of an album: the stored list, or a smart album's current matches (id order). A
@@ -714,9 +714,7 @@ impl Catalog {
         if rules.deleted {
             return Err(CatalogError::Invalid("smart album rules can't select deleted photos".into()));
         }
-        if let Some(a) = rules.album
-            && self.albums.get(&a).is_some_and(Album::is_smart)
-        {
+        if rules.albums_wanted().iter().any(|a| self.albums.get(a).is_some_and(Album::is_smart)) {
             return Err(CatalogError::Invalid("smart album rules can't reference another smart album".into()));
         }
         Ok(())

@@ -120,8 +120,7 @@ fn an_album_that_comes_back_is_not_shown_again_by_itself() {
     photos(&mut s, 3);
     let id = run(&mut s, "album.create", json!({"name": "First"}))["id"].as_u64().unwrap();
     show(&mut s, id);
-    run(&mut s, "library.filter", json!({"album": id}));
-    // the filter is no undo step: this undoes the album
+    // showing the album is no undo step: this undoes the album
     run(&mut s, "edit.undo", json!({}));
     assert!(s.catalog.album(AlbumId(id)).is_none(), "the album's creation was undone");
     assert_eq!((s.source, s.filter.album), (LibrarySource::All, None));
@@ -134,6 +133,25 @@ fn an_album_that_comes_back_is_not_shown_again_by_itself() {
     let second = run(&mut s, "album.create", json!({"name": "Second"}))["id"].as_u64().unwrap();
     assert_ne!(second, id, "ids are not handed out again");
     shows_all(&mut s, "another album was made");
+}
+
+/// The filter's album chip too: one that is gone is let go of, and does not come back with the
+/// album. (The filter bar's album is for a view that does not show albums itself: with an album
+/// source `library.filter` refuses it.)
+#[test]
+fn an_album_chip_of_the_filter_that_is_gone_is_let_go_of() {
+    let mut s = Session::new();
+    photos(&mut s, 3);
+    let id = run(&mut s, "album.create", json!({"name": "First"}))["id"].as_u64().unwrap();
+    run(&mut s, "library.filter", json!({"album": id}));
+    assert_eq!(s.filter.album, Some(AlbumId(id)));
+    // the filter is no undo step: this undoes the album
+    run(&mut s, "edit.undo", json!({}));
+    assert!(s.catalog.album(AlbumId(id)).is_none(), "the album's creation was undone");
+    assert_eq!(s.filter.album, None);
+    run(&mut s, "edit.redo", json!({}));
+    assert!(s.catalog.album(AlbumId(id)).is_some(), "and redone");
+    assert_eq!(s.filter.album, None, "the album came back, its chip did not");
 }
 
 /// The target album is looked up where it is used: gone, photos go to the Quick Collection; back
