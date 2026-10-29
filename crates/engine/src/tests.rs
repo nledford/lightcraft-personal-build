@@ -48,6 +48,7 @@ mod print;
 mod process;
 mod recheck;
 mod restore;
+mod relocate;
 mod segment;
 mod settings_files;
 mod slide;
