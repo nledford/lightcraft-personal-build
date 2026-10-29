@@ -24,15 +24,22 @@ fn settings_of_a_library_in(dir: &Path) -> Headless {
     let mut session = lightcraft_engine::Session::new().with_fs();
     session.open_library(dir.join("library"), false).unwrap();
     let mut h = Headless::new(LightcraftApp::new(session, Services::default()), [1300.0, 820.0], 1.0);
+    // (the first frames change the panels: a key sent before they settle is canceled)
+    h.settle(T);
     open_settings(&mut h);
     h
 }
 
-/// Settings, opened as a person opens it (⌘,): on General.
+/// Settings, opened as a person opens it (⌘,: on General), and taken to the Library tab, where Backups are.
 fn open_settings(h: &mut Headless) {
     let r = h.request("ui.key", json!({"key": ",", "cmd": true}), T);
     assert_eq!(r["ok"], true, "{r}");
     assert_eq!(h.app.ui.dialog, Some(Dialog::Settings { tab: "general".into() }));
+    let r = h.request("engine.execute", json!({"command": "app.settings", "params": {"tab": "library"}}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    for _ in 0..4 {
+        h.step();
+    }
 }
 
 fn has(h: &mut Headless, id: &str) -> bool {

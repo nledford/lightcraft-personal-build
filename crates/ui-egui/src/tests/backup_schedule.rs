@@ -70,6 +70,15 @@ fn has(h: &mut Headless, id: &str) -> bool {
     h.request("ui.widgets", json!({"filter": id}), T)["result"].as_array().is_some_and(|w| w.iter().any(|w| w["id"] == id))
 }
 
+/// Settings ▸ Library, where Backups are (⌘, opens General).
+fn library_tab(h: &mut Headless) {
+    let r = h.request("engine.execute", json!({"command": "app.settings", "params": {"tab": "library"}}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    for _ in 0..4 {
+        h.step();
+    }
+}
+
 fn backups(dir: &Path) -> usize {
     std::fs::read_dir(dir.join("library/Backups"))
         .map(|d| d.filter_map(|e| e.ok()).filter(|e| !e.file_name().to_string_lossy().ends_with(".partial")).count())
@@ -84,6 +93,7 @@ fn the_schedule_is_chosen_in_settings() {
     let dir = temp("settings");
     let mut h = app_with_a_library_in(&dir);
     assert_eq!(h.request("ui.key", json!({"key": ",", "cmd": true}), T)["ok"], true);
+    library_tab(&mut h);
     for id in ["settingsBackupEvery-0", "settingsBackupEvery-3", "settingsBackupOnClose-0", "settingsBackupOnClose-2"] {
         assert!(has(&mut h, &format!("button:{id}")), "{id}");
     }
@@ -389,6 +399,7 @@ fn how_long_backups_are_kept_is_chosen_in_settings() {
     let dir = temp("keep");
     let mut h = app_with_a_library_in(&dir);
     assert_eq!(h.request("ui.key", json!({"key": ",", "cmd": true}), T)["ok"], true);
+    library_tab(&mut h);
     assert!(has(&mut h, "button:settingsBackupKeep-0") && has(&mut h, "button:settingsBackupKeep-4"));
     assert!(prefs(&mut h, json!({}))["keepDays"].is_null(), "forever until chosen");
     click(&mut h, "button:settingsBackupKeep-2");
