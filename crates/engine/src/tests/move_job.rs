@@ -219,6 +219,7 @@ fn a_running_move_holds_back_other_file_moves_and_another_library() {
     s.selection = crate::Selection::single(b);
     busy(s.execute("photo.rename", &json!({"ids": [b.0], "template": "renamed"})));
     busy(s.execute("folder.rename", &json!({"path": dir.path("share"), "name": "nas"})));
+    busy(s.execute("folder.move", &json!({"paths": [dir.path("share")], "into": dir.path("local")})));
     busy(s.execute("edit.undo", &json!({})));
     let other = dir.0.join("other-library");
     let e = Session::open_library(&mut s, &other, false).map(|_| ()).unwrap_err().to_string();
@@ -466,6 +467,8 @@ fn a_move_whose_worker_dies_is_followed_and_its_held_sidecars_are_written() {
     let xmp = std::fs::read_to_string(dir.path("share/a.xmp")).expect("the held sidecar is written where the photo is");
     assert!(xmp.contains("xmp:Rating=\"5\"") || xmp.contains("<xmp:Rating>5</xmp:Rating>"), "{xmp}");
     assert!(!s.move_running() && s.activity.list().is_empty());
+    let row = s.activity.finished().into_iter().next().expect("a worker that died leaves a row");
+    assert_eq!((row.kind, row.ending), ("move", crate::activity::Ending::Died));
     assert!(dir.records().is_empty(), "{:?}", dir.records());
 }
 

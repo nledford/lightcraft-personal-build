@@ -226,8 +226,10 @@ impl MoveFinish {
     /// written because the library has no folder of its own, from the files themselves), and the
     /// sidecars held back meanwhile are written where their photos now are.
     pub fn abandon(self, s: &mut Session) -> crate::move_intent::Recovered {
-        let MoveFinish { plans, record, ticket, guard, .. } = self;
+        let MoveFinish { plans, record, ticket, mut guard, .. } = self;
         let own = record.get().cloned();
+        // (the guard is dropped by this healthy thread, so it would leave no row: say how it ended)
+        guard.report(Outcome::ended(Ending::Died));
         drop((ticket, guard));
         let recovered = match own {
             Some(own) => s.recover_own_move(Some(&own)),

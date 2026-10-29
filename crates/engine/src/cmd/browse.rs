@@ -682,6 +682,7 @@ const MOST_FOLDERS_AT_ONCE: usize = 200;
 /// ([`batch_refusal`]); a folder that still fails when its turn comes (the library's own, a
 /// disk error) puts the ones already moved back and nothing is left half done.
 fn move_folders(s: &mut Session, p: &Value) -> Result<Value> {
+    s.refuse_while_moving()?;
     let into = str_param(p, "into").filter(|i| !i.is_empty()).ok_or_else(|| bad("folder.move", "missing into"))?;
     // (without trailing separators, but a root stays one: `/` and `C:\\` are folders, `` and `C:` are not)
     let trimmed = into.trim_end_matches(std::path::is_separator);
