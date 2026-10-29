@@ -2423,5 +2423,6 @@
   "the library is not a folder on disk": "la libreria non è una cartella sul disco",
   "the library was closed or opened again before the backup was moved into place; it is as it was": "la libreria è stata chiusa o riaperta prima che il backup venisse messo al suo posto; è com'era",
   "the backup was cancelled": "il backup è stato annullato",
-  "the restore was stopped; the library is as it was": "il ripristino è stato interrotto; la libreria è com'era"
+  "the restore was stopped; the library is as it was": "il ripristino è stato interrotto; la libreria è com'era",
+  "Same Content as Another Photo": "Stesso contenuto di un'altra foto"
 }
