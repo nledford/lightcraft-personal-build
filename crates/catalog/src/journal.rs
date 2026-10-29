@@ -725,10 +725,53 @@ fn log_from_the_start(log: Option<&[u8]>) -> bool {
     first.and_then(|l| std::str::from_utf8(l).ok()).and_then(|l| decode_record(l.trim_end_matches('\r'))).is_some_and(|(seq, _)| seq == 1)
 }
 
-/// Read the `catalog.snap` in `bytes`: the header first (a newer snapshot may not parse as this version's catalog),
-/// then the file. Returns it with its format version, whether it states what its records' missing develop settings read
-/// as, and the defaults its records are to be read over when those are not this build's.
-fn read_snapshot(bytes: &[u8], report: &mut LoadReport) -> Result<(SnapFile, u32, bool, Option<crate::stored::ReadingOver>)> {
+/// What `catalog.snap` gave when a library was opened.
+struct SnapRead {
+    catalog: Catalog,
+    seq: u64,
+    /// The format it was written in (`None`: there is no snapshot).
+    version: Option<u32>,
+    listed: Vec<Segment>,
+    stated: Option<u64>,
+    /// (dropped once the snapshot, its segments and the log are read: their records are read
+    /// over the library's own defaults where those are not this build's)
+    reading: Option<crate::stored::ReadingOver>,
+    /// (the snapshot says what its records' missing develop settings read as: from format 10)
+    states_defaults: bool,
+}
+
+/// Segment files without the snapshot that lists them (a folder copied or synced in part, a
+/// `catalog.snap` that was removed): they hold the photos, and opening this as a new library would
+/// abandon them. Not so when the log holds every change from the first: a library that never had a
+/// snapshot, whose first one got as far as writing segments.
+fn refuse_orphan_segments(store: &mut dyn Store, snap_missing: bool, log: Option<&[u8]>) -> Result<()> {
+    if snap_missing
+        && store.segmented()
+        && !log_from_the_start(log)
+        && let n @ 1.. = segments::files(store).map_err(io)?
+    {
+        return Err(CatalogError::Corrupt(format!(
+            "{SNAPSHOT} is missing, but {n} segment file(s) of a catalog are here ({SEGMENT_PREFIX}…{SEGMENT_SUFFIX})"
+        )));
+    }
+    Ok(())
+}
+
+/// Read the snapshot (none: a new catalog), noting in `report` what its header says about the
+/// develop defaults. Fails when it isn't a catalog of a format this build reads.
+fn read_snapshot(snap: Option<&[u8]>, report: &mut LoadReport) -> Result<SnapRead> {
+    let Some(bytes) = snap else {
+        return Ok(SnapRead {
+            catalog: Catalog::new(),
+            seq: 0,
+            version: None,
+            listed: Vec::new(),
+            stated: None,
+            reading: None,
+            states_defaults: false,
+        });
+    };
+    // the header first: a newer snapshot may not parse as this version's catalog
     let h: SnapHeader = serde_json::from_slice(bytes).map_err(|e| CatalogError::Corrupt(format!("{SNAPSHOT}: {e}")))?;
     if h.format != FORMAT {
         return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: not a LightCraft catalog (format {:?})", h.format)));
@@ -751,93 +794,81 @@ fn read_snapshot(bytes: &[u8], report: &mut LoadReport) -> Result<(SnapFile, u32
     if s.seq > MAX_SEQ {
         return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: seq {} is out of range", s.seq)));
     }
-    Ok((s, h.version, states_defaults, reading))
+    Ok(SnapRead { catalog: s.catalog, seq: s.seq, version: Some(h.version), listed: s.segments, stated: s.photos, reading, states_defaults })
 }
 
-/// Put the photos a snapshot lists into `catalog`: read from its segments, or none when `catalog` holds them itself
-/// (`inline_photos`). Returns the baseline the next snapshot is written against (empty for a one-file library, and
-/// where the segments were written with `other_defaults`). A segment list that doesn't add up to the `stated` count
-/// is not the one that was written.
-fn load_photos(
-    store: &mut dyn Store,
-    catalog: &mut Catalog,
-    listed: &[Segment],
-    inline_photos: bool,
-    stated: Option<u64>,
-    other_defaults: bool,
-) -> Result<Photos> {
+/// Load the photos of the segments the snapshot lists into `catalog`. Returns the baseline the
+/// next snapshot may keep (none where the store isn't segmented or the segments were written with
+/// other defaults).
+fn load_segments(store: &mut dyn Store, listed: &[Segment], inline_photos: bool, other_defaults: bool, catalog: &mut Catalog) -> Result<Photos> {
     let mut baseline = Photos::new();
-    if !listed.is_empty() {
-        if inline_photos {
-            return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: holds photos and lists segments")));
-        }
-        let readers = segments::readers(&*store, listed.len());
-        let photos = segments::load(store, readers, listed).map_err(|e| match e.kind() {
-            std::io::ErrorKind::InvalidData => CatalogError::Corrupt(e.to_string()),
-            _ => io(e),
-        })?;
-        if store.segmented() && !other_defaults {
-            // (shared with the catalog: pointers, not copies. Not where the segments were
-            // written with other defaults: none of them is what this build would write, so
-            // none is what the next snapshot may keep.)
-            baseline = photos.clone();
-        }
-        catalog.set_photos(photos);
+    if listed.is_empty() {
+        return Ok(baseline);
     }
-    if stated.is_some_and(|n| n != catalog.len() as u64) {
-        return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: its segments hold {} photos where it states {}", catalog.len(), stated.unwrap_or(0))));
+    if inline_photos {
+        return Err(CatalogError::Corrupt(format!("{SNAPSHOT}: holds photos and lists segments")));
     }
+    let readers = segments::readers(&*store, listed.len());
+    let photos = segments::load(store, readers, listed).map_err(|e| match e.kind() {
+        std::io::ErrorKind::InvalidData => CatalogError::Corrupt(e.to_string()),
+        _ => io(e),
+    })?;
+    if store.segmented() && !other_defaults {
+        // (shared with the catalog: pointers, not copies. Not where the segments were
+        // written with other defaults: none of them is what this build would write, so
+        // none is what the next snapshot may keep.)
+        baseline = photos.clone();
+    }
+    catalog.set_photos(photos);
     Ok(baseline)
 }
 
-/// Whether a good record is among `rest`, the log after a bad one (then the bad one is damage, not a torn tail).
-/// Fails on a record that holds a change this version doesn't know, before anything is modified.
+/// Where the good records of a log end, and what was found past them.
+struct LogScan {
+    /// The byte offset just past the last good record.
+    good_end: usize,
+    /// Where the damage starts, when a good record follows a bad one.
+    damaged_at: Option<usize>,
+    /// The last good record has no newline after it.
+    needs_newline: bool,
+}
+
+/// The record on one log line (`raw`, `line` being its text if that is UTF-8), found even behind
+/// the torn start of a failed append. Refuses a record only a newer LightCraft knows.
+fn record_at(line: Option<&str>, raw: &[u8], last: u64, report: &mut LoadReport) -> Result<Option<(u64, Op)>> {
+    let mut record = line.and_then(decode_record);
+    if record.is_none()
+        && let Some((at, r)) = resync(raw, last)
+    {
+        // the torn start of a failed append, then the retried records (older builds
+        // appended them right after the fragment)
+        log::warn!("catalog log: skipped a partial record ({at} bytes) left by a failed write");
+        report.torn_fragments += 1;
+        record = Some(r);
+    }
+    if record.is_none()
+        && let Some(Line::Newer(seq)) = line.map(decode_line)
+    {
+        return Err(newer(format!("{LOG} record {seq} holds a change this version doesn't know")));
+    }
+    Ok(record)
+}
+
+/// Whether a good record is in `rest` (the log after a bad one: then that one is damage, not a
+/// torn tail). Refuses a record only a newer LightCraft knows, before anything is modified.
 fn good_record_follows(rest: &[u8]) -> Result<bool> {
-    let mut good = false;
+    let mut found = false;
     for l in rest.split(|b| *b == b'\n') {
         match std::str::from_utf8(l).map(|l| decode_line(l.trim_end_matches('\r'))) {
-            Ok(Line::Record(..)) => good = true,
+            Ok(Line::Record(..)) => found = true,
             Ok(Line::Newer(seq)) => return Err(newer(format!("{LOG} record {seq} holds a change this version doesn't know"))),
             Ok(Line::Bad) | Err(_) => {}
         }
     }
-    Ok(good)
-}
-
-/// Segment files without the snapshot that lists them (a folder copied or synced in part, a `catalog.snap` that was
-/// removed): they hold the photos, and opening this as a new library would abandon them. Not so when the log holds
-/// every change from the first: a library that never had a snapshot, whose first one got as far as writing segments.
-fn refuse_orphan_segments(store: &mut dyn Store, snap: Option<&[u8]>, log: Option<&[u8]>) -> Result<()> {
-    if snap.is_none()
-        && store.segmented()
-        && !log_from_the_start(log)
-        && let n @ 1.. = segments::files(store).map_err(io)?
-    {
-        return Err(CatalogError::Corrupt(format!(
-            "{SNAPSHOT} is missing, but {n} segment file(s) of a catalog are here ({SEGMENT_PREFIX}…{SEGMENT_SUFFIX})"
-        )));
-    }
-    Ok(())
+    Ok(found)
 }
 
 impl Journal {
-    /// The log ends after its last good record, at byte `good_end` of `log_len`: drop a torn final record, or end the
-    /// last line, so that what is appended starts a line of its own.
-    fn settle_tail(&mut self, report: &mut LoadReport, log_len: usize, good_end: usize, needs_newline: bool) -> Result<()> {
-        if good_end < log_len {
-            report.torn_bytes = (log_len - good_end) as u64;
-            log::warn!("catalog log: dropped a torn final record ({} bytes)", report.torn_bytes);
-            self.store.truncate(LOG, good_end as u64).map_err(io)?;
-            self.log_bytes = good_end as u64;
-        } else if needs_newline {
-            self.store.append(LOG, b"\n").map_err(io)?;
-            self.log_bytes = good_end as u64 + 1;
-        } else {
-            self.log_bytes = good_end as u64;
-        }
-        Ok(())
-    }
-
     /// Open (or create) the catalog in `store`: load the snapshot, replay the log, repair a torn
     /// tail. Fails if the snapshot is unreadable or a newer LightCraft's (then nothing is
     /// modified), or if the library is in an older format and can't be brought to this build's
@@ -848,30 +879,21 @@ impl Journal {
         let snap = store.read(SNAPSHOT).map_err(io)?;
         let log = store.read(LOG).map_err(io)?;
         report.created = snap.is_none() && log.is_none();
-        refuse_orphan_segments(store.as_mut(), snap.as_deref(), log.as_deref())?;
+        refuse_orphan_segments(store.as_mut(), snap.is_none(), log.as_deref())?;
         let head_bytes = snap.as_ref().map_or(0, |b| b.len() as u64);
-        let mut listed = Vec::new();
-        let mut stated = None;
-        // (dropped once the snapshot, its segments and the log are read: their records are read
-        // over the library's own defaults where those are not this build's)
-        let mut reading = None;
-        // (the snapshot says what its records' missing develop settings read as: from format 10)
-        let mut states_defaults = false;
-        let (mut catalog, snapshot_seq, snapshot_version) = match &snap {
-            Some(bytes) => {
-                let (s, version, defaults, over) = read_snapshot(bytes, &mut report)?;
-                states_defaults = defaults;
-                reading = over;
-                listed = s.segments;
-                stated = s.photos;
-                (s.catalog, s.seq, Some(version))
-            }
-            None => (Catalog::new(), 0, None),
-        };
+        let SnapRead { mut catalog, seq: snapshot_seq, version: snapshot_version, listed, stated, reading, states_defaults } =
+            read_snapshot(snap.as_deref(), &mut report)?;
         report.snapshot_seq = snapshot_seq;
         // the photos: in `catalog.snap` itself (a one-file library), or in the segments it lists
         let inline_photos = !catalog.is_empty();
-        let baseline = load_photos(store.as_mut(), &mut catalog, &listed, inline_photos, stated, report.other_defaults)?;
+        let baseline = load_segments(store.as_mut(), &listed, inline_photos, report.other_defaults, &mut catalog)?;
+        if stated.is_some_and(|n| n != catalog.len() as u64) {
+            return Err(CatalogError::Corrupt(format!(
+                "{SNAPSHOT}: its segments hold {} photos where it states {}",
+                catalog.len(),
+                stated.unwrap_or(0)
+            )));
+        }
         // (once the photos are in: on a library in segments `catalog.snap` holds none, and its
         // stacks would read as stacks of missing photos)
         report.repaired = catalog.repair();
@@ -904,66 +926,7 @@ impl Journal {
         };
         let log = log.unwrap_or_default();
 
-        // Scan records; `good_end` is the byte offset just past the last good record.
-        let mut pos = 0usize;
-        let mut good_end = 0usize;
-        let mut damaged_at: Option<usize> = None;
-        let mut needs_newline = false;
-        while pos < log.len() {
-            let (line_end, next, has_nl) = match log[pos..].iter().position(|b| *b == b'\n') {
-                Some(i) => (pos + i, pos + i + 1, true),
-                None => (log.len(), log.len(), false),
-            };
-            let line = std::str::from_utf8(&log[pos..line_end]).ok().map(|l| l.trim_end_matches('\r'));
-            if line.is_some_and(|l| l.trim().is_empty()) {
-                pos = next;
-                good_end = next;
-                continue;
-            }
-            let mut record = line.and_then(decode_record);
-            if record.is_none()
-                && let Some((at, r)) = resync(&log[pos..line_end], j.seq)
-            {
-                // the torn start of a failed append, then the retried records (older builds
-                // appended them right after the fragment)
-                log::warn!("catalog log: skipped a partial record ({at} bytes) left by a failed write");
-                report.torn_fragments += 1;
-                record = Some(r);
-            }
-            if record.is_none()
-                && let Some(Line::Newer(seq)) = line.map(decode_line)
-            {
-                return Err(newer(format!("{LOG} record {seq} holds a change this version doesn't know")));
-            }
-            match record {
-                Some((seq, op)) if seq <= j.seq => {
-                    // already in the snapshot
-                    let _ = op;
-                    report.stale += 1;
-                }
-                Some((seq, op)) if j.seq.checked_add(1) == Some(seq) => {
-                    // (a batch that was only partly taken back when it was applied is logged as it was, and fails
-                    // the same way again, leaving the same changes: that is the log being replayed, not damage)
-                    if catalog.apply(op).is_err_and(|e| !matches!(e, crate::CatalogError::PartlyApplied { .. })) {
-                        report.failed += 1;
-                    } else {
-                        report.replayed += 1;
-                    }
-                    j.seq = seq;
-                }
-                _ => {
-                    // bad record (or a gap): torn tail if nothing good follows, else damage
-                    if good_record_follows(&log[next..])? {
-                        damaged_at = Some(pos);
-                    }
-                    break;
-                }
-            }
-            j.log_records += 1;
-            pos = next;
-            good_end = next;
-            needs_newline = !has_nl;
-        }
+        let LogScan { good_end, damaged_at, needs_newline } = j.scan_log(&mut catalog, &mut report, &log)?;
 
         drop(reading);
         // An older (or snapshot-less) library is brought to this build's format before anything
@@ -987,7 +950,7 @@ impl Journal {
             }
             rewritten = true;
         } else {
-            j.settle_tail(&mut report, log.len(), good_end, needs_newline)?;
+            j.trim_log_tail(&log, good_end, needs_newline, &mut report)?;
         }
         if report.created {
             // tiny: written directly, not counted as a compaction
@@ -1020,13 +983,86 @@ impl Journal {
                 j.behind_at = (j.seq, j.log_bytes);
             }
         }
-        if report.other_defaults && !rewritten {
+        if !rewritten {
+            j.restate_defaults(&catalog, &report)?;
+        }
+
+        catalog.revision = 0;
+        Ok((j, catalog, report))
+    }
+
+    /// Cut a torn final record off the log, or end an unterminated last record with a newline, and
+    /// note where the log now ends (`good_end`: just past the last good record).
+    fn trim_log_tail(&mut self, log: &[u8], good_end: usize, needs_newline: bool, report: &mut LoadReport) -> Result<()> {
+        if good_end < log.len() {
+            report.torn_bytes = (log.len() - good_end) as u64;
+            log::warn!("catalog log: dropped a torn final record ({} bytes)", report.torn_bytes);
+            self.store.truncate(LOG, good_end as u64).map_err(io)?;
+            self.log_bytes = good_end as u64;
+        } else if needs_newline {
+            self.store.append(LOG, b"\n").map_err(io)?;
+            self.log_bytes = good_end as u64 + 1;
+        } else {
+            self.log_bytes = good_end as u64;
+        }
+        Ok(())
+    }
+
+    /// Scan the log's records, replaying those after the snapshot into `catalog`. Stops at the
+    /// first bad one; [`LogScan`] says where the good records end and whether damage follows.
+    fn scan_log(&mut self, catalog: &mut Catalog, report: &mut LoadReport, log: &[u8]) -> Result<LogScan> {
+        let mut scan = LogScan { good_end: 0, damaged_at: None, needs_newline: false };
+        let mut pos = 0usize;
+        while pos < log.len() {
+            let (line_end, next, has_nl) = match log[pos..].iter().position(|b| *b == b'\n') {
+                Some(i) => (pos + i, pos + i + 1, true),
+                None => (log.len(), log.len(), false),
+            };
+            let line = std::str::from_utf8(&log[pos..line_end]).ok().map(|l| l.trim_end_matches('\r'));
+            if line.is_some_and(|l| l.trim().is_empty()) {
+                pos = next;
+                scan.good_end = next;
+                continue;
+            }
+            match record_at(line, &log[pos..line_end], self.seq, report)? {
+                Some((seq, _)) if seq <= self.seq => {
+                    // already in the snapshot
+                    report.stale += 1;
+                }
+                Some((seq, op)) if self.seq.checked_add(1) == Some(seq) => {
+                    if catalog.apply(op).is_err() {
+                        report.failed += 1;
+                    } else {
+                        report.replayed += 1;
+                    }
+                    self.seq = seq;
+                }
+                _ => {
+                    // bad record (or a gap): torn tail if nothing good follows, else damage
+                    if good_record_follows(&log[next..])? {
+                        scan.damaged_at = Some(pos);
+                    }
+                    break;
+                }
+            }
+            self.log_records += 1;
+            pos = next;
+            scan.good_end = next;
+            scan.needs_newline = !has_nl;
+        }
+        Ok(scan)
+    }
+
+    /// Before anything is appended to a library whose defaults the snapshot's header doesn't (or
+    /// no longer) state, and which was not just rewritten: see the comments below.
+    fn restate_defaults(&mut self, catalog: &Catalog, report: &LoadReport) -> Result<()> {
+        if report.other_defaults {
             // The same format, other defaults: the library must state this build's before
             // anything is appended, since a compact record leaves out what equals the default the
             // header states for it. Nothing is kept for that: any build reads a library over the
             // defaults it states. If it can't be rewritten the library is refused.
-            j.snapshot(&catalog)?;
-        } else if report.defaults_added && !rewritten {
+            self.snapshot(catalog)?;
+        } else if report.defaults_added {
             // A setting this build has that the header doesn't state: restate it before a
             // compact record is appended. If that can't be done now (a full disk, a read-only
             // volume; or the upgrade just above failed, which keeps no copies behind, so the
@@ -1034,20 +1070,18 @@ impl Journal {
             // written whole until a snapshot succeeds (`header_incomplete`). A crash at any point
             // finds the old files whole, or a header that states every setting before any compact
             // record was written.
-            j.header_incomplete = true;
-            if j.behind.is_none() {
-                match j.snapshot(&catalog) {
+            self.header_incomplete = true;
+            if self.behind.is_none() {
+                match self.snapshot(catalog) {
                     Ok(()) => {}
-                    Err(e) if j.header_incomplete => {
+                    Err(e) if self.header_incomplete => {
                         log::warn!("catalog: can't restate the library's defaults ({e}); writing whole records until it can")
                     }
                     Err(e) => log::warn!("catalog: the library's defaults were restated, but its log could not be reset: {e}"),
                 }
             }
         }
-
-        catalog.revision = 0;
-        Ok((j, catalog, report))
+        Ok(())
     }
 
     /// Bring a library in format `from` to this build's: keep the files it was (`snap` and `log`,
