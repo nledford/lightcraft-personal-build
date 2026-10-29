@@ -2339,5 +2339,6 @@
   "Imports, exports and other long jobs show here while they run.": "Nhập, xuất và các tác vụ dài khác hiển thị tại đây khi đang chạy.",
   "No tasks are running": "Không có tác vụ nào đang chạy",
   "Tasks": "Tác vụ",
-  "cancelled": "đã hủy"
+  "cancelled": "đã hủy",
+  "Sorting the library": "Đang sắp xếp thư viện"
 }

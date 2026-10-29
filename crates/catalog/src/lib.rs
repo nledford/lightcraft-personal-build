@@ -23,6 +23,7 @@ pub mod library_tally;
 pub mod local;
 pub mod lock;
 pub mod model;
+mod order;
 pub mod query;
 pub mod restore;
 pub mod rules;
@@ -821,6 +822,7 @@ impl Catalog {
         ids.dedup();
         ids
     }
+
     fn album_mut(&mut self, id: AlbumId) -> Result<&mut Album> {
         self.albums.get_mut(&id).ok_or(CatalogError::NoAlbum(id))
     }
@@ -1368,6 +1370,7 @@ impl Catalog {
     /// (nothing, for a catalog this build wrote).
     pub fn repair(&mut self) -> Vec<String> {
         let mut changed = Vec::new();
+        self.index.orders.forget();
         for (id, p) in self.photos.iter_mut() {
             if p.id != *id {
                 changed.push(format!("photo {} was filed as {}", p.id.0, id.0));
@@ -1583,6 +1586,8 @@ mod tests_library_tally;
 mod tests_local;
 #[cfg(test)]
 mod tests_lock;
+#[cfg(test)]
+mod tests_order;
 #[cfg(test)]
 mod tests_policy;
 #[cfg(test)]
