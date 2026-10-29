@@ -2545,5 +2545,6 @@
   "Tool strip": "Barre d’outils",
   "Bottom bar": "Barre inférieure",
   "Recently Added always shows the newest imports first.": "Ajoutées récemment affiche toujours les importations les plus récentes en premier.",
-  "Recently Deleted shows no date groups.": "Supprimées récemment n'affiche aucun groupe par date."
+  "Recently Deleted shows no date groups.": "Supprimées récemment n'affiche aucun groupe par date.",
+  "Previous Shuffle": "Mélange précédent"
 }

@@ -2355,5 +2355,6 @@
   "Tool strip": "工具栏",
   "Bottom bar": "底部栏",
   "Recently Added always shows the newest imports first.": "“最近添加”始终先显示最新导入的照片。",
-  "Recently Deleted shows no date groups.": "“最近删除”不显示日期分组。"
+  "Recently Deleted shows no date groups.": "“最近删除”不显示日期分组。",
+  "Previous Shuffle": "上一次随机排序"
 }

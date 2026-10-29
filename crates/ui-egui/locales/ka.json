@@ -2889,5 +2889,6 @@
   "Tool strip": "ხელსაწყოების ზოლი",
   "Bottom bar": "ქვედა ზოლი",
   "Recently Added always shows the newest imports first.": "„ბოლოს დამატებული“ ყოველთვის ჯერ უახლეს იმპორტებს აჩვენებს.",
-  "Recently Deleted shows no date groups.": "„ახლახან წაშლილი“ თარიღის მიხედვით დაჯგუფებას არ აჩვენებს."
+  "Recently Deleted shows no date groups.": "„ახლახან წაშლილი“ თარიღის მიხედვით დაჯგუფებას არ აჩვენებს.",
+  "Previous Shuffle": "წინა არევა"
 }

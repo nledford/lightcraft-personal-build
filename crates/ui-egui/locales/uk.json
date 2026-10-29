@@ -2509,5 +2509,6 @@
   "Tool strip": "Панель інструментів",
   "Bottom bar": "Нижня панель",
   "Recently Added always shows the newest imports first.": "У «Нещодавно додані» завжди спершу показано найновіші імпорти.",
-  "Recently Deleted shows no date groups.": "У «Нещодавно видалені» немає груп за датою."
+  "Recently Deleted shows no date groups.": "У «Нещодавно видалені» немає груп за датою.",
+  "Previous Shuffle": "Попереднє перемішування"
 }

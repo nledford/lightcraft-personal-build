@@ -2480,5 +2480,6 @@
   "Tool strip": "Työkalupalkki",
   "Bottom bar": "Alapalkki",
   "Recently Added always shows the newest imports first.": "Äskettäin lisätyt näyttää aina uusimmat tuonnit ensin.",
-  "Recently Deleted shows no date groups.": "Äskettäin poistetut ei näytä päivämääräryhmiä."
+  "Recently Deleted shows no date groups.": "Äskettäin poistetut ei näytä päivämääräryhmiä.",
+  "Previous Shuffle": "Edellinen sekoitus"
 }

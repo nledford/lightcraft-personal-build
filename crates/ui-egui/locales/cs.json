@@ -2561,5 +2561,6 @@
   "Tool strip": "Pruh nástrojů",
   "Bottom bar": "Dolní lišta",
   "Recently Added always shows the newest imports first.": "Nedávno přidané vždy zobrazuje nejnovější importy jako první.",
-  "Recently Deleted shows no date groups.": "Nedávno odstraněné nezobrazuje skupiny podle data."
+  "Recently Deleted shows no date groups.": "Nedávno odstraněné nezobrazuje skupiny podle data.",
+  "Previous Shuffle": "Předchozí promíchání"
 }

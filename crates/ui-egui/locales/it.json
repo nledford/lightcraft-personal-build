@@ -2514,5 +2514,6 @@
   "Tool strip": "Barra degli strumenti",
   "Bottom bar": "Barra inferiore",
   "Recently Added always shows the newest imports first.": "Aggiunte di recente mostra sempre prima le importazioni più recenti.",
-  "Recently Deleted shows no date groups.": "Eliminate di recente non mostra raggruppamenti per data."
+  "Recently Deleted shows no date groups.": "Eliminate di recente non mostra raggruppamenti per data.",
+  "Previous Shuffle": "Rimescolamento precedente"
 }

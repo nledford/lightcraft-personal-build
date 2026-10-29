@@ -26,6 +26,13 @@
   date sort again or leave Recently Deleted, as the direction already was for Random. Reshuffle is always listed, in both menus, under its own
   separator below the sort keys, and is on only while you sort at random.
 
+### Previous Shuffle brings back the order a Reshuffle replaced
+- Both Sort menus (the bottom bar's popup and View ▸ Sort) have a new Previous Shuffle row under Reshuffle. It goes back to
+  the exact random order the last Reshuffle replaced, and again for the one before, up to 32 steps in this session. It is
+  on only while you sort at random and a Reshuffle has replaced something; the steps are forgotten when you leave Random
+  or open another library, and are never saved with it. Reshuffle is now ⌘⌥⇧R (Ctrl+Alt+Shift+R) and Previous Shuffle ⌘⌥⇧P
+  (Ctrl+Alt+Shift+P); both rows show their keys.
+
 ### The window's parts are named for screen readers
 - The top bar, the tool strip and the bottom bar are now announced as toolbars (Top bar, Tool strip, Bottom bar), and the
   sidebar (Library), the photos, the Tools panel (or Presets) and the filmstrip as landmarks, so a screen reader can list

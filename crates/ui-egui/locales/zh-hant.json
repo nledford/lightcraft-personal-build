@@ -2312,5 +2312,6 @@
   "Tool strip": "工具列",
   "Bottom bar": "底部列",
   "Recently Added always shows the newest imports first.": "「最近加入」一律先顯示最新匯入的相片。",
-  "Recently Deleted shows no date groups.": "「最近刪除」不顯示日期群組。"
+  "Recently Deleted shows no date groups.": "「最近刪除」不顯示日期群組。",
+  "Previous Shuffle": "上一次隨機排序"
 }

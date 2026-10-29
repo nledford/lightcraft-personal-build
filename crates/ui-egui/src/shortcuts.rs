@@ -591,6 +591,10 @@ fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fi
         up_down_key(app, ctx, f);
         return;
     }
+    // the Sort menus' rule for these two rows holds for the keys too (a native menu enforces it for its own keys)
+    if sort_row_off(app, f) {
+        return;
+    }
     // a command that can't run (an export with no folder, a view that can't be saved as a smart
     // album, nothing to undo…) says why instead of doing nothing; its success is said only when
     // it went through
@@ -605,6 +609,16 @@ fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fi
             "edit.redo" => app.toast(ctx, crate::i18n::tr("Redo")),
             _ => {}
         }
+    }
+}
+
+/// Reshuffle and Previous Shuffle where the Sort menus turn them off.
+fn sort_row_off(app: &LightcraftApp, f: &str) -> bool {
+    let menu = crate::menus::sort_menu::SortMenu::of(&app.session);
+    match f {
+        "library.shuffle" => !menu.reshuffle_enabled(),
+        "library.previousShuffle" => !menu.previous_enabled(),
+        _ => false,
     }
 }
 
