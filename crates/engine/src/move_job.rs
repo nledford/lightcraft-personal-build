@@ -106,16 +106,13 @@ pub fn start(s: &mut Session, p: &Value, cancellable: bool) -> Result<Option<(Mo
     if !dir.is_dir() {
         return Err(EngineError::Other(not_a_folder(folder)));
     }
-    let ids = s.targets(p).map_err(|e| match e {
-        EngineError::BadParams { cmd, msg } if cmd.is_empty() => bad(C, msg),
-        e => e,
-    })?;
+    let ids = s.targets(p).map_err(named)?;
     if ids.is_empty() {
         return Err(EngineError::Other("There are no photos to move. Select some first".into()));
     }
-    let skip = move_check::skip_param(p)?;
-    let items = move_check::items(s, &ids)?;
-    move_check::screen(&items, &skip)?;
+    let skip = move_check::skip_param(p).map_err(named)?;
+    let items = move_check::items(s, &ids).map_err(named)?;
+    move_check::screen(&items, &skip).map_err(named)?;
     let skip_paths = move_check::skip_paths(s, &skip);
     // the files that could move: what the library alone says (the disk is the worker's to look at)
     let mut plans: Vec<RenamePlan> = Vec::new();
@@ -301,10 +298,20 @@ impl MoveFinish {
 /// the person counts, in photos (`photos`: for each file in order, of which the first `files` moved), and the photos
 /// that were left out.
 fn counted_as_photos(mut moved: Value, skipped: Vec<Value>, photos: &[usize], files: usize) -> Value {
+    // (`files`: how many files moved, for a text that says files)
+    moved["files"] = moved["moved"].clone();
     moved["moved"] = json!(photos.iter().take(files).sum::<usize>());
     moved["of"] = json!(photos.iter().sum::<usize>());
     moved["skipped"] = json!(skipped);
     moved
+}
+
+/// An error of the checks `start` shares with other commands, named for this one (they leave the command empty).
+fn named(e: EngineError) -> EngineError {
+    match e {
+        EngineError::BadParams { cmd, msg } if cmd.is_empty() => bad(C, msg),
+        e => e,
+    }
 }
 
 fn label(n: usize, folder: &str) -> String {

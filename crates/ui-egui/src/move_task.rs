@@ -163,7 +163,8 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
             } else if moved > 0 && skipped > 0 {
                 crate::panels::left::moved_skipping_text(moved, skipped, &run.name)
             } else {
-                crate::panels::left::moved_text(moved, &run.name)
+                // (said in files, as the question and the hint are: `moved` counts photos, virtual copies included)
+                crate::panels::left::moved_text(r["files"].as_u64().unwrap_or(moved), &run.name)
             };
             if moved > 0 {
                 // (the step is committed: Undo on the toast takes the photos back)

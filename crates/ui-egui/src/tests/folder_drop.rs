@@ -543,7 +543,7 @@ fn a_background_move_has_a_cancellable_row_and_holds_back_other_moves_until_it_e
     assert!(toast(&h).starts_with("Moved 1 file to “home”."), "{}", toast(&h));
     let inspect = crate::control::inspect(&h.app, &h.view.ctx);
     assert_eq!(inspect["move"]["running"], serde_json::Value::Null);
-    assert_eq!(inspect["move"]["last"], json!({"moved": 1, "of": 1, "folder": home.to_string_lossy(), "stopped": false, "skipped": []}));
+    assert_eq!(inspect["move"]["last"], json!({"files": 1, "moved": 1, "of": 1, "folder": home.to_string_lossy(), "stopped": false, "skipped": []}));
     let _ = std::fs::remove_dir_all(&root);
 }
 

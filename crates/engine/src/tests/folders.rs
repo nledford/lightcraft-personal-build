@@ -690,6 +690,7 @@ fn a_move_counts_photos_as_the_person_sees_them_not_files() {
     let p = Photo::new(vc, Source::File { path: dir.path("in/a.jpg") }, "a.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
     s.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
     let r = s.execute("photo.moveToFolder", &json!({"ids": [a.0, vc.0, b.0], "folder": dir.path("out")})).unwrap();
+    assert_eq!(r["files"], 2, "the toast says files: two files moved for three photos: {r}");
     assert_eq!(r["moved"], 3, "{r}");
     assert_eq!(file_of(&s, vc), dir.path("out/a.jpg"));
 }

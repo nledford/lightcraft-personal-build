@@ -736,7 +736,7 @@ fn folder_drop_target(
         let (problems, movable) = match app.run("photo.checkMove", json!({"folder": n.path, "ids": ids})) {
             Ok(r) => move_problems(&r),
             Err(e) => {
-                app.toast(ui.ctx(), e);
+                app.toast_error(ui.ctx(), e);
                 return;
             }
         };
