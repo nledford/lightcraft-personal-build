@@ -2500,5 +2500,7 @@
   "Only a photo file LightCraft reads can be opened this way": "Так можно открыть только файл фото, который читает LightCraft",
   "Top bar": "Верхняя панель",
   "Tool strip": "Панель инструментов",
-  "Bottom bar": "Нижняя панель"
+  "Bottom bar": "Нижняя панель",
+  "Recently Added always shows the newest imports first.": "В «Недавно добавленные» сначала всегда показаны самые новые импорты.",
+  "Recently Deleted shows no date groups.": "В «Недавно удалённые» нет групп по датам."
 }

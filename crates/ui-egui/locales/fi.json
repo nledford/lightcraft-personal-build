@@ -2476,5 +2476,7 @@
   "Only a photo file LightCraft reads can be opened this way": "Näin voi avata vain kuvatiedoston, jonka LightCraft lukee",
   "Top bar": "Yläpalkki",
   "Tool strip": "Työkalupalkki",
-  "Bottom bar": "Alapalkki"
+  "Bottom bar": "Alapalkki",
+  "Recently Added always shows the newest imports first.": "Äskettäin lisätyt näyttää aina uusimmat tuonnit ensin.",
+  "Recently Deleted shows no date groups.": "Äskettäin poistetut ei näytä päivämääräryhmiä."
 }

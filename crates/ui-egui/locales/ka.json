@@ -2885,5 +2885,7 @@
   "Only a photo file LightCraft reads can be opened this way": "ასე მხოლოდ ისეთი ფოტოს ფაილი იხსნება, რომელსაც LightCraft კითხულობს",
   "Top bar": "ზედა ზოლი",
   "Tool strip": "ხელსაწყოების ზოლი",
-  "Bottom bar": "ქვედა ზოლი"
+  "Bottom bar": "ქვედა ზოლი",
+  "Recently Added always shows the newest imports first.": "„ბოლოს დამატებული“ ყოველთვის ჯერ უახლეს იმპორტებს აჩვენებს.",
+  "Recently Deleted shows no date groups.": "„ახლახან წაშლილი“ თარიღის მიხედვით დაჯგუფებას არ აჩვენებს."
 }

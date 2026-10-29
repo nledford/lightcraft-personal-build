@@ -2508,5 +2508,7 @@
   "Only a photo file LightCraft reads can be opened this way": "この方法で開けるのは LightCraft が読み込める写真ファイルだけです",
   "Top bar": "上部バー",
   "Tool strip": "ツールバー",
-  "Bottom bar": "下部バー"
+  "Bottom bar": "下部バー",
+  "Recently Added always shows the newest imports first.": "「最近追加した写真」では、常に読み込みが新しい順に表示されます。",
+  "Recently Deleted shows no date groups.": "「最近削除した写真」では日付でまとめて表示されません。"
 }

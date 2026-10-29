@@ -2353,5 +2353,7 @@
   "Only a photo file LightCraft reads can be opened this way": "Só é possível abrir assim um arquivo de foto que o LightCraft lê",
   "Top bar": "Barra superior",
   "Tool strip": "Barra de ferramentas",
-  "Bottom bar": "Barra inferior"
+  "Bottom bar": "Barra inferior",
+  "Recently Added always shows the newest imports first.": "Adicionados recentemente sempre mostra as importações mais recentes primeiro.",
+  "Recently Deleted shows no date groups.": "Excluídos recentemente não mostra grupos de datas."
 }

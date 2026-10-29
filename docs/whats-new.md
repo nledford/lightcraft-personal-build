@@ -2,6 +2,15 @@
 
 ## 2026-10-28
 
+### The Sort menus offer only what the view uses
+- In Recently Added, which always shows the newest imports first, the sort keys, Ascending / Descending and Reshuffle in
+  the bottom bar's Sort popup and in View ▸ Sort are now off and nothing is checked as the order shown; a dim line says
+  "Recently Added always shows the newest imports first." Before, they checked the saved sort (and, under Random, offered
+  a Reshuffle that changed nothing). Outside Recently Added, the Group by Date choices are off too where the grid draws no date headers —
+  under Random, File Name, Rating and File Size, and in Recently Deleted — and your choice is kept for when you pick a
+  date sort again or leave Recently Deleted, as the direction already was for Random. Reshuffle is always listed, in both menus, under its own
+  separator below the sort keys, and is on only while you sort at random.
+
 ### The window's parts are named for screen readers
 - The top bar, the tool strip and the bottom bar are now announced as toolbars (Top bar, Tool strip, Bottom bar), and the
   sidebar (Library), the photos, the Tools panel (or Presets) and the filmstrip as landmarks, so a screen reader can list

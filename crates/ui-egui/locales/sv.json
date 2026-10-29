@@ -2578,5 +2578,7 @@
   "Only a photo file LightCraft reads can be opened this way": "Bara en fotofil som LightCraft läser kan öppnas så här",
   "Top bar": "Övre fältet",
   "Tool strip": "Verktygsfält",
-  "Bottom bar": "Nedre fältet"
+  "Bottom bar": "Nedre fältet",
+  "Recently Added always shows the newest imports first.": "Nyligen tillagda visar alltid de senaste importerna först.",
+  "Recently Deleted shows no date groups.": "Nyligen raderade visar inga datumgrupper."
 }
