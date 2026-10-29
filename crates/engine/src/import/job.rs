@@ -1,5 +1,5 @@
 use super::commit::{How, Plan, Slot, Transfer, commit_prepared, name_family, run_transfers, system_clock};
-use super::files::{expand_knowing, probe_all};
+use super::files::{Seen, expand_knowing, probe_all, reusable_probes, sidecars_of};
 use super::scan::note_content;
 use super::types::{ImportCandidate, ImportMode, ImportOptions, ImportReport, Kept, OnDeleted};
 use super::{HashMap, ListedFolders, MediaKind, Path, PathBuf, Photo, PhotoId, ProbeInfo, Session, Source};
@@ -45,7 +45,7 @@ pub struct ImportJob {
     pub(super) probe: Option<crate::media::FileProbe>,
     file_bytes: Option<crate::merge::ByteReader>,
     /// Probes from a preceding scan (not read again).
-    cache: HashMap<String, ProbeInfo>,
+    pub(super) cache: HashMap<String, ProbeInfo>,
     pub(super) naming: crate::sidecar::SidecarNaming,
     /// The `.xmp` names in the folders [`ImportJob::expand`] listed.
     pub(super) listed: ListedFolders,
@@ -305,15 +305,10 @@ impl ImportJob {
 
         // files a preceding scan already probed are not read again (a network share is slow to read),
         // as long as they are still there, as they were: a file gone or changed since is probed again
-        let cached: Vec<Option<ProbeInfo>> = todo
-            .iter()
-            .map(|f| {
-                // (the web's files are not std::fs files: kept as probed)
-                self.cache
-                    .remove(f)
-                    .filter(|info| cfg!(target_arch = "wasm32") || std::fs::metadata(f).is_ok_and(|m| m.is_file() && m.len() == info.file_size))
-            })
-            .collect();
+        let cached = reusable_probes(&todo, &mut self.cache, cancel, |seen, info| {
+            // (the web's files are not std::fs files: kept as probed)
+            cfg!(target_arch = "wasm32") || matches!(seen, Seen::At { is_file: true, len } if len == info.file_size)
+        });
         let missing: Vec<String> = todo.iter().zip(&cached).filter(|(_, c)| c.is_none()).map(|(f, _)| f.clone()).collect();
         // Reading the files is the slow part of adding them where they are: it is counted on its
         // own, and `cancel` stops it too (a large library takes long enough to want both).
@@ -329,6 +324,19 @@ impl ImportJob {
             library.as_ref(),
             todo.iter().zip(&probed).filter_map(|(path, info)| info.as_ref().ok().map(|i| (path.as_str(), i.kind))),
         );
+        // The sidecar of every file that was probed, looked up for the batch at once: each is a few
+        // names asked of the disk, which on a network share made a folder of thousands of photos wait
+        // a round trip per name, one name after another.
+        let asked: Vec<&str> = todo.iter().zip(&probed).filter(|(_, p)| p.is_ok()).map(|(f, _)| f.as_str()).collect();
+        // (a file whose content the library has is skipped below as a duplicate: it asks the disk nothing)
+        let known: std::collections::HashSet<&str> = todo
+            .iter()
+            .zip(&probed)
+            .filter(|(_, p)| !opts.local && p.as_ref().is_ok_and(|i| i.content_hash.as_ref().is_some_and(|h| self.by_hash.contains_key(h))))
+            .map(|(f, _)| f.as_str())
+            .collect();
+        let mut found =
+            sidecars_of(&asked, cancel, |f| if known.contains(f) { None } else { self.listed.find_for_import(&stems, self.naming, f) }).into_iter();
         // Files are planned one by one, in order (duplicates, sidecars, names, folders); their
         // copies or moves — the slow part, reading and writing every byte and verifying it — are
         // collected and run on several threads (issue #367), then their outcomes take their places.
@@ -346,6 +354,8 @@ impl ImportJob {
                     continue;
                 }
             };
+            // (this file's place in the lookups above: files that failed to probe have none)
+            let found_sidecar = found.next().flatten();
             // a copy of a file whose transfer is still pending: a duplicate only if that one succeeds
             if !opts.local
                 && let Some(h) = &info.content_hash
@@ -367,11 +377,7 @@ impl ImportJob {
             // the XMP sidecar (or a raw's embedded XMP), read before copying: its capture time files
             // and names the copy when the file itself has none
             let raw = info.kind == MediaKind::Raw;
-            let packet = self
-                .listed
-                .find_for_import(&stems, self.naming, &path)
-                .and_then(|f| std::fs::read_to_string(f).ok())
-                .or_else(|| info.xmp.clone().filter(|_| raw));
+            let packet = found_sidecar.and_then(|f| std::fs::read_to_string(f).ok()).or_else(|| info.xmp.clone().filter(|_| raw));
             let target = crate::crs::Target::for_file(info.kind, &info.format, info.preview_only.is_some(), &info.meta.camera);
             let sidecar = packet.and_then(|x| match crate::sidecar::parse_sidecar(&x, target) {
                 Ok(sc) => Some(sc),
