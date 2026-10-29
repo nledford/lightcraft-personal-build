@@ -2470,5 +2470,9 @@
   "This row has no name to change": "У этой строки нет имени, которое можно изменить",
   "Loupe Overlay": "Накладка лупы",
   "View Options…": "Параметры вида…",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Вид → Накладка лупы → Параметры вида выбирает строки, которые показывают Info 1 и Info 2."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Вид → Накладка лупы → Параметры вида выбирает строки, которые показывают Info 1 и Info 2.",
+  "Damaged file: cut short, shown from the data present": "Повреждённый файл: обрезан, показан по имеющимся данным",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Файл обрезан, например из-за прерванной загрузки или копирования. LightCraft показывает имеющиеся данные и никогда не изменяет файл.",
+  "Damaged": "Повреждён",
+  "Damaged File": "Повреждённый файл"
 }

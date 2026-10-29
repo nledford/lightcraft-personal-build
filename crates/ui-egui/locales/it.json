@@ -2480,5 +2480,9 @@
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "I tasti agiscono sulla barra laterale: le frecce spostano, Invio apre, digita per cercare, Esc torna alle foto",
   "This row has no name to change": "Questa riga non ha un nome da cambiare",
   "Loupe Overlay": "Sovrapposizione lente",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Visualizza → Sovrapposizione lente → Opzioni di visualizzazione sceglie le righe di Info 1 e Info 2."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Visualizza → Sovrapposizione lente → Opzioni di visualizzazione sceglie le righe di Info 1 e Info 2.",
+  "Damaged file: cut short, shown from the data present": "File danneggiato: troncato, mostrato dai dati presenti",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Il file è stato troncato, ad esempio da un download o una copia interrotti. LightCraft mostra i dati presenti e non modifica mai il file.",
+  "Damaged": "Danneggiato",
+  "Damaged File": "File danneggiato"
 }

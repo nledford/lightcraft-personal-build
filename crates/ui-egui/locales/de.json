@@ -3558,5 +3558,9 @@
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Die Tasten gelten der Seitenleiste: Pfeile bewegen, Eingabe öffnet, Tippen sucht, Esc führt zurück zu den Fotos",
   "This row has no name to change": "Diese Zeile hat keinen Namen, der sich ändern ließe",
   "View Options…": "Ansichtsoptionen…",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Ansicht → Lupenüberlagerung → Ansichtsoptionen legt fest, welche Zeilen Info 1 und Info 2 zeigen."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Ansicht → Lupenüberlagerung → Ansichtsoptionen legt fest, welche Zeilen Info 1 und Info 2 zeigen.",
+  "Damaged file: cut short, shown from the data present": "Beschädigte Datei: abgeschnitten, aus den vorhandenen Daten angezeigt",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Die Datei wurde abgeschnitten, zum Beispiel durch einen abgebrochenen Download oder Kopiervorgang. LightCraft zeigt die vorhandenen Daten an und verändert die Datei nie.",
+  "Damaged": "Beschädigt",
+  "Damaged File": "Beschädigte Datei"
 }

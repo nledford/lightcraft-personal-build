@@ -2511,5 +2511,9 @@
   "This row has no name to change": "Cette ligne n’a pas de nom à modifier",
   "Loupe Overlay": "Incrustation de la loupe",
   "View Options…": "Options d'affichage…",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Affichage → Incrustation de la loupe → Options d'affichage choisit les lignes que montrent Info 1 et Info 2."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Affichage → Incrustation de la loupe → Options d'affichage choisit les lignes que montrent Info 1 et Info 2.",
+  "Damaged file: cut short, shown from the data present": "Fichier endommagé : tronqué, affiché à partir des données présentes",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Le fichier a été tronqué, par exemple par un téléchargement ou une copie interrompus. LightCraft affiche les données présentes et ne modifie jamais le fichier.",
+  "Damaged": "Endommagé",
+  "Damaged File": "Fichier endommagé"
 }

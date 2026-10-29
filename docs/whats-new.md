@@ -191,6 +191,11 @@
   and 2 % edited, a photo takes about 2.8 kB where it took 4.4 kB (285 MB instead of 441 MB). Nothing changes on
   screen, and the library's files are byte for byte what they were, so earlier versions open them as before.
 
+### Damaged JPEGs are marked, and can be found
+- A JPEG that was cut short now says so. Info shows "Damaged file: cut short, shown from the data present"; the
+  import review puts a "Damaged" badge on it; the message after an import counts them ("· 2 damaged"); and a
+  smart album can collect them with the rule File → Damaged File.
+
 ## 2026-10-23
 
 ### Large libraries (#2968)

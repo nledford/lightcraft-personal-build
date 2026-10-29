@@ -2479,5 +2479,9 @@
   "This row has no name to change": "Esta fila no tiene un nombre que cambiar",
   "Loupe Overlay": "Superposición de la lupa",
   "View Options…": "Opciones de vista…",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Vista → Superposición de la lupa → Opciones de vista elige las líneas que muestran Info 1 e Info 2."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Vista → Superposición de la lupa → Opciones de vista elige las líneas que muestran Info 1 e Info 2.",
+  "Damaged file: cut short, shown from the data present": "Archivo dañado: cortado, se muestra con los datos disponibles",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "El archivo se cortó, por ejemplo por una descarga o copia interrumpida. LightCraft muestra los datos que hay y nunca modifica el archivo.",
+  "Damaged": "Dañado",
+  "Damaged File": "Archivo dañado"
 }

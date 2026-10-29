@@ -2404,5 +2404,9 @@
   "This row has no name to change": "Ten wiersz nie ma nazwy do zmiany",
   "Loupe Overlay": "Nakładka lupy",
   "View Options…": "Opcje widoku…",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Widok → Nakładka lupy → Opcje widoku wybiera wiersze, które pokazują Info 1 i Info 2."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Widok → Nakładka lupy → Opcje widoku wybiera wiersze, które pokazują Info 1 i Info 2.",
+  "Damaged file: cut short, shown from the data present": "Uszkodzony plik: ucięty, pokazany z dostępnych danych",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Plik został ucięty, na przykład przez przerwane pobieranie lub kopiowanie. LightCraft pokazuje dostępne dane i nigdy nie zmienia pliku.",
+  "Damaged": "Uszkodzony",
+  "Damaged File": "Uszkodzony plik"
 }

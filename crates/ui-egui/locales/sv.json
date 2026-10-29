@@ -2548,5 +2548,9 @@
   "Crop Overlay": "Beskärningsöverlägg",
   "Loupe Overlay": "Lupp-överlägg",
   "View Options…": "Visningsalternativ…",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Visa → Lupp-överlägg → Visningsalternativ väljer vilka rader Info 1 och Info 2 visar."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Visa → Lupp-överlägg → Visningsalternativ väljer vilka rader Info 1 och Info 2 visar.",
+  "Damaged file: cut short, shown from the data present": "Skadad fil: avkapad, visas från de data som finns",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Filen har kapats, till exempel av en avbruten nedladdning eller kopiering. LightCraft visar de data som finns och ändrar aldrig filen.",
+  "Damaged": "Skadad",
+  "Damaged File": "Skadad fil"
 }

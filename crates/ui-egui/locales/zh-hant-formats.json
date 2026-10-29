@@ -334,5 +334,6 @@
   "Lists “{name}”, the folder this one is in": "列出此資料夾所在的「{name}」",
   "Showing {what}": "正在顯示 {what}",
   "{title}, showing {what}": "{title}，正在顯示 {what}",
-  "+{n} more": "還有 {n} 項"
+  "+{n} more": "還有 {n} 項",
+  " · {} damaged": " · {} 個已損毀"
 }

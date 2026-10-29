@@ -2321,5 +2321,9 @@
   "This row has no name to change": "此行没有可更改的名称",
   "Loupe Overlay": "放大镜叠加",
   "View Options…": "视图选项…",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "视图 → 放大镜叠加 → 视图选项 用于选择“信息 1”和“信息 2”显示的行。"
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "视图 → 放大镜叠加 → 视图选项 用于选择“信息 1”和“信息 2”显示的行。",
+  "Damaged file: cut short, shown from the data present": "文件已损坏：被截断，根据现有数据显示",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "文件被截断，例如下载或复制中断所致。LightCraft 显示现有数据，且从不修改文件。",
+  "Damaged": "已损坏",
+  "Damaged File": "损坏的文件"
 }

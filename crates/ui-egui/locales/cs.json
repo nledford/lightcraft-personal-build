@@ -2527,5 +2527,9 @@
   "This row has no name to change": "Tento řádek nemá název, který by šlo změnit",
   "Loupe Overlay": "Překrytí lupy",
   "View Options…": "Možnosti zobrazení…",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Zobrazení → Překrytí lupy → Možnosti zobrazení určuje, které řádky zobrazují Info 1 a Info 2."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Zobrazení → Překrytí lupy → Možnosti zobrazení určuje, které řádky zobrazují Info 1 a Info 2.",
+  "Damaged file: cut short, shown from the data present": "Poškozený soubor: useknutý, zobrazuje se z dostupných dat",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Soubor byl useknut, například přerušeným stahováním nebo kopírováním. LightCraft zobrazuje dostupná data a soubor nikdy nemění.",
+  "Damaged": "Poškozený",
+  "Damaged File": "Poškozený soubor"
 }

@@ -2478,5 +2478,9 @@
   "Loupe Overlay": "ルーペのオーバーレイ",
   "View Options…": "表示オプション…",
   "View Options": "表示オプション",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "表示 → ルーペのオーバーレイ → 表示オプション で、情報1と情報2に表示する行を選びます。"
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "表示 → ルーペのオーバーレイ → 表示オプション で、情報1と情報2に表示する行を選びます。",
+  "Damaged file: cut short, shown from the data present": "破損ファイル: 途中で切れています。存在するデータから表示しています",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "ダウンロードやコピーの中断などでファイルが途中で切れています。LightCraft は存在するデータを表示し、ファイルは変更しません。",
+  "Damaged": "破損",
+  "Damaged File": "破損ファイル"
 }

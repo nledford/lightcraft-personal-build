@@ -334,5 +334,6 @@
   "Lists “{name}”, the folder this one is in": "Показывает «{name}» — папку, в которой лежит эта",
   "Showing {what}": "Показано: {what}",
   "{title}, showing {what}": "{title}, показано: {what}",
-  "+{n} more": "ещё {n}"
+  "+{n} more": "ещё {n}",
+  " · {} damaged": " · повреждено: {}"
 }

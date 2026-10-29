@@ -2461,5 +2461,9 @@
   "White": "Putih",
   "Loupe Overlay": "Overlay loupe",
   "View Options…": "Opsi Tampilan…",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Tampilan → Overlay loupe → Opsi Tampilan memilih baris yang ditampilkan Info 1 dan Info 2."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Tampilan → Overlay loupe → Opsi Tampilan memilih baris yang ditampilkan Info 1 dan Info 2.",
+  "Damaged file: cut short, shown from the data present": "File rusak: terpotong, ditampilkan dari data yang ada",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "File ini terpotong, misalnya karena unduhan atau penyalinan terhenti. LightCraft menampilkan data yang ada dan tidak pernah mengubah file.",
+  "Damaged": "Rusak",
+  "Damaged File": "File rusak"
 }

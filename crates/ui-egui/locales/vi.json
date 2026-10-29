@@ -2356,5 +2356,9 @@
   "White": "Trắng",
   "Loupe Overlay": "Lớp phủ kính lúp",
   "View Options…": "Tùy chọn xem…",
-  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Xem → Lớp phủ kính lúp → Tùy chọn xem chọn các dòng mà Info 1 và Info 2 hiển thị."
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Xem → Lớp phủ kính lúp → Tùy chọn xem chọn các dòng mà Info 1 và Info 2 hiển thị.",
+  "Damaged file: cut short, shown from the data present": "Tệp bị hỏng: bị cắt cụt, hiển thị từ dữ liệu hiện có",
+  "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Tệp bị cắt cụt, ví dụ do tải xuống hoặc sao chép bị gián đoạn. LightCraft hiển thị dữ liệu hiện có và không bao giờ thay đổi tệp.",
+  "Damaged": "Bị hỏng",
+  "Damaged File": "Tệp bị hỏng"
 }

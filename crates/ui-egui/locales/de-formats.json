@@ -334,5 +334,6 @@
   "Lists “{name}”, the folder this one is in": "Listet „{name}“ auf, den Ordner, in dem dieser liegt",
   "Showing {what}": "Zeigt {what}",
   "{title}, showing {what}": "{title}, zeigt {what}",
-  "+{n} more": "+{n} weitere"
+  "+{n} more": "+{n} weitere",
+  " · {} damaged": " · {} beschädigt"
 }

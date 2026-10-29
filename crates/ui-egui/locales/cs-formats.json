@@ -334,5 +334,6 @@
   "Look at the changes found in “{name}” first, or dismiss them": "Nejprve si prohlédněte změny nalezené v „{name}“, nebo je zahoďte",
   "Lists “{name}”, the folder this one is in": "Zobrazuje „{name}“, složku, ve které je tato",
   "Showing {what}": "Zobrazeno: {what}",
-  "{title}, showing {what}": "{title}, zobrazeno: {what}"
+  "{title}, showing {what}": "{title}, zobrazeno: {what}",
+  " · {} damaged": " · poškozené: {}"
 }

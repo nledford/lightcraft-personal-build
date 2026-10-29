@@ -334,5 +334,6 @@
   "Lists “{name}”, the folder this one is in": "Показує «{name}» — теку, в якій лежить ця",
   "Showing {what}": "Показано: {what}",
   "{title}, showing {what}": "{title}, показано: {what}",
-  "+{n} more": "+{n} ще"
+  "+{n} more": "+{n} ще",
+  " · {} damaged": " · пошкоджено: {}"
 }
