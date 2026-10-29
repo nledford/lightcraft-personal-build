@@ -1481,6 +1481,17 @@ pub(crate) fn announce_button(resp: &egui::Response, enabled: bool, name: impl I
         }
     }
 }
+/// A photo's thumbnail (grid cell, filmstrip thumbnail) for screen readers: a selectable list
+/// item that is, or is not, selected.
+///
+/// egui's `WidgetInfo::selected` publishes AccessKit's `Toggled`, which macOS turns into a check box
+/// ("checked"). A list item with AccessKit's `selected` state is what macOS reads as "selected",
+/// and it keeps the click action, so one helper gives the grid and the filmstrip the same role.
+pub(crate) fn announce_cell(resp: &egui::Response, name: impl Into<String>, selected: bool) {
+    let name = name.into();
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ListItem, resp.enabled(), name.clone()));
+    resp.ctx.accesskit_node_builder(resp.id, |node| node.set_selected(selected));
+}
 
 /// `r`, named `name` for screen readers: a plain egui field or slider whose caption is drawn
 /// beside it, or whose hint is all it shows.

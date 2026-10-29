@@ -2,6 +2,12 @@
 
 ## 2026-10-28
 
+### Screen readers read photo thumbnails as selectable items, not check boxes
+- On macOS, VoiceOver said "checked" or "unchecked" for a photo's thumbnail in the grid, as it does for a check box, and
+  the filmstrip's thumbnails, which began saying whether they are selected in the entry below, were read the same way.
+  A thumbnail in either place is now a selectable item: VoiceOver says "selected" for the photos you have picked, and
+  says nothing about a state for the others. The name is the same as before (file name, rating, flag, color label).
+
 ### The photo in Detail is named with its file for screen readers
 - With VoiceOver, the photo in Detail view is now announced with its file name, rating, flag and colour label ("Photo:
   IMG_0042.JPG, rating 4 of 5, picked") instead of only "Photo", as the grid names the same photo.

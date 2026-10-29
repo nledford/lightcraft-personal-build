@@ -9,3 +9,4 @@ mod filmstrip_names;
 mod grid_names;
 mod photo_name;
 mod sidebar_names;
+mod thumb_cells;
