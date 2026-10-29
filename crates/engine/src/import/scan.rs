@@ -193,8 +193,10 @@ pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &Sc
         library_hashes(&input.library, probed_hashes).into_iter().map(|(h, id)| (h, Some(id.0))).collect();
     let mut out = Vec::with_capacity(files.len());
     let mut kept = HashMap::new();
+    // (a content's browsed first copy: its path, until the first file of its own with that content stands in for it)
+    let mut browsed_first: HashMap<String, String> = HashMap::new();
     for f in files {
-        if let Some((id, c, hash)) = by_path.get(Path::new(&f)) {
+        if let Some((_, c, hash)) = by_path.get(Path::new(&f)) {
             let mut c = c.clone();
             c.name = Path::new(&f).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| f.clone());
             // a browsed file the library has the content of (or an earlier file here promotes) is a duplicate
@@ -207,7 +209,10 @@ pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &Sc
                         c.existing = *existing;
                     }
                     None => {
-                        seen_hash.insert(h.clone(), Some(id.0));
+                        // (the library doesn't have it: a browsed record isn't a library photo, and
+                        // the import looks the library up when it runs)
+                        seen_hash.insert(h.clone(), None);
+                        browsed_first.insert(h.clone(), f.clone());
                     }
                 }
             }
@@ -228,6 +233,11 @@ pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &Sc
                         Some(existing) => {
                             c.duplicate = Some("content".into());
                             c.existing = *existing;
+                            // (the first copy of a browsed photo that is a file of its own stands in for it when
+                            // copying leaves the browsed one out: said once per content)
+                            if existing.is_none() {
+                                c.browsed_twin = browsed_first.remove(h);
+                            }
                         }
                         None => {
                             seen_hash.insert(h.clone(), None);
