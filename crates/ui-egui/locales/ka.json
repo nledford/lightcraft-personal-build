@@ -2803,5 +2803,10 @@
   "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "ფოტოებისთვის საკვანძო სიტყვის მისაცემად გამოიყენეთ საკვანძო სიტყვების სია (ფანჯარა → საკვანძო სიტყვები, K): ჩააგდეთ იქ სასურველ სიტყვაზე",
   "Already on these photos": "ამ ფოტოებს უკვე აქვთ",
   "Can't go inside itself": "საკუთარ თავში ვერ მოხვდება",
-  "Demo photos have no file on disk, so they can't be moved": "სადემონსტრაციო ფოტოებს დისკზე ფაილი არ აქვთ, ამიტომ მათი გადატანა შეუძლებელია"
+  "Demo photos have no file on disk, so they can't be moved": "სადემონსტრაციო ფოტოებს დისკზე ფაილი არ აქვთ, ამიტომ მათი გადატანა შეუძლებელია",
+  "Reduce Motion": "მოძრაობის შემცირება",
+  "Reduce motion": "მოძრაობის შემცირება",
+  "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "გამორთავს მასშტაბირებისა და მიმდინარეობის ინდიკატორის ანიმაციებს. გაბუნდოვნება შენარჩუნდება. სანამ აქ არ შეცვლით, სისტემის „მოძრაობის შემცირების“ პარამეტრს მისდევს.",
+  "Use the system setting": "სისტემის პარამეტრის გამოყენება",
+  "Turns off zoom and spinner animations. Fades stay.": "გამორთავს მასშტაბირებისა და მიმდინარეობის ინდიკატორის ანიმაციებს. გაბუნდოვნება შენარჩუნდება."
 }

@@ -2408,5 +2408,10 @@
   "Can't add to an album folder": "Tidak dapat menambahkan ke folder album",
   "Can't go inside itself": "Tidak dapat dimasukkan ke dalam dirinya sendiri",
   "Demo photos have no file on disk, so they can't be moved": "Foto demo tidak memiliki file di disk, sehingga tidak dapat dipindahkan",
-  "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Beri foto kata kunci di Daftar kata kunci (Jendela → Kata kunci, K): jatuhkan ke kata kunci di sana"
+  "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Beri foto kata kunci di Daftar kata kunci (Jendela → Kata kunci, K): jatuhkan ke kata kunci di sana",
+  "Reduce Motion": "Kurangi gerakan",
+  "Reduce motion": "Kurangi gerakan",
+  "Turns off zoom and spinner animations. Fades stay.": "Menonaktifkan animasi zoom dan indikator putar. Efek memudar tetap ada.",
+  "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Menonaktifkan animasi zoom dan indikator putar. Efek memudar tetap ada. Mengikuti pengaturan Kurangi Gerakan sistem sampai Anda mengubahnya di sini.",
+  "Use the system setting": "Gunakan pengaturan sistem"
 }

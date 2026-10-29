@@ -2394,5 +2394,10 @@
   "Can't add to an album folder": "Albumikansioon ei voi lisätä",
   "Can't go inside itself": "Ei voi siirtää itsensä sisään",
   "Demo photos have no file on disk, so they can't be moved": "Demokuvilla ei ole tiedostoa levyllä, joten niitä ei voi siirtää",
-  "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Anna kuville avainsana avainsanaluettelossa (Ikkuna → Avainsanat, K): pudota ne siellä avainsanan päälle"
+  "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Anna kuville avainsana avainsanaluettelossa (Ikkuna → Avainsanat, K): pudota ne siellä avainsanan päälle",
+  "Reduce Motion": "Vähennä liikettä",
+  "Reduce motion": "Vähennä liikettä",
+  "Turns off zoom and spinner animations. Fades stay.": "Poistaa zoomaus- ja pyörivät animaatiot käytöstä. Häivytykset säilyvät.",
+  "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Poistaa zoomaus- ja pyörivät animaatiot käytöstä. Häivytykset säilyvät. Seuraa järjestelmän Vähennä liikettä -asetusta, kunnes muutat sitä täällä.",
+  "Use the system setting": "Käytä järjestelmän asetusta"
 }

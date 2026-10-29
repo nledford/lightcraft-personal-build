@@ -2423,5 +2423,10 @@
   "Add keywords in the Keyword List": "Додавайте ключові слова у списку ключових слів",
   "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Щоб задати фото ключове слово, скористайтеся списком ключових слів (Вікно → Ключові слова, K): киньте фото там на потрібне слово",
   "Already on these photos": "Уже є в цих фото",
-  "Can't go inside itself": "Не можна помістити всередину себе"
+  "Can't go inside itself": "Не можна помістити всередину себе",
+  "Reduce Motion": "Зменшити рух",
+  "Reduce motion": "Зменшити рух",
+  "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Вимикає анімацію масштабування та індикаторів роботи. Плавні згасання залишаються. Доки ви не зміните це тут, діє системне налаштування «Зменшити рух».",
+  "Use the system setting": "Використовувати налаштування системи",
+  "Turns off zoom and spinner animations. Fades stay.": "Вимикає анімацію масштабування та індикаторів роботи. Плавні згасання залишаються."
 }

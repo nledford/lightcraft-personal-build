@@ -2459,5 +2459,10 @@
   "Add keywords in the Keyword List": "Ajoutez des mots-clés dans la Liste des mots-clés",
   "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Pour donner un mot-clé à des photos, utilisez la Liste des mots-clés (Fenêtre → Mots-clés, K) : déposez-les sur le mot-clé",
   "Already on these photos": "Déjà sur ces photos",
-  "Can't go inside itself": "Ne peut pas aller dans lui-même"
+  "Can't go inside itself": "Ne peut pas aller dans lui-même",
+  "Reduce Motion": "Réduire les animations",
+  "Reduce motion": "Réduire les animations",
+  "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Désactive les animations du zoom et des indicateurs d’activité. Les fondus restent. Suit le réglage Réduire les animations du système tant que vous ne le changez pas ici.",
+  "Use the system setting": "Utiliser le réglage du système",
+  "Turns off zoom and spinner animations. Fades stay.": "Désactive les animations du zoom et des indicateurs d’activité. Les fondus restent."
 }
