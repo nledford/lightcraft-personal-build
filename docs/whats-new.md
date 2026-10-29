@@ -13,6 +13,12 @@
   text first, to the overlay you typed it for (a template's text then shows under Previous settings), even though the
   overlays move up or are replaced.
 
+### Language: Sync with System
+- Settings ▸ General ▸ Language has a new first choice, Sync with System. Choosing it switches to the system's
+  preferred language right away (the browser's in the web build) and keeps following it each time LightCraft starts.
+  Before, a language chosen once was kept for good and nothing went back. A new installation starts with it chosen,
+  and choosing any language turns it off.
+
 ## 2026-10-27
 
 ### Reading a photo from a network share asks the server less
@@ -66,6 +72,12 @@
 - Starting LightCraft with `--no-update-check` skips the look for a newer release at start, so a throwaway copy (a test
   or scripted run) makes no request to GitHub and never opens the update prompt. Help ▸ Check for Updates… still
   checks when you ask; without the option nothing changes.
+
+### The desktop app starts in the system's language
+- On macOS, Windows and Linux, a library with no saved settings now opens in the first of the system's preferred
+  languages that LightCraft has a catalog for (Russian for `ru-SK`, German for `de-AT`), as the web build follows the
+  browser's languages. Before, it opened in English unless `LIGHTCRAFT_LANGUAGE` was set. A language chosen in
+  Settings ▸ General ▸ Language is kept as before.
 
 ## 2026-10-26
 
