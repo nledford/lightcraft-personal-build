@@ -81,6 +81,7 @@ fn info(label: &str, done: u64, total: u64) -> TaskInfo {
         waiting: false,
         place: 0,
         lane: None,
+        facts: String::new(),
     }
 }
 

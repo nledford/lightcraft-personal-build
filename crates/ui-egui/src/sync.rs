@@ -507,6 +507,9 @@ pub fn confirm(app: &mut LightcraftApp, dlg: &Dialog) -> Result<Value, String> {
         });
         let request = sync_request(path, name, *disk, choice, &shown.unwrap_or_default());
         // (the dialog's scan is let go only once the line has room: refused, the dialog stays open holding it)
+        if app.session.activity.line_full() {
+            return Err(crate::panels::activity::line_full_text());
+        }
         let (id, place) = app.session.activity.enqueue("sync", "Synchronizing folder", request)?;
         if std::mem::take(&mut app.sync_owns_changes) {
             app.session.folder_changes = None;
@@ -615,6 +618,8 @@ fn sync_request(path: &str, name: &str, disk: bool, choice: SyncChoice, shown: &
             "relinkMoved": choice.relink_moved, "removeMissing": choice.remove_missing, "readMetadata": choice.read_metadata,
             "missing": shown.missing, "moved": shown.moved, "metadata": shown.metadata,
         }),
+        subject: name.to_string(),
+        facts: String::new(),
     }
 }
 

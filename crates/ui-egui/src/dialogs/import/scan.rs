@@ -28,8 +28,40 @@ fn scan_guard(app: &LightcraftApp, progress: &ScanProgress, browse: bool) -> lig
 /// `library.import` params.
 pub const IMPORT_REQUEST: &str = "app:import";
 
-fn import_request(paths: &[String], params: &Value, auto: bool) -> Request {
-    Request { command: IMPORT_REQUEST.into(), params: json!({"paths": paths, "params": params, "auto": auto}) }
+/// `sources`: the folders or files the person chose, which name the import; `counted`: `paths` are the photos the
+/// review counted (dropped folders are not counted until they are read).
+pub(super) fn import_request(paths: &[String], params: &Value, auto: bool, sources: &[String], counted: bool) -> Request {
+    Request {
+        command: IMPORT_REQUEST.into(),
+        params: json!({"paths": paths, "params": params, "auto": auto}),
+        subject: subject_of(sources),
+        facts: facts_of(counted.then_some(paths.len()), params["mode"].as_str().unwrap_or("add")),
+    }
+}
+
+/// What an import is about, for its rows: the source folder's (or file's) name, or how many sources there are. Empty
+/// when it is not known where the photos come from.
+pub(super) fn subject_of(sources: &[String]) -> String {
+    match sources {
+        [] => String::new(),
+        [one] => {
+            std::path::Path::new(one.trim_end_matches(['/', '\\'])).file_name().map_or_else(|| one.clone(), |n| n.to_string_lossy().into_owned())
+        }
+        many => crate::i18n::tr_format!("{} item{}", many.len(), "s"),
+    }
+}
+
+/// What else an import waiting in line says: how many photos (when the review counted them) and how they come in.
+fn facts_of(photos: Option<usize>, mode: &str) -> String {
+    let how = match mode {
+        "copy" => crate::i18n::tr("Copy"),
+        "move" => crate::i18n::tr("Move"),
+        _ => crate::i18n::tr("Add in place"),
+    };
+    match photos {
+        Some(n) => format!("{} · {how}", crate::i18n::tr_format!("{n} photo{}", if n == 1 { "" } else { "s" }, n = n)),
+        None => how.to_string(),
+    }
 }
 
 /// The library lane is taken: an import (or the reading of a Local folder) or a Synchronize Folder runs, or waits
@@ -44,10 +76,28 @@ pub(crate) fn library_busy(app: &LightcraftApp) -> bool {
         || app.session.activity.lane_waiting(Lane::Library)
 }
 
+/// What a task asked for now would start after, as its dialog says it ("Importing · Rome"): what runs in the library
+/// lane, else the last task waiting there. `None` when the lane is free.
+pub(crate) fn lane_ahead_text(app: &LightcraftApp) -> Option<String> {
+    if !library_busy(app) {
+        return None;
+    }
+    let rows = app.session.activity.list();
+    let in_lane = |t: &&lightcraft_engine::activity::TaskInfo| t.lane == Some(Lane::Library);
+    let ahead = rows.iter().filter(in_lane).find(|t| !t.waiting).or_else(|| rows.iter().rev().find(in_lane));
+    // (a Local folder being read holds the lane with a row of its own kind, which has no lane)
+    let reading = || app.scan.as_ref().is_some_and(|t| t.browse).then(|| crate::i18n::tr("Reading folder").to_string());
+    Some(ahead.map(crate::panels::activity::waiting_name).or_else(reading).unwrap_or_else(|| crate::i18n::tr("Importing").to_string()))
+}
+
 /// Put an import of `paths` with `params` in line behind what runs in the library lane, and say so (an Auto Import
 /// quietly: nobody asked for it).
-pub(super) fn wait_in_line(app: &mut LightcraftApp, paths: &[String], params: &Value, auto: bool) -> Result<Value, String> {
-    let (id, place) = app.session.activity.enqueue("import", "Importing", import_request(paths, params, auto))?;
+pub(super) fn wait_in_line(app: &mut LightcraftApp, request: Request) -> Result<Value, String> {
+    if app.session.activity.line_full() {
+        return Err(crate::panels::activity::line_full_text());
+    }
+    let auto = request.params["auto"].as_bool().unwrap_or(false);
+    let (id, place) = app.session.activity.enqueue("import", "Importing", request)?;
     if !auto {
         app.queued_toast(place as u64);
     }
@@ -71,7 +121,7 @@ pub(crate) fn auto_import_listed(app: &mut LightcraftApp, listing: Vec<(String, 
         o.remove("paths");
     }
     if library_busy(app) {
-        if let Err(e) = wait_in_line(app, &paths, &params, true) {
+        if let Err(e) = wait_in_line(app, import_request(&paths, &params, true, &[], true)) {
             log::warn!("auto import: {e}");
         }
         return;
@@ -352,16 +402,23 @@ pub(crate) fn stall_scan_of(app: &mut LightcraftApp, browse: bool) -> Box<dyn st
 
 /// Whether an import or any scan (the review's, or a Local folder browse) is running, or a finished scan's review waits
 /// for a dialog to close. A drop that was held behind a barrier is tried again only when this is over (a fresh drop
-/// while an import runs is not refused: it waits in line, see [`drop_blocked`]).
+/// while an import runs is not refused: it waits in line, see [`drop_refusal`]).
 pub fn running(app: &LightcraftApp) -> bool {
     app.import.is_some() || app.scan.is_some() || app.review_pending.is_some()
 }
 
-/// Whether any scan (the review's, or a Local folder browse) is running, or a finished scan's review waits for a
-/// dialog to close, which a drop of photos must not replace: `open` refuses while a scan runs, and a browse that
-/// finishes replaces `app.import`. A drop while an import runs is not refused: it waits in line ([`library_busy`]).
-pub fn drop_blocked(app: &LightcraftApp) -> bool {
-    app.scan.is_some() || app.review_pending.is_some()
+/// Why a drop of photos is refused now, in the person's language, if it is: a scan (the review's, or a Local folder
+/// browse) is running, or a finished scan's review waits for a dialog to close. A drop must not replace them: `open`
+/// refuses while a scan runs, and a browse that finishes replaces `app.import`. A drop while an import runs is not
+/// refused: it waits in line ([`library_busy`]).
+pub fn drop_refusal(app: &LightcraftApp) -> Option<String> {
+    let why = match app.scan.as_ref() {
+        Some(scan) if scan.browse => "A folder is still being read for the Local view: drop photos when it has finished",
+        Some(_) => "A folder is still being scanned for the import review: drop photos when it has finished",
+        None if app.review_pending.is_some() => "An import review is waiting to open: drop photos when it is closed",
+        None => return None,
+    };
+    Some(crate::i18n::tr(why).to_string())
 }
 
 impl ScanTask {

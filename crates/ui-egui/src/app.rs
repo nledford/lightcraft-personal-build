@@ -46,6 +46,7 @@ impl LightcraftApp {
             updates_rt: Default::default(),
             quit_prompt: None,
             notice_input: Default::default(),
+            switch_prompt: None,
             quit_confirmed: false,
             quit_backup: QuitBackup::default(),
             control_rx: None,
@@ -351,8 +352,7 @@ impl LightcraftApp {
         } else {
             i18n::tr_format!("Queued: it starts after {n} more", n = place - 1)
         };
-        let now = self.tick_now();
-        self.ui.show_toast(now, text, TOAST_SECONDS, None);
+        self.say(text, TOAST_SECONDS);
     }
 
     /// Start the tasks waiting in line whose lane is free: the engine's ([`lightcraft_engine::Session::start_waiting`])
