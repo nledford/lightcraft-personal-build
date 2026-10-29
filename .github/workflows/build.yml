@@ -31,11 +31,13 @@ on:
         type: boolean
         default: true
       cache:
-        description: "App job compile cache: rust-cache (dependencies only) or mbx (per-compilation objects, trial)"
+        # Measured 29 Oct at 4f216e6b58 (app job): cold 13.2 min mbx vs 16.8 rust-cache; same commit restored 2.3 vs 7.5;
+        # a one-line edit in lightcraft-develop 6.1 vs 6.6. rust-cache stays as a fallback if the mbx Action breaks.
+        description: "App job compile cache: mbx (per-compilation objects, our own crates too) or rust-cache (dependencies only)"
         required: false
         type: choice
-        options: [rust-cache, mbx]
-        default: rust-cache
+        options: [mbx, rust-cache]
+        default: mbx
 
 permissions:
   contents: read
