@@ -253,6 +253,7 @@ impl FilterState {
             self.aside = None;
         }
     }
+
     /// Carry a change onto the person's filter: `edit` gets it, and whether it is put aside. A filter in use is
     /// then cleared of what the source owns (one put aside is, when it comes back). `edit` returns whether the
     /// filter goes aside again (a filter in use) or is dropped (one put aside): that is the step's own undo.
