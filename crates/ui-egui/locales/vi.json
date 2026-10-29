@@ -2311,5 +2311,8 @@
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Tắt hiệu ứng phóng to và biểu tượng xoay. Hiệu ứng mờ dần vẫn được giữ nguyên. Theo cài đặt Giảm chuyển động của hệ thống cho đến khi bạn thay đổi tại đây.",
   "Use the system setting": "Dùng cài đặt của hệ thống",
   "Files": "Tệp",
-  "Monitor": "Màn hình"
+  "Monitor": "Màn hình",
+  "Filter settings": "Lọc cài đặt",
+  "No setting matches what is typed.": "Không có cài đặt nào khớp với nội dung đã nhập.",
+  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Hãy thử một từ hoặc một phần của từ: tên các tab và mục, nhãn và phần giải thích đều được tìm."
 }

@@ -2401,5 +2401,8 @@
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Poistaa zoomaus- ja pyörivät animaatiot käytöstä. Häivytykset säilyvät. Seuraa järjestelmän Vähennä liikettä -asetusta, kunnes muutat sitä täällä.",
   "Use the system setting": "Käytä järjestelmän asetusta",
   "Files": "Tiedostot",
-  "Monitor": "Näyttö"
+  "Monitor": "Näyttö",
+  "Filter settings": "Suodata asetuksia",
+  "No setting matches what is typed.": "Mikään asetus ei vastaa kirjoitettua.",
+  "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Kokeile yhtä sanaa tai sen osaa: haku kattaa välilehtien ja osioiden nimet, otsikot ja selitykset."
 }
