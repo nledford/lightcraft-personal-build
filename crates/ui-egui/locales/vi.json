@@ -844,7 +844,7 @@
   "In library": "Trong thư viện",
   "In memory — nothing is saved": "Trong bộ nhớ — chưa lưu gì",
   "In use": "Đang dùng",
-  "In-memory session: these settings last until LightCraft quits.": "Phiên trong bộ nhớ: các cài đặt này chỉ tồn tại đến khi LightCraft thoát.",
+  "In-memory session: the library's settings last until LightCraft quits.": "Phiên trong bộ nhớ: các cài đặt của thư viện chỉ tồn tại đến khi LightCraft thoát.",
   "Include on Export": "Bao gồm khi xuất",
   "Include selected photos": "Bao gồm ảnh đã chọn",
   "Include subfolders": "Bao gồm thư mục con",
@@ -2309,5 +2309,7 @@
   "Reduce motion": "Giảm chuyển động",
   "Turns off zoom and spinner animations. Fades stay.": "Tắt hiệu ứng phóng to và biểu tượng xoay. Hiệu ứng mờ dần vẫn được giữ nguyên.",
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Tắt hiệu ứng phóng to và biểu tượng xoay. Hiệu ứng mờ dần vẫn được giữ nguyên. Theo cài đặt Giảm chuyển động của hệ thống cho đến khi bạn thay đổi tại đây.",
-  "Use the system setting": "Dùng cài đặt của hệ thống"
+  "Use the system setting": "Dùng cài đặt của hệ thống",
+  "Files": "Tệp",
+  "Monitor": "Màn hình"
 }
