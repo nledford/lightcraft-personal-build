@@ -2495,5 +2495,21 @@
   "The library's own folder can't be moved": "La cartella della libreria stessa non può essere spostata",
   "A folder can't move into itself or a folder inside it": "Una cartella non può essere spostata in se stessa o in una cartella al suo interno",
   "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "La cartella, i suoi file e i file XMP collegati vengono spostati sul disco. Modifica → Annulla la riporta indietro.",
-  "Another library was opened since the folder was dropped: nothing was moved": "Dopo il trascinamento della cartella è stata aperta un'altra libreria: non è stato spostato nulla"
+  "Another library was opened since the folder was dropped: nothing was moved": "Dopo il trascinamento della cartella è stata aperta un'altra libreria: non è stato spostato nulla",
+  "Choose one album to rename it": "Scegli un solo album per rinominarlo",
+  "Choose one folder to rename it": "Scegli una sola cartella per rinominarla",
+  "Choose one folder to synchronize it": "Scegli una sola cartella per sincronizzarla",
+  "Choose one keyword to create a keyword inside it": "Scegli una sola parola chiave per crearne una al suo interno",
+  "Choose one keyword to edit it": "Scegli una sola parola chiave per modificarla",
+  "Choose one keyword to rename it": "Scegli una sola parola chiave per rinominarla",
+  "Create Keyword Tag Inside…": "Crea tag parola chiave all'interno…",
+  "Delete Albums": "Elimina album",
+  "Delete Folder": "Elimina cartella",
+  "Delete Keywords": "Elimina parole chiave",
+  "Moves the photos imported from these folders to Recently Deleted; no file is touched": "Sposta le foto importate da queste cartelle in Eliminate di recente; nessun file viene toccato",
+  "No photo has them; the keywords below them go too.": "Nessuna foto le ha; vengono eliminate anche le parole chiave sotto di esse.",
+  "One of them is a whole disk: remove a disk by itself": "Uno di essi è un disco intero: rimuovi un disco da solo",
+  "Remove Folders from Library": "Rimuovi cartelle dalla libreria",
+  "That includes the photos in the folders inside them.": "Sono incluse le foto nelle cartelle al loro interno.",
+  "The photos stay in All Photos. Undo brings the albums back.": "Le foto restano in Tutte le foto. Annulla ripristina gli album."
 }

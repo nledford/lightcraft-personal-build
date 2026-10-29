@@ -9,14 +9,6 @@ use super::{
     headless, i18n, import, lightroom_import, menus, merge, model_setup, panels, pick, recheck, refusal_toast, render, shortcuts, slideshow_export,
     state, sync, tasks, theme, updates_ui, widgets,
 };
-use super::{
-    AiModel, Caches, CommandError, ControlRequest, ControlResponse, ErrorKind, GESTURE_TIMEOUT_MS, LightcraftApp, MAX_PENDING_GESTURES,
-    MAX_PENDING_SHOTS, MAX_SHOT_BYTES, MAX_SHOT_TOTAL_BYTES, MAX_TEXTURE_SIDE, PendingGesture, PendingShot, Perf, REFUSAL_SECONDS, Receiver, Refusal,
-    SCREEN_PROFILE, SCREENSHOT_FALLBACK_MS, SCREENSHOT_SETTLE_MS, SHOT_FORCE_BUSY_MS, SHOT_SETTLE_FRAMES, SHOT_SETTLE_MS, Sender, Session,
-    ShotGeometry, TOAST_SECONDS, UiState, Value, docking, drop_overlay, export_task, focus_scan, frame_rate, headless, i18n, import,
-    lightroom_import, menus, merge, model_setup, panels, pick, recheck, render, shortcuts, slideshow_export, state, sync, tasks, theme, updates_ui,
-    widgets,
-};
 
 mod control;
 mod frame;
@@ -250,6 +242,18 @@ impl LightcraftApp {
     /// at the call. `None` when it was refused.
     pub fn quiet(&mut self, id: &str, params: Value) -> Option<Value> {
         self.run_told(id, params).ok()
+    }
+    /// [`Self::act`] for a caller that hands the refusal on (a dialog's confirm, which the control
+    /// channel answers with it): the toast says the reason, the `Err` is the whole error.
+    pub(crate) fn act_told(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        let before = self.ui.toast.clone();
+        self.run_told(id, params).map_err(|refusal| {
+            let now = self.tick_now();
+            let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
+            let said = refusal_toast(made, &refusal);
+            self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
+            refusal.error
+        })
     }
 
     /// [`Self::run`], keeping what a refusal says to a person apart from the whole error.

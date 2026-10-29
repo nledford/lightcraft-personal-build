@@ -164,6 +164,11 @@ fn deeper_row(app: &mut LightcraftApp, ui: &mut egui::Ui, name: &str, path: &str
 
 pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Album) {
     crate::widgets::context_menu(resp, |ui| {
+        // one of several albums chosen: what can be done to them all
+        let several = crate::panels::side_select::album_targets(app, a.id);
+        if several.len() > 1 {
+            return crate::panels::side_select::albums_menu(app, ui, &several);
+        }
         if a.folder {
             // the same commands as File ▸ New…, aimed at this folder
             MenuItem::new(crate::i18n::tr("New")).submenu(ui, |ui| {
@@ -575,6 +580,7 @@ fn folder_row(
     }
     folder_drop_target(app, ui, &resp, n, branch, open, said);
     folder_drag_target(app, ui, &resp, n, branch, open, said);
+    crate::panels::side_select::outline(app, ui, crate::panels::side_select::SideList::Folders, sel, resp.rect, 8.0);
     let mut toggled = false;
     if !n.children.is_empty() {
         let tr =
@@ -955,6 +961,12 @@ pub(crate) fn move_folder_to(app: &mut LightcraftApp, ctx: &egui::Context, path:
 /// The context menu of a Folders row: a folder's own, a disk's (remove it), none for the
 /// startup disk.
 fn row_menu(app: &mut LightcraftApp, resp: &egui::Response, n: &FolderNode, parents: FolderParents) {
+    // one of several folders chosen: what can be done to them all
+    let several = crate::panels::side_select::folder_targets(app, &n.path);
+    if several.len() > 1 {
+        crate::widgets::context_menu(resp, |ui| crate::panels::side_select::folders_menu(app, ui, &several));
+        return;
+    }
     if !n.volume {
         folder_menu_for_library(app, resp, n, parents);
     } else if n.path != "/" {

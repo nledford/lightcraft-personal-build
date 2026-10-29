@@ -99,6 +99,7 @@ fn album_ids(v: &Value, c: &str) -> Result<Vec<AlbumId>> {
     Ok(out)
 }
 
+
 /// A command's `paths`: folder paths, each folder once (named twice, the last counts).
 fn folder_paths(v: &Value, c: &str) -> Result<Vec<String>> {
     let list = v.as_array().ok_or_else(|| bad(c, "`paths` must be a list of folder paths"))?;
@@ -1175,6 +1176,7 @@ pub fn specs() -> Vec<CommandSpec> {
                 // a deleted album that was being shown gives way to All Photos, as after any
                 // other way it goes (`Session::reconcile_view`)
                 s.commit(&label, Op::Batch { ops })?;
+
                 if several { Ok(json!({"deleted": ids.len()})) } else { ok() }
             }
         ),

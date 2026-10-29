@@ -2369,5 +2369,21 @@
   "The library's own folder can't be moved": "Không thể di chuyển thư mục của chính thư viện",
   "A folder can't move into itself or a folder inside it": "Không thể di chuyển thư mục vào chính nó hoặc vào thư mục bên trong nó",
   "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "Thư mục, các tệp và sidecar XMP của nó được di chuyển trên đĩa. Chỉnh sửa → Hoàn tác sẽ di chuyển lại.",
-  "Another library was opened since the folder was dropped: nothing was moved": "Một thư viện khác đã được mở sau khi thả thư mục: không có gì được di chuyển"
+  "Another library was opened since the folder was dropped: nothing was moved": "Một thư viện khác đã được mở sau khi thả thư mục: không có gì được di chuyển",
+  "Choose one album to rename it": "Chọn một album để đổi tên",
+  "Choose one folder to rename it": "Chọn một thư mục để đổi tên",
+  "Choose one folder to synchronize it": "Chọn một thư mục để đồng bộ",
+  "Choose one keyword to create a keyword inside it": "Chọn một từ khóa để tạo từ khóa bên trong nó",
+  "Choose one keyword to edit it": "Chọn một từ khóa để sửa",
+  "Choose one keyword to rename it": "Chọn một từ khóa để đổi tên",
+  "Create Keyword Tag Inside…": "Tạo thẻ từ khóa bên trong…",
+  "Delete Albums": "Xóa album",
+  "Delete Folder": "Xóa thư mục",
+  "Delete Keywords": "Xóa từ khóa",
+  "Moves the photos imported from these folders to Recently Deleted; no file is touched": "Chuyển các ảnh đã nhập từ những thư mục này vào Đã xóa gần đây; không tệp nào bị đụng đến",
+  "No photo has them; the keywords below them go too.": "Không ảnh nào có chúng; các từ khóa bên dưới cũng bị xóa.",
+  "One of them is a whole disk: remove a disk by itself": "Một trong số đó là cả một ổ đĩa: hãy gỡ ổ đĩa riêng",
+  "Remove Folders from Library": "Gỡ thư mục khỏi thư viện",
+  "That includes the photos in the folders inside them.": "Bao gồm cả ảnh trong các thư mục bên trong chúng.",
+  "The photos stay in All Photos. Undo brings the albums back.": "Ảnh vẫn ở trong Tất cả ảnh. Hoàn tác sẽ đưa album trở lại."
 }
