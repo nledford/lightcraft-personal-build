@@ -2326,5 +2326,6 @@
   "This folder stays listed while the grid shows its photos": "网格显示此文件夹的照片时，它会保留在列表中",
   "Keyboard in Sidebar": "在边栏中使用键盘",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "按键现在作用于边栏：方向键移动，回车打开，输入文字查找，Esc 返回照片",
-  "This row has no name to change": "此行没有可更改的名称"
+  "This row has no name to change": "此行没有可更改的名称",
+  "Keywords and presets apply to new files only, not to photos already in Local": "关键词和预设仅应用于新文件，不适用于已在“本地”中的照片"
 }

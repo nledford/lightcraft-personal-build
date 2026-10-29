@@ -2516,5 +2516,6 @@
   "This folder stays listed while the grid shows its photos": "Ce dossier reste affiché tant que la grille montre ses photos",
   "Keyboard in Sidebar": "Clavier dans la barre latérale",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Les touches sont dans la barre latérale : les flèches déplacent, Entrée ouvre, tapez pour chercher, Échap revient aux photos",
-  "This row has no name to change": "Cette ligne n’a pas de nom à modifier"
+  "This row has no name to change": "Cette ligne n’a pas de nom à modifier",
+  "Keywords and presets apply to new files only, not to photos already in Local": "Les mots-clés et les préréglages ne s'appliquent qu'aux nouveaux fichiers, pas aux photos déjà dans Local"
 }

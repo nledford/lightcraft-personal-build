@@ -2480,5 +2480,6 @@
   "This folder stays listed while the grid shows its photos": "Ця тека лишається у списку, доки сітка показує її фотографії",
   "Keyboard in Sidebar": "Клавіатура в бічній панелі",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Клавіші працюють у бічній панелі: стрілки переміщують, Enter відкриває, набір тексту шукає, Esc повертає до фотографій",
-  "This row has no name to change": "Цей рядок не має назви, яку можна змінити"
+  "This row has no name to change": "Цей рядок не має назви, яку можна змінити",
+  "Keywords and presets apply to new files only, not to photos already in Local": "Ключові слова та пресети застосовуються лише до нових файлів, а не до фото, що вже є в «Локальних»"
 }

@@ -2361,5 +2361,6 @@
   "This photo is on a disk that has no Trash. Erase its file for good?": "Ảnh này nằm trên ổ đĩa không có Thùng rác. Xóa vĩnh viễn tệp của nó?",
   "This cannot be undone: the files are not kept anywhere.": "Không thể hoàn tác: các tệp không được giữ ở đâu cả.",
   "Only these files are erased; XMP sidecars beside them stay.": "Chỉ các tệp này bị xóa; sidecar XMP bên cạnh vẫn còn.",
-  "Cancel leaves these photos in the library and their files where they are.": "Chọn Hủy để giữ các ảnh này trong thư viện và tệp của chúng ở nguyên chỗ."
+  "Cancel leaves these photos in the library and their files where they are.": "Chọn Hủy để giữ các ảnh này trong thư viện và tệp của chúng ở nguyên chỗ.",
+  "Keywords and presets apply to new files only, not to photos already in Local": "Từ khóa và cài đặt sẵn chỉ áp dụng cho tệp mới, không áp dụng cho ảnh đã có trong Cục bộ"
 }

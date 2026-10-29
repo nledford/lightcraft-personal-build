@@ -2409,5 +2409,6 @@
   "This photo is on a disk that has no Trash. Erase its file for good?": "To zdjęcie jest na dysku bez Kosza. Usunąć jego plik na zawsze?",
   "This cannot be undone: the files are not kept anywhere.": "Tego nie można cofnąć: pliki nie są nigdzie przechowywane.",
   "Only these files are erased; XMP sidecars beside them stay.": "Usuwane są tylko te pliki; pliki pomocnicze XMP obok nich zostają.",
-  "Cancel leaves these photos in the library and their files where they are.": "Anuluj pozostawi te zdjęcia w bibliotece, a ich pliki tam, gdzie są."
+  "Cancel leaves these photos in the library and their files where they are.": "Anuluj pozostawi te zdjęcia w bibliotece, a ich pliki tam, gdzie są.",
+  "Keywords and presets apply to new files only, not to photos already in Local": "Słowa kluczowe i ustawienia predefiniowane dotyczą tylko nowych plików, nie zdjęć, które już są w Lokalnych"
 }
