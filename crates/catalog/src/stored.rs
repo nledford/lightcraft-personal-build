@@ -310,7 +310,7 @@ fn reads_exactly_as(v: &Value, settings: &DevelopSettings) -> bool {
 }
 
 /// Whether any number in `v` is -0.0.
-fn has_negative_zero<T: Serialize + ?Sized>(v: &T) -> bool {
+pub(crate) fn has_negative_zero<T: Serialize + ?Sized>(v: &T) -> bool {
     let mut scan = NegativeZero(false);
     // (an error only says the walk stopped: when in doubt, it has one)
     v.serialize(&mut scan).is_err() || scan.0
