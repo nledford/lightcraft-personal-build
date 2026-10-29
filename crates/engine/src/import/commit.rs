@@ -190,6 +190,14 @@ fn trashed_file_is_gone(cat: &lightcraft_catalog::Catalog, id: PhotoId) -> bool 
         }
 }
 
+/// The file a photo was imported from when it was cut short, for the import's list of those.
+fn truncated_file(p: &Photo) -> Option<String> {
+    match &p.source {
+        Source::File { path } if p.truncated => Some(path.clone()),
+        _ => None,
+    }
+}
+
 /// The catalog half of an import: add the photos [`ImportJob::prepare`] readied (one undoable op;
 /// a Move's sources are removed once it is saved). On a failed commit a Move's placed files are
 /// taken back.
@@ -254,11 +262,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 if promoted.is_some_and(|p| p.local) {
                     ops.push(Op::SetLocal { id, local: false });
                 }
-                if let Some(p) = promoted.filter(|p| p.truncated)
-                    && let Source::File { path } = &p.source
-                {
-                    report.truncated.push(path.clone());
-                }
+                report.truncated.extend(promoted.and_then(|p| truncated_file(p)));
                 report.imported.push(id.0);
             }
             PreparedItem::Duplicate { path, existing, reason, hash } => {
@@ -368,9 +372,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                     p.history.push(lightcraft_catalog::HistoryStep { label, settings: d });
                 }
                 report.imported.push(id.0);
-                if p.truncated {
-                    report.truncated.push(path.clone());
-                }
+                report.truncated.extend(p.truncated.then(|| path.clone()));
                 p.local = opts.local;
                 if opts.local {
                     // the state as browsed: a later change keeps the record from being forgotten
