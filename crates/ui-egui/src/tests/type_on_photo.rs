@@ -195,8 +195,8 @@ fn a_toast_can_be_read_in_every_theme() {
         run(&mut h, "view.detail", json!({}));
         // When something is said in a toast
         let now = h.app.tick_now();
-        h.app.ui.toast =
-            Some(crate::toast::Toast { text: "Rated 3 stars".into(), shown_at: now - 10.0, until: now + 60.0, hovered: false, label: None });
+        h.app.ui.toasts =
+            vec![crate::toast::Toast { text: "Rated 3 stars".into(), shown_at: now - 10.0, until: now + 60.0, hovered: false, label: None, topic: None }];
         h.step();
         h.step();
         // Then it is written in the ink for pictures and stands 4.5:1 against its shade

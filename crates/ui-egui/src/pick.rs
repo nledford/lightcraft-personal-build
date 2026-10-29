@@ -274,8 +274,8 @@ mod tests {
         let (mut h, asked) = app_with_picker();
         h.app.run("file.exportPresets", json!({"group": "No such group"})).unwrap();
         asked.lock().unwrap()[0].1.send(vec!["/tmp/lc-pick-refused.lcpreset".to_string()]).unwrap();
-        h.step_until(SETTLE, |h| h.app.ui.toast.is_some());
-        let said = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+        h.step_until(SETTLE, |h| h.app.ui.toast().is_some());
+        let said = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
         assert!(said.contains("no presets to export") || said.contains("No presets to export"), "{said}");
         assert!(!said.contains("preset.export"), "the reason, without the command's id: {said}");
     }

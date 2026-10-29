@@ -214,14 +214,14 @@ impl LightcraftApp {
     /// It flags `let _ = app.session.execute(…)`, which goes round this, too, unless a comment
     /// on its line or the one above says why (`// refusal expected: <reason>`).
     pub fn act(&mut self, id: &str, params: Value) -> Option<Value> {
-        let before = self.ui.toast.clone();
+        let before = self.ui.toast().cloned();
         match self.run_told(id, params) {
             Ok(v) => Some(v),
             Err(refusal) => {
                 let now = self.tick_now();
                 // A toast the command made itself (a partial import report) says what did happen:
                 // keep it ahead of the reason rather than replacing it.
-                let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
+                let made = self.ui.toasts.pop().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
                 let said = refusal_toast(made, &refusal);
                 self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
                 None
@@ -297,7 +297,11 @@ impl LightcraftApp {
             };
             if let Some(message) = completed {
                 let now = self.tick_now();
-                self.ui.show_toast(now, message, TOAST_SECONDS, None);
+                // (Auto Sync On / Off says a state: the new one takes the old one's place)
+                match id {
+                    "develop.autoSync" => self.ui.show_toast_on(now, "autoSync", message, TOAST_SECONDS, None),
+                    _ => self.ui.show_toast(now, message, TOAST_SECONDS, None),
+                }
             }
         }
         if r.is_ok() && id == "photo.label" {
@@ -311,7 +315,7 @@ impl LightcraftApp {
                 None => i18n::tr("Color label cleared").into(),
             };
             let now = self.tick_now();
-            self.ui.show_toast(now, text, TOAST_SECONDS, label);
+            self.ui.show_toast_on(now, "label", text, TOAST_SECONDS, label);
         }
         match &r {
             Err(refusal) => {
@@ -549,19 +553,23 @@ impl LightcraftApp {
         match (unsaved, self.ui.unsaved_seen) {
             (Some((n, e)), false) => {
                 self.ui.unsaved_seen = true;
-                self.toast_error(
-                    ctx,
+                self.ui.show_toast_on(
+                    self.tick_now(),
+                    "save",
                     crate::i18n::tr_format!(
                         "{n} change{} saved in memory but not written to disk: {e} — LightCraft will retry",
                         if n == 1 { "" } else { "s" },
                         n = n,
                         e = e
                     ),
+                    ERROR_TOAST_SECONDS,
+                    None,
                 );
             }
             (None, true) => {
                 self.ui.unsaved_seen = false;
-                self.toast(ctx, crate::i18n::tr("Library saved"));
+                // (it takes the place of the warning that it couldn't be saved, if that still shows)
+                self.toast_on(ctx, "save", crate::i18n::tr("Library saved"));
             }
             (Some(_), true) => ctx.request_repaint_after(std::time::Duration::from_secs(2)), // retry
             (None, false) => {}
@@ -580,6 +588,13 @@ impl LightcraftApp {
         {
             self.toast(ctx, crate::i18n::tr("No horizon or vertical lines to level by"));
         }
+    }
+
+    /// A toast that says the state of `topic` ("flag", "panel", "slideshow"…): it replaces the ones still showing
+    /// about that topic, but the same message again stays until the later of its times ([`state::UiState::show_toast_on`]).
+    pub fn toast_on(&mut self, _ctx: &egui::Context, topic: &'static str, text: impl Into<String>) {
+        let t = self.tick_now();
+        self.ui.show_toast_on(t, topic, text.into(), TOAST_SECONDS, None);
     }
 
     /// A toast that stays at least `secs` seconds (messages that say where to look or what to do next).

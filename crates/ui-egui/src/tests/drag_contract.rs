@@ -88,7 +88,7 @@ fn hint(h: &Headless) -> Option<String> {
 }
 
 fn toast(h: &Headless) -> String {
-    h.app.ui.toast.clone().map(|t| t.text).unwrap_or_default()
+    h.app.ui.toast().cloned().map(|t| t.text).unwrap_or_default()
 }
 
 fn select(h: &mut Headless, ids: &[u64]) {
@@ -257,7 +257,7 @@ fn a_right_button_release_over_a_refusing_row_says_nothing() {
         }
         assert_eq!(toast(&h), "", "{row}: nothing is said: {}", toast(&h));
         release(&mut h, target);
-        h.app.ui.toast = None;
+        h.app.ui.toasts.clear();
     }
 }
 
@@ -375,7 +375,7 @@ fn rows_that_cannot_hold_photos_say_so_and_refuse() {
         assert!(toast(&h).contains(pointing_at), "{row}: the toast says why: {}", toast(&h));
         assert_eq!(h.app.ui.dragging_photos, None, "{row}");
         assert_eq!(h.app.session.undo.len(), undo, "{row}: nothing changed");
-        h.app.ui.toast = None;
+        h.app.ui.toasts.clear();
     }
     let albums_after: Vec<_> = h.app.session.catalog.albums().map(|a| (a.id.0, a.photos.len())).collect();
     assert_eq!(albums_before, albums_after);

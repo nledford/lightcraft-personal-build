@@ -579,7 +579,7 @@ fn finish(app: &mut LightcraftApp, ctx: &egui::Context, mut task: ImportTask) {
 /// the reason is taken off the toast it made and added to `refusals`.
 fn act_keeping_the_reason(app: &mut LightcraftApp, id: &str, params: Value, refusals: &mut Vec<String>) {
     if app.act(id, params).is_none() {
-        refusals.extend(app.ui.toast.take().map(|toast| toast.text));
+        refusals.extend(app.ui.toasts.pop().map(|toast| toast.text));
     }
 }
 
@@ -742,7 +742,7 @@ mod tests {
     }
 
     fn toast_text(app: &LightcraftApp) -> String {
-        app.ui.toast.as_ref().map(|toast| toast.text.clone()).unwrap_or_default()
+        app.ui.toast().map(|toast| toast.text.clone()).unwrap_or_default()
     }
 
     /// The first photo is gone by the time the import ends: selecting it is refused, and the report
@@ -759,7 +759,7 @@ mod tests {
         finish(&mut app, &egui::Context::default(), done_with_first(u64::MAX));
         assert_eq!(toast_text(&app), format!("{summary}\n\n{reason}"));
         // and it stays as long as a refusal does, so the reason can be read
-        let left = app.ui.toast.as_ref().map(|toast| toast.until).unwrap_or_default() - app.tick_now();
+        let left = app.ui.toast().map(|toast| toast.until).unwrap_or_default() - app.tick_now();
         assert!(left > crate::REFUSAL_SECONDS - 1.0, "the toast stays {left} s");
     }
 
@@ -785,7 +785,7 @@ mod tests {
         act_keeping_the_reason(&mut app, "library.source", json!({"kind": "all"}), &mut refusals);
         assert_eq!(refusals.len(), 2, "a command that goes through adds nothing: {refusals:?}");
         assert!(refusals[0].contains(&u64::MAX.to_string()) && refusals[1].contains(&(u64::MAX - 1).to_string()), "{refusals:?}");
-        assert!(app.ui.toast.is_none(), "their toasts are taken");
+        assert!(app.ui.toast().is_none(), "their toasts are taken");
     }
 
     /// The worker's end is told from its death: a channel that closes after every batch was sent is a finished

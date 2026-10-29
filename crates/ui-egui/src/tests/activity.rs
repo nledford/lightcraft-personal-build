@@ -426,13 +426,13 @@ fn stale_cancel_is_harmless() {
     let r = h.request("engine.execute", json!({"command": "activity.cancel", "params": {"id": id}}), T);
     assert_eq!(r["ok"], false, "an error result, not a panic: {r}");
     h.step();
-    assert!(h.app.ui.toast.is_none(), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_none(), "{:?}", h.app.ui.toasts);
     // the same through the row's ✕ (clicked in the frame the task ended): no message in the status bar either
     h.app.ui.status = "Ready".into();
     crate::panels::activity::cancel(&mut h.app, id);
     h.step();
     assert_eq!(h.app.ui.status, "Ready");
-    assert!(h.app.ui.toast.is_none(), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_none(), "{:?}", h.app.ui.toasts);
 }
 
 #[test]
@@ -591,7 +591,7 @@ fn import_cancelled_by_command_reports_cancelled() {
     h.app.session.activity.cancel(tasks[0].id).unwrap();
     assert!(h.step_until(Duration::from_secs(60), |h| h.app.import.is_none()));
     assert!(h.app.session.activity.list().is_empty());
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Import cancelled")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_some_and(|t| t.text.starts_with("Import cancelled")), "{:?}", h.app.ui.toasts);
     // and, once the toast has passed, it is still in the list under the bell, saying how far it got
     let rows = h.app.session.activity.finished();
     assert_eq!(rows.len(), 1, "{rows:?}");
@@ -681,7 +681,7 @@ fn final_merge_shows_a_row_and_cancels() {
     assert!(h.app.merge.last_result.is_none(), "nothing merged");
     assert_eq!(h.app.session.catalog.len(), before, "no photo added");
     assert!(h.app.session.activity.list().is_empty());
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert_eq!(toast, "HDR merge cancelled");
     let row = h.app.session.activity.last_finished().expect("a stopped merge leaves a row");
     assert_eq!((row.ending, row.summary.as_str()), (Ending::Stopped, "HDR merge cancelled"));
@@ -848,19 +848,19 @@ fn rows_added_later_grow_the_open_list() {
 fn immediate_library_commands_and_auto_sync_show_completion() {
     let mut h = demo();
     assert!(h.app.run("library.clearPreviews", json!({})).is_ok());
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("✓ Discard Preview Cache"));
+    assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some("✓ Discard Preview Cache"));
 
     assert_eq!(h.app.run("develop.autoSync", json!({"on": true})).unwrap()["on"], true);
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Auto Sync: On"));
+    assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some("Auto Sync: On"));
 
     assert_eq!(h.app.run("develop.autoSync", json!({"on": false})).unwrap()["on"], false);
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Auto Sync: Off"));
+    assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some("Auto Sync: Off"));
 
     // This demo has no on-disk library to optimize. A failed command must not
     // report completion (or accidentally keep its preceding success toast).
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     assert!(h.app.run("library.compact", json!({})).is_err());
-    assert!(h.app.ui.toast.is_none());
+    assert!(h.app.ui.toast().is_none());
 }
 
 /// A task that ended `ending`, kept in the list whatever time it took. Its id.
@@ -994,7 +994,7 @@ fn an_export_that_failed_for_a_file_leaves_a_row_with_the_file_and_the_reason() 
     assert!(row.path.as_deref().is_some_and(|p| p.starts_with("/lc-test-out/")), "one of the files written: {:?}", row.path);
     assert!(!row.failures[0].name.is_empty() && row.failures[0].reason.contains("The disk is full"), "{:?}", row.failures);
     // And it is said at once too, as ever; the bell is marked for when the toast has passed
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.0.starts_with("Exported 4 of 5")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_some_and(|t| t.text.starts_with("Exported 4 of 5")), "{:?}", h.app.ui.toasts);
     h.step();
     assert!(has(&h, "activity:attention"));
     // When the row's failed files are asked for, Then the file and the reason can be copied
@@ -1014,7 +1014,7 @@ fn a_short_clean_export_is_a_toast_and_leaves_no_row() {
     start_export(&mut h, 2);
     assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
     assert!(h.app.session.activity.finished().is_empty(), "watched to its end: nothing to come back to");
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.0.starts_with("Exported 2 of 2")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_some_and(|t| t.text.starts_with("Exported 2 of 2")), "{:?}", h.app.ui.toasts);
 }
 
 #[test]

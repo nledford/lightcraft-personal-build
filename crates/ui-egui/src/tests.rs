@@ -96,6 +96,7 @@ mod temp_slider;
 mod thumb;
 mod titlebar;
 mod toast_timing;
+mod toasts;
 mod tool_overlay;
 mod type_contrast;
 mod type_fit;

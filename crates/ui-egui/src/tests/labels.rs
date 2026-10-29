@@ -66,7 +66,7 @@ fn label_tints_grid_and_filmstrip_chrome_without_changing_photo_pixels() {
         let mut colours = Vec::new();
         for label in ["red", "yellow", "green", "blue", "purple"] {
             h.app.run("photo.label", json!({"label": label})).unwrap();
-            h.app.ui.toast = None;
+            h.app.ui.toasts.clear();
             h.step();
             let image = h.paint();
             let c = pixel(&image, sample);
@@ -76,7 +76,7 @@ fn label_tints_grid_and_filmstrip_chrome_without_changing_photo_pixels() {
             assert_eq!(pixel(&image, cell.center()), centre, "{view:?} {label} must not tint image pixels");
         }
         h.app.run("photo.label", json!({"label": "none"})).unwrap();
-        h.app.ui.toast = None;
+        h.app.ui.toasts.clear();
         h.step();
         assert_eq!(pixel(&h.paint(), sample), pixel(&neutral, sample), "clearing restores neutral chrome");
     }
