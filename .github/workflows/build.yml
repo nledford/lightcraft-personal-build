@@ -207,9 +207,18 @@ jobs:
           for f in LICENSE-MIT LICENSE-APACHE NOTICE OFL-Inter.txt; do
             [ -s "$dir/$f" ] || { echo "::error::$f is missing from $dir"; exit 1; }
           done
-          want=$({ echo Inter; for l in craft-fonts/fonts/*/OFL.txt; do basename "$(dirname "$l")"; done; } | sort -u | wc -l | tr -d ' ')
+          # By name, per family. (macOS' file system ignores case: craft-fonts' family `inter` and the project's own
+          # OFL-Inter.txt are one file there, so packaging's copy of the one over the other leaves 29 files, not 30; the two texts
+          # are identical. The count below is of names ignoring case.)
+          missing=""
+          for l in craft-fonts/fonts/*/OFL.txt; do
+            fam=$(basename "$(dirname "$l")")
+            [ -s "$dir/OFL-$fam.txt" ] || missing="$missing $fam"
+          done
+          [ -z "$missing" ] || { echo "::error::no OFL text in the app for the craft-fonts families:$missing"; exit 1; }
+          want=$({ echo inter; for l in craft-fonts/fonts/*/OFL.txt; do basename "$(dirname "$l")" | tr '[:upper:]' '[:lower:]'; done; } | sort -u | wc -l | tr -d ' ')
           have=$(ls "$dir"/OFL-*.txt | wc -l | tr -d ' ')
-          [ "$want" -gt 1 ] && [ "$have" -eq "$want" ] || { echo "::error::$have OFL texts in the app, expected $want (Inter and each craft-fonts family)"; exit 1; }
+          [ "$want" -gt 1 ] && [ "$have" -eq "$want" ] || { echo "::error::$have OFL files in the app, expected $want (Inter and each craft-fonts family, names ignoring case)"; exit 1; }
           echo "count=$have" >> "$GITHUB_OUTPUT"
           echo "- license texts in the app: LICENSE-MIT, LICENSE-APACHE, NOTICE and $have OFL files" >> "$GITHUB_STEP_SUMMARY"
 
