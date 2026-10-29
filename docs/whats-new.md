@@ -272,7 +272,8 @@
 
 ### A right-click while you carry photos opens no menu
 - While you drag photos from the grid, a right-click opens no context menu, on an album, folder or keyword row in
-  the sidebar or anywhere else. Before, the menu opened on the row the photos were over.
+  the sidebar or on any other row or thumbnail that has one. Before, the menu opened on the row the photos were over.
+  The menu of a text field (Cut, Copy, Paste) is not held back.
 
 ### Adding photos that are already in an album no longer costs an undo step
 - Add to Album and dragging photos to an album now leave the album, the undo history and Redo alone when every
