@@ -341,6 +341,10 @@ pub struct UiState {
     /// A keyword being dragged in the Keyword List (onto another to nest it).
     #[serde(skip)]
     pub dragging_keyword: Option<String>,
+    /// Choosing several rows of a sidebar list: the rows drawn and the anchor of each list, and
+    /// the other keywords picked in the Keyword List.
+    #[serde(skip)]
+    pub side: crate::panels::side_select::SideState,
     /// A running slideshow (full screen; see [`crate::panels::slideshow`]).
     #[serde(skip)]
     pub slideshow: Option<Box<crate::panels::slideshow::Run>>,
@@ -524,6 +528,7 @@ impl Default for UiState {
             sidebar_trees: Default::default(),
             keyword_list_selected: None,
             dragging_keyword: None,
+            side: Default::default(),
             info_overlay: InfoOverlay::Off,
             brief_info: BriefInfo::default(),
             layout_image: LayoutImage::default(),

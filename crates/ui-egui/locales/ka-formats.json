@@ -347,5 +347,7 @@
   "Move “{name}” into “{into}”": "„{name}“-ის გადატანა „{into}“-ში",
   "Move “{name}” into “{into}”?": "გადავიტანოთ „{name}“ „{into}“-ში?",
   "Photos in it and in the folders inside it: {count}": "ფოტო მასში და მის შიგნით არსებულ საქაღალდეებში: {count}",
-  "“{name}” is no longer there: nothing was moved": "„{name}“ აქ აღარ არის: არაფერი გადატანილა"
+  "“{name}” is no longer there: nothing was moved": "„{name}“ აქ აღარ არის: არაფერი გადატანილა",
+  "{n} albums": "ალბომები: {n}",
+  "{n} folders": "საქაღალდეები: {n}"
 }

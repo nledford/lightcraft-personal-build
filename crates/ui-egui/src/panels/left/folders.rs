@@ -439,7 +439,7 @@ fn only_leads_on(n: &FolderNode) -> bool {
 
 /// Whether the grid shows the folder at `path` (the Local / library folder source).
 fn shown_folder(app: &LightcraftApp, path: &str) -> bool {
-    app.session.source == LibrarySource::LibraryFolder && app.session.library_folder.as_deref().is_some_and(|f| same_folder(f, path))
+    crate::panels::side_select::folder_shown(app, path)
 }
 
 /// Where a folder stands in the Folders tree, for Show Parent Folder.
@@ -519,6 +519,9 @@ pub(super) fn folder_rows(
         let branch = folder_branch(n, &key);
         let mut open = app.ui.sidebar_trees.is_open_under(&branch, said);
         // a row whose path would cover other disks' photos too only opens and closes
+        if n.selectable {
+            app.ui.side.folders.saw(n.path.clone());
+        }
         let name = if n.selectable { n.name.clone() } else { crate::i18n::tr("This Computer").to_string() };
         let id = format!("libfolder:{}", n.path);
         // (worked out for a row that is drawn, or listed for the keys: not for every row out of sight)
@@ -549,6 +552,7 @@ fn folder_row(
     sel: bool,
     said: Option<Said>,
 ) {
+
     // the label is said with the name, as it is shown beside it
     let spoken = match n.label {
         Some(l) => format!("{name}, {}", crate::i18n::color_label(&app.session.catalog, l)),
@@ -584,7 +588,7 @@ fn folder_row(
     if super::side_keys::chosen(ui, &resp) && !toggled {
         if n.selectable {
             // a source like an album or a Local folder: it replaces what the grid showed
-            app.act("library.source", json!({"kind": "libraryFolder", "path": n.path}));
+            crate::panels::side_select::folder_clicked(app, ui, &n.path);
         } else {
             *open = !*open;
             app.ui.sidebar_trees.set(branch, *open);

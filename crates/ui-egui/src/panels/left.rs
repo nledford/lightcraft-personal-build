@@ -55,6 +55,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let frame = egui::Frame::NONE.fill(t.chrome).stroke(egui::Stroke::new(1.0, t.divider));
     // (a library opened since the frame began is known before its rows are shown)
+    super::side_select::begin_left(app);
     follow_shown(app, ui.ctx());
     frame.show(ui, |ui| {
         ui.spacing_mut().item_spacing.y = 0.0;
