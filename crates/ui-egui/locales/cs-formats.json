@@ -322,5 +322,7 @@
   "Changes found: {n}": "Nalezené změny: {n}",
   "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "„{name}“ se ještě prohledává: počkejte, nebo hledání zastavte × na jeho řádku",
   "Look at the changes found in “{name}” first, or dismiss them": "Nejprve si prohlédněte změny nalezené v „{name}“, nebo je zahoďte",
-  "Lists “{name}”, the folder this one is in": "Zobrazuje „{name}“, složku, ve které je tato"
+  "Lists “{name}”, the folder this one is in": "Zobrazuje „{name}“, složku, ve které je tato",
+  "Showing {what}": "Zobrazeno: {what}",
+  "{title}, showing {what}": "{title}, zobrazeno: {what}"
 }

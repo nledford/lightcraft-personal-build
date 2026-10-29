@@ -322,5 +322,7 @@
   "Changes found: {n}": "ნაპოვნი ცვლილებები: {n}",
   "“{name}” is still being scanned: wait for it, or stop it with ✕ on its row": "„{name}“ ჯერ კიდევ მოწმდება: დაელოდეთ, ან შეაჩერეთ ×-ით მის მწკრივზე",
   "Look at the changes found in “{name}” first, or dismiss them": "ჯერ ნახეთ „{name}“-ში ნაპოვნი ცვლილებები, ან უარყავით ისინი",
-  "Lists “{name}”, the folder this one is in": "აჩვენებს „{name}“-ს, საქაღალდეს, რომელშიც ეს არის"
+  "Lists “{name}”, the folder this one is in": "აჩვენებს „{name}“-ს, საქაღალდეს, რომელშიც ეს არის",
+  "Showing {what}": "ნაჩვენებია: {what}",
+  "{title}, showing {what}": "{title}, ნაჩვენებია: {what}"
 }
