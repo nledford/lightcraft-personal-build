@@ -56,6 +56,12 @@
   Enable Filters had the filter put aside, a folder that undo restores while another folder is shown stays in it and
   comes back with Enable Filters once that other folder is no longer shown.
 
+### A refused name prompt stays open and says why
+- A one-line prompt (Rename Folder, New Folder on Disk, the preset and version names, New Library for a name it can't
+  use, Auto-Tag from Tracklog) that the app refuses, for example a folder name that is taken, now stays open with what
+  you typed and shows the reason, so you can change the name. Before, it closed without a word. A New Folder on Disk
+  that works now says so: “Created folder “Selects” in “2026/Shoot””. Cancel and Esc still close the prompt.
+
 ## 2026-10-26
 
 ### The sidebar from the keyboard

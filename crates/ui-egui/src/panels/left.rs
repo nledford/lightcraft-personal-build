@@ -31,7 +31,7 @@ pub(crate) use folders::follow_shown;
 pub(crate) use folders::folder_export_blocker;
 #[cfg(test)]
 pub(crate) use folders::native_path;
-pub(crate) use folders::{FolderPlace, folder_place, folder_row_of, move_photos, moved_text};
+pub(crate) use folders::{FolderPlace, created_text, folder_place, folder_row_of, move_photos, moved_text};
 use folders::{folder_rows, reveal_chosen};
 use keywords::keyword_rows;
 pub(crate) use local::{fs_cached, fs_cached_running, same_folder};
