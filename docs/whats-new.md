@@ -63,7 +63,7 @@
 ## 2026-10-26
 
 ### The sidebar from the keyboard
-- **View ▸ Keyboard in Sidebar** (Cmd+Alt+B) gives the keys to the left sidebar: a ring shows the row they are
+- **Window ▸ Keyboard in Sidebar** (Cmd+Alt+B) gives the keys to the left sidebar: a ring shows the row they are
   on, starting at what the grid shows. ↑ ↓ move (Home, End, Page Up, Page Down too), → unfolds a folder or
   section or steps into it, ← folds it or steps out, Enter or Space chooses the row as a click does, typing goes
   to the next row that starts so (the same letter again: the one after), and F2 renames an album, a keyword or
