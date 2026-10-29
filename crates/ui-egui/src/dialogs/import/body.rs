@@ -477,7 +477,6 @@ fn candidate_cell(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDial
         (Some(_), _) if in_trash && on => Some(if d.on_deleted == "fresh" { "Will be replaced" } else { "Will be restored" }),
         (Some(_), _) if d.is_copy_twin(i) => None,
         (Some(_), _) if in_trash => Some("In Recently Deleted"),
-        (Some(_), _) if d.is_browsed(i) && !d.copy => None,
         (Some(r), _) if r == "path" => Some("In library"),
         (Some(_), _) => Some("Duplicate"),
         (None, None) if d.copy && d.is_browsed(i) => Some("In library"),

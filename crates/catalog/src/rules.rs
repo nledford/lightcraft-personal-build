@@ -1095,9 +1095,9 @@ impl Rule {
                     Some(_) => COST_SMALL,
                 }),
                 "text" | "filePath" | "location" => COST_TEXT,
-                "keywords" | "person" | "personCount" | "stacked" | "copyName" | "fileName" | "extension" | "format" | "title" | "caption"
-                | "altText" | "city" | "state" | "country" | "camera" | "lens" | "creator" | "copyright" | "captureDate" | "importDate"
-                | "editDate" | "shutterSpeed" | "aspect" => COST_SMALL,
+                "keywords" | "person" | "personCount" | "stacked" | "sameContent" | "copyName" | "fileName" | "extension" | "format" | "title"
+                | "caption" | "altText" | "city" | "state" | "country" | "camera" | "lens" | "creator" | "copyright" | "captureDate"
+                | "importDate" | "editDate" | "shutterSpeed" | "aspect" => COST_SMALL,
                 _ => COST_SCALAR,
             },
         }
