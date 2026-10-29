@@ -335,8 +335,11 @@ first.
   and says where the files are; with the note removed, the library opens as whatever is in place.
 - **A restored catalog that doesn't open is taken back.** If the session can't open what it restored (a segment that
   has its checksum but is no catalog data), the library's files are moved back, the backup's go to
-  `Replaced/<the time> (not opened)`, and the session goes on in the library as it was. With `to` nothing is opened,
-  so that is found out only when the folder is.
+  `Replaced/<the time> (not opened)`, and the session goes on in the library as it was. With `to` nothing is opened for
+  work, so the restored catalog is tried instead (read as opening would read it, with nothing written to the
+  folder): one that doesn't open is taken back the same way; from a folder that held nothing before, what the restore
+  put there is removed again (those files and no others: the folder is never emptied wholesale). `to` names the
+  folder outright: a path with `..` in it is refused, since it can come to mean another folder once part of it is made.
 - **Not while the library is at work.** A restore of the open library is refused while a backup or any other
   background task is running.
 - **If it can neither go on nor go back** (the disk fails between two moves), the session changes and writes nothing
@@ -357,8 +360,11 @@ the library was not restored. While it waits its row reads "copied", and can sti
   library is next opened.
 - `Replaced/<the time>` is named for when the restore was asked for, not for when the files were moved.
 - `background` is for a session that goes on (the app, MCP, the control channel). Without it the command does all of
-  it before it returns, which is what a script or a one-shot `lightcraft-cli run` needs: that program ends when the
-  command returns, and a restore in the background ends with it, having changed nothing.
+  it before it returns, which is what a script needs: a program that ends when the command returns takes a restore
+  in the background with it, having changed nothing. A headless `lightcraft-cli run` does not: it waits for a
+  restore or a backup that one of its commands started in the background (and for every earlier one of the same kind before it
+  starts another), prints how each ended as one more line (`library.restoreStatus` / `library.backupStatus`), and
+  exits non-zero if any of them failed, even when a later one worked.
   `library.restoreStatus` reports a restore in the background and, asked until `running` is false, sees it through
   where no frame loop does.
 

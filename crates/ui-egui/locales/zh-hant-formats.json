@@ -281,6 +281,7 @@
   "Backups in {}": "{} 中的備份",
   "Folders of what restores replaced, removed: {}": "已移除的還原時被取代內容的資料夾：{}",
   "Folders of what restores replaced that could not be removed: {}": "未能移除的還原時被取代內容的資料夾：{}",
+  "Not available right now: {}": "目前無法使用：{}",
   "{count} more warnings.": "另有 {count} 則警告。",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "有 {skipped} 張影像未匯入，因為它們在目錄中的記錄不完整。",
   "{photos} catalog records processed; {collections} collections.": "已處理 {photos} 筆目錄記錄；{collections} 個收藏集。",

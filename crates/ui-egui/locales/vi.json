@@ -2277,5 +2277,13 @@
   "another library": "thư viện khác",
   "Choose a backup first": "Hãy chọn một bản sao lưu trước",
   "The library becomes what it was when the backup was made. What it holds now is kept in Replaced in the library folder.": "Thư viện trở lại như lúc tạo bản sao lưu. Nội dung hiện tại của nó được giữ trong Replaced trong thư mục thư viện.",
-  "What restores replaced (Replaced in the library folder) goes by the same rule.": "Những gì các lần khôi phục đã thay thế (Replaced trong thư mục thư viện) cũng theo quy tắc này."
+  "What restores replaced (Replaced in the library folder) goes by the same rule.": "Những gì các lần khôi phục đã thay thế (Replaced trong thư mục thư viện) cũng theo quy tắc này.",
+  "Choose a Folder": "Chọn thư mục",
+  "a restore of this library is under way": "đang khôi phục thư viện này",
+  "a backup of this library is running": "đang sao lưu thư viện này",
+  "a restore of this library stopped part-way; open the library again": "việc khôi phục thư viện này đã dừng giữa chừng; hãy mở lại thư viện",
+  "the library is not a folder on disk": "thư viện không phải là một thư mục trên đĩa",
+  "the library was closed or opened again before the backup was moved into place; it is as it was": "thư viện đã được đóng hoặc mở lại trước khi bản sao lưu được chuyển vào chỗ; thư viện vẫn như cũ",
+  "the backup was cancelled": "đã hủy sao lưu",
+  "the restore was stopped; the library is as it was": "đã dừng khôi phục; thư viện vẫn như cũ"
 }
