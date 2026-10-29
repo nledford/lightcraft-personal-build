@@ -7,6 +7,9 @@
 
 ## 2026-10-27
 
+### macOS: the Window menu lists the open windows
+- The Window menu now shows a row for each open window (the main window, and the second one from Window ▸ Second Window while it is open), below Bring All to Front. Before, the menu ended at Bring All to Front and listed no window. macOS also adds its own window items there: Fill, Center, Move & Resize and Full Screen Tile on macOS 15 and later, and Minimize All, Zoom All and Arrange in Front while Option is held.
+
 ### The app and Help menus follow the Mac's order
 - On macOS, Check for Updates… is in the LightCraft menu right under About LightCraft, as in other Mac apps. It stays in Help on Windows, Linux and the web.
 - Help opens with LightCraft Help, then What's New and Keyboard Shortcuts, then Send Feedback… and the ArtCraft Discord, the websites, and System Info, Open Log Folder and Debug. Join the ArtCraft Discord… no longer leads the menu, and LightCraft Help is no longer the last row.
