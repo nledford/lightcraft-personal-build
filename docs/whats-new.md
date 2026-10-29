@@ -7,6 +7,11 @@
 
 ## 2026-10-27
 
+### Screen readers and Voice Control name the grid's date headers as they read
+- A date header in the photo grid is now named with the text it shows ("Sunday, 20 September 2026 · 1 photo"), where
+  it was named with the bare date key ("2026-09-20"). VoiceOver reads what a sighted person reads, and Voice Control's
+  "click Sunday" finds the header.
+
 ### Increase contrast
 - **Settings ▸ Interface ▸ Increase contrast** (`view.increaseContrast` for scripts and agents) makes borders,
   separators and text stand out more in every theme: text reads at least 7:1 on the surfaces it is written on (panels,
