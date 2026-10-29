@@ -17,7 +17,9 @@ const T: Duration = Duration::from_secs(60);
 const PHOTOS: u64 = 40;
 
 /// Photos `IMG_0000` … on a share; the first ten are gone. The existence check waits for `open`
-/// (a share that answers slowly), at most `guard`, and counts its calls, and those made on the UI thread.
+/// (a share that answers slowly), at most `guard`, and counts its calls, and those made on the UI thread. The calls
+/// the availability worker makes for the grid's cells (a failed thumbnail's mark asks whether its file is offline)
+/// are not the check's and are not counted: they are cached answers, not a walk of the share.
 struct Share {
     open: Arc<AtomicBool>,
     on_ui: Arc<AtomicUsize>,
@@ -35,7 +37,9 @@ fn app_on_a_slow_share(guard: Duration) -> (Headless, Share) {
     let (ui, open, on_ui, calls) = (std::thread::current().id(), share.open.clone(), share.on_ui.clone(), share.calls.clone());
     let deadline = Instant::now() + guard;
     app.session.media.availability.set_probe(Arc::new(move |f| {
-        calls.fetch_add(1, Ordering::SeqCst);
+        if std::thread::current().name() != Some("lc-availability") {
+            calls.fetch_add(1, Ordering::SeqCst);
+        }
         if std::thread::current().id() == ui {
             on_ui.fetch_add(1, Ordering::SeqCst);
         }
