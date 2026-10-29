@@ -27,6 +27,8 @@ use albums::{albums_rows, drag_auto_scroll};
 pub(crate) use dates::browse_all_photos;
 use dates::date_rows;
 pub(crate) use folders::follow_shown;
+#[cfg(test)]
+pub(crate) use folders::move_folder_to;
 pub(crate) use folders::{FolderPlace, folder_place, folder_row_of, moved_text};
 use folders::{folder_rows, reveal_chosen};
 use keywords::keyword_rows;

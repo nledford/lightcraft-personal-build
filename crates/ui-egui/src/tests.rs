@@ -39,6 +39,7 @@ mod filmstrip;
 mod filmstrip_drag;
 mod focus_point;
 mod folder_drop;
+mod folder_move_message;
 mod grading;
 mod grid;
 mod grid_badges;
