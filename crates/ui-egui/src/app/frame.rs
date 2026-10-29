@@ -79,7 +79,7 @@ impl LightcraftApp {
         recheck::tick(self);
         tasks::poll(self, ctx);
         updates_ui::tick(self, ctx);
-        self.preview_build_status(ctx);
+        self.tick_preview_builds(ctx);
         self.backup_schedule(ctx);
         self.backup_status(ctx);
         panels::notices::quit_after_backup(self);

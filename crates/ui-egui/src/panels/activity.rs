@@ -130,7 +130,8 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
     // a scan that finished in the background and waits to be looked at
     let ready = app.sync_ready.clone();
     // newest first: the one just started is the one looked for
-    let mut all = app.session.activity.list();
+    // (a task waiting in line has nothing to show yet and no progress to draw: agents see it in `activity.list`)
+    let mut all: Vec<TaskInfo> = app.session.activity.list().into_iter().filter(|t| !t.waiting).collect();
     all.reverse();
     if !all.is_empty() {
         // look again soon: a young task becomes due, the ring and the bars move
