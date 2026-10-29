@@ -651,6 +651,12 @@
   button lists and what happens on disk, instead of pointing at the button. Contact Sheet, Auto-Stack and
   Slideshow Export no longer say "1 photos" or "1 stacks".
 
+### A big selection no longer slows every frame
+- With a very large selection (hundreds of thousands of photos), the app spent most of each frame working out which
+  menu items to enable, so the window felt frozen even when nothing was happening. Menus, the grid and the Keywording
+  box now answer from facts kept for the current selection, refreshed when the selection or the photos change, so an
+  idle frame is no longer slowed by how many photos are selected. Which items are enabled hasn't changed.
+
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a
   photo by half a pixel used to lose a third of its finest detail; now it keeps most of it, without halos around

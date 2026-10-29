@@ -772,7 +772,7 @@ fn cell(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, r: Rect, view: 
     let Some(photo) = app.session.catalog.photo(id).cloned() else { return };
     let resp = ui.interact(r, egui::Id::unique(("cell", id.0)), Sense::click_and_drag());
     register(ui, format!("thumb:{}", id.0), r);
-    let state = app.session.selection.state_of(id);
+    let state = app.session.selection_view().state_of(id);
     let selected = state != lightcraft_engine::SelectionState::NotSelected;
     let spoken = cell_description(app, &photo);
     resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, true, selected, &spoken));
@@ -931,7 +931,7 @@ fn cell_interaction(
     }
     // drag the selection (this photo joins it, or replaces it when it wasn't selected)
     if resp.drag_started() {
-        if !app.session.selection.contains(id) {
+        if !app.session.selection_view().contains(id) {
             app.act("library.select", json!({"ids": [id.0]}));
         }
         app.ui.dragging_photos = Some(app.session.selection.ids.iter().map(|p| p.0).collect());
@@ -1133,6 +1133,11 @@ pub fn local_only(app: &LightcraftApp, ids: &[PhotoId]) -> bool {
     !ids.is_empty() && ids.iter().all(|id| app.session.catalog.photo(*id).is_some_and(|p| p.local))
 }
 
+/// [`local_only`] for the photos commands act on (the selection, else the active photo), without walking a big selection every frame.
+pub fn selection_local_only(app: &LightcraftApp) -> bool {
+    app.session.selected_count() > 0 && !app.session.selection_facts().any_in_library(&app.session)
+}
+
 /// Why an album action is off for Local photos.
 pub fn albums_hint() -> String {
     crate::i18n::tr("Albums hold library photos: Add to My Photos first").to_string()
@@ -1210,7 +1215,7 @@ pub fn context_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
 }
 
 fn context_menu_open_and_edit(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
-    if !app.session.selection.contains(id) {
+    if !app.session.selection_view().contains(id) {
         app.act("library.select", json!({"ids": [id.0]}));
     }
     if MenuItem::new(crate::i18n::tr("Open in Detail")).show(ui).clicked() {
@@ -1279,7 +1284,7 @@ fn context_menu_rate(app: &mut LightcraftApp, ui: &mut egui::Ui) {
 }
 
 fn context_menu_albums(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
-    if local_only(app, &app.session.selected()) {
+    if selection_local_only(app) {
         // albums hold library photos (issue #684): nothing here to add until they join My Photos
         MenuItem::new(crate::i18n::tr("Add to Album")).enabled(false).disabled_reason(&albums_hint()).widget("button:contextAddToAlbum").show(ui);
     } else {
