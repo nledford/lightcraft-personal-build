@@ -18,7 +18,6 @@ use crate::LightcraftApp;
 use crate::menu_item::MenuItem;
 use crate::multi_select::{Click, ListRows, targets};
 use crate::state::Dialog;
-use crate::widgets::register;
 
 /// A sidebar list in which several rows can be chosen and then deleted.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
