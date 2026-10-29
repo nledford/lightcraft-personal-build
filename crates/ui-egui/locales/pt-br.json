@@ -1941,7 +1941,6 @@
   "Skipped: files that can't be read": "Ignorados: arquivos que não podem ser lidos",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "Esta pasta não está lá: foi movida ou renomeada, ou o disco dela não está conectado.",
   "Relink photos whose file was renamed or moved": "Vincular de novo fotos cujo arquivo foi renomeado ou movido",
-  "A folder is already being synchronized": "Uma pasta já está sendo sincronizada",
   "Synchronizing…": "Sincronizando…",
   "Relinked": "Revinculadas",
   "Removed": "Removidas",
@@ -1950,8 +1949,6 @@
   "Stopped": "Interrompido",
   "Stopped by an error (see the log)": "Interrompido por um erro (veja o log)",
   "Not saved": "Não salvo",
-  "A folder is being synchronized": "Uma pasta está sendo sincronizada",
-  "Wait for the import to finish": "Aguarde a importação terminar",
   "Filter settings": "Filtrar ajustes",
   "No setting matches what is typed.": "Nenhum ajuste corresponde ao que foi digitado.",
   "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Tente uma palavra ou parte dela: a busca inclui os nomes das abas e seções, os rótulos e as explicações.",
@@ -2329,5 +2326,9 @@
   "Keyboard in Sidebar": "Teclado na barra lateral",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "As teclas estão na barra lateral: as setas movem, Enter abre, digite para achar, Esc volta às fotos",
   "This row has no name to change": "Esta linha não tem um nome para mudar",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Palavras-chave e predefinições valem só para arquivos novos, não para fotos que já estão em Local"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Palavras-chave e predefinições valem só para arquivos novos, não para fotos que já estão em Local",
+  "Queued: it starts when the task ahead of it ends": "Na fila: começa quando a tarefa anterior terminar",
+  "Another library was opened: nothing was done": "Outra biblioteca foi aberta: nada foi feito",
+  "Photos of the folder changed while it was read: nothing was done": "As fotos da pasta mudaram durante a leitura: nada foi feito",
+  "Starts next": "Começa em seguida"
 }

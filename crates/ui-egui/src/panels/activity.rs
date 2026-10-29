@@ -688,7 +688,12 @@ fn scan_notice(ui: &mut egui::Ui, t: &Tokens, ready: &crate::sync::SyncReady, wi
     reviewed.then_some(Notice::Review)
 }
 
-/// One task: name and ✕, the bar, the detail line. True when ✕ was clicked.
+/// What ✕ on `task`'s row is called, for screen readers and its tooltip.
+pub(crate) fn cross_name(task: &TaskInfo) -> String {
+    if task.waiting { tr_format!("Remove from Queue: {label}", label = tr(&task.label)) } else { tr("Cancel").to_string() }
+}
+
+/// One task: name and ✕, the bar, the detail line (a waiting one: name and ✕, when it starts). True when ✕ was clicked.
 fn row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> bool {
     let mut clicked = false;
     let r = ui.vertical(|ui| {
@@ -703,17 +708,23 @@ fn row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> bool {
             });
             if cross {
                 let (rect, resp) = ui.allocate_exact_size(vec2(CROSS, CROSS), Sense::click());
-                crate::widgets::announce(&resp, format!("{}: {}", tr("Cancel"), tr(&task.label)));
+                let name = cross_name(task);
+                crate::widgets::announce(&resp, if task.waiting { name.clone() } else { format!("{name}: {}", tr(&task.label)) });
                 paint(ui.painter(), rect.shrink(2.0), Icon::Close, if resp.hovered() || resp.has_focus() { t.text } else { t.icon });
                 // (a row scrolled out of view has nothing to click: its ✕ is the list's to bring back first)
                 if ui.is_rect_visible(rect) {
                     register(ui, format!("activity:cancel:{}", task.id), rect);
                 }
-                clicked = resp.on_hover_text(tr("Cancel")).clicked();
+                clicked = resp.on_hover_text(name).clicked();
             }
         });
-        bar(ui, task, width);
-        let line = detail_line(task);
+        let line = if task.waiting {
+            // (counted as the Queued toast counts: the waiting tasks ahead of it, after the running one)
+            if task.place <= 1 { tr("Starts next").to_string() } else { tr_format!("Starts after {n} more", n = task.place - 1) }
+        } else {
+            bar(ui, task, width);
+            detail_line(task)
+        };
         if !line.is_empty() {
             ui.add(egui::Label::new(RichText::new(line).font(t.font(11.0)).color(t.text_dim)).truncate());
         }

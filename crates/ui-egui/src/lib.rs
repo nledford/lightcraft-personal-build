@@ -432,6 +432,8 @@ pub struct LightcraftApp {
     /// An Erase question a finished Move Files to Trash has to ask (photo ids, library generation),
     /// waiting for the dialog slot to be free.
     pub trash_erase_later: Option<(Vec<u64>, u64)>,
+    /// A Synchronize Folder that waited in line, scanning its folder again before it runs.
+    pub sync_queued: Option<sync::SyncRescan>,
     /// A Lightroom catalog inspect/import in progress.
     pub lightroom: Option<lightroom_import::LightroomTask>,
     /// Last terminal Lightroom result, exposed by the command's status/wait response.

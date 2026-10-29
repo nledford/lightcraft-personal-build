@@ -350,5 +350,9 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Ei voitu siirtää, jäävät kirjastoon ({n}): {why}",
   "Photos whose file was already gone: {n}": "Kuvat, joiden tiedosto oli jo poissa: {n}",
   "Sidecars left in place: {n}": "Paikoilleen jätetyt sivutiedostot: {n}",
-  "Files other photos still use, kept: {n}": "Säilytetyt tiedostot, joita muut kuvat vielä käyttävät: {n}"
+  "Files other photos still use, kept: {n}": "Säilytetyt tiedostot, joita muut kuvat vielä käyttävät: {n}",
+  "Queued: it starts after {n} more": "Jonossa: alkaa {n} muun jälkeen",
+  "Left alone: {n} (synchronize again to review them)": "Jätetty ennalleen: {n} (synkronoi uudelleen tarkistaaksesi)",
+  "Starts after {n} more": "Alkaa {n} muun jälkeen",
+  "Remove from Queue: {label}": "Poista jonosta: {label}"
 }

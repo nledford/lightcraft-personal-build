@@ -350,5 +350,9 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Fotos que não puderam ser movidas e continuam na biblioteca ({n}): {why}",
   "Photos whose file was already gone: {n}": "Fotos cujo arquivo já não existia: {n}",
   "Sidecars left in place: {n}": "Arquivos sidecar deixados no lugar: {n}",
-  "Files other photos still use, kept: {n}": "Arquivos que outras fotos ainda usam (mantidos): {n}"
+  "Files other photos still use, kept: {n}": "Arquivos que outras fotos ainda usam (mantidos): {n}",
+  "Queued: it starts after {n} more": "Na fila: começa depois de mais {n}",
+  "Left alone: {n} (synchronize again to review them)": "Deixados como estavam: {n} (sincronize de novo para revisá-los)",
+  "Starts after {n} more": "Começa depois de mais {n}",
+  "Remove from Queue: {label}": "Remover da fila: {label}"
 }

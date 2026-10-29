@@ -350,5 +350,9 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "有 {n} 个无法移动，仍留在图库中：{why}",
   "Photos whose file was already gone: {n}": "文件已不存在的照片：{n} 张",
   "Sidecars left in place: {n}": "保留在原处的附属文件：{n} 个",
-  "Files other photos still use, kept: {n}": "其他照片仍在使用而保留的文件：{n} 个"
+  "Files other photos still use, kept: {n}": "其他照片仍在使用而保留的文件：{n} 个",
+  "Queued: it starts after {n} more": "已加入队列：再过 {n} 个后开始",
+  "Left alone: {n} (synchronize again to review them)": "未处理：{n}（再次同步以查看）",
+  "Starts after {n} more": "再过 {n} 个后开始",
+  "Remove from Queue: {label}": "从队列中移除：{label}"
 }

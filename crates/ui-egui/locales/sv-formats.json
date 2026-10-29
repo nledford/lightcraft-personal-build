@@ -350,5 +350,9 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Kunde inte flyttas och finns kvar i biblioteket ({n}): {why}",
   "Photos whose file was already gone: {n}": "Foton vars fil redan saknades: {n}",
   "Sidecars left in place: {n}": "Sidofiler som lämnats kvar: {n}",
-  "Files other photos still use, kept: {n}": "Filer som andra foton fortfarande använder, behållna: {n}"
+  "Files other photos still use, kept: {n}": "Filer som andra foton fortfarande använder, behållna: {n}",
+  "Queued: it starts after {n} more": "I kö: startar efter {n} till",
+  "Left alone: {n} (synchronize again to review them)": "Lämnade orörda: {n} (synkronisera igen för att granska dem)",
+  "Starts after {n} more": "Startar efter {n} till",
+  "Remove from Queue: {label}": "Ta bort från kön: {label}"
 }

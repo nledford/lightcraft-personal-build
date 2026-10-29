@@ -16,8 +16,6 @@
   "=  exactly": "=  přesně",
   "A blank template keeps the original names.": "Prázdná šablona zachová původní názvy.",
   "A filter is hiding this view's photos: change it, or clear it (View → Clear Filters)": "Fotografie v tomto zobrazení skrývá filtr: změňte jej nebo jej zrušte (Zobrazení → Zrušit filtry)",
-  "A folder is already being synchronized": "Již probíhá synchronizace složky",
-  "A folder is being synchronized": "Probíhá synchronizace složky",
   "A keyword set needs a name": "Sada klíčových slov musí mít název",
   "A one-time download of about": "Jednorázové stažení přibližně",
   "A pen's pressure sets the size and flow of the brush": "Přítlak pera určuje velikost a tok štětce",
@@ -2084,7 +2082,6 @@
   "Visualize range": "Zobrazit rozsah",
   "Vivid": "Živé",
   "Vivid Pop": "Živé zvýraznění",
-  "Wait for the import to finish": "Počkejte na dokončení importu",
   "Waiting to start…": "Čekání na spuštění…",
   "Warm Film": "Teplý film",
   "Warm Glow": "Teplá záře",
@@ -2533,5 +2530,9 @@
   "This cannot be undone: the files are not kept anywhere.": "Tuto akci nelze vrátit: soubory se nikde neuchovají.",
   "Only these files are erased; XMP sidecars beside them stay.": "Smažou se jen tyto soubory; doprovodné soubory XMP vedle nich zůstanou.",
   "Cancel leaves these photos in the library and their files where they are.": "Zrušit ponechá tyto fotografie v knihovně a jejich soubory na místě.",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Klíčová slova a předvolby se použijí jen u nových souborů, ne u fotografií, které už jsou v Místních souborech"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Klíčová slova a předvolby se použijí jen u nových souborů, ne u fotografií, které už jsou v Místních souborech",
+  "Queued: it starts when the task ahead of it ends": "Ve frontě: začne, až skončí úloha před ní",
+  "Another library was opened: nothing was done": "Byla otevřena jiná knihovna: nic se neprovedlo",
+  "Photos of the folder changed while it was read: nothing was done": "Fotografie ve složce se během čtení změnily: nic se neprovedlo",
+  "Starts next": "Začne jako další"
 }

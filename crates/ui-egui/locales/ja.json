@@ -1943,7 +1943,6 @@
   "Skipped: files that can't be read": "スキップ: 読み込めないファイル",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "このフォルダが見つかりません。移動または名前の変更がされたか、ディスクが接続されていません。",
   "Relink photos whose file was renamed or moved": "ファイル名の変更や移動があった写真をリンクし直す",
-  "A folder is already being synchronized": "すでにフォルダを同期中です",
   "Synchronizing…": "同期中…",
   "Relinked": "リンクし直し",
   "Removed": "除去",
@@ -1952,8 +1951,6 @@
   "Stopped": "停止しました",
   "Stopped by an error (see the log)": "エラーで停止しました（ログを参照）",
   "Not saved": "保存されていません",
-  "A folder is being synchronized": "フォルダを同期中です",
-  "Wait for the import to finish": "読み込みが終わるまでお待ちください",
   "Filter settings": "設定を絞り込む",
   "No setting matches what is typed.": "入力に一致する設定はありません。",
   "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "単語またはその一部で試してください。タブとセクションの名前、ラベル、説明文が検索されます。",
@@ -2483,5 +2480,9 @@
   "Keyboard in Sidebar": "サイドバーでキーボードを使う",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "キーはサイドバーにあります。矢印で移動、Enter で開く、入力で検索、Esc で写真に戻ります",
   "This row has no name to change": "この行には変更できる名前がありません",
-  "Keywords and presets apply to new files only, not to photos already in Local": "キーワードとプリセットは新しいファイルにのみ適用され、すでにローカルにある写真には適用されません"
+  "Keywords and presets apply to new files only, not to photos already in Local": "キーワードとプリセットは新しいファイルにのみ適用され、すでにローカルにある写真には適用されません",
+  "Queued: it starts when the task ahead of it ends": "キューに追加: 前のタスクが終わると開始します",
+  "Another library was opened: nothing was done": "別のライブラリが開かれました: 何も行われていません",
+  "Photos of the folder changed while it was read: nothing was done": "読み取り中にフォルダ内の写真が変更されました: 何も行われていません",
+  "Starts next": "次に開始します"
 }

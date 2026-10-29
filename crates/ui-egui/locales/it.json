@@ -2031,7 +2031,6 @@
   "Skipped: files that can't be read": "Saltati: file che non si possono leggere",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "Questa cartella non c'è: è stata spostata o rinominata, oppure il suo disco non è collegato.",
   "Relink photos whose file was renamed or moved": "Ricollega le foto il cui file è stato rinominato o spostato",
-  "A folder is already being synchronized": "Una cartella è già in sincronizzazione",
   "Synchronizing…": "Sincronizzazione in corso…",
   "Relinked": "Ricollegate",
   "Removed": "Rimosse",
@@ -2040,8 +2039,6 @@
   "Stopped": "Interrotto",
   "Stopped by an error (see the log)": "Interrotta da un errore (vedi il log)",
   "Not saved": "Non salvato",
-  "A folder is being synchronized": "Una cartella è in sincronizzazione",
-  "Wait for the import to finish": "Aspetta che l'importazione finisca",
   "Appearance": "Aspetto",
   "Appearance Mode": "Modalità aspetto",
   "Sync with System": "Segui il sistema",
@@ -2488,5 +2485,9 @@
   "This cannot be undone: the files are not kept anywhere.": "Questa operazione non si può annullare: i file non vengono conservati da nessuna parte.",
   "Only these files are erased; XMP sidecars beside them stay.": "Vengono cancellati solo questi file; i file collaterali XMP accanto a essi restano.",
   "Cancel leaves these photos in the library and their files where they are.": "Annulla lascia queste foto nella libreria e i loro file dove sono.",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Parole chiave e preset si applicano solo ai file nuovi, non alle foto già in Locale"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Parole chiave e preset si applicano solo ai file nuovi, non alle foto già in Locale",
+  "Queued: it starts when the task ahead of it ends": "In coda: parte quando finisce l'attività precedente",
+  "Another library was opened: nothing was done": "È stata aperta un'altra libreria: non è stato fatto nulla",
+  "Photos of the folder changed while it was read: nothing was done": "Le foto della cartella sono cambiate durante la lettura: non è stato fatto nulla",
+  "Starts next": "Parte subito dopo"
 }

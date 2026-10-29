@@ -1653,7 +1653,6 @@
   "Skipped: files that can't be read": "Пропущено: файлы, которые не удаётся прочитать",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "Этой папки нет: её переместили или переименовали, либо её диск не подключён.",
   "Relink photos whose file was renamed or moved": "Повторно связать фото, файл которых переименован или перемещён",
-  "A folder is already being synchronized": "Папка уже синхронизируется",
   "Synchronizing…": "Синхронизация…",
   "Imported": "Импортированные",
   "Relinked": "Связано повторно",
@@ -1663,8 +1662,6 @@
   "Stopped": "Остановлено",
   "Stopped by an error (see the log)": "Остановлено из-за ошибки (см. журнал)",
   "Not saved": "Не сохранено",
-  "A folder is being synchronized": "Папка синхронизируется",
-  "Wait for the import to finish": "Дождитесь завершения импорта",
   "Files": "Файлы",
   "Monitor": "Монитор",
   "Filter settings": "Фильтр настроек",
@@ -2476,5 +2473,9 @@
   "Keyboard in Sidebar": "Клавиатура в боковой панели",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Клавиши работают в боковой панели: стрелки перемещают, Enter открывает, набор текста ищет, Esc возвращает к фотографиям",
   "This row has no name to change": "У этой строки нет имени, которое можно изменить",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Ключевые слова и пресеты применяются только к новым файлам, а не к фото, которые уже есть в «Локальных»"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Ключевые слова и пресеты применяются только к новым файлам, а не к фото, которые уже есть в «Локальных»",
+  "Queued: it starts when the task ahead of it ends": "В очереди: начнётся, когда закончится задача перед ней",
+  "Another library was opened: nothing was done": "Открыта другая библиотека: ничего не сделано",
+  "Photos of the folder changed while it was read: nothing was done": "Фотографии в папке изменились во время чтения: ничего не сделано",
+  "Starts next": "Начнётся следующей"
 }

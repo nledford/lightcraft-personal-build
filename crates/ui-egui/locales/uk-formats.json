@@ -350,5 +350,9 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Не вдалося перемістити ({n}), вони залишаються в бібліотеці: {why}",
   "Photos whose file was already gone: {n}": "Фото, файлу яких уже не було: {n}",
   "Sidecars left in place: {n}": "Залишено супровідних файлів: {n}",
-  "Files other photos still use, kept: {n}": "Файли, які використовують інші фото (залишено): {n}"
+  "Files other photos still use, kept: {n}": "Файли, які використовують інші фото (залишено): {n}",
+  "Queued: it starts after {n} more": "У черзі: почнеться після ще {n}",
+  "Left alone: {n} (synchronize again to review them)": "Залишено без змін: {n} (синхронізуйте знову, щоб переглянути)",
+  "Starts after {n} more": "Почнеться після ще {n}",
+  "Remove from Queue: {label}": "Прибрати з черги: {label}"
 }

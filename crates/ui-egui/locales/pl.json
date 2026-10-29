@@ -1858,7 +1858,6 @@
   "Skipped: files that can't be read": "Pominięto: pliki, których nie można odczytać",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "Ten folder nie istnieje: przeniesiono go, zmieniono nazwę albo odłączono dysk.",
   "Relink photos whose file was renamed or moved": "Połącz ponownie zdjęcia, których pliki przeniesiono lub przemianowano",
-  "A folder is already being synchronized": "Trwa już synchronizacja folderu",
   "Synchronizing…": "Synchronizowanie…",
   "Relinked": "Połączono ponownie",
   "Removed": "Usunięto",
@@ -1867,8 +1866,6 @@
   "Stopped": "Zatrzymano",
   "Stopped by an error (see the log)": "Zatrzymano z powodu błędu (zobacz dziennik)",
   "Not saved": "Nie zapisano",
-  "A folder is being synchronized": "Trwa synchronizacja folderu",
-  "Wait for the import to finish": "Poczekaj na zakończenie importu",
   "Quit while tasks are running?": "Zakończyć, gdy trwają zadania?",
   "Exporting contact sheet": "Eksportowanie arkusza stykowego",
   "Reading folder": "Odczytywanie folderu",
@@ -2410,5 +2407,9 @@
   "This cannot be undone: the files are not kept anywhere.": "Tego nie można cofnąć: pliki nie są nigdzie przechowywane.",
   "Only these files are erased; XMP sidecars beside them stay.": "Usuwane są tylko te pliki; pliki pomocnicze XMP obok nich zostają.",
   "Cancel leaves these photos in the library and their files where they are.": "Anuluj pozostawi te zdjęcia w bibliotece, a ich pliki tam, gdzie są.",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Słowa kluczowe i ustawienia predefiniowane dotyczą tylko nowych plików, nie zdjęć, które już są w Lokalnych"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Słowa kluczowe i ustawienia predefiniowane dotyczą tylko nowych plików, nie zdjęć, które już są w Lokalnych",
+  "Queued: it starts when the task ahead of it ends": "W kolejce: rozpocznie się po zakończeniu poprzedniego zadania",
+  "Another library was opened: nothing was done": "Otwarto inną bibliotekę: nic nie zrobiono",
+  "Photos of the folder changed while it was read: nothing was done": "Zdjęcia w folderze zmieniły się podczas odczytu: nic nie zrobiono",
+  "Starts next": "Rozpocznie się jako następne"
 }

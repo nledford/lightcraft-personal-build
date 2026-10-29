@@ -67,6 +67,7 @@ impl LightcraftApp {
         merge::poll(self, ctx);
         import::poll_scan(self, ctx);
         sync::poll(self, ctx);
+        sync::poll_rescan(self, ctx);
         sync::poll_run(self, ctx);
         trash_run::poll(self, ctx);
         // Import commits batches and must not run twice in one host frame. The first layout pass
@@ -96,30 +97,14 @@ impl LightcraftApp {
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(folder) = self.session.import_defaults.auto_folder.clone() {
             const LABEL: &str = "Auto Import";
-            if now - self.ui.auto_import_at >= 3.0
-                && self.import.is_none()
-                && self.sync_run.is_none()
-                && self.lightroom.is_none()
-                && !self.tasks.is_running(LABEL)
-            {
+            // (it waits for the whole library lane: what runs, rescans or waits there goes first)
+            if now - self.ui.auto_import_at >= 3.0 && !import::library_busy(self) && self.lightroom.is_none() && !self.tasks.is_running(LABEL) {
                 self.ui.auto_import_at = now;
                 let watched = folder.clone();
                 let work = move || lightcraft_engine::cmd::library::list_auto_import_folder(&folder);
-                let done = move |app: &mut LightcraftApp, _ctx: &egui::Context, listing: Result<Vec<(String, u64)>, String>| {
-                    let listing = match listing {
-                        Ok(l) => l,
-                        Err(e) => return log::debug!("auto import: {e}"),
-                    };
-                    let p = serde_json::json!({"listing": listing, "start": false});
-                    let Ok(r) = app.session.execute("library.autoImportScan", &p) else { return };
-                    let Some(mut params) = r.get("import").cloned().filter(|_| app.import.is_none()) else { return };
-                    let paths: Vec<String> =
-                        params["paths"].as_array().into_iter().flatten().filter_map(|v| v.as_str().map(str::to_string)).collect();
-                    if let Some(o) = params.as_object_mut() {
-                        o.remove("paths");
-                    }
-                    let undo0 = app.session.undo.len();
-                    app.import = Some(import::ImportTask::new(paths, params, undo0, false).named_below(vec![watched]).auto());
+                let done = move |app: &mut LightcraftApp, _ctx: &egui::Context, listing: Result<Vec<(String, u64)>, String>| match listing {
+                    Ok(listing) => import::auto_import_listed(app, listing, vec![watched]),
+                    Err(e) => log::debug!("auto import: {e}"),
                 };
                 // listed every few seconds: quiet, no row in the activity stack (so nothing to say of how it ended)
                 let done = move |app: &mut LightcraftApp, ctx: &egui::Context, listing| {

@@ -350,5 +350,9 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Không thể chuyển và vẫn ở trong thư viện ({n}): {why}",
   "Photos whose file was already gone: {n}": "Ảnh có tệp đã mất từ trước: {n}",
   "Sidecars left in place: {n}": "Sidecar để lại tại chỗ: {n}",
-  "Files other photos still use, kept: {n}": "Tệp ảnh khác vẫn đang dùng, được giữ lại: {n}"
+  "Files other photos still use, kept: {n}": "Tệp ảnh khác vẫn đang dùng, được giữ lại: {n}",
+  "Queued: it starts after {n} more": "Trong hàng đợi: bắt đầu sau {n} tác vụ nữa",
+  "Left alone: {n} (synchronize again to review them)": "Để nguyên: {n} (đồng bộ lại để xem xét)",
+  "Starts after {n} more": "Bắt đầu sau {n} tác vụ nữa",
+  "Remove from Queue: {label}": "Xóa khỏi hàng đợi: {label}"
 }

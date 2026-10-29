@@ -350,5 +350,9 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Tidak dapat dipindahkan dan tetap di pustaka ({n}): {why}",
   "Photos whose file was already gone: {n}": "Foto yang file-nya sudah tidak ada: {n}",
   "Sidecars left in place: {n}": "Sidecar yang dibiarkan di tempatnya: {n}",
-  "Files other photos still use, kept: {n}": "File yang masih dipakai foto lain, dipertahankan: {n}"
+  "Files other photos still use, kept: {n}": "File yang masih dipakai foto lain, dipertahankan: {n}",
+  "Queued: it starts after {n} more": "Dalam antrean: dimulai setelah {n} lagi",
+  "Left alone: {n} (synchronize again to review them)": "Dibiarkan: {n} (sinkronkan lagi untuk meninjau)",
+  "Starts after {n} more": "Dimulai setelah {n} lagi",
+  "Remove from Queue: {label}": "Hapus dari antrean: {label}"
 }

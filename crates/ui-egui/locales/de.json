@@ -2092,7 +2092,6 @@
   "Skipped: files that can't be read": "Übersprungen: Dateien, die nicht gelesen werden können",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "Dieser Ordner ist nicht vorhanden: Er wurde verschoben oder umbenannt, oder sein Datenträger ist nicht verbunden.",
   "Relink photos whose file was renamed or moved": "Fotos neu verknüpfen, deren Datei umbenannt oder verschoben wurde",
-  "A folder is already being synchronized": "Es wird bereits ein Ordner synchronisiert",
   "Synchronizing…": "Wird synchronisiert…",
   "Relinked": "Neu verknüpft",
   "Removed": "Entfernt",
@@ -2101,8 +2100,6 @@
   "Stopped": "Angehalten",
   "Stopped by an error (see the log)": "Durch einen Fehler angehalten (siehe Protokoll)",
   "Not saved": "Nicht gespeichert",
-  "A folder is being synchronized": "Ein Ordner wird gerade synchronisiert",
-  "Wait for the import to finish": "Warte, bis der Import abgeschlossen ist",
   "Filter settings": "Einstellungen filtern",
   "No setting matches what is typed.": "Keine Einstellung passt zur Eingabe.",
   "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Versuche ein Wort oder einen Teil davon: Durchsucht werden die Namen der Tabs und Abschnitte, Beschriftungen und Erklärungen.",
@@ -3565,5 +3562,9 @@
   "Keyboard in Sidebar": "Tastatur in der Seitenleiste",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Die Tasten gelten der Seitenleiste: Pfeile bewegen, Eingabe öffnet, Tippen sucht, Esc führt zurück zu den Fotos",
   "This row has no name to change": "Diese Zeile hat keinen Namen, der sich ändern ließe",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Stichwörter und Vorgaben gelten nur für neue Dateien, nicht für Fotos, die schon in „Lokal“ sind"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Stichwörter und Vorgaben gelten nur für neue Dateien, nicht für Fotos, die schon in „Lokal“ sind",
+  "Queued: it starts when the task ahead of it ends": "In der Warteschlange: startet, wenn die Aufgabe davor endet",
+  "Another library was opened: nothing was done": "Eine andere Bibliothek wurde geöffnet: es wurde nichts getan",
+  "Photos of the folder changed while it was read: nothing was done": "Fotos des Ordners haben sich beim Lesen geändert: es wurde nichts getan",
+  "Starts next": "Startet als Nächstes"
 }
