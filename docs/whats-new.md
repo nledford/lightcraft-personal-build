@@ -900,14 +900,17 @@
   desktop app).
 
 ### Every way to the samples leads to the editor
-- However the sample photos come into an empty library (a thumbnail, the welcome's Try Sample Photos button, Help ▸
-  Add Sample Photos, an agent), they open on a sample in Detail with the Edit panel, ready to edit; a thumbnail opens
-  the one clicked. A library that already has photos stays where it was.
+- However the sample photos come in while an empty library's welcome is showing (a thumbnail, the welcome's Try Sample
+  Photos button, Help ▸ Add Sample Photos, an agent), they open on a sample in Detail with the Edit panel, ready to
+  edit; a thumbnail opens the one clicked. A library that already has photos, or a Local folder or Recently Deleted on
+  screen, stays where it was.
 - The banner then walks the first edit through: "Drag any slider: the original never changes. Press Y to compare before
-  and after." (the key Before/After Side by Side is bound to); once a slider is dragged, "That's your first edit. Press Y
-  to see it beside the original."; while a Before / After layout shows it, "The original beside your edit: the file
-  itself never changes."; then the usual message. A rating or a keyword is not an edit; another unedited sample, or an
-  undo back to the start, is invited again.
+  and after."; once a slider is dragged, "That's your first edit. Press Y to see it beside the original."; while a
+  Before / After layout shows it, "The original beside your edit: the file itself never changes."; then the usual
+  message. Y is the default key of Before/After Side by Side: the banner names whatever key it is bound to, and with
+  none bound it leaves the key out ("That's your first edit. View → Before/After Side by Side shows it beside the
+  original."). A rating or a keyword is not an edit; another unedited sample, or an undo back to the start, is invited
+  again.
 
 ### Selection rings you can see in the light themes
 - The active photo's white outline vanished on Silver and Paper's light grid, and told the active photo from the other
