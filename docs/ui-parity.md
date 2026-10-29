@@ -125,6 +125,28 @@ Found and fixed (2026-10-12): 47 problems in the views and tools, 11 more in the
 Keyboard reach: Crop (angle, offsets, scale, aspect) and Remove (size, feather, opacity) settings
 are reached with Tab and adjusted with the arrow keys (tested).
 
+Keyboard gate: on the same 52 screens the test presses Tab until the focus comes back to a control it
+already visited. Every control that takes a click or the focus (the roles above, not a disabled one,
+not text the pointer can select) has to be reached, and the frame has to look different around it with
+the focus than without it (the shapes painted on and around the control are compared, no pixels, so the
+result does not depend on a GPU). A control that takes the focus back at once, such as a dialog's one
+text field, has no verdict on the second point. Today's gaps are in
+`crates/ui-egui/tests/a11y-keyboard-gaps.json`: a control Tab never reaches is listed by role, name and
+the windows around it; a control that shows no focus is counted by role and the windows around it, so the
+file does not repeat every sidebar button on every screen. Only a gap that is not listed fails.
+`LIGHTCRAFT_A11Y_KEYBOARD_BASELINE=shrink` removes fixed entries; `=write` removes them too, adds the screens
+the file does not list yet and still fails on a new problem on a listed screen (a clean screen is listed as `{}`);
+`=regenerate` rewrites the file. Listed today: 116 controls Tab never reaches on 27
+screens (the rating row's 2 to 5 star buttons on an unrated photo, on 27 screens, which are not Tab stops on purpose: the row is one stop, like a radio group, and the arrow keys change the rating and the focus follows; the Photo and View menus' scroll
+strip, which takes neither a click nor the focus but is announced as a button; and the Remove panel's
+threshold and its reset button, which are switched off and announced as enabled), and about 2,830 controls on 41 screens that
+show no focus, most of them buttons that paint no ring (the top bar, the sidebar, the tool strip). The
+audit hides Local's Pictures, Desktop, Downloads and Home and waits for the renders to come back before it
+counts, so the counts are the same on every computer and every run. The "shows no focus" counts are large
+buckets: after fixing one, run `shrink`, or a new control without a focus ring in the same place passes
+under the old count. A control scrolled out of view paints nothing with or without the focus, so it
+counts as showing none too, and content added above a scroll area can move one into a bucket.
+
 Canvas tools by keyboard (`crates/ui-egui/src/canvas_keys.rs`, tests in `tests_canvas_keys.rs`):
 every handle drawn on the photo has an invisible stand-in that takes the focus. Tab reaches it, a
 screen reader reads its name and position ("Crop bottom-right corner", "left 0%, top 0%, right
