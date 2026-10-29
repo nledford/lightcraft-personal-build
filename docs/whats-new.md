@@ -2,6 +2,12 @@
 
 ## 2026-10-28
 
+### Dialogs are exposed to screen readers as dialogs
+- Export, Settings and the other dialogs, the library chooser and the prompts that stop the window (the quit question, a
+  library that could not be opened, a settings file problem) are now exposed to screen readers as dialogs: modal ones, so the
+  rest of the window is marked as blocked while one is open, and an alert dialog for the prompts. The answer to Check for
+  Updates is a dialog too, but not a modal one. Before, each was a plain group that only carried the dialog's title.
+
 ### Screen readers tell buttons, switches and choices apart
 - With VoiceOver, a button that does something (Reset, Auto, Choose…, Create Album, Back) is now a button, not a check box that is "unchecked". A button that is on or off (B&W, HDR) says whether it is on, and one of several choices (Format, Color space, Sharpen, a language, the view buttons: Photo Grid, Square Grid, Detail, Compare, Survey and People) is a radio button that says which one is chosen.
 

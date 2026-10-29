@@ -3,6 +3,7 @@
 
 mod accessibility;
 mod command_roles;
+mod dialog_role;
 mod docking_workflows;
 mod filmstrip_names;
 mod grid_names;
