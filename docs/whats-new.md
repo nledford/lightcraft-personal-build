@@ -828,7 +828,9 @@
   preset, Rename for photos, albums, keywords, people and presets, Create Stacks for Auto-Stack, Change Time for Capture Time,
   Copy and Paste for settings, and Export 12 Photos in the Export dialog. Rename Photos now explains what its Tags
   button lists and what happens on disk, instead of pointing at the button. Contact Sheet, Auto-Stack and
-  Slideshow Export no longer say "1 photos" or "1 stacks".
+  Slideshow Export no longer say "1 photos" or "1 stacks". The Import review's Move button counts photos that are
+  in Recently Deleted apart, since they are restored and their files stay where they are: "Move 2 Photos · Restore 1
+  Photo".
 
 ### A big selection no longer slows every frame
 - With a very large selection (hundreds of thousands of photos), the app spent most of each frame working out which
