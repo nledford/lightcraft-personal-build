@@ -210,8 +210,12 @@ fn window_page(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max
     // line always has the bar's under it: in a narrow window, or a language with long names, the
     // tabs take two lines or more.
     let mut lines: Vec<f32> = Vec::new();
+    // The page drawn is the one that was open when the frame began: a tab clicked now opens on
+    // the next frame, so a text box on the page being left is drawn once more and saves what was
+    // typed in it (the click took the focus from it).
+    let shown = tab.clone();
     // (the bar is one stop for Tab, at the open tab; the arrow keys go along it)
-    let mut bar = crate::widgets::Roving::new(ui, "settingsTabs", TABS.iter().position(|(id, _)| *id == tab.as_str()).filter(|_| !filtering));
+    let mut bar = crate::widgets::Roving::new(ui, "settingsTabs", TABS.iter().position(|(id, _)| *id == shown.as_str()).filter(|_| !filtering));
     // (the page of the open tab: its tab tells a screen reader that it controls this)
     let panel = ui.scope_id().with("settings-tab-panel");
     let sections = crate::i18n::tr("Settings sections");
@@ -219,7 +223,7 @@ fn window_page(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = egui::vec2(4.0, 5.0);
             for (id, label) in TABS {
-                let open = tab == id && !filtering;
+                let open = shown == *id && !filtering;
                 let r = crate::widgets::tab_button_in(ui, &mut bar, &format!("settingsTab-{id}"), tab_label(id, label), open);
                 if open {
                     crate::widgets::tab_controls(&r, panel);
@@ -230,6 +234,7 @@ fn window_page(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max
                 }
                 if r.clicked() {
                     *tab = id.to_string();
+                    ui.ctx().request_repaint();
                     // (a tab opened is its page asked for: the filter gives way)
                     filter.text.clear();
                 }
@@ -256,20 +261,20 @@ fn window_page(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max
             // (a section chosen that starts its tab, with no heading of its own: the page goes to its top)
             if ui
                 .data(|d| d.get_temp::<(&'static str, String)>(egui::Id::unique(GOTO)))
-                .is_some_and(|(to, section)| to == tab.as_str() && section.is_empty())
+                .is_some_and(|(to, section)| to == shown.as_str() && section.is_empty())
             {
                 ui.scroll_to_cursor(Some(egui::Align::TOP));
             }
             if pinned {
                 slideshow_tab(app, ui, &Tokens::get(ui.ctx()), false);
             } else {
-                body(app, ui, tab.as_str());
+                body(app, ui, shown.as_str());
             }
             // (what the page took: wider than the room for it would mean a control is cut off)
             register(ui, "settings:page", ui.min_rect());
         }
     };
-    let name = TABS.iter().find(|(id, _)| *id == tab.as_str()).map_or("", |(_, label)| crate::i18n::tr(label));
+    let name = TABS.iter().find(|(id, _)| *id == shown.as_str()).map_or("", |(_, label)| crate::i18n::tr(label));
     if room < PAGE_MIN_HEIGHT {
         crate::widgets::tab_panel(ui, panel, name, |ui| page(app, ui, false));
     } else {
@@ -286,7 +291,7 @@ fn window_page(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max
             // page, it scrolls with the page instead (as in the short window above). What was found
             // is drawn in its place while the filter has something typed.
             let mut pinned = false;
-            if tab == "slideshow" && found.is_none() {
+            if shown == "slideshow" && found.is_none() {
                 // (the filter row is taken off the page, not off the preview: the slide is as large as it was)
                 let slide_h =
                     ((room + filter_row).min(PAGE_SIZE.y) * PINNED_PREVIEW_SHARE - PREVIEW_CHROME).max(crate::panels::slide_layout::PREVIEW_MIN_H);
@@ -299,7 +304,7 @@ fn window_page(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max
                     pinned = true;
                 }
             }
-            let salt = if found.is_some() { "found" } else { tab.as_str() };
+            let salt = if found.is_some() { "found" } else { shown.as_str() };
             egui::ScrollArea::vertical()
                 .id_salt(("settings-page", salt))
                 .max_height(height)

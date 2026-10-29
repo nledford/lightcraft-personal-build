@@ -138,6 +138,17 @@ pub(super) fn focus_style(ui: &mut egui::Ui, t: &Tokens) {
     visuals.widgets.active.bg_stroke = egui::Stroke::new(2.0, t.text);
     visuals.selection.stroke = egui::Stroke::new(2.0, t.text);
 }
+
+/// A text box of the Settings window, shown: Esc in it gives its text back and is used up by
+/// that, so Settings stays open (a second Esc, with nothing being edited, closes it).
+pub(super) fn field(ui: &mut egui::Ui, field: crate::text_field::TextField<'_>) -> crate::text_field::TextFieldResponse {
+    let shown = field.show(ui);
+    if shown.cancelled() {
+        crate::widgets::take_escape(ui.ctx());
+    }
+    shown
+}
+
 pub(crate) fn heading(ui: &mut egui::Ui, t: &Tokens, text: &str) {
     ui.add_space(4.0);
     // `text` is the heading's English name (its message key). It is shown translated and

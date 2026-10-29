@@ -2,7 +2,7 @@ use super::import::xmp_sidecars;
 use super::performance::local_folders;
 #[cfg(not(target_arch = "wasm32"))]
 use super::performance::smart_previews;
-use super::widgets::{choices, heading, hint, path_label, path_stand_in, row};
+use super::widgets::{choices, field, heading, hint, path_label, path_stand_in, row};
 use super::{Button, LightcraftApp, RichText, StartupView, Tokens, check, json, register};
 use crate::menu_item::MenuItem;
 
@@ -122,10 +122,12 @@ fn startup_and_culling(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 fn external_editing(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     heading(ui, t, "External Editing");
     row(ui, t, crate::i18n::tr("PhotoCraft"), |ui| {
-        crate::text_field::TextField::singleline("field:photocraftPath", &mut app.ui.settings.photocraft_path)
-            .hint(crate::i18n::tr("Found automatically"))
-            .width(220.0)
-            .show(ui);
+        field(
+            ui,
+            crate::text_field::TextField::singleline("field:photocraftPath", &mut app.ui.settings.photocraft_path)
+                .hint(crate::i18n::tr("Found automatically"))
+                .width(220.0),
+        );
     });
     edit_file_rows(ui, t, "photocraftFile", &mut app.ui.settings.photocraft_file);
     hint(
@@ -136,10 +138,12 @@ fn external_editing(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         ),
     );
     row(ui, t, crate::i18n::tr("Other editor"), |ui| {
-        crate::text_field::TextField::singleline("field:externalEditor", &mut app.ui.settings.external_editor)
-            .hint(crate::i18n::tr("System default"))
-            .width(220.0)
-            .show(ui);
+        field(
+            ui,
+            crate::text_field::TextField::singleline("field:externalEditor", &mut app.ui.settings.external_editor)
+                .hint(crate::i18n::tr("System default"))
+                .width(220.0),
+        );
     });
     edit_file_rows(ui, t, "externalFile", &mut app.ui.settings.external_file);
     hint(ui, t, crate::i18n::tr("Edit in Other Editor (⌥⌘E) opens the copy in this application (an app name on macOS, a program path elsewhere)."));
