@@ -492,12 +492,48 @@ fn copy_file_path_copies_each_file_once() {
     let r = ask(&mut h, vec![v[0].0]);
     assert_eq!(r["result"]["paths"], json!(["/pics/a.jpg"]), "{r}");
     assert_eq!(h.app.copied.as_deref(), Some("/pics/a.jpg"));
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.0.as_str()), Some("Copied the file path"));
+    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Copied the file path"));
     h.app.session.execute("library.select", &json!({"ids": [v[0].0]})).unwrap();
     let copy = h.app.session.execute("photo.virtualCopy", &json!({})).unwrap();
     let copy = copy["ids"][0].as_u64().or_else(|| copy["id"].as_u64()).expect("the virtual copy's id");
     let r = ask(&mut h, vec![v[0].0, copy, v[1].0]);
     assert_eq!(r["result"]["paths"], json!(["/pics/a.jpg", "/pics/b.jpg"]), "{r}");
     assert_eq!(h.app.copied.as_deref(), Some("/pics/a.jpg\n/pics/b.jpg"));
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.0.as_str()), Some("Copied 2 file paths"));
+    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Copied 2 file paths"));
+}
+
+/// Survey tiles at most `SURVEY_MAX` photos: a selected photo past them is "culled out", so a
+/// right-click on it in the filmstrip leaves the active photo on a tile; with fewer selected, or
+/// for a tiled photo, none is, and outside Compare and Survey no photo is.
+#[test]
+fn photos_past_the_survey_tiles_are_culled_out() {
+    use crate::panels::compare::{SURVEY_MAX, survey_photos};
+    let mut s = lightcraft_engine::Session::new();
+    for i in 0..(SURVEY_MAX as u64 + 12) {
+        let p = lightcraft_catalog::Photo::new(
+            PhotoId(i + 1),
+            lightcraft_catalog::Source::File { path: format!("/pics/{i:03}.jpg") },
+            &format!("{i:03}.jpg"),
+            "JPEG",
+            600,
+            400,
+            "2026-01-01T00:00:00",
+        );
+        s.catalog.apply(lightcraft_catalog::Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    }
+    let mut a = LightcraftApp::new(s, Default::default());
+    let v = photos(&mut a);
+    assert!(v.len() > SURVEY_MAX);
+    select(&mut a, &v);
+    a.ui.view = ViewMode::Survey;
+    let tiled = survey_photos(&mut a);
+    let tile = tiled[0];
+    let past = v.iter().copied().find(|p| !tiled.contains(p)).expect("a selected photo past the tiles");
+    assert!(culled_out(&mut a, past), "a photo past the tiles");
+    assert!(!culled_out(&mut a, tile), "a tiled photo");
+    select(&mut a, &v[..SURVEY_MAX]);
+    assert!(!culled_out(&mut a, v[SURVEY_MAX - 1]), "every selected photo is tiled");
+    a.ui.view = ViewMode::PhotoGrid;
+    select(&mut a, &v);
+    assert!(!culled_out(&mut a, past), "only Compare and Survey leave photos out");
 }
