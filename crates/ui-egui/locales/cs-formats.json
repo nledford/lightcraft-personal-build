@@ -367,5 +367,13 @@
   "{n} keywords": "Klíčová slova: {n}",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Pravidlo {n} z {m}: {what}. Přesun pomocí šipek",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Skupina {n} z {m}: shoda {mode}, uvnitř {count}. Přesun pomocí šipek",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Vede zpět samo na sebe přes album „{}“: změňte pravidla jednoho alba ve smyčce (Upravit inteligentní album…)"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Vede zpět samo na sebe přes album „{}“: změňte pravidla jednoho alba ve smyčce (Upravit inteligentní album…)",
+  "These can't be moved to “{}”:": "Do „{0}“ nelze přesunout:",
+  "{} is already in “{}”": "{0} už je ve složce „{1}“",
+  "{} is missing or offline": "{0} chybí nebo je offline",
+  "and {n} more": "a dalších: {n}",
+  "Move {n}, skip {m}": "Přesunout {n}, přeskočit {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Do „{1}“ přesunuto fotografií: {n}{0:.0}, přeskočeno: {skipped}. Úpravy → Zpět je vrátí.",
+  "{} can't be moved": "{0} nelze přesunout",
+  "{} has the same name as another photo being moved": "{0} má stejný název jako jiná přesouvaná fotografie"
 }

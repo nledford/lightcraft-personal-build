@@ -2386,7 +2386,6 @@
   "Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there": "Aby nadać zdjęciom słowo kluczowe, użyj Listy słów kluczowych (Okno → Słowa kluczowe, K): upuść je tam na to słowo",
   "Already on these photos": "Już mają je te zdjęcia",
   "Can't go inside itself": "Nie może trafić do siebie samego",
-  "Demo photos have no file on disk, so they can't be moved": "Zdjęcia demonstracyjne nie mają pliku na dysku, więc nie można ich przenieść",
   "Reduce Motion": "Ogranicz ruch",
   "Reduce motion": "Ogranicz ruch",
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Wyłącza animacje powiększania i wskaźników pracy. Zanikanie i przenikanie zostają. Dopóki nie zmienisz tego tutaj, program stosuje systemowe ustawienie Ogranicz ruch.",
@@ -2449,5 +2448,8 @@
   "A group can't go inside itself": "Grupa nie może znaleźć się wewnątrz samej siebie",
   "Groups can't nest any deeper": "Grup nie można zagnieżdżać głębiej",
   "This album is in a loop, so it shows nothing": "Ten album jest w pętli, więc niczego nie pokazuje",
-  "It tests itself: change its rules (Edit Smart Album…)": "Sprawdza samego siebie: zmień jego reguły (Edytuj album inteligentny…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "Sprawdza samego siebie: zmień jego reguły (Edytuj album inteligentny…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Zmień nazwę zdjęcia o tej samej nazwie albo wybierz inny folder, aby je przenieść.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Podłącz dysk ponownie albo użyj Plik → Znajdź brakujące zdjęcia…, a potem spróbuj jeszcze raz.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Zdjęcia bez pliku nie można przenieść. Zdjęcie lokalne można, po użyciu Dodaj do Moich zdjęć."
 }

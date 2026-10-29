@@ -367,5 +367,13 @@
   "{n} keywords": "{n} palabras clave",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Regla {n} de {m}: {what}. Mover con las teclas de flecha",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Grupo {n} de {m}: coincidir con {mode}, {count} dentro. Mover con las teclas de flecha",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Vuelve a sí mismo a través del álbum “{}”: cambia las reglas de uno de los álbumes del bucle (Editar álbum inteligente…)"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Vuelve a sí mismo a través del álbum “{}”: cambia las reglas de uno de los álbumes del bucle (Editar álbum inteligente…)",
+  "These can't be moved to “{}”:": "No se pueden mover a “{0}”:",
+  "{} is already in “{}”": "{0} ya está en “{1}”",
+  "{} is missing or offline": "{0} falta o está sin conexión",
+  "and {n} more": "y {n} más",
+  "Move {n}, skip {m}": "Mover {n}, omitir {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} foto{0} movida{0} a “{1}”; omitidas: {skipped}. Editar → Deshacer las devuelve.",
+  "{} can't be moved": "{0} no se puede mover",
+  "{} has the same name as another photo being moved": "{0} tiene el mismo nombre que otra foto que se está moviendo"
 }

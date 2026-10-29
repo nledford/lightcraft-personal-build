@@ -28,7 +28,6 @@
   "Can't be moved here": "Сюда переместить нельзя",
   "This row covers more than one disk: drop on a folder inside it": "Эта строка охватывает несколько дисков: перетащите на папку внутри неё",
   "Local photos aren't in the library yet: Add to My Photos first, then move them": "Локальных фото ещё нет в библиотеке: сначала «Добавить в «Мои фото»», затем перемещайте",
-  "Demo photos have no file on disk, so they can't be moved": "У демонстрационных фото нет файла на диске, поэтому их нельзя переместить",
   "Add to Selected Photos": "Добавить к выбранным фото",
   "Add to Target Album": "Добавить в целевой альбом",
   "Add to this mask": "Добавить к этой маске",
@@ -2515,5 +2514,8 @@
   "A group can't go inside itself": "Группу нельзя поместить внутрь самой себя",
   "Groups can't nest any deeper": "Группы нельзя вкладывать глубже",
   "This album is in a loop, so it shows nothing": "Этот альбом попал в цикл, поэтому ничего не показывает",
-  "It tests itself: change its rules (Edit Smart Album…)": "Он проверяет сам себя: измените его условия (Изменить смарт-альбом…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "Он проверяет сам себя: измените его условия (Изменить смарт-альбом…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Переименуйте фото с таким же именем или выберите другую папку, чтобы переместить его.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Подключите диск снова или выберите Файл → Найти отсутствующие фото…, затем повторите.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Фото без файла нельзя переместить. Локальное фото можно переместить после команды Добавить в «Мои фото»."
 }

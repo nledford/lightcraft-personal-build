@@ -43,7 +43,6 @@
   "Can't be moved here": "No se pueden mover aquí",
   "This row covers more than one disk: drop on a folder inside it": "Esta fila abarca más de un disco: suéltalas en una carpeta dentro de ella",
   "Local photos aren't in the library yet: Add to My Photos first, then move them": "Las fotos locales aún no están en la biblioteca: primero Añadir a Mis fotos y luego muévelas",
-  "Demo photos have no file on disk, so they can't be moved": "Las fotos de demostración no tienen archivo en el disco, así que no se pueden mover",
   "Add to Selected Photos": "Añadir a las fotos seleccionadas",
   "Add to Target Album": "Añadir al álbum de destino",
   "Add to this mask": "Añadir a esta máscara",
@@ -2524,5 +2523,8 @@
   "A group can't go inside itself": "Un grupo no puede ir dentro de sí mismo",
   "Groups can't nest any deeper": "Los grupos no se pueden anidar más",
   "This album is in a loop, so it shows nothing": "Este álbum está en un bucle, así que no muestra nada",
-  "It tests itself: change its rules (Edit Smart Album…)": "Se comprueba a sí mismo: cambia sus reglas (Editar álbum inteligente…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "Se comprueba a sí mismo: cambia sus reglas (Editar álbum inteligente…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Cambia el nombre de la foto repetida o elige otra carpeta para poder moverla.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Vuelve a conectar el disco o usa Archivo → Buscar fotos que faltan… y vuelve a intentarlo.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Una foto sin archivo no se puede mover. Una foto local sí, una vez que uses Añadir a Mis fotos."
 }

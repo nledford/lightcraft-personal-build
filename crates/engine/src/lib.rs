@@ -60,6 +60,7 @@ pub mod merge;
 mod model_download;
 pub mod move_intent;
 pub mod move_job;
+mod move_check;
 pub mod open_path;
 pub mod originals;
 mod pdf;

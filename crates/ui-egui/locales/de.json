@@ -58,7 +58,6 @@
   "Can't be moved here": "Hierher nicht verschiebbar",
   "This row covers more than one disk: drop on a folder inside it": "Diese Zeile umfasst mehr als ein Laufwerk: auf einem Ordner darin ablegen",
   "Local photos aren't in the library yet: Add to My Photos first, then move them": "Lokale Fotos sind noch nicht in der Bibliothek: erst zu „Meine Fotos“ hinzufügen, dann verschieben",
-  "Demo photos have no file on disk, so they can't be moved": "Demofotos haben keine Datei auf dem Datenträger und lassen sich deshalb nicht verschieben",
   "Add to Selected Photos": "Zu ausgewählten Fotos hinzufügen",
   "Add to Target Album": "Zu Zielalbum hinzufügen",
   "Add to this mask": "Zu dieser Maske hinzufügen",
@@ -3603,5 +3602,8 @@
   "A group can't go inside itself": "Eine Gruppe kann nicht in sich selbst liegen",
   "Groups can't nest any deeper": "Gruppen lassen sich nicht tiefer verschachteln",
   "This album is in a loop, so it shows nothing": "Dieses Album ist in einem Kreis und zeigt deshalb nichts",
-  "It tests itself: change its rules (Edit Smart Album…)": "Es prüft sich selbst: Ändere seine Regeln (Smart-Album bearbeiten…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "Es prüft sich selbst: Ändere seine Regeln (Smart-Album bearbeiten…)",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Benenne das Foto mit dem gleichen Namen um oder wähle einen anderen Ordner, dann kann es mitkommen.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Verbinde den Datenträger wieder oder nutze Datei → Fehlende Fotos suchen… und versuche es dann erneut.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ein Foto ohne Datei lässt sich nicht verschieben. Ein lokales Foto schon, sobald du Zu „Meine Fotos“ hinzufügen verwendest."
 }

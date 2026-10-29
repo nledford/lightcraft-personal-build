@@ -45,7 +45,6 @@
   "Can't be moved here": "無法移到這裡",
   "This row covers more than one disk: drop on a folder inside it": "此列涵蓋多個磁碟：請拖放到其中的資料夾",
   "Local photos aren't in the library yet: Add to My Photos first, then move them": "本機照片尚未在照片庫中：請先「加入我的照片」，再移動",
-  "Demo photos have no file on disk, so they can't be moved": "示範照片在磁碟上沒有檔案，因此無法移動",
   "Add to Selected Photos": "加入選取的照片",
   "Add to Target Album": "加入目標相簿",
   "Add to this mask": "加入此遮色片",
@@ -2323,5 +2322,8 @@
   "A group can't go inside itself": "群組不能放進它自己裡面",
   "Groups can't nest any deeper": "群組不能再巢狀得更深",
   "This album is in a loop, so it shows nothing": "此相簿處於循環中，因此不顯示任何內容",
-  "It tests itself: change its rules (Edit Smart Album…)": "它引用了自身：請變更其規則（編輯智慧型相簿…）"
+  "It tests itself: change its rules (Edit Smart Album…)": "它引用了自身：請變更其規則（編輯智慧型相簿…）",
+  "Rename a clashing photo, or choose another folder, to move it too.": "請重新命名重名的照片，或選擇其他資料夾，才能移動。",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "請重新連接磁碟，或使用 檔案 → 尋找遺失的照片…，然後重試。",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "沒有檔案的照片無法移動。本機照片在使用「加入我的照片」後即可移動。"
 }
