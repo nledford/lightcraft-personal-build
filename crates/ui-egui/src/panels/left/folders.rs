@@ -562,7 +562,6 @@ fn folder_row(
     sel: bool,
     said: Option<Said>,
 ) {
-
     // the label is said with the name, as it is shown beside it
     let spoken = match n.label {
         Some(l) => format!("{name}, {}", crate::i18n::color_label(&app.session.catalog, l)),

@@ -209,7 +209,6 @@ fn album_ids(v: &Value, c: &str) -> Result<Vec<AlbumId>> {
     Ok(out)
 }
 
-
 /// A command's `paths`: folder paths, each folder once (named twice, the last counts).
 fn folder_paths(v: &Value, c: &str) -> Result<Vec<String>> {
     let list = v.as_array().ok_or_else(|| bad(c, "`paths` must be a list of folder paths"))?;
@@ -1317,7 +1316,6 @@ pub fn specs() -> Vec<CommandSpec> {
                 ok()
             }
         ),
-
         cmd!(
             "album.reorder",
             "Reorder Album",

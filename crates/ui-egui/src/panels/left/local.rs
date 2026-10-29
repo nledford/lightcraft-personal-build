@@ -463,7 +463,18 @@ mod tests {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     for index in 0..500 {
                         let path = format!("/lightcraft-test/folder-{index:04}");
-                        super::folder_tree(&mut app, ui, &path, &format!("Folder {index}"), &path, 0.0, &super::LocalView::default(), false, false, None);
+                        super::folder_tree(
+                            &mut app,
+                            ui,
+                            &path,
+                            &format!("Folder {index}"),
+                            &path,
+                            0.0,
+                            &super::LocalView::default(),
+                            false,
+                            false,
+                            None,
+                        );
                     }
                 });
             });
