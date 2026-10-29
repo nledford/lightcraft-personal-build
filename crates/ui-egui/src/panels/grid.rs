@@ -1150,7 +1150,7 @@ fn shuffle_chip(app: &mut LightcraftApp, ui: &mut egui::Ui, rect: Rect, compact:
         .show_at(ui, at)
         .clicked()
     {
-        let _ = app.run("library.shuffle", json!({}));
+        app.act("library.shuffle", json!({}));
     }
 }
 
