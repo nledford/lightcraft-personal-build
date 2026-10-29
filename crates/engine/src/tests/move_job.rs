@@ -162,6 +162,8 @@ fn a_stopped_move_keeps_what_moved_and_one_undo_moves_it_back() {
     let out = work.run_with(&StopAfter { s: &activity, task: finish.task_id(), after: Cell::new(2) });
     let r = s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
     assert_eq!(r, json!({"moved": 2, "of": 3, "folder": dir.path("share"), "stopped": true}));
+    let row = s.activity.finished().into_iter().next().expect("a stopped move leaves a row");
+    assert_eq!((row.kind, row.ending), ("move", crate::activity::Ending::Stopped));
     // the two that moved point at the share, with a's sidecar; c never left
     assert_eq!(file_of(&s, a), dir.path("share/a.jpg"));
     assert_eq!(file_of(&s, b), dir.path("share/b.jpg"));
