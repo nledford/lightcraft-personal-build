@@ -2882,5 +2882,8 @@
   "This photo has no file on disk": "ამ ფოტოს დისკზე ფაილი არ აქვს",
   "This photo is not in a folder of the library": "ეს ფოტო ბიბლიოთეკის საქაღალდეში არ არის",
   "Opening other programs needs the desktop app": "სხვა პროგრამების გასახსნელად საჭიროა სამუშაო მაგიდის აპი",
-  "Only a photo file LightCraft reads can be opened this way": "ასე მხოლოდ ისეთი ფოტოს ფაილი იხსნება, რომელსაც LightCraft კითხულობს"
+  "Only a photo file LightCraft reads can be opened this way": "ასე მხოლოდ ისეთი ფოტოს ფაილი იხსნება, რომელსაც LightCraft კითხულობს",
+  "Top bar": "ზედა ზოლი",
+  "Tool strip": "ხელსაწყოების ზოლი",
+  "Bottom bar": "ქვედა ზოლი"
 }

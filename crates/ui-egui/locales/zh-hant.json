@@ -2305,5 +2305,8 @@
   "This photo has no file on disk": "這張照片在磁碟上沒有檔案",
   "This photo is not in a folder of the library": "這張照片不在照片庫的資料夾中",
   "Opening other programs needs the desktop app": "開啟其他程式需要桌面版 App",
-  "Only a photo file LightCraft reads can be opened this way": "只有 LightCraft 能讀取的照片檔案才能這樣開啟"
+  "Only a photo file LightCraft reads can be opened this way": "只有 LightCraft 能讀取的照片檔案才能這樣開啟",
+  "Top bar": "頂部列",
+  "Tool strip": "工具列",
+  "Bottom bar": "底部列"
 }

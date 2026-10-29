@@ -3585,5 +3585,8 @@
   "This photo has no file on disk": "Dieses Foto hat keine Datei auf dem Datenträger",
   "This photo is not in a folder of the library": "Dieses Foto liegt in keinem Ordner der Bibliothek",
   "Opening other programs needs the desktop app": "Andere Programme lassen sich nur in der Desktop-App öffnen",
-  "Only a photo file LightCraft reads can be opened this way": "So lässt sich nur eine Fotodatei öffnen, die LightCraft lesen kann"
+  "Only a photo file LightCraft reads can be opened this way": "So lässt sich nur eine Fotodatei öffnen, die LightCraft lesen kann",
+  "Top bar": "Obere Leiste",
+  "Tool strip": "Werkzeugleiste",
+  "Bottom bar": "Untere Leiste"
 }

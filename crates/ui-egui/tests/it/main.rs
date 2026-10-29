@@ -11,3 +11,4 @@ mod photo_name;
 mod sidebar_names;
 mod thumb_cells;
 mod thumb_size_slider;
+mod landmarks;

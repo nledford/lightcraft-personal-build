@@ -2497,5 +2497,8 @@
   "This photo has no file on disk": "У этого фото нет файла на диске",
   "This photo is not in a folder of the library": "Это фото не находится в папке библиотеки",
   "Opening other programs needs the desktop app": "Открывать другие программы можно только в настольном приложении",
-  "Only a photo file LightCraft reads can be opened this way": "Так можно открыть только файл фото, который читает LightCraft"
+  "Only a photo file LightCraft reads can be opened this way": "Так можно открыть только файл фото, который читает LightCraft",
+  "Top bar": "Верхняя панель",
+  "Tool strip": "Панель инструментов",
+  "Bottom bar": "Нижняя панель"
 }
