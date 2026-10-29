@@ -2465,5 +2465,20 @@
   "Damaged file: cut short, shown from the data present": "File rusak: terpotong, ditampilkan dari data yang ada",
   "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "File ini terpotong, misalnya karena unduhan atau penyalinan terhenti. LightCraft menampilkan data yang ada dan tidak pernah mengubah file.",
   "Damaged": "Rusak",
-  "Damaged File": "File rusak"
+  "Damaged File": "File rusak",
+  "Open in Compare": "Buka di Bandingkan",
+  "Open in Survey": "Buka di Survei",
+  "Edit Settings": "Pengaturan edit",
+  "Rotate & Flip": "Putar dan balik",
+  "Copy File Path": "Salin jalur file",
+  "Copied the file path": "Jalur file disalin",
+  "The selected photos have no file on disk": "Foto yang dipilih tidak memiliki file di disk",
+  "Select 2 or more photos": "Pilih 2 foto atau lebih",
+  "Copy edit settings first": "Salin pengaturan edit terlebih dahulu",
+  "Copy metadata first": "Salin metadata terlebih dahulu",
+  "This version of LightCraft can't open the file manager": "Versi LightCraft ini tidak dapat membuka pengelola file",
+  "This photo has no file on disk": "Foto ini tidak memiliki file di disk",
+  "This photo is not in a folder of the library": "Foto ini tidak berada di folder pustaka",
+  "Opening other programs needs the desktop app": "Membuka program lain memerlukan aplikasi desktop",
+  "Only a photo file LightCraft reads can be opened this way": "Hanya file foto yang dibaca LightCraft yang dapat dibuka dengan cara ini"
 }

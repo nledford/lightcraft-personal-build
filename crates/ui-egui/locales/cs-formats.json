@@ -335,5 +335,6 @@
   "Lists “{name}”, the folder this one is in": "Zobrazuje „{name}“, složku, ve které je tato",
   "Showing {what}": "Zobrazeno: {what}",
   "{title}, showing {what}": "{title}, zobrazeno: {what}",
-  " · {} damaged": " · poškozené: {}"
+  " · {} damaged": " · poškozené: {}",
+  "Copied {n} file paths": "Zkopírované cesty k souborům: {n}"
 }

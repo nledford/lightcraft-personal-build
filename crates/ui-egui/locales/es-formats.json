@@ -335,5 +335,6 @@
   "Showing {what}": "Mostrando {what}",
   "{title}, showing {what}": "{title}, mostrando {what}",
   "+{n} more": "+{n} más",
-  " · {} damaged": " · dañadas: {}"
+  " · {} damaged": " · dañadas: {}",
+  "Copied {n} file paths": "{n} rutas de archivo copiadas"
 }

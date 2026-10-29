@@ -81,6 +81,7 @@ pub use widgets::text_field;
 mod app;
 mod caches;
 mod clock;
+pub mod photo_menu;
 mod readout;
 mod services;
 

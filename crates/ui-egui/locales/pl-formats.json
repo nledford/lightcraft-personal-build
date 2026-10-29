@@ -335,5 +335,6 @@
   "Lists “{name}”, the folder this one is in": "Pokazuje „{name}”, folder, w którym jest ten",
   "Showing {what}": "Wyświetlane: {what}",
   "{title}, showing {what}": "{title}, wyświetlane: {what}",
-  " · {} damaged": " · uszkodzone: {}"
+  " · {} damaged": " · uszkodzone: {}",
+  "Copied {n} file paths": "Skopiowane ścieżki plików: {n}"
 }

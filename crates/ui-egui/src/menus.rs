@@ -12,6 +12,7 @@ mod files;
 mod run;
 mod ui_commands;
 
+pub(crate) use files::show_in_finder_enabled;
 pub use files::{confirm_delete, delete_in_album, reveal_label, show_in_folders_enabled};
 pub(crate) use run::backups_to_choose_from;
 pub use run::{library_replaced, parse_rgb, run_ui_command};
@@ -57,15 +58,16 @@ pub fn ui_enabled(app: &LightcraftApp, id: &str) -> bool {
                     _ => false,
                 })
         }
-        "app.showInFinder" => {
-            app.services.reveal.is_some()
-                && app
-                    .session
-                    .active()
-                    .and_then(|id| app.session.catalog.photo(id))
-                    .is_some_and(|p| matches!(p.source, lightcraft_engine::catalog::Source::File { .. }))
-        }
+        "app.showInFinder" => show_in_finder_enabled(app, None),
         "app.showInFolders" => show_in_folders_enabled(app, None),
+        // (asked every frame a menu is open: reads the selection in place, copies no path)
+        "photo.copyPath" => {
+            let on_disk = |id: &lightcraft_catalog::PhotoId| {
+                matches!(app.session.catalog.photo(*id).map(|p| &p.source), Some(lightcraft_engine::catalog::Source::File { .. }))
+            };
+            let sel = &app.session.selection;
+            if sel.ids.is_empty() { sel.active.as_ref().is_some_and(on_disk) } else { sel.ids.iter().any(on_disk) }
+        }
         "app.openSamModelFolder" => app.session.segmenter.dir.is_some() && app.services.open_with.is_some(),
         "file.exportPresets" => app.session.presets.iter().any(|p| !p.builtin),
         "file.exportMaskEffects" => !app.session.mask_effects.is_empty(),

@@ -2479,5 +2479,20 @@
   "Damaged file: cut short, shown from the data present": "Пошкоджений файл: обрізаний, показано за наявними даними",
   "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Файл обрізано, наприклад через перерване завантаження чи копіювання. LightCraft показує наявні дані й ніколи не змінює файл.",
   "Damaged": "Пошкоджений",
-  "Damaged File": "Пошкоджений файл"
+  "Damaged File": "Пошкоджений файл",
+  "Open in Compare": "Відкрити в порівнянні",
+  "Open in Survey": "Відкрити в огляді",
+  "Edit Settings": "Налаштування редагування",
+  "Rotate & Flip": "Поворот і віддзеркалення",
+  "Copy File Path": "Копіювати шлях до файлу",
+  "Copied the file path": "Шлях до файлу скопійовано",
+  "The selected photos have no file on disk": "Вибрані фото не мають файлу на диску",
+  "Select 2 or more photos": "Виберіть 2 або більше фото",
+  "Copy edit settings first": "Спершу скопіюйте налаштування редагування",
+  "Copy metadata first": "Спершу скопіюйте метадані",
+  "This version of LightCraft can't open the file manager": "Ця версія LightCraft не може відкрити файловий менеджер",
+  "This photo has no file on disk": "Це фото не має файлу на диску",
+  "This photo is not in a folder of the library": "Це фото не в теці бібліотеки",
+  "Opening other programs needs the desktop app": "Відкривати інші програми можна лише в застосунку для комп’ютера",
+  "Only a photo file LightCraft reads can be opened this way": "Так можна відкрити лише файл фото, який читає LightCraft"
 }

@@ -335,5 +335,6 @@
   "Lists “{name}”, the folder this one is in": "Elenca “{name}”, la cartella in cui si trova questa",
   "Showing {what}": "Mostra {what}",
   "{title}, showing {what}": "{title}, mostra {what}",
-  " · {} damaged": " · danneggiate: {}"
+  " · {} damaged": " · danneggiate: {}",
+  "Copied {n} file paths": "Percorsi dei file copiati: {n}"
 }
