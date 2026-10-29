@@ -497,16 +497,21 @@ fn marks_row(ctx: &egui::Context, p: &Painter, t: &Tokens, m: &Metrics, th: &Thu
     }
     let y = bar.center().y;
     let mut x = bar.left() + m.pad;
+    // (a picture has no theme: its marks are one light ink on a shade as wide as each group of
+    // them, not the theme's star and label colours, which are dark in the light themes)
+    let ink = Tokens::on_photo();
+    let (left_shade, right_shade) = (p.add(egui::Shape::Noop), p.add(egui::Shape::Noop));
+    let left_start = bar.left() + m.pad / 2.0;
     match layout.stars {
         Stars::None => {}
         Stars::Row(n) => {
-            let width = crate::rating::paint_rating(p, pos2(x, y), n, m.rating, t.star);
+            let width = crate::rating::paint_rating_spaced(p, pos2(x, y), n, m.rating, m.rating.step(), ink);
             mark("stars", Rect::from_min_size(pos2(x, y - m.star / 2.0), vec2(width, m.star)));
             x += width;
         }
         Stars::Compact(n) => {
-            paint(p, Rect::from_min_size(pos2(x, y - m.star / 2.0), vec2(m.star, m.star)), Icon::StarFilled, t.star);
-            p.text(pos2(x + m.star + 1.0, y), Align2::LEFT_CENTER, n.to_string(), t.semibold(m.font), t.star);
+            paint(p, Rect::from_min_size(pos2(x, y - m.star / 2.0), vec2(m.star, m.star)), Icon::StarFilled, ink);
+            p.text(pos2(x + m.star + 1.0, y), Align2::LEFT_CENTER, n.to_string(), t.semibold(m.font), ink);
             mark("stars", Rect::from_min_size(pos2(x, y - m.star / 2.0), vec2(m.star + 1.0 + m.digit, m.star)));
             x += m.star + 1.0 + m.digit;
         }
@@ -514,13 +519,21 @@ fn marks_row(ctx: &egui::Context, p: &Painter, t: &Tokens, m: &Metrics, th: &Thu
     if layout.flag {
         let at = Rect::from_min_size(pos2(x + m.flag - m.flag_icon, y - m.flag_icon / 2.0), vec2(m.flag_icon, m.flag_icon));
         match photo.flag {
-            Flag::Pick => paint(p, at, Icon::FlagPickFilled, t.pick),
-            Flag::Reject => paint(p, at, Icon::FlagReject, t.reject),
+            Flag::Pick => paint(p, at, Icon::FlagPickFilled, ink),
+            Flag::Reject => paint(p, at, Icon::FlagReject, Tokens::on_photo_reject()),
             Flag::None => {}
         }
         mark("flag", at);
+        x += m.flag;
+    }
+    let shade = |from: f32, to: f32| {
+        egui::Shape::rect_filled(Rect::from_min_max(pos2(from, bar.top() + 1.0), pos2(to, bar.bottom() - 1.0)), 3.0, Tokens::photo_shade())
+    };
+    if x > left_start + m.pad / 2.0 {
+        p.set(left_shade, shade(left_start, (x + m.pad / 2.0).min(bar.right())));
     }
     let mut right = bar.right() - m.pad;
+    let right_end = right;
     if layout.label
         && let Some(l) = photo.label
     {
@@ -530,8 +543,12 @@ fn marks_row(ctx: &egui::Context, p: &Painter, t: &Tokens, m: &Metrics, th: &Thu
     }
     if layout.edited {
         let at = Rect::from_center_size(pos2(right - m.edited / 2.0, y), vec2(m.edited_icon, m.edited_icon));
-        paint(p, at, Icon::Sliders, t.text_label);
+        paint(p, at, Icon::Sliders, ink);
         mark("edited", at);
+        right -= m.edited;
+    }
+    if right < right_end {
+        p.set(right_shade, shade((right - m.pad / 2.0).max(left_start), (right_end + m.pad / 2.0).min(bar.right())));
     }
     Some(bar)
 }
