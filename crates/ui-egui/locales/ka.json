@@ -2870,5 +2870,7 @@
   "Copies the photos of a folder you choose into this folder; the review lets you change that": "ირჩევ საქაღალდეს და მისი ფოტოები ამ საქაღალდეში კოპირდება; განხილვაში ამის შეცვლა შეგიძლია",
   "Add to My Photos…": "ჩემს ფოტოებში დამატება…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "ამ საქაღალდის ფოტოებს გადაამოწმებ და ბიბლიოთეკაში იქვე დაამატებ; არცერთ ფაილს არ ეხება",
-  "Keywords and presets apply to new files only, not to photos already in Local": "საკვანძო სიტყვები და პრესეტები მხოლოდ ახალ ფაილებზე მოქმედებს და არა იმ ფოტოებზე, რომლებიც უკვე ლოკალშია"
+  "Keywords and presets apply to new files only, not to photos already in Local": "საკვანძო სიტყვები და პრესეტები მხოლოდ ახალ ფაილებზე მოქმედებს და არა იმ ფოტოებზე, რომლებიც უკვე ლოკალშია",
+  "Copy Path": "მისამართის კოპირება",
+  "Path copied": "მისამართი დაკოპირდა"
 }

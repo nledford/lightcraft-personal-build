@@ -2358,5 +2358,7 @@
   "Copies the photos of a folder you choose into this folder; the review lets you change that": "Copia as fotos de uma pasta que você escolher para esta pasta; na revisão você pode mudar isso",
   "Add to My Photos…": "Adicionar às Minhas fotos…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Revisa as fotos desta pasta e depois as adiciona à biblioteca onde estão; nenhum arquivo é tocado",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Palavras-chave e predefinições valem só para arquivos novos, não para fotos que já estão em Local"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Palavras-chave e predefinições valem só para arquivos novos, não para fotos que já estão em Local",
+  "Copy Path": "Copiar caminho",
+  "Path copied": "Caminho copiado"
 }

@@ -2564,5 +2564,7 @@
   "Copies the photos of a folder you choose into this folder; the review lets you change that": "Kopierar fotona i en mapp du väljer till den här mappen; i granskningen kan du ändra det",
   "Add to My Photos…": "Lägg till i Mina foton…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Granskar fotona i den här mappen och lägger sedan till dem i biblioteket där de ligger; ingen fil rörs",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Nyckelord och förinställningar gäller bara nya filer, inte foton som redan finns i Lokalt"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Nyckelord och förinställningar gäller bara nya filer, inte foton som redan finns i Lokalt",
+  "Copy Path": "Kopiera sökväg",
+  "Path copied": "Sökväg kopierad"
 }

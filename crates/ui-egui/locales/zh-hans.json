@@ -2356,5 +2356,7 @@
   "Copies the photos of a folder you choose into this folder; the review lets you change that": "将所选文件夹中的照片复制到此文件夹；可在审阅中更改",
   "Add to My Photos…": "添加到我的照片…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "审阅此文件夹中的照片，然后就地添加到图库；不会改动任何文件",
-  "Keywords and presets apply to new files only, not to photos already in Local": "关键词和预设仅应用于新文件，不适用于已在“本地”中的照片"
+  "Keywords and presets apply to new files only, not to photos already in Local": "关键词和预设仅应用于新文件，不适用于已在“本地”中的照片",
+  "Copy Path": "复制路径",
+  "Path copied": "已复制路径"
 }

@@ -2314,5 +2314,7 @@
   "Copies the photos of a folder you choose into this folder; the review lets you change that": "將所選資料夾中的照片複製到此資料夾；可在審閱中更改",
   "Add to My Photos…": "加入我的照片…",
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "審閱此資料夾中的照片，然後就地加入照片庫；不會更動任何檔案",
-  "Keywords and presets apply to new files only, not to photos already in Local": "關鍵字和預設集僅套用於新檔案，不適用於已在「本機」中的照片"
+  "Keywords and presets apply to new files only, not to photos already in Local": "關鍵字和預設集僅套用於新檔案，不適用於已在「本機」中的照片",
+  "Copy Path": "複製路徑",
+  "Path copied": "已複製路徑"
 }

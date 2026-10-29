@@ -858,6 +858,7 @@ enum FolderItem {
     /// above it or was itself asked for.
     Parents,
     Reveal,
+    CopyPath,
     KeepInLocal,
     RemoveFromLocal,
     RemoveFromLibrary,
@@ -875,12 +876,24 @@ fn folder_menu_groups(row: FolderRow) -> &'static [&'static [FolderItem]] {
             &[ImportHere, Synchronize, LocateMissing, ExportFolder, ExportFolderWithPreset],
             &[NewFolder, Rename, Move, MovePhotosHere],
             &[ColorLabel, Parents],
-            &[Reveal],
+            &[Reveal, CopyPath],
             &[RemoveFromLibrary],
         ],
-        FolderRow::Disk => &[&[Synchronize, LocateMissing, ExportFolder, ExportFolderWithPreset], &[ColorLabel], &[RemoveDisk]],
-        FolderRow::Local { .. } => &[&[AddToMyPhotos, Synchronize], &[Rename, Move], &[Reveal], &[KeepInLocal, RemoveFromLocal]],
+        FolderRow::Disk => {
+            &[&[Synchronize, LocateMissing, ExportFolder, ExportFolderWithPreset], &[NewFolder], &[ColorLabel], &[Reveal, CopyPath], &[RemoveDisk]]
+        }
+        FolderRow::Local { .. } => &[&[AddToMyPhotos, Synchronize], &[NewFolder, Rename, Move], &[Reveal, CopyPath], &[KeepInLocal, RemoveFromLocal]],
     }
+}
+
+/// `path` as the OS spells it: its separators native (a path may carry `/` on Windows), and a
+/// bare drive (`D:`, a disk's row) as the drive's root.
+pub(crate) fn native_path(path: &str, sep: char) -> String {
+    let mut spelled: String = path.chars().map(|c| if c == '/' { sep } else { c }).collect();
+    if matches!(spelled.as_bytes(), [d, b':'] if d.is_ascii_alphabetic()) {
+        spelled.push(sep);
+    }
+    spelled
 }
 
 /// The context menu of the folder at `path`, laid out by [`folder_menu_groups`]. `node`: its
@@ -943,6 +956,11 @@ fn folder_item(
     parents: FolderParents,
 ) {
     let (name, label) = names;
+    // a disk is called by its own name, as in Synchronize and Remove Disk
+    let label = match (row, node) {
+        (FolderRow::Disk, Some(n)) => n.name.as_str(),
+        _ => label,
+    };
     match item {
         FolderItem::ImportHere => import_here_item(app, ui, path),
         FolderItem::AddToMyPhotos => add_to_my_photos_item(app, ui, path),
@@ -1037,6 +1055,14 @@ fn folder_item(
                 if let Some(Err(e)) = app.services.reveal.as_mut().map(|f| f(path)) {
                     app.toast_error(ui.ctx(), e);
                 }
+                ui.close();
+            }
+        }
+        FolderItem::CopyPath => {
+            let r = MenuItem::new(crate::i18n::tr("Copy Path")).widget("folderCopyPath").show(ui);
+            if r.clicked() {
+                ui.ctx().copy_text(native_path(path, std::path::MAIN_SEPARATOR));
+                app.toast(ui.ctx(), crate::i18n::tr("Path copied"));
                 ui.close();
             }
         }
