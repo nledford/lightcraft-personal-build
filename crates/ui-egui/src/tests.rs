@@ -64,6 +64,7 @@ mod menu_item;
 mod menubar;
 mod merge_preview;
 mod missing_count;
+mod missing_sweep;
 mod model_setup;
 mod offline;
 mod open_lightroom;
