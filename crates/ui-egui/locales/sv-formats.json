@@ -338,5 +338,10 @@
   "The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.": "Biblioteket kunde inte följa de filer som flyttades ({}); Sök efter saknade foton länkar om dem.",
   "The files that were being moved are followed, but that couldn't be saved ({}).": "Biblioteket följer de filer som flyttades, men det kunde inte sparas ({}).",
   "Copies removed from the new place, because the original was still where the library has it: {}.": "Kopior som togs bort från den nya platsen, eftersom originalet fortfarande låg där biblioteket har det: {}.",
-  "“{name}” is now a place in Local: open it there": "“{name}” är nu en plats i Lokalt: öppna den där"
+  "“{name}” is now a place in Local: open it there": "“{name}” är nu en plats i Lokalt: öppna den där",
+  "None of this folder's photos are in “{name}”: choose the folder it is now": "Inga av mappens foton finns i ”{name}”: välj mappen där den finns nu",
+  "Only {found} of this folder's {total} photos are in:": "Bara {found} av mappens {total} foton finns i:",
+  "Only {found} of this folder's {total} photos are in “{name}”: the folder was not located": "Bara {found} av mappens {total} foton finns i ”{name}”: mappen hittades inte",
+  "Files there that are not the size the library recorded: {n}": "Filer där som inte har den storlek biblioteket registrerade: {n}",
+  "Folder located. Photos relinked: {n}": "Mappen har hittats. Omlänkade foton: {n}"
 }
