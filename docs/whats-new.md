@@ -104,10 +104,12 @@
 ### The macOS menu bar shows every row
 - File ▸ Export… no longer reads “Custom…”, File ▸ Export with Preset keeps its Custom… row, and Photo ▸ Add to Album keeps New Album…. When two menu rows ran the same command, the menu bar left the second one out and gave the first one its label; now each row is its own item and a click on either one runs the command. The View menu now also lists its second Layout Image row (without a key), as the in-window menu does.
 
-### Shortcut hints on macOS read like the menu bar
-- A shortcut shown in the menu bar's labels, in a button's tooltip, in the empty-library hint or in the Keyboard
-  Shortcuts dialog now lists its modifiers in the order macOS menus use, Control, Option, Shift, Command: `⇧⌘I`
-  where it used to say `⌘⇧I`. Windows and Linux are unchanged.
+### Shortcuts read the same way everywhere on macOS
+- Wherever LightCraft shows a shortcut (the menu bar's labels, a button's tooltip, the empty-library hint, the
+  line under "No photos" in an empty album, the Keyboard Shortcuts dialog and its search) it lists the modifiers in
+  the order macOS menus use, Control, Option, Shift, Command: `⇧⌘I` where it used to say `⌘⇧I`. The line under
+  "No photos" also shows the shortcut as it is bound now, and as Ctrl+Shift+I on Windows and Linux, where it
+  always said Cmd+Shift+I. Windows and Linux otherwise keep the order a shortcut is written in.
 
 ### The Edit menu loses its Language submenu
 - Choose the interface language in Settings ▸ General ▸ Language, which already lists every language. Edit no longer carries 18 more rows for it, on any platform.
