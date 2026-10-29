@@ -44,7 +44,6 @@
   "About LightCraft": "Giới thiệu LightCraft",
   "Accept & Download": "Chấp nhận và tải",
   "Active": "Đang dùng",
-  "Activity": "Hoạt động",
   "Actual size": "Kích thước thực",
   "Add": "Thêm",
   "Add Catchlight": "Thêm điểm sáng mắt",
@@ -1689,7 +1688,6 @@
   "Show in Explorer": "Hiện trong Explorer",
   "Show in File Manager": "Hiện trong trình quản lý tệp",
   "Show in Finder": "Hiện trong trình quản lý tệp",
-  "Show less": "Hiện ít hơn",
   "Show on Map": "Hiện trên bản đồ",
   "Show ratings, flags and edit badges": "Hiện xếp hạng, cờ và huy hiệu chỉnh sửa",
   "Show the Navigator while zoomed in": "Hiện Điều hướng khi phóng to",
@@ -2333,5 +2331,8 @@
   "This folder stays listed while the grid shows its photos": "Thư mục này vẫn được liệt kê khi lưới hiển thị ảnh của nó",
   "Keyboard in Sidebar": "Bàn phím trong thanh bên",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Phím đang điều khiển thanh bên: phím mũi tên di chuyển, Enter mở, gõ để tìm, Esc quay lại ảnh",
-  "This row has no name to change": "Hàng này không có tên để đổi"
+  "This row has no name to change": "Hàng này không có tên để đổi",
+  "Imports, exports and other long jobs show here while they run.": "Nhập, xuất và các tác vụ dài khác hiển thị tại đây khi đang chạy.",
+  "No tasks are running": "Không có tác vụ nào đang chạy",
+  "Tasks": "Tác vụ"
 }

@@ -324,5 +324,6 @@
   "Look at the changes found in “{name}” first, or dismiss them": "Titta först på ändringarna som hittades i ”{name}”, eller avfärda dem",
   "Lists “{name}”, the folder this one is in": "Visar “{name}”, mappen som den här ligger i",
   "Showing {what}": "Visar {what}",
-  "{title}, showing {what}": "{title}, visar {what}"
+  "{title}, showing {what}": "{title}, visar {what}",
+  "{n} tasks": "{n} uppgifter"
 }

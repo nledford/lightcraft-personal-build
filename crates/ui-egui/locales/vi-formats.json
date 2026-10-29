@@ -324,5 +324,6 @@
   "Look at the changes found in “{name}” first, or dismiss them": "Hãy xem trước các thay đổi tìm thấy trong «{name}», hoặc bỏ qua chúng",
   "Lists “{name}”, the folder this one is in": "Hiển thị “{name}”, thư mục chứa thư mục này",
   "Showing {what}": "Đang hiển thị {what}",
-  "{title}, showing {what}": "{title}, đang hiển thị {what}"
+  "{title}, showing {what}": "{title}, đang hiển thị {what}",
+  "{n} tasks": "{n} tác vụ"
 }

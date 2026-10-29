@@ -396,7 +396,10 @@ impl LightcraftApp {
         self.hover_preview = None;
         self.end_drags(&ctx);
         if self.ui.fullscreen {
-            // full-screen preview: the photo alone on black
+            // full-screen preview: the photo alone on black (no top bar: the list of tasks under its bell is closed,
+            // and a request to open it is not kept for later)
+            self.activity_open = false;
+            self.activity_set = None;
             egui::CentralPanel::default()
                 .frame(egui::Frame::NONE.fill(egui::Color32::BLACK))
                 .show(ui, |ui| if self.ui.slideshow.is_some() { panels::slideshow::show(self, ui) } else { panels::detail::show(self, ui) });
@@ -444,7 +447,6 @@ impl LightcraftApp {
         panels::library_problem::show(self, &ctx, notice_blocks);
         export_task::poll(self, &ctx);
         slideshow_export::poll(self, &ctx);
-        panels::activity::show(self, &ctx);
         export_task::poll_photos(self, &ctx);
         pick::poll(self, &ctx);
         // (each ends its drag when the button is up, which an offscreen frame's pointer never is)

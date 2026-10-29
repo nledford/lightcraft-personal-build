@@ -237,13 +237,13 @@
   "{done} of {total}": "{done} von {total}",
   "{done} of {total} MB": "{done} von {total} MB",
   "{pct} %": "{pct} %",
-  "+{n} more": "+{n} weitere",
   "Create the keyword “{name}”": "Stichwort „{name}“ erstellen",
   "new, inside {parent}": "neu, in {parent}",
   "Keywords of {n} selected photos": "Stichwörter von {n} ausgewählten Fotos",
   "Removed “{name}” from {n} photos. Edit ▸ Undo puts it back.": "„{name}“ von {n} Fotos entfernt. Bearbeiten → Rückgängig stellt es wieder her.",
   "1 task is still running: {names}. Quitting stops it.": "1 Aufgabe läuft noch: {names}. Beenden bricht sie ab.",
   "{n} tasks are still running: {names}. Quitting stops them.": "{n} Aufgaben laufen noch: {names}. Beenden bricht sie ab.",
+  "{n} tasks": "{n} Aufgaben",
   "{what} merge cancelled": "{what}-Zusammenfügung abgebrochen",
   "{n} Local photo{} skipped: albums hold library photos (Add to My Photos first)": "Übersprungen: {n} lokale Fotos{0:.0} – Alben enthalten Bibliotheksfotos (zuerst zu „Meine Fotos“ hinzufügen)",
   "New Folder in “{name}”": "Neuer Ordner in „{name}“",
@@ -324,5 +324,6 @@
   "Look at the changes found in “{name}” first, or dismiss them": "Sieh dir zuerst die in „{name}“ gefundenen Änderungen an oder verwirf sie",
   "Lists “{name}”, the folder this one is in": "Listet „{name}“ auf, den Ordner, in dem dieser liegt",
   "Showing {what}": "Zeigt {what}",
-  "{title}, showing {what}": "{title}, zeigt {what}"
+  "{title}, showing {what}": "{title}, zeigt {what}",
+  "+{n} more": "+{n} weitere"
 }

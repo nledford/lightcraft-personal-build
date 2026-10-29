@@ -324,5 +324,6 @@
   "Look at the changes found in “{name}” first, or dismiss them": "Katso ensin kohteesta ”{name}” löydetyt muutokset tai hylkää ne",
   "Lists “{name}”, the folder this one is in": "Näyttää kansion “{name}”, jonka sisällä tämä on",
   "Showing {what}": "Näytetään: {what}",
-  "{title}, showing {what}": "{title}, näytetään: {what}"
+  "{title}, showing {what}": "{title}, näytetään: {what}",
+  "{n} tasks": "{n} tehtävää"
 }

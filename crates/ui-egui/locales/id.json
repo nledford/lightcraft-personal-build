@@ -39,7 +39,6 @@
   "About LightCraft": "Tentang LightCraft",
   "Accept & Download": "Setujui & unduh",
   "Active": "Aktif",
-  "Activity": "Aktivitas",
   "Actual size": "Ukuran sebenarnya",
   "Add": "Tambahkan",
   "Add Catchlight": "Tambahkan catchlight",
@@ -1835,7 +1834,6 @@
   "Show in File Manager": "Tampilkan di pengelola file",
   "Show in Finder": "Tampilkan di Finder",
   "Show in Library": "Tampilkan di pustaka",
-  "Show less": "Tampilkan lebih sedikit",
   "Show on Map": "Tampilkan di peta",
   "Show photos": "Tampilkan foto",
   "Show ratings, flags and edit badges": "Tampilkan rating, tanda, dan lencana edit",
@@ -2438,5 +2436,8 @@
   "This folder stays listed while the grid shows its photos": "Folder ini tetap tercantum selama grid menampilkan fotonya",
   "Keyboard in Sidebar": "Keyboard di bilah samping",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Tombol berlaku di bilah samping: panah untuk berpindah, Enter untuk membuka, ketik untuk mencari, Esc untuk kembali ke foto",
-  "This row has no name to change": "Baris ini tidak punya nama yang bisa diubah"
+  "This row has no name to change": "Baris ini tidak punya nama yang bisa diubah",
+  "Imports, exports and other long jobs show here while they run.": "Impor, ekspor, dan tugas panjang lainnya ditampilkan di sini selama berjalan.",
+  "No tasks are running": "Tidak ada tugas yang berjalan",
+  "Tasks": "Tugas"
 }

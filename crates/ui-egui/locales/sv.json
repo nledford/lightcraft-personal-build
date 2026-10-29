@@ -49,7 +49,6 @@
   "About LightCraft": "Om LightCraft",
   "Accept & Download": "Acceptera och hämta",
   "Active": "Aktiv",
-  "Activity": "Aktivitet",
   "Actual size": "Verklig storlek",
   "Add": "Addera",
   "Add a model file…": "Lägg till en modellfil…",
@@ -1979,7 +1978,6 @@
   "Show in File Manager": "Visa i filhanteraren",
   "Show in Finder": "Visa i Finder",
   "Show in Library": "Visa i Bibliotek",
-  "Show less": "Visa färre",
   "Show Luminance Map": "Visa luminanskarta",
   "Show Mask": "Visa mask",
   "Show mask": "Visa mask",
@@ -2525,5 +2523,8 @@
   "This folder stays listed while the grid shows its photos": "Den här mappen står kvar i listan medan rutnätet visar dess foton",
   "Keyboard in Sidebar": "Tangentbord i sidofältet",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Tangenterna styr sidofältet: piltangenterna flyttar, Enter öppnar, skriv för att söka, Esc går tillbaka till fotona",
-  "This row has no name to change": "Raden har inget namn att ändra"
+  "This row has no name to change": "Raden har inget namn att ändra",
+  "Imports, exports and other long jobs show here while they run.": "Importer, exporter och andra långa jobb visas här medan de pågår.",
+  "No tasks are running": "Inga uppgifter körs",
+  "Tasks": "Uppgifter"
 }
