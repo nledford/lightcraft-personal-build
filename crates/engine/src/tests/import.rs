@@ -1324,6 +1324,8 @@ fn smart_previews_folder_is_chosen_per_library() {
     let r = again.execute("library.smartPreviewsLocation", &json!({"reset": true})).unwrap();
     assert_eq!(r["custom"], false, "{r}");
     assert_eq!(r["path"], lib.join("Smart Previews").to_string_lossy().as_ref());
+    // (the open library's files are removed below: on Windows an open file cannot be)
+    drop(again);
     for d in [&lib, &away, &src.with_extension("offline")] {
         let _ = std::fs::remove_dir_all(d);
     }
