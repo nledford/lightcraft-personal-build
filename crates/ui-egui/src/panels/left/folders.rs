@@ -1,5 +1,5 @@
 use super::albums::pointer_over_row;
-use super::local::{is_builtin_place, same_folder, subfolders};
+use super::local::{LocalView, add_local_root_checked, is_builtin_place, same_folder, subfolders};
 use super::rows::{INDENT_STEP, Inside, LIBFOLDER_REVEALED, Row, drawn_indent, note_width, out_of_sight, tree_toggle};
 use super::{Album, Branch, FolderNode, Icon, LibrarySource, LightcraftApp, Said, Sense, Tokens, TreeState, json, pos2, register, vec2};
 use crate::menu_item::MenuItem;
@@ -23,16 +23,17 @@ pub(super) fn folder_tree(
     name: &str,
     path: &str,
     indent: f32,
-    current: Option<&str>,
+    view: &LocalView,
     reveal: bool,
     transient: bool,
     above: Option<Said>,
 ) {
+    let current = view.current;
     // a folder that is a place of its own is drawn twice when the place it lies in is open down
     // to it: the row inside is another row (the open state is keyed by the place a row is drawn in);
-    // a place taken out of Local with Remove from Local is not listed, so it is not drawn twice
-    let also_place =
-        indent > 0.0 && app.ui.local_roots.iter().any(|r| same_folder(r, path)) && !app.ui.hidden_locations.iter().any(|h| same_folder(h, path));
+    // the places are the ones Local draws (the built-in ones too), and a place taken out of Local
+    // with Remove from Local is not among them, so it is not drawn twice
+    let also_place = indent > 0.0 && view.places.iter().any(|(_, p)| same_folder(p, path));
     let branch = Branch::local(place, path);
     let sel = current.is_some_and(|c| same_folder(c, path));
     let on_the_way = !sel && current.is_some_and(|c| lightcraft_catalog::query::folder_within(c, path));
@@ -121,7 +122,7 @@ pub(super) fn folder_tree(
     if open && indent < LOCAL_DEPTH {
         let inside = app.ui.sidebar_trees.inside(&branch, above);
         for (n, p) in subfolders(ui, path).iter() {
-            folder_tree(app, ui, place, n, p, indent + INDENT_STEP, current, reveal, false, inside);
+            folder_tree(app, ui, place, n, p, indent + INDENT_STEP, view, reveal, false, inside);
         }
     } else if open && !subfolders(ui, path).is_empty() {
         deeper_row(app, ui, name, path, indent, (&branch, above), also_place);
@@ -149,15 +150,15 @@ fn deeper_row(app: &mut LightcraftApp, ui: &mut egui::Ui, name: &str, path: &str
                 "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further",
             ));
         if super::side_keys::chosen(ui, &more) {
-            match app.run("local.addRoot", json!({"path": path})) {
-                Ok(_) => {
-                    // this row is the folder inside another place from now on: it stays open as it was
-                    app.ui.sidebar_trees.show(tree.0, tree.1);
-                    app.toast(ui.ctx(), crate::i18n::tr_format!("“{name}” is now a place in Local: open it there", name = name));
-                }
-                // the folder went away (or its drive) while the listed row was still shown
-                Err(e) => app.toast_error(ui.ctx(), e),
-            }
+            // the folder is checked on a worker (it can lie on a network share that has stopped answering), then
+            // kept; the folder went away (or its drive) while the listed row was still shown: the refusal is said
+            let name = name.to_string();
+            let (branch, said) = (tree.0.clone(), tree.1);
+            add_local_root_checked(app, ui.ctx(), path, move |app, ctx| {
+                // (this row is the folder inside another place from now on: it stays open as it was)
+                app.ui.sidebar_trees.show(&branch, said);
+                app.toast(ctx, crate::i18n::tr_format!("“{name}” is now a place in Local: open it there", name = name));
+            });
         }
     }
 }

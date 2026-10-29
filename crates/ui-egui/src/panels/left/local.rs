@@ -90,10 +90,11 @@ fn builtin_place_in(injected: Option<&[(String, String)]>, home: &str, path: &st
 /// Local's rows: each place as a folder tree, Browse Folder…, and the way back for hidden places.
 pub(super) fn local_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, now: &LocalNow) {
     let (local, current) = (&now.places, now.current.as_deref());
+    let view = LocalView { places: &local.places, current };
     for (i, (name, path)) in local.places.iter().enumerate() {
         let transient = local.browse_root.as_deref() == Some(path.as_str());
         let reveal = local.owner == Some(i);
-        folder_tree(app, ui, path, name, path, 0.0, current, reveal, transient, None);
+        folder_tree(app, ui, path, name, path, 0.0, &view, reveal, transient, None);
     }
     if app.services.pick_folder.is_some() && {
         let resp = Row::new("local:browse", Icon::Plus, crate::i18n::tr("Browse Folder…")).show(app, ui);
@@ -154,6 +155,67 @@ fn hidden_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, hidden: &[(String, St
 /// slash, `.`/`..`, drive-letter case; see `lightcraft_catalog::query::folder_key`).
 pub(crate) fn same_folder(a: &str, b: &str) -> bool {
     a == b || lightcraft_catalog::query::folder_key(a) == lightcraft_catalog::query::folder_key(b)
+}
+
+/// The folder as Local keeps it: absolute, without a trailing separator. No disk access.
+pub(crate) fn local_root_path(path: &str) -> String {
+    let abs = std::path::absolute(path).map(|a| a.to_string_lossy().trim_end_matches(['/', '\\']).to_string()).unwrap_or(path.into());
+    if abs.is_empty() { path.to_string() } else { abs }
+}
+
+/// Keeps the folder `abs` ([`local_root_path`]) in Local, and brings it back if it was hidden. The caller
+/// has checked it is a folder.
+pub(crate) fn keep_local_root(app: &mut LightcraftApp, abs: &str) {
+    if !app.ui.local_roots.iter().any(|r| same_folder(r, abs)) {
+        app.ui.local_roots.push(abs.to_string());
+    }
+    app.ui.hidden_locations.retain(|h| !same_folder(h, abs));
+}
+
+/// `local.addRoot` for a click: whether `path` is a folder is asked on a worker thread (it can lie on a network
+/// share that has stopped answering, and the stat would freeze the window), then the folder is kept in Local and
+/// `then` runs on the UI thread; a folder that is none says "not a folder" in a message and Local stays as it is.
+pub(super) fn add_local_root_checked(
+    app: &mut LightcraftApp,
+    ctx: &egui::Context,
+    path: &str,
+    then: impl FnOnce(&mut LightcraftApp, &egui::Context) + Send + 'static,
+) {
+    let (shown, abs) = (path.to_string(), local_root_path(path));
+    let label = format!("Add “{abs}” to Local");
+    if app.tasks.is_running(&label) {
+        return;
+    }
+    let checked = abs.clone();
+    let done = move |app: &mut LightcraftApp, ctx: &egui::Context, is_dir: bool| {
+        if is_dir {
+            keep_local_root(app, &abs);
+            then(app, ctx);
+        } else {
+            app.toast_error(ctx, format!("{shown}: not a folder"));
+        }
+    };
+    if let Err(e) = crate::tasks::spawn(app, &label, None, move || is_folder(&checked), done) {
+        app.toast_error(ctx, e);
+    }
+}
+
+fn is_folder(path: &str) -> bool {
+    #[cfg(test)]
+    CHECKED_ON.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push((path.to_string(), std::thread::current().id()));
+    std::path::Path::new(path).is_dir()
+}
+
+/// Which thread asked whether each path is a folder (tests: never the UI thread's).
+#[cfg(test)]
+pub(crate) static CHECKED_ON: std::sync::Mutex<Vec<(String, std::thread::ThreadId)>> = std::sync::Mutex::new(Vec::new());
+
+/// What a Local tree is drawn against: the places Local lists (the built-in ones and the saved ones, those
+/// taken out with Remove from Local left out) and the folder being browsed.
+#[derive(Default)]
+pub(super) struct LocalView<'a> {
+    pub places: &'a [(String, String)],
+    pub current: Option<&'a str>,
 }
 
 /// Local's top-level folders and how the folder being browsed sits among them.
@@ -401,7 +463,7 @@ mod tests {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     for index in 0..500 {
                         let path = format!("/lightcraft-test/folder-{index:04}");
-                        super::folder_tree(&mut app, ui, &path, &format!("Folder {index}"), &path, 0.0, None, false, false, None);
+                        super::folder_tree(&mut app, ui, &path, &format!("Folder {index}"), &path, 0.0, &super::LocalView::default(), false, false, None);
                     }
                 });
             });
@@ -589,7 +651,7 @@ mod tests {
             let raw = HeadlessView::raw_input(egui::vec2(300.0, 200.0), 1.0, frame as f64 / 60.0, vec![]);
             view.run(raw, |ui| {
                 super::Row::new("all", super::Icon::Photos, "All Photos").show(&mut app, ui);
-                super::folder_tree(&mut app, ui, path, "Pictures", path, 0.0, None, false, false, None);
+                super::folder_tree(&mut app, ui, path, "Pictures", path, 0.0, &super::LocalView::default(), false, false, None);
             });
             widgets = crate::widgets::take_registry(&view.ctx);
         }
