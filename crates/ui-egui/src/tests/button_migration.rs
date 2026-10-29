@@ -102,7 +102,8 @@ fn settings_library_buttons_still_fire() {
         observed.fetch_add(1, Ordering::SeqCst);
         None
     }));
-    h.app.run("app.settings", json!({"tab": "general"})).unwrap();
+    // (Open Library… and New Library… are on the Library tab since #2524)
+    h.app.run("app.settings", json!({"tab": "library"})).unwrap();
     assert!(matches!(h.app.ui.dialog, Some(Dialog::Settings { .. })));
     click(&mut h, "button:settingsOpenLibrary");
     assert_eq!(calls.load(Ordering::SeqCst), 1, "Open Library… asked for a folder");
