@@ -1483,7 +1483,8 @@
   "Watched folder": "監視フォルダ",
   "Watermark": "透かし",
   "What's New": "新着情報",
-  "When rated or hovered": "評価時またはカーソルを合わせたとき",
+  "Stars on hover": "星はカーソルを合わせたとき",
+  "Stars on hover: flags and colour labels always show; the stars and the edited mark appear while a photo is hovered or selected.": "星はカーソルを合わせたとき：フラグとカラーラベルは常に表示され、星と編集済みマークは写真にカーソルを合わせたか選択したときに表示されます。",
   "White Balance": "ホワイトバランス",
   "White Balance Selector": "ホワイトバランス選択",
   "White Balance Selector (W)": "ホワイトバランス選択（W）",
@@ -2410,5 +2411,10 @@
   "Same Content as Another Photo": "他の写真と同じ内容",
   "Counting library": "ライブラリを集計中",
   "Previous page": "前のページ",
-  "Next page": "次のページ"
+  "Next page": "次のページ",
+  "Stack — click to expand (S)": "スタック — クリックして展開 (S)",
+  "Stack — click to collapse (S)": "スタック — クリックして折りたたむ (S)",
+  "Virtual copy": "仮想コピー",
+  "Right-click ▸ Locate Missing File… to find it again.": "右クリック → 見つからないファイルを指定… で、ファイルをもう一度指定できます。",
+  "Right-click ▸ Reload from Disk to try again.": "右クリック → ディスクから再読み込み で、もう一度試せます。"
 }
