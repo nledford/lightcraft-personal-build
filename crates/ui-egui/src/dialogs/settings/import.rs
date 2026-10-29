@@ -116,7 +116,7 @@ pub(super) fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens)
             }
         });
     }
-    heading(ui, t, crate::i18n::tr("Read from photos"));
+    heading(ui, t, "Read from photos");
     hint(ui, t, crate::import::READ_HINT);
     let mut read = app.session.import_defaults.read;
     for (kind, label, on) in crate::import::read_choices(&mut read) {

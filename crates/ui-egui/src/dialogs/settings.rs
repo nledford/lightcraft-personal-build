@@ -295,14 +295,14 @@ pub const ALSO: &[(&str, &str, &str)] = &[
     ("general", "", "locale translation translate"),
     ("general", "Startup", "launch start"),
     ("general", "Culling", "trash bin delete deleted"),
-    ("general", "Library", "catalog database"),
-    ("performance", "Smart previews", "proxy proxies offline"),
+    ("library", "Library", "catalog database"),
+    ("library", "Smart previews", "proxy proxies offline"),
     ("import", "Raw defaults", "preset develop"),
     ("import", "Metadata", "iptc author credit"),
     ("import", "Cameras and Cards", "memory card sd camera connected device"),
     ("import", "Auto Import", "watch tether"),
-    ("import", "XMP sidecars", "metadata"),
-    ("general", "External Editing", "editor photoshop color space bit depth"),
+    ("files", "XMP sidecars", "metadata"),
+    ("files", "External Editing", "editor photoshop color space bit depth"),
     ("performance", "Rendering", "graphics card speed resolution"),
     ("performance", "Thumbnail cache", "disk space storage previews"),
     ("display", "Monitor profile", "screen color management calibration calibrate"),
@@ -418,7 +418,7 @@ impl Filter {
 impl Section {
     /// The name of the section's tab, as shown.
     fn tab_name(&self) -> &'static str {
-        TABS.iter().find(|(id, _)| *id == self.tab).map_or("", |(_, label)| crate::i18n::tr(label))
+        TABS.iter().find(|(id, _)| *id == self.tab).map_or("", |(id, label)| crate::i18n::tr(tab_label(id, label)))
     }
 
     /// How well the section matches `words` (in lower case), less being better, or `None` when one

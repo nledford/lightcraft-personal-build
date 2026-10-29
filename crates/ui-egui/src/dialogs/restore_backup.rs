@@ -83,7 +83,7 @@ pub(super) fn choose_backup_folder(app: &mut LightcraftApp, ctx: &egui::Context)
         // a backup was chosen: its restore has begun
         Ok(_) => true,
         Err(e) => {
-            app.toast(ctx, e);
+            app.toast_error(ctx, e);
             false
         }
     }

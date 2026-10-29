@@ -350,9 +350,16 @@ pub fn body(app: &LightcraftApp, ui: &mut egui::Ui, dlg: &mut Dialog) {
     if c.copies > 0 {
         ui.indent("syncSkipDuplicatesIndent", |ui| {
             let mut skip = !*import_duplicates;
-            let r = ui.add_enabled(*import_new, egui::Checkbox::new(&mut skip, count("Don't import files already in the library", c.copies)));
+            // screen readers hear the count too (it is dimmed text inside the same row)
+            let name = count("Don't import files already in the library", c.copies);
+            let suffix = format!("({})", c.copies);
+            let r = Check::new("sync.syncSkipDuplicates", &mut skip, "Don't import files already in the library")
+                .accessible_name(&name)
+                .suffix(&suffix)
+                .tooltip(crate::i18n::tr("A file with the same content as a photo of the library, under another name or in another folder. Untick to bring such files in as photos of their own. Remembered for the next Synchronize."))
+                .enabled(*import_new)
+                .show(ui);
             crate::widgets::register(ui, "syncSkipDuplicates", r.rect);
-            let r = r.on_hover_text(crate::i18n::tr("A file with the same content as a photo of the library, under another name or in another folder. Untick to bring such files in as photos of their own. Remembered for the next Synchronize."));
             if r.changed() {
                 *import_duplicates = !skip;
             }
@@ -363,14 +370,14 @@ pub fn body(app: &LightcraftApp, ui: &mut egui::Ui, dlg: &mut Dialog) {
         // the Import Photos review; widgets `check:syncRead.<kind>`)
         // (indented as a whole, so the kinds that wrap stay under the option they belong to)
         ui.indent("syncRead", |ui| {
-            ui.add_enabled_ui(*import_new, |ui| {
-                ui.horizontal_wrapped(|ui| {
-                    ui.label(egui::RichText::new(crate::i18n::tr("Read")).color(t.text_dim));
-                    for (kind, label, on) in crate::import::read_choices(read) {
-                        let r = ui.checkbox(on, crate::i18n::tr(label)).on_hover_text(crate::i18n::tr(crate::import::READ_HINT));
-                        crate::widgets::register(ui, format!("check:syncRead.{kind}"), r.rect);
-                    }
-                });
+            ui.horizontal_wrapped(|ui| {
+                ui.label(egui::RichText::new(crate::i18n::tr("Read")).color(t.text_dim));
+                for (kind, label, on) in crate::import::read_choices(read) {
+                    Check::new(&format!("syncRead.{kind}"), on, label)
+                        .tooltip(crate::i18n::tr(crate::import::READ_HINT))
+                        .enabled(*import_new)
+                        .show(ui);
+                }
             });
         });
     }
