@@ -2428,5 +2428,12 @@
   "Imports, exports and other long jobs show here while they run.": "Tuonnit, viennit ja muut pitkät työt näkyvät tässä, kun ne ovat käynnissä.",
   "No tasks are running": "Ei käynnissä olevia tehtäviä",
   "Tasks": "Tehtävät",
-  "cancelled": "peruttu"
+  "cancelled": "peruttu",
+  "Welcome to LightCraft": "Tervetuloa LightCraftiin",
+  "Start with photos of your own, or look around with a set of sample photos first. Nothing is copied or moved unless you choose to.": "Aloita omilla kuvillasi tai tutustu ensin esimerkkikuviin. Mitään ei kopioida tai siirretä, ellet itse niin valitse.",
+  "Try Sample Photos": "Kokeile esimerkkikuvia",
+  "These are sample photos, to try LightCraft on. Import your own whenever you're ready.": "Nämä ovat esimerkkikuvia LightCraftin kokeilemiseen. Tuo omat kuvasi, kun olet valmis.",
+  "Your photos are in. The sample photos are still here too.": "Kuvasi on tuotu. Esimerkkikuvat ovat edelleen mukana.",
+  "Keep Them": "Säilytä ne",
+  "Hide": "Piilota"
 }

@@ -329,5 +329,6 @@
   "{n} tasks": "{n} tác vụ",
   "Exported contact sheet: {photos} photos, {pages} pages": "Đã xuất tờ tiếp xúc (ảnh: {photos}, trang: {pages})",
   "Printed to PDF: {photos} photos, {pages} pages": "Đã in ra PDF (ảnh: {photos}, trang: {pages})",
-  "{} import warning{}": "Cảnh báo khi nhập: {}{:.0}"
+  "{} import warning{}": "Cảnh báo khi nhập: {}{:.0}",
+  "Removed {n} sample photos. Edit → Undo brings them back.": "Đã xóa {n} ảnh mẫu. Chỉnh sửa → Hoàn tác sẽ đưa chúng trở lại."
 }

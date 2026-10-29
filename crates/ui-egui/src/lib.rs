@@ -477,6 +477,10 @@ pub struct LightcraftApp {
     /// Whether each recent library can be opened, answered by a worker (issue #1290): the launch
     /// list and File ▸ Open Recent Library never look at a folder on the UI thread.
     pub recent_checks: panels::library_problem::RecentChecks,
+    /// Whether the library held sample photos last frame (`None` before the first): samples that
+    /// newly appear, however they came (the welcome, Help ▸ Add Sample Photos, an agent), bring
+    /// back a samples banner closed over earlier ones.
+    pub samples_present: Option<bool>,
     /// The list of running tasks under the top bar's bell is open (as of the last frame).
     pub activity_open: bool,
     /// `view.tasks` asked for the list to be opened or closed; the top bar does it on its next frame.

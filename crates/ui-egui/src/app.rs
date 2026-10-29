@@ -147,6 +147,7 @@ impl LightcraftApp {
             recent_checks: Default::default(),
             activity_open: false,
             activity_set: None,
+            samples_present: None,
             model_setup: Default::default(),
         }
     }
