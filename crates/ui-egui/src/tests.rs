@@ -100,6 +100,7 @@ mod tool_overlay;
 mod type_contrast;
 mod type_fit;
 mod type_on_photo;
+mod type_polish;
 mod type_readout;
 mod type_roles;
 mod type_scale;
