@@ -431,6 +431,22 @@ fn the_empty_view_names_the_import_shortcut_of_this_platform() {
     assert_eq!(import_way_in(&keymap, true).1, None);
 }
 
+/// The empty view lists the import key's modifiers in the menu bar's one order (⇧⌘I, not ⌘⇧I),
+/// in the platform's notation, follows a rebinding, and names no key when unbound (#3200).
+#[test]
+fn the_no_photos_line_lists_modifiers_in_the_menu_order() {
+    use crate::panels::grid::import_way_in;
+    let mut keymap = crate::state::AppSettings::default().keymap;
+    let mac = import_way_in(&keymap, true).1.unwrap();
+    assert_eq!(mac, "⇧⌘I");
+    let other = import_way_in(&keymap, false).1.unwrap();
+    assert!(other.contains("Ctrl+Shift+I") && !other.contains("Cmd"), "{other}");
+    crate::shortcuts::assign(&mut keymap, "file.addPhotos", Some("Cmd+Alt+Shift+I")).unwrap();
+    assert_eq!(import_way_in(&keymap, true).1.as_deref(), Some("⌥⇧⌘I"));
+    crate::shortcuts::assign(&mut keymap, "file.addPhotos", None).unwrap();
+    assert_eq!(import_way_in(&keymap, true).1, None);
+}
+
 /// A narrow grid wraps the empty view's way in (a long translation with its shortcut would run
 /// out of the window on one line) and keeps the shortcut visible.
 #[test]
