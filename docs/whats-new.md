@@ -43,12 +43,6 @@
   value and range, instead of a button with no value. Increment and Decrement (VoiceOver's Control-Option-Up and Down) and,
   while it has the keyboard focus, the Up and Down arrow keys change it by one step, as the `=` and `-` keys do.
 
-### Screen readers read photo thumbnails as selectable items, not check boxes
-- On macOS, VoiceOver said "checked" or "unchecked" for a photo's thumbnail in the grid, as it does for a check box, and
-  the filmstrip's thumbnails, which began saying whether they are selected on 2026-10-27 ("Screen readers name filmstrip thumbnails like the grid's"), were read the same way.
-  A thumbnail in either place is now a selectable item: VoiceOver says "selected" for the photos you have picked, and
-  says nothing about a state for the others. The name is the same as before (file name, rating, flag, color label).
-
 ### The photo in Detail is named with its file for screen readers
 - With VoiceOver, the photo in Detail view is now announced with its file name, rating, flag and colour label ("Photo:
   IMG_0042.JPG, rating 4 of 5, picked") instead of only "Photo", as the grid names the same photo.
@@ -58,6 +52,8 @@
   library that could not be opened, a settings file problem) are now exposed to screen readers as dialogs: modal ones, so the
   rest of the window is marked as blocked while one is open, and an alert dialog for the prompts. The answer to Check for
   Updates is a dialog too, but not a modal one. Before, each was a plain group that only carried the dialog's title.
+- An alert dialog also carries what it says as its description: a screen reader can read the library problem's path, error and
+  explanation, or a prompt's text, together with the dialog.
 
 ### Screen readers tell buttons, switches and choices apart
 - With VoiceOver, a button that does something (Reset, Auto, Choose…, Create Album, Back) is now a button, not a check box that is "unchecked". A button that is on or off (B&W, HDR) says whether it is on, and one of several choices (Format, Color space, Sharpen, a language, the view buttons: Photo Grid, Square Grid, Detail, Compare, Survey and People) is a radio button that says which one is chosen.
@@ -121,10 +117,13 @@
   LightCraft's row is left; it opens a new issue on the project's GitHub. (A `--memory` session doesn't change that
   setting, so on a Mac where LightCraft only ever ran that way macOS's row stays.)
 
-### Screen readers name filmstrip thumbnails like the grid's
+### Screen readers name filmstrip thumbnails like the grid's and read thumbnails as selectable items
 - A thumbnail in the filmstrip is now named as the grid's cell for the same photo is: the file name, then its rating,
   flag and color label ("LC01207.JPG, 3 stars, picked"), and it says whether it is selected. It was named with the
   file name only, so VoiceOver told you less in Detail than in the grid.
+- A thumbnail, in the grid and in the filmstrip, is also a selectable item now, not a check box: on macOS VoiceOver
+  used to say "checked" or "unchecked" for it; it now reports the photos you have selected as selected and gives no
+  state for the others.
 
 ### Screen readers name a slider's value field "value"
 - The number beside a slider is now named "Exposure value" (the slider's name and "value"), and "Click to type a value,
@@ -1516,14 +1515,17 @@
   desktop app).
 
 ### Every way to the samples leads to the editor
-- However the sample photos come into an empty library (a thumbnail, the welcome's Try Sample Photos button, Help ▸
-  Add Sample Photos, an agent), they open on a sample in Detail with the Edit panel, ready to edit; a thumbnail opens
-  the one clicked. A library that already has photos stays where it was.
+- However the sample photos come in while an empty library's welcome is showing (a thumbnail, the welcome's Try Sample
+  Photos button, Help ▸ Add Sample Photos, an agent), they open on a sample in Detail with the Edit panel, ready to
+  edit; a thumbnail opens the one clicked. A library that already has photos, or a Local folder or Recently Deleted on
+  screen, stays where it was.
 - The banner then walks the first edit through: "Drag any slider: the original never changes. Press Y to compare before
-  and after." (the key Before/After Side by Side is bound to); once a slider is dragged, "That's your first edit. Press Y
-  to see it beside the original."; while a Before / After layout shows it, "The original beside your edit: the file
-  itself never changes."; then the usual message. A rating or a keyword is not an edit; another unedited sample, or an
-  undo back to the start, is invited again.
+  and after."; once a slider is dragged, "That's your first edit. Press Y to see it beside the original."; while a
+  Before / After layout shows it, "The original beside your edit: the file itself never changes."; then the usual
+  message. Y is the default key of Before/After Side by Side: the banner names whatever key it is bound to, and with
+  none bound it leaves the key out ("That's your first edit. View → Before/After Side by Side shows it beside the
+  original."). A rating or a keyword is not an edit; another unedited sample, or an undo back to the start, is invited
+  again.
 
 ### Selection rings you can see in the light themes
 - The active photo's white outline vanished on Silver and Paper's light grid, and told the active photo from the other
