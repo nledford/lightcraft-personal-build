@@ -2483,5 +2483,9 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "Папка ещё читается для вида «Локальное». Перетащите фото, когда это закончится",
   "An import review is waiting to open: drop photos when it is closed": "Проверка импорта ждёт открытия. Перетащите фото, когда она будет закрыта",
   "Switch library while tasks are waiting?": "Сменить библиотеку, пока задачи ждут в очереди?",
-  "Switch Library": "Сменить библиотеку"
+  "Switch Library": "Сменить библиотеку",
+  "Waiting": "Ожидает",
+  "Remove from Queue": "Убрать из очереди",
+  "Retry": "Повторить",
+  "1 task waiting in line won't run.": "1 задача в очереди не будет запущена."
 }

@@ -2860,7 +2860,7 @@
   "Queued: it starts when the task ahead of it ends": "რიგშია: დაიწყება, როცა წინა ამოცანა დასრულდება",
   "Another library was opened: nothing was done": "სხვა ბიბლიოთეკა გაიხსნა: არაფერი გაკეთებულა",
   "Photos of the folder changed while it was read: nothing was done": "საქაღალდის ფოტოები წაკითხვისას შეიცვალა: არაფერი გაკეთებულა",
-  "Starts next": "დაიწყება შემდეგი",
+  "Starts next": "შემდეგი დაიწყება",
   "Queue": "რიგში დამატება",
   "Queue Move": "გადაადგილების რიგში დამატება",
   "Queue Synchronize": "სინქრონიზაციის რიგში დამატება",
@@ -2868,5 +2868,9 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "საქაღალდე ჯერ კიდევ იკითხება ლოკალური ხედისთვის. ფოტოები ჩააგდეთ, როცა დასრულდება",
   "An import review is waiting to open: drop photos when it is closed": "იმპორტის გადახედვა გასახსნელად ელოდება. ფოტოები ჩააგდეთ, როცა დაიხურება",
   "Switch library while tasks are waiting?": "გადავერთოთ ბიბლიოთეკაზე, სანამ ამოცანები რიგშია?",
-  "Switch Library": "ბიბლიოთეკის შეცვლა"
+  "Switch Library": "ბიბლიოთეკის შეცვლა",
+  "Waiting": "ელოდება",
+  "Remove from Queue": "რიგიდან ამოღება",
+  "Retry": "ხელახლა ცდა",
+  "1 task waiting in line won't run.": "რიგში მყოფი 1 ამოცანა არ გაეშვება."
 }

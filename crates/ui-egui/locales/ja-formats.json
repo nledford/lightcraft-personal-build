@@ -353,11 +353,13 @@
   "Files other photos still use, kept: {n}": "ほかの写真が使っているため残したファイル: {n}個",
   "Queued: it starts after {n} more": "キューに追加: あと {n} 件の後に開始します",
   "Left alone: {n} (synchronize again to review them)": "そのまま: {n} 件（再度同期して確認してください）",
-  "Starts after {n} more": "あと {n} 件の後に開始します",
+  "Starts after {n} more": "あと {n} 件の後に開始",
   "Remove from Queue: {label}": "キューから削除: {label}",
   "Starts after: {what}": "次の後に開始: {what}",
   "1 task is waiting in line: {names}. Switching libraries drops it.": "1件のタスクが待機中です：{names}。ライブラリを切り替えると破棄されます。",
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n}件のタスクが待機中です：{names}。ライブラリを切り替えると破棄されます。",
   "Waiting tasks dropped: {n}": "破棄した待機中のタスク：{n}件",
-  "Too many tasks are waiting ({n}): wait for some to finish": "待機中のタスクが多すぎます（{n}件）：いくつか完了するまでお待ちください"
+  "Too many tasks are waiting ({n}): wait for some to finish": "待機中のタスクが多すぎます（{n}件）：いくつか完了するまでお待ちください",
+  "{n} waiting": "待機中 {n} 件",
+  "{n} tasks waiting in line won't run.": "待機中の {n} 件は実行されません。"
 }

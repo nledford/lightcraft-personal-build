@@ -2336,5 +2336,9 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "Uma pasta ainda está sendo lida para a visualização Local. Solte as fotos quando terminar",
   "An import review is waiting to open: drop photos when it is closed": "A revisão da importação está esperando para abrir. Solte as fotos quando ela for fechada",
   "Switch library while tasks are waiting?": "Trocar de biblioteca com tarefas na fila?",
-  "Switch Library": "Trocar de biblioteca"
+  "Switch Library": "Trocar de biblioteca",
+  "Waiting": "Aguardando",
+  "Remove from Queue": "Remover da fila",
+  "Retry": "Tentar novamente",
+  "1 task waiting in line won't run.": "1 tarefa na fila não será executada."
 }

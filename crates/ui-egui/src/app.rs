@@ -339,6 +339,17 @@ impl LightcraftApp {
                     self.follow_renamed_person(from, &to);
                 }
             }
+            // (`place` tells a task put in line from the older `queued` counts of AI Denoise and Read Focus Points; a retried one
+            // may have started already)
+            Ok(v)
+                if id != "activity.retry"
+                    && v.get("queued").and_then(Value::as_u64).is_some()
+                    && v.get("place").and_then(Value::as_u64).is_some() =>
+            {
+                // a task asked for while one of its lane runs waits in line: say so, or nothing seems to happen
+                let place = v.get("place").and_then(Value::as_u64).unwrap_or(1);
+                self.queued_toast(place);
+            }
             Ok(_) => {}
         }
         r

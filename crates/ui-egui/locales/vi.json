@@ -2369,5 +2369,9 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "Thư mục vẫn đang được đọc cho chế độ xem Cục bộ. Hãy thả ảnh khi hoàn tất",
   "An import review is waiting to open: drop photos when it is closed": "Bản xem lại lần nhập đang chờ mở. Hãy thả ảnh sau khi đóng nó",
   "Switch library while tasks are waiting?": "Chuyển thư viện khi còn tác vụ đang chờ trong hàng đợi?",
-  "Switch Library": "Chuyển thư viện"
+  "Switch Library": "Chuyển thư viện",
+  "Waiting": "Đang chờ",
+  "Remove from Queue": "Xóa khỏi hàng đợi",
+  "Retry": "Thử lại",
+  "1 task waiting in line won't run.": "1 tác vụ đang chờ trong hàng đợi sẽ không chạy."
 }

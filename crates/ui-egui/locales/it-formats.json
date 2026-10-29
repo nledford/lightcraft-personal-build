@@ -351,13 +351,15 @@
   "Photos whose file was already gone: {n}": "Foto il cui file mancava già: {n}",
   "Sidecars left in place: {n}": "File collaterali lasciati al loro posto: {n}",
   "Files other photos still use, kept: {n}": "File ancora usati da altre foto, conservati: {n}",
-  "Queued: it starts after {n} more": "In coda: parte dopo altre attività ({n})",
+  "Queued: it starts after {n} more": "In coda: parte dopo altre {n}",
   "Left alone: {n} (synchronize again to review them)": "Lasciati invariati: {n} (sincronizza di nuovo per rivederli)",
-  "Starts after {n} more": "Parte dopo altre attività ({n})",
+  "Starts after {n} more": "Parte dopo altre {n}",
   "Remove from Queue: {label}": "Rimuovi dalla coda: {label}",
   "Starts after: {what}": "Parte dopo: {what}",
   "1 task is waiting in line: {names}. Switching libraries drops it.": "1 attività è in coda: {names}. Cambiando libreria viene scartata.",
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} attività sono in coda: {names}. Cambiando libreria vengono scartate.",
   "Waiting tasks dropped: {n}": "Attività in coda scartate: {n}",
-  "Too many tasks are waiting ({n}): wait for some to finish": "Troppe attività in coda ({n}): attendi che alcune finiscano"
+  "Too many tasks are waiting ({n}): wait for some to finish": "Troppe attività in coda ({n}): attendi che alcune finiscano",
+  "{n} waiting": "{n} in attesa",
+  "{n} tasks waiting in line won't run.": "{n} attività in coda non verranno eseguite."
 }

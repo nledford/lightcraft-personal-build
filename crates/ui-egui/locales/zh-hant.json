@@ -2283,7 +2283,7 @@
   "Queued: it starts when the task ahead of it ends": "已加入佇列：前一個工作結束後開始",
   "Another library was opened: nothing was done": "已開啟另一個圖庫：未執行任何操作",
   "Photos of the folder changed while it was read: nothing was done": "讀取期間資料夾中的照片發生了變化：未執行任何操作",
-  "Starts next": "接下來開始",
+  "Starts next": "下一個開始",
   "Queue": "加入佇列",
   "Queue Move": "加入佇列（移動）",
   "Queue Synchronize": "加入佇列（同步）",
@@ -2291,5 +2291,9 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "正在讀取資料夾以供「本機」檢視使用。讀取完成後再拖放照片",
   "An import review is waiting to open: drop photos when it is closed": "匯入預覽正等待開啟。關閉後再拖放照片",
   "Switch library while tasks are waiting?": "要在有工作排隊等待時切換照片庫嗎？",
-  "Switch Library": "切換照片庫"
+  "Switch Library": "切換照片庫",
+  "Waiting": "等待中",
+  "Remove from Queue": "從佇列中移除",
+  "Retry": "重試",
+  "1 task waiting in line won't run.": "佇列中等待的 1 個工作不會執行。"
 }

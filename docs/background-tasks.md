@@ -20,7 +20,7 @@ well always does: done with problems, failed, stopped, or stopped unexpectedly (
 in the list, under "Needs attention", and put a mark on the bell until they are dismissed. With nothing running, a
 task that just ended is named beside the bell for a few seconds. Which jobs report this way is listed under "Say
 how it ended" below.
-Quitting asks first while a task that can stop is running. Agents see the same list through `activity.list` /
+Quitting asks first while a task that can stop is running, or one waits in line. Agents see the same list through `activity.list` /
 `activity.cancel`, and `ui.inspect` reports it as `activity` (and whether the list is open as `activityOpen`); the tasks that ended and left a row are `activity.finished` / `activity.dismiss` and `activityFinished`.
 
 The registry is `lightcraft_engine::activity` (`crates/engine/src/activity.rs`, `Session::activity`). The stack is
@@ -109,13 +109,18 @@ A call that sets `queue: true` while its lane is busy does not fail:
 `Activity::enqueue` keeps what it was asked (`Request`: the command and its parameters, with the photos written out)
 and `Session::start_waiting` runs it, under the id it had in line, once the lane is free. The engine calls it after
 every command and the app every frame. `activity.list` shows a waiting task after the running ones (`waiting`,
-`place`, `lane`); the activity stack in the app draws a waiting task too, at once, as a row without a bar (its folder, what is known of it, and "Starts next" or "Starts after N more") with ✕, "Remove from Queue", which runs `activity.cancel`. `activity.cancel` takes a waiting task out
+`place`, `lane`); the list under the bell shows them under "Waiting", below the running tasks (its folder, what is known of it, and "Starts next" or "Starts after N more", with ✕, "Remove from Queue", which runs `activity.cancel`) and the line beside the bell counts them ("Building previews · 40 % · 2 waiting"). `activity.cancel` takes a waiting task out
 of the line, `activity.cancel {all: true}` empties it, and opening another library drops it: the photos it names
-belong to the old one. Opening another library while tasks wait asks first in the app (an agent says `dropWaiting: true` to agree; without it
+belong to the old one, and so does a quit (the files may change before the next launch; the quit question says how
+many would not run). Opening another library while tasks wait asks first in the app (an agent says `dropWaiting: true` to agree; without it
 `app.openLibrary` and `app.newLibrary` return `asked: true` and the question is up), and the switch says how many it
 dropped. At most `MAX_WAITING` (100) tasks wait; the app's own refusals of a full line say so in the window's language,
 the engine's (`Activity::line_full_error`) stays English. Without `queue` a call is refused while its lane is
-busy, as before. A waiting task whose start fails (there is no smart previews folder any more, say) is logged (the app's own, an import or a Synchronize Folder, also says why in a toast) and the next in line goes on.
+busy, as before. A waiting task whose start fails (there is no smart previews folder any more, say) is logged (the app's own, an import or a Synchronize Folder, also says why in a toast), leaves a failed row saying why, and the next in line goes on.
+
+A job that kept what it was asked (`guard.set_request`, only the preview builds so far) and did not end well has Retry in its
+row (`activity.retry`, `retryable` in `activity.finished`): the row goes and the same request waits at the end of its
+lane, for the same photos. Opening another library makes old rows unretryable.
 
 ## Examples in the code
 

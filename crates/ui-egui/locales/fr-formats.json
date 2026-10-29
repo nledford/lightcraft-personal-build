@@ -351,13 +351,15 @@
   "Photos whose file was already gone: {n}": "Photos dont le fichier avait déjà disparu : {n}",
   "Sidecars left in place: {n}": "Fichiers annexes laissés en place : {n}",
   "Files other photos still use, kept: {n}": "Fichiers encore utilisés par d'autres photos (conservés) : {n}",
-  "Queued: it starts after {n} more": "En file : démarre après {n} autre(s) tâche(s)",
+  "Queued: it starts after {n} more": "En file : démarre après {n} autres",
   "Left alone: {n} (synchronize again to review them)": "Laissés tels quels : {n} (synchronisez à nouveau pour les examiner)",
-  "Starts after {n} more": "Démarre après {n} autre(s) tâche(s)",
+  "Starts after {n} more": "Démarre après {n} autres",
   "Remove from Queue: {label}": "Retirer de la file : {label}",
   "Starts after: {what}": "Démarre après : {what}",
   "1 task is waiting in line: {names}. Switching libraries drops it.": "1 tâche attend en file : {names}. Changer de bibliothèque l'abandonne.",
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} tâches attendent en file : {names}. Changer de bibliothèque les abandonne.",
   "Waiting tasks dropped: {n}": "Tâches en attente abandonnées : {n}",
-  "Too many tasks are waiting ({n}): wait for some to finish": "Trop de tâches attendent ({n}) : patientez jusqu'à ce que certaines se terminent"
+  "Too many tasks are waiting ({n}): wait for some to finish": "Trop de tâches attendent ({n}) : patientez jusqu'à ce que certaines se terminent",
+  "{n} waiting": "{n} en attente",
+  "{n} tasks waiting in line won't run.": "{n} tâches en file d’attente ne seront pas lancées."
 }

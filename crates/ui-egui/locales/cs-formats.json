@@ -351,13 +351,15 @@
   "Photos whose file was already gone: {n}": "Fotografie, jejichž soubor už chyběl: {n}",
   "Sidecars left in place: {n}": "Doprovodné soubory ponechané na místě: {n}",
   "Files other photos still use, kept: {n}": "Soubory, které stále používají jiné fotografie (ponechány): {n}",
-  "Queued: it starts after {n} more": "Ve frontě: začne po dalších úlohách: {n}",
+  "Queued: it starts after {n} more": "Ve frontě: začne po {n} dalších",
   "Left alone: {n} (synchronize again to review them)": "Ponecháno: {n} (pro kontrolu synchronizujte znovu)",
-  "Starts after {n} more": "Začne po dalších úlohách: {n}",
+  "Starts after {n} more": "Začne po {n} dalších",
   "Remove from Queue: {label}": "Odebrat z fronty: {label}",
   "Starts after: {what}": "Začne po: {what}",
   "1 task is waiting in line: {names}. Switching libraries drops it.": "Ve frontě čeká 1 úloha: {names}. Přepnutí knihovny ji zahodí.",
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "Ve frontě čekají úlohy: {n}: {names}. Přepnutí knihovny je zahodí.",
   "Waiting tasks dropped: {n}": "Zahozené čekající úlohy: {n}",
-  "Too many tasks are waiting ({n}): wait for some to finish": "Ve frontě čeká příliš mnoho úloh: {n}. Počkejte, až některé skončí"
+  "Too many tasks are waiting ({n}): wait for some to finish": "Ve frontě čeká příliš mnoho úloh: {n}. Počkejte, až některé skončí",
+  "{n} waiting": "{n} čeká",
+  "{n} tasks waiting in line won't run.": "Úlohy čekající ve frontě ({n}) se nespustí."
 }

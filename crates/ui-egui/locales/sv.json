@@ -2561,5 +2561,9 @@
   "A folder is still being read for the Local view: drop photos when it has finished": "En mapp läses fortfarande för vyn Lokalt. Släpp fotona när den är klar",
   "An import review is waiting to open: drop photos when it is closed": "Importgranskningen väntar på att öppnas. Släpp fotona när den är stängd",
   "Switch library while tasks are waiting?": "Byta bibliotek medan uppgifter väntar i kön?",
-  "Switch Library": "Byt bibliotek"
+  "Switch Library": "Byt bibliotek",
+  "Waiting": "Väntar",
+  "Remove from Queue": "Ta bort från kön",
+  "Retry": "Försök igen",
+  "1 task waiting in line won't run.": "1 uppgift som väntar i kön kommer inte att köras."
 }
