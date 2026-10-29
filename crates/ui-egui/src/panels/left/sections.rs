@@ -8,7 +8,7 @@ use crate::menu_item::MenuItem;
 pub(super) const SECTION_GAP: f32 = 10.0;
 
 /// Height of a section's header.
-const SECTION_HEADER: f32 = 34.0;
+pub(crate) const SECTION_HEADER: f32 = 34.0;
 
 /// One sidebar section: the gap above it, its header, and (while it is open) the rows `body`
 /// draws. Every section goes through here, so they all fold, space and announce themselves alike.
