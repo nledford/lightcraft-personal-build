@@ -1,0 +1,191 @@
+# Flaky hunt: one test of a crate, run many times, on hosted runners: `just hosted-flaky <ref> <crate> <test> [runs] [shards] [os]`
+# from the lightcraft tools pushes the ref to a `candidate-test-<short sha>` branch and dispatches this workflow on `main`.
+# Each shard builds the crate's tests once and runs the test (`cargo test -p <crate> -- --exact <test>`) its share of the runs, one
+# after the other; the summary adds up passes and failures and shows the first failure's output. The run is red when any run
+# failed (the test is flaky or broken here), green when every requested run passed. Hosted runners are shared and noisy: a hosted
+# result says the test fails on this ref under Actions, not how often it fails on my Mac. Use it before `just flaky`.
+# The compile cache is read only (only `integration` runs of build.yml write it).
+name: Hosted flaky
+run-name: flaky ${{ inputs.crate }} ${{ inputs.test }} at ${{ inputs.ref }} (${{ inputs.os }}, ${{ inputs.runs }} runs)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch of this repo (or a full sha already pushed here): candidate-test-<sha>, ..."
+        required: true
+        type: string
+      crate:
+        description: "Package name, e.g. lightcraft-ui-egui"
+        required: true
+        type: string
+      test:
+        description: "Exact test name (as cargo test --exact takes it), e.g. headless::tests::a_manual_slideshow_waits_for_the_arrow_keys"
+        required: true
+        type: string
+      runs:
+        description: "Runs in all (split over the shards)"
+        required: false
+        type: string
+        default: "200"
+      shards:
+        description: "Runners side by side (1-16)"
+        required: false
+        type: string
+        default: "4"
+      os:
+        description: "Runner: linux (ubuntu-24.04), macos (macos-15) or windows (windows-2025)"
+        required: true
+        type: choice
+        options: [linux, macos, windows]
+        default: linux
+      budget-minutes:
+        description: "Each shard stops starting runs after this many minutes (the summary says so)"
+        required: false
+        type: string
+        default: "240"
+      craft-fonts-ref:
+        description: "storytold/craft-fonts commit (the laptop's craft-fonts-current)"
+        required: true
+        type: string
+      rust-toolchain:
+        description: "rustc version (the laptop's), e.g. 1.99.1"
+        required: true
+        type: string
+      cache:
+        description: "Compile cache: mbx or rust-cache (dependencies only; the only one used on windows)"
+        required: false
+        type: choice
+        options: [mbx, rust-cache]
+        default: mbx
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosted-flaky-${{ inputs.ref }}-${{ inputs.crate }}-${{ inputs.test }}-${{ inputs.os }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      shards: ${{ steps.plan.outputs.shards }}
+      cache: ${{ steps.plan.outputs.cache }}
+    steps:
+      - id: plan
+        env:
+          REF: ${{ inputs.ref }}
+          CRATE: ${{ inputs.crate }}
+          TEST: ${{ inputs.test }}
+          RUNS: ${{ inputs.runs }}
+          SHARDS: ${{ inputs.shards }}
+          BUDGET: ${{ inputs.budget-minutes }}
+          OS: ${{ inputs.os }}
+          CACHE: ${{ inputs.cache }}
+        run: |
+          set -euo pipefail
+          [[ $REF =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::ref '$REF' must be a branch name or sha without a '/'"; exit 1; }
+          [[ $CRATE =~ ^[A-Za-z0-9_-]+$ ]] || { echo "::error::crate '$CRATE' is not a package name"; exit 1; }
+          [[ $TEST =~ ^[A-Za-z0-9_:]+$ ]] || { echo "::error::test '$TEST' must be one exact test path (letters, digits, _ and ::)"; exit 1; }
+          [[ $RUNS =~ ^[0-9]+$ ]] && [ "$RUNS" -ge 1 ] && [ "$RUNS" -le 5000 ] || { echo "::error::runs must be 1-5000"; exit 1; }
+          [[ $SHARDS =~ ^[0-9]+$ ]] && [ "$SHARDS" -ge 1 ] && [ "$SHARDS" -le 16 ] || { echo "::error::shards must be 1-16"; exit 1; }
+          [[ $BUDGET =~ ^[0-9]+$ ]] && [ "$BUDGET" -ge 5 ] && [ "$BUDGET" -le 330 ] || { echo "::error::budget-minutes must be 5-330"; exit 1; }
+          [ "$SHARDS" -le "$RUNS" ] || SHARDS=$RUNS
+          [ "$OS" = windows ] && CACHE=rust-cache
+          echo "cache=$CACHE" >> "$GITHUB_OUTPUT"
+          echo "shards=$(seq 1 "$SHARDS" | jq -cs .)" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Flaky hunt: $CRATE $TEST"
+            echo ""
+            echo "- ref $REF on $OS: $RUNS runs over $SHARDS shard(s), $BUDGET minute budget per shard, cache $CACHE"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  shard:
+    name: shard ${{ matrix.shard }}
+    needs: plan
+    runs-on: ${{ inputs.os == 'linux' && 'ubuntu-24.04' || inputs.os == 'macos' && 'macos-15' || 'windows-2025' }}
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 0
+      CARGO_NET_RETRY: 10
+      CARGO_PROFILE_DEV_DEBUG: 0
+      RUST_BACKTRACE: 1
+      RUST_TEST_THREADS: 4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: Check out the scripts and the setup action
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: personal-build-main
+          sparse-checkout: |
+            scripts
+            .github/actions
+          persist-credentials: false
+      - uses: ./personal-build-main/.github/actions/setup
+        with:
+          craft-fonts-ref: ${{ inputs.craft-fonts-ref }}
+          rust-toolchain: ${{ inputs.rust-toolchain }}
+          cache: ${{ needs.plan.outputs.cache }}
+          cache-name: flaky-${{ inputs.os }}
+      - name: Run the test
+        env:
+          CRATE: ${{ inputs.crate }}
+          TEST: ${{ inputs.test }}
+          RUNS: ${{ inputs.runs }}
+          SHARDS: ${{ inputs.shards }}
+          SHARD: ${{ matrix.shard }}
+          BUDGET: ${{ inputs.budget-minutes }}
+        run: |
+          set -euo pipefail
+          [ "$SHARDS" -le "$RUNS" ] || SHARDS=$RUNS
+          # this shard's share: RUNS / SHARDS, the first RUNS % SHARDS shards one more
+          mine=$((RUNS / SHARDS + (SHARD <= RUNS % SHARDS ? 1 : 0)))
+          bash personal-build-main/scripts/flaky-shard.sh "$CRATE" "$TEST" "$mine" "$SHARD" "$BUDGET"
+      - name: Keep the shard's result
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: flaky-result-${{ matrix.shard }}
+          path: ${{ runner.temp }}/flaky/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  summary:
+    name: Result
+    if: always()
+    needs: [plan, shard]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: flaky-result-*
+          path: results
+          merge-multiple: true
+        continue-on-error: true
+      - name: Add up the shards
+        env:
+          CRATE: ${{ inputs.crate }}
+          TEST: ${{ inputs.test }}
+          REF: ${{ inputs.ref }}
+          RESULT: ${{ needs.shard.result }}
+        run: |
+          bash scripts/flaky-summary.sh "Flaky hunt: $CRATE $TEST at $REF" "$RESULT" results

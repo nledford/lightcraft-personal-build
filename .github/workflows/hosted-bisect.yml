@@ -1,0 +1,124 @@
+# Correctness bisect on a hosted runner: `just hosted-bisect <good> <bad> <crate> <test> [os]` from the lightcraft tools pushes
+# <bad> (whose history holds <good>) to a `candidate-test-<short sha>` branch and dispatches this workflow on `main`.
+# `git bisect run` builds the crate's tests at each step and runs one test (scripts/test-once.sh); the summary names the first bad
+# commit. It first checks that the test fails at <bad> and passes at <good>. NOT for performance: hosted runners are shared and
+# noisy, so a time is never evidence here. The compile cache is read only (only `integration` runs of build.yml write it).
+name: Hosted bisect
+run-name: bisect ${{ inputs.crate }} ${{ inputs.test }} (${{ inputs.os }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      good:
+        description: "A commit where the test passes (a sha; an ancestor of bad)"
+        required: true
+        type: string
+      bad:
+        description: "A commit where the test fails, pushed to this repo: a branch name or a full sha"
+        required: true
+        type: string
+      crate:
+        description: "Package name, e.g. lightcraft-engine"
+        required: true
+        type: string
+      test:
+        description: "Exact test name (as cargo test --exact takes it)"
+        required: true
+        type: string
+      repeat:
+        description: "Runs per commit; a commit is bad when any run fails (use more than 1 for a flaky test)"
+        required: false
+        type: string
+        default: "1"
+      os:
+        description: "Runner: linux (ubuntu-24.04), macos (macos-15) or windows (windows-2025)"
+        required: true
+        type: choice
+        options: [linux, macos, windows]
+        default: linux
+      craft-fonts-ref:
+        description: "storytold/craft-fonts commit (the laptop's craft-fonts-current)"
+        required: true
+        type: string
+      rust-toolchain:
+        description: "rustc version (the laptop's), e.g. 1.99.1"
+        required: true
+        type: string
+      cache:
+        description: "Compile cache: mbx or rust-cache (dependencies only; the only one used on windows)"
+        required: false
+        type: choice
+        options: [mbx, rust-cache]
+        default: mbx
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosted-bisect-${{ inputs.bad }}-${{ inputs.crate }}-${{ inputs.test }}-${{ inputs.os }}
+  cancel-in-progress: true
+
+jobs:
+  bisect:
+    name: bisect ${{ inputs.os }}
+    runs-on: ${{ inputs.os == 'linux' && 'ubuntu-24.04' || inputs.os == 'macos' && 'macos-15' || 'windows-2025' }}
+    timeout-minutes: 350
+    defaults:
+      run:
+        shell: bash
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 0
+      CARGO_NET_RETRY: 10
+      CARGO_PROFILE_DEV_DEBUG: 0
+      RUST_BACKTRACE: 1
+      RUST_TEST_THREADS: 4
+    steps:
+      - name: Check the inputs
+        env:
+          GOOD: ${{ inputs.good }}
+          BAD: ${{ inputs.bad }}
+          CRATE: ${{ inputs.crate }}
+          TEST: ${{ inputs.test }}
+          REPEAT: ${{ inputs.repeat }}
+        run: |
+          set -euo pipefail
+          [[ $GOOD =~ ^[0-9a-f]{7,40}$ ]] || { echo "::error::good '$GOOD' must be a commit sha"; exit 1; }
+          [[ $BAD =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::bad '$BAD' must be a branch name or sha without a '/'"; exit 1; }
+          [[ $CRATE =~ ^[A-Za-z0-9_-]+$ ]] || { echo "::error::crate '$CRATE' is not a package name"; exit 1; }
+          [[ $TEST =~ ^[A-Za-z0-9_:]+$ ]] || { echo "::error::test '$TEST' must be one exact test path (letters, digits, _ and ::)"; exit 1; }
+          [[ $REPEAT =~ ^[0-9]+$ ]] && [ "$REPEAT" -ge 1 ] && [ "$REPEAT" -le 100 ] || { echo "::error::repeat must be 1-100"; exit 1; }
+
+      # full history: the bisect walks it
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.bad }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check out the scripts and the setup action
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: personal-build-main
+          sparse-checkout: |
+            scripts
+            .github/actions
+          persist-credentials: false
+      - uses: ./personal-build-main/.github/actions/setup
+        with:
+          craft-fonts-ref: ${{ inputs.craft-fonts-ref }}
+          rust-toolchain: ${{ inputs.rust-toolchain }}
+          cache: ${{ inputs.os == 'windows' && 'rust-cache' || inputs.cache }}
+          cache-name: bisect-${{ inputs.os }}
+      - name: Bisect
+        env:
+          GOOD: ${{ inputs.good }}
+          BAD: ${{ inputs.bad }}
+          CRATE: ${{ inputs.crate }}
+          TEST: ${{ inputs.test }}
+          REPEAT: ${{ inputs.repeat }}
+        run: |
+          set -euo pipefail
+          git config user.name bisect
+          git config user.email bisect@invalid
+          export TEST_ONCE="$GITHUB_WORKSPACE/personal-build-main/scripts/test-once.sh"
+          bash personal-build-main/scripts/bisect.sh "$GOOD" "$BAD" "$CRATE" "$TEST" "$REPEAT"

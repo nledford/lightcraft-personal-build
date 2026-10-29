@@ -1,0 +1,260 @@
+# The tests of any ref on a hosted macOS, Windows or Linux runner: `just hosted-test <ref> [os] [scope] [filter]` from the
+# lightcraft tools pushes the ref to a `candidate-test-<short sha>` branch of this repo and dispatches this workflow on `main`.
+# It replaces the laptop's macOS-only tests and gives Windows (which the laptop can't run) the same steps; nothing here builds an
+# app, signs anything or reads my library.
+#
+# scope `full`        every `cargo xtask ci` step (scripts/xtask-group.sh), each even after a failure
+# scope `macos-only`  the tests of macOS-only code (the list is in scripts/xtask-group.sh; macOS only)
+# filter              words for `cargo test`'s name filter: only those workspace tests run (scope is ignored)
+# Linux, scope full, runs the four groups of linux-ci.yml side by side (as build.yml does); macOS and Windows run one job.
+# The compile cache is read only, except for `ref` = `integration` (the build repo's integration branch): only my build writes it.
+name: Hosted test
+run-name: ${{ inputs.ref }} ${{ inputs.os }} ${{ inputs.filter && format('[{0}]', inputs.filter) || inputs.scope }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch of this repo (or a full sha already pushed here): candidate-test-<sha>, integration, ..."
+        required: true
+        type: string
+      os:
+        description: "Runner: macos (macos-15, arm64), windows (windows-2025) or linux (ubuntu-24.04)"
+        required: true
+        type: choice
+        options: [macos, windows, linux]
+        default: macos
+      scope:
+        description: "full (every xtask ci step) or macos-only (tests of macOS-only code; macos only)"
+        required: true
+        type: choice
+        options: [full, macos-only]
+        default: full
+      filter:
+        description: "Test name words (space separated), e.g. window_place:: menus::; overrides scope"
+        required: false
+        type: string
+        default: ""
+      craft-fonts-ref:
+        description: "storytold/craft-fonts commit (the laptop's craft-fonts-current)"
+        required: true
+        type: string
+      rust-toolchain:
+        description: "rustc version (the laptop's), e.g. 1.99.1"
+        required: true
+        type: string
+      cache:
+        description: "Compile cache: mbx (macos, linux) or rust-cache (dependencies only; the only one on windows)"
+        required: false
+        type: choice
+        options: [mbx, rust-cache]
+        default: mbx
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosted-test-${{ inputs.ref }}-${{ inputs.os }}-${{ inputs.scope }}-${{ inputs.filter }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      save: ${{ steps.plan.outputs.save }}
+      groups: ${{ steps.plan.outputs.groups }}
+      group: ${{ steps.plan.outputs.group }}
+      cache: ${{ steps.plan.outputs.cache }}
+    steps:
+      - id: plan
+        env:
+          REF: ${{ inputs.ref }}
+          OS: ${{ inputs.os }}
+          SCOPE: ${{ inputs.scope }}
+          FILTER: ${{ inputs.filter }}
+          CACHE: ${{ inputs.cache }}
+        run: |
+          set -euo pipefail
+          [[ $REF =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::ref '$REF' must be a branch name or sha without a '/'"; exit 1; }
+          [[ -z $FILTER || $FILTER =~ ^[A-Za-z0-9_:.\ -]+$ ]] || { echo "::error::filter '$FILTER' may hold only letters, digits, _ : . - and spaces"; exit 1; }
+          if [ -z "$FILTER" ] && [ "$SCOPE" = macos-only ] && [ "$OS" != macos ]; then
+            echo "::error::scope macos-only tests macOS-only code: use os macos (or scope full, or a filter)"
+            exit 1
+          fi
+          # only my build writes the caches
+          [ "$REF" = integration ] && echo "save=true" >> "$GITHUB_OUTPUT" || echo "save=false" >> "$GITHUB_OUTPUT"
+          # Windows has only rust-cache here: mbx's Action and shim are trialled on macOS and Linux
+          [ "$OS" = windows ] && CACHE=rust-cache
+          echo "cache=$CACHE" >> "$GITHUB_OUTPUT"
+          if [ -n "$FILTER" ]; then
+            echo "group=test" >> "$GITHUB_OUTPUT"
+            echo 'groups=["test"]' >> "$GITHUB_OUTPUT"
+          else
+            [ "$SCOPE" = macos-only ] && echo "group=macos-only" >> "$GITHUB_OUTPUT" || echo "group=full" >> "$GITHUB_OUTPUT"
+            echo 'groups=["lint","test","heif-doc","wasm"]' >> "$GITHUB_OUTPUT"
+          fi
+          {
+            echo "### Hosted test: $REF"
+            echo ""
+            echo "- runner: $OS, scope: ${FILTER:+filter [$FILTER]}${FILTER:-$SCOPE}, cache: $CACHE"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  linux:
+    name: Linux ${{ matrix.group }}
+    needs: plan
+    if: inputs.os == 'linux'
+    strategy:
+      fail-fast: false
+      matrix:
+        group: ${{ fromJSON(needs.plan.outputs.groups) }}
+    uses: ./.github/workflows/linux-ci.yml
+    with:
+      ref: ${{ inputs.ref }}
+      craft-fonts-ref: ${{ inputs.craft-fonts-ref }}
+      rust-toolchain: ${{ inputs.rust-toolchain }}
+      group: ${{ matrix.group }}
+      save-cache: ${{ needs.plan.outputs.save == 'true' }}
+      cache: ${{ needs.plan.outputs.cache }}
+      filter: ${{ inputs.filter }}
+
+  native:
+    name: ${{ inputs.os }} ${{ needs.plan.outputs.group }}
+    needs: plan
+    if: inputs.os != 'linux'
+    runs-on: ${{ inputs.os == 'macos' && 'macos-15' || 'windows-2025' }}
+    timeout-minutes: 240
+    defaults:
+      run:
+        shell: bash
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 0
+      CARGO_NET_RETRY: 10
+      CARGO_PROFILE_DEV_DEBUG: 0
+      RUST_BACKTRACE: 1
+      RUST_TEST_THREADS: 4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Check out the step scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: personal-build-main
+          sparse-checkout: scripts
+          persist-credentials: false
+
+      - name: Check out craft-fonts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: storytold/craft-fonts
+          ref: ${{ inputs.craft-fonts-ref }}
+          path: craft-fonts
+          persist-credentials: false
+
+      - name: Build with craft-fonts
+        run: |
+          set -euo pipefail
+          fonts="$GITHUB_WORKSPACE/craft-fonts"
+          if command -v cygpath >/dev/null; then fonts=$(cygpath -m "$fonts"); fi
+          {
+            echo "CRAFT_FONTS_DIR=$fonts"
+            echo "CRAFT_FONTS_REQUIRED=1"
+            echo "LIGHTCRAFT_BUILD_SHA=$(git rev-parse HEAD)"
+          } >> "$GITHUB_ENV"
+
+      - name: Check out craft-i18n
+        uses: storytold/craft-common-actions/actions/checkout-craft-i18n@main
+
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+          targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
+
+      - if: needs.plan.outputs.cache == 'rust-cache'
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          prefix-key: v1-rust
+          key: hosted-${{ inputs.os }}
+          save-if: ${{ needs.plan.outputs.save }}
+          cache-on-failure: true
+
+      - if: needs.plan.outputs.cache == 'mbx'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-downloads-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-downloads-
+      - if: needs.plan.outputs.cache == 'mbx'
+        uses: jdx/mr-boxington-action@88acf2bb50552c7c508cbac13e5f8c576b95b1de # v1.7.3
+        with:
+          github-cache-mode: objects
+          cache-generation: hosted-${{ inputs.os }}-v1
+          save-on-workflow-dispatch: ${{ needs.plan.outputs.save }}
+      - if: needs.plan.outputs.cache == 'mbx'
+        name: Route cargo through mbx
+        run: |
+          set -euo pipefail
+          mbx --version
+          mbx setup </dev/null || true
+          shim=$(find "$HOME/Library/Application Support/mbx" -type f -name cargo -perm -u+x 2>/dev/null | head -1 || true)
+          [ -n "$shim" ] || { echo "::error::no mbx Cargo shim found after mbx setup"; exit 1; }
+          dirname "$shim" >> "$GITHUB_PATH"
+          PATH="$(dirname "$shim"):$PATH" command -v cargo
+
+      - name: The steps
+        env:
+          REF: ${{ inputs.ref }}
+          CACHE: ${{ needs.plan.outputs.cache }}
+          GROUP: ${{ needs.plan.outputs.group }}
+          FILTER: ${{ inputs.filter }}
+        run: |
+          # (FILTER words are split on spaces on purpose: several test names or paths)
+          # shellcheck disable=SC2086
+          bash personal-build-main/scripts/xtask-group.sh "$GROUP" $FILTER
+
+      - name: Keep the result for the summary job
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: xtask-result-${{ inputs.os }}-${{ needs.plan.outputs.group }}
+          path: ${{ runner.temp }}/result/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  summary:
+    name: Result
+    if: always()
+    needs: [plan, linux, native]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: xtask-result-*
+          path: results
+          merge-multiple: true
+        continue-on-error: true
+      - name: Every failed step and test
+        env:
+          REF: ${{ inputs.ref }}
+          OS: ${{ inputs.os }}
+          PLAN: ${{ needs.plan.result }}
+          LINUX: ${{ needs.linux.result }}
+          NATIVE: ${{ needs.native.result }}
+        run: |
+          # the job that ran is the one that wasn't skipped
+          if [ "$PLAN" != success ]; then result=$PLAN; elif [ "$OS" = linux ]; then result=$LINUX; else result=$NATIVE; fi
+          bash scripts/xtask-summary.sh "Hosted test: $REF on $OS" "$result" results

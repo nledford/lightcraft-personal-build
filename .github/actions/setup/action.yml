@@ -1,0 +1,112 @@
+name: Set up a LightCraft source checkout for building
+description: >-
+  craft-fonts and craft-i18n checkouts, the Linux build dependencies, the Rust toolchain and the compile cache (mbx or
+  rust-cache). The source ref must already be checked out at the workspace root. Used from this repo's main through a
+  checkout at `personal-build-main` (`uses: ./personal-build-main/.github/actions/setup`), because the source checkout
+  doesn't have this file.
+
+inputs:
+  craft-fonts-ref:
+    description: "storytold/craft-fonts commit"
+    required: true
+  rust-toolchain:
+    description: "rustc version"
+    required: true
+  cache:
+    description: "mbx or rust-cache"
+    required: false
+    default: mbx
+  save-cache:
+    description: "Write the compile cache (only my build's runs do)"
+    required: false
+    default: "false"
+  cache-name:
+    description: "Names this job's cache entry (so parallel jobs never overwrite each other's)"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Check out craft-fonts
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: storytold/craft-fonts
+        ref: ${{ inputs.craft-fonts-ref }}
+        path: craft-fonts
+        persist-credentials: false
+
+    - name: Build with craft-fonts
+      shell: bash
+      run: |
+        set -euo pipefail
+        fonts="$GITHUB_WORKSPACE/craft-fonts"
+        if command -v cygpath >/dev/null; then fonts=$(cygpath -m "$fonts"); fi
+        {
+          echo "CRAFT_FONTS_DIR=$fonts"
+          echo "CRAFT_FONTS_REQUIRED=1"
+          echo "LIGHTCRAFT_BUILD_SHA=$(git rev-parse HEAD)"
+        } >> "$GITHUB_ENV"
+
+    # Does nothing unless the source has craft-i18n.rev.
+    - name: Check out craft-i18n
+      uses: storytold/craft-common-actions/actions/checkout-craft-i18n@main
+
+    # Nothing waits on it: the space is free before the build needs it.
+    - name: Free disk space
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        nohup sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+          /opt/hostedtoolcache/CodeQL </dev/null >/dev/null 2>&1 &
+
+    - name: Install Linux build dependencies
+      if: runner.os == 'Linux'
+      uses: storytold/craft-common-actions/actions/install-apt-packages@main
+      with:
+        save: never
+        packages: >-
+          pkg-config libxkbcommon-dev libwayland-dev libx11-dev libxcb1-dev libxcursor-dev
+          libxrandr-dev libxi-dev libfontconfig1-dev libfreetype-dev mesa-vulkan-drivers
+          libgl1-mesa-dev libdbus-1-dev
+
+    - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+      with:
+        toolchain: ${{ inputs.rust-toolchain }}
+        targets: wasm32-unknown-unknown
+        components: clippy, rustfmt
+
+    - if: inputs.cache == 'rust-cache'
+      uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      with:
+        prefix-key: v1-rust
+        key: ${{ inputs.cache-name }}
+        save-if: ${{ inputs.save-cache }}
+        cache-on-failure: true
+
+    - if: inputs.cache == 'mbx'
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+        key: cargo-downloads-${{ hashFiles('Cargo.lock') }}
+        restore-keys: cargo-downloads-
+    - if: inputs.cache == 'mbx'
+      uses: jdx/mr-boxington-action@88acf2bb50552c7c508cbac13e5f8c576b95b1de # v1.7.3
+      with:
+        github-cache-mode: objects
+        cache-generation: ${{ inputs.cache-name }}-v1
+        save-on-workflow-dispatch: ${{ inputs.save-cache }}
+    - if: inputs.cache == 'mbx'
+      name: Route cargo through mbx
+      shell: bash
+      run: |
+        set -euo pipefail
+        mbx --version
+        mbx setup </dev/null || true
+        shim=$(find "$HOME/Library/Application Support/mbx" "$HOME/.local" "$HOME/.config" "$HOME/.cache" -type f -name cargo -path '*mbx*' -perm -u+x 2>/dev/null | head -1 || true)
+        [ -n "$shim" ] || { echo "::error::no mbx Cargo shim found after mbx setup"; exit 1; }
+        dirname "$shim" >> "$GITHUB_PATH"
+        echo "shim: $shim"
+        PATH="$(dirname "$shim"):$PATH" command -v cargo

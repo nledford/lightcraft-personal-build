@@ -1,0 +1,181 @@
+# One group of the `cargo xtask ci` steps on a Linux runner (as in xtask/src/main.rs cmd_ci on 29 Oct), each step run even after
+# an earlier one failed, as `just ci-rest` does locally (`xtask ci` itself stops at the first failure). Called by build.yml
+# (four groups side by side on separate runners) and by hosted-test.yml (os linux, scope full). Setup follows storytold's
+# gate.yml (craft-common-actions), which can't be called here because it checks out the dispatching ref, not `ref`.
+#
+# The groups split the 13 steps of the old single job so the wall time is the slowest group, not the sum:
+#   lint      type, fmt, clippy, heif clippy, parity, layers, refusals, assets
+#   test      the workspace tests (`cargo test`, not nextest: xtask/src/ci.rs documents the ui-egui tests taking ~30 min under
+#             nextest, because every test process rebuilds the demo scene, against under 5 min under cargo test)
+#   heif-doc  heif-test, heif-engine, doctest
+#   wasm      the wasm32 build
+# Test builds carry no debug info (CARGO_PROFILE_DEV_DEBUG=0) and no incremental state: faster to build, link and cache.
+name: Linux xtask ci steps
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Source ref of this repo (a branch pushed here)"
+        required: true
+        type: string
+      craft-fonts-ref:
+        required: true
+        type: string
+      rust-toolchain:
+        required: true
+        type: string
+      group:
+        description: "lint, test, heif-doc or wasm"
+        required: true
+        type: string
+      save-cache:
+        description: "Write the compile cache (my build only)"
+        required: false
+        type: boolean
+        default: false
+      cache:
+        description: "mbx (per-compilation objects, our own crates too) or rust-cache (dependencies only)"
+        required: false
+        type: string
+        default: mbx
+      filter:
+        description: "Only the workspace tests whose names contain these words (group test); empty: the group's own steps"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: xtask ci ${{ inputs.group }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 0
+      CARGO_NET_RETRY: 10
+      CARGO_PROFILE_DEV_DEBUG: 0
+      RUST_BACKTRACE: 1
+      # xtask ci caps test threads at 4 (frame-budget tests get flaky with more); the runner has 4 CPUs anyway.
+      RUST_TEST_THREADS: 4
+    steps:
+      - name: Check the group
+        env:
+          GROUP: ${{ inputs.group }}
+        run: |
+          case $GROUP in lint | test | heif-doc | wasm) ;; *) echo "::error::group must be lint, test, heif-doc or wasm, not '$GROUP'"; exit 1 ;; esac
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      # The shared step list (scripts/xtask-group.sh) lives on this repo's main; the source checkout above is `ref`.
+      - name: Check out the step scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: personal-build-main
+          sparse-checkout: scripts
+          persist-credentials: false
+
+      - name: Check out craft-fonts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: storytold/craft-fonts
+          ref: ${{ inputs.craft-fonts-ref }}
+          path: craft-fonts
+          persist-credentials: false
+
+      - name: Build with craft-fonts
+        run: |
+          echo "CRAFT_FONTS_DIR=$GITHUB_WORKSPACE/craft-fonts" >> "$GITHUB_ENV"
+          echo "CRAFT_FONTS_REQUIRED=1" >> "$GITHUB_ENV"
+
+      - name: Check out craft-i18n
+        uses: storytold/craft-common-actions/actions/checkout-craft-i18n@main
+
+      # Nothing waits on it: the space is free before the build needs it.
+      - name: Free disk space
+        run: |
+          nohup sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL </dev/null >/dev/null 2>&1 &
+
+      - name: Install Linux build dependencies
+        uses: storytold/craft-common-actions/actions/install-apt-packages@main
+        with:
+          # The action saves only on pushes to the default branch by default; every run here is a dispatch. One group
+          # saves, so four jobs never write the same entry.
+          save: ${{ inputs.save-cache && inputs.group == 'lint' && 'always' || 'never' }}
+          packages: >-
+            pkg-config libxkbcommon-dev libwayland-dev libx11-dev libxcb1-dev libxcursor-dev
+            libxrandr-dev libxi-dev libfontconfig1-dev libfreetype-dev mesa-vulkan-drivers
+            libgl1-mesa-dev libdbus-1-dev
+
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+          targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
+
+      - if: inputs.cache == 'rust-cache'
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          prefix-key: v1-rust
+          key: linux-ci-${{ inputs.group }}
+          save-if: ${{ inputs.save-cache }}
+          cache-on-failure: true
+
+      # As in build.yml's app job: Cargo's downloads get their own cache (mbx's objects leave them out), and mbx's Cargo
+      # shim goes first on PATH so every cargo call (xtask's too) goes through it. Each group has its own cache
+      # generation, so the four jobs save four entries that never overwrite each other and each restores its own kind
+      # of build (check, test, wasm) instead of whichever job saved last.
+      - if: inputs.cache == 'mbx'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-downloads-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-downloads-
+      - if: inputs.cache == 'mbx'
+        uses: jdx/mr-boxington-action@88acf2bb50552c7c508cbac13e5f8c576b95b1de # v1.7.3
+        with:
+          github-cache-mode: objects
+          cache-generation: linux-${{ inputs.group }}-v1
+          save-on-workflow-dispatch: ${{ inputs.save-cache }}
+      - if: inputs.cache == 'mbx'
+        name: Route cargo through mbx
+        run: |
+          set -euo pipefail
+          mbx --version
+          mbx setup --status || true
+          mbx setup </dev/null || true
+          shim=$(find "$HOME/.local" "$HOME/.config" "$HOME/.cache" -type f -name cargo -path '*mbx*' -perm -u+x 2>/dev/null | head -1 || true)
+          [ -n "$shim" ] || { echo "::error::no mbx Cargo shim found after mbx setup"; exit 1; }
+          dirname "$shim" >> "$GITHUB_PATH"
+          echo "shim: $shim"
+          PATH="$(dirname "$shim"):$PATH" command -v cargo
+
+      - name: The xtask ci steps of this group
+        env:
+          REF: ${{ inputs.ref }}
+          GROUP: ${{ inputs.group }}
+          CACHE: ${{ inputs.cache }}
+          FILTER: ${{ inputs.filter }}
+        run: |
+          # (FILTER words are split on spaces on purpose: several test names or paths)
+          # shellcheck disable=SC2086
+          bash personal-build-main/scripts/xtask-group.sh "$GROUP" $FILTER
+
+      - name: Keep the group's result for the summary job
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: xtask-result-${{ inputs.group }}
+          path: ${{ runner.temp }}/result/
+          if-no-files-found: ignore
+          retention-days: 7

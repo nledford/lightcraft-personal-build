@@ -1,0 +1,37 @@
+# Nightly test-merge: merges the pinned members (members.txt on this repo's main) onto storytold/lightcraft's main, in order, and
+# reports in the run summary which member conflicts. Nothing is built, nothing is pushed or commented anywhere. The run is red
+# when a member conflicts, a member's head moved (refresh with `just hosted-members` from the lightcraft tools) or can't be fetched.
+# `just hosted-members` rewrites members.txt from my open PRs (or an integration inputs file); `just hosted-merge` runs this by hand.
+# (GitHub switches scheduled workflows off after 60 days without a push to this repo; a push of members.txt turns them on again.)
+name: Nightly test-merge
+run-name: test-merge of members.txt onto main
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-merge
+  cancel-in-progress: true
+
+jobs:
+  merge:
+    name: Test-merge the members
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            scripts
+            members.txt
+          persist-credentials: false
+      - name: Test-merge
+        run: |
+          set -euo pipefail
+          [ -f members.txt ] || { echo "::error::members.txt is missing: run just hosted-members"; exit 1; }
+          bash scripts/nightly-merge.sh members.txt
