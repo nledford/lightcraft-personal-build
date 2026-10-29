@@ -1274,7 +1274,14 @@ mod tests {
                 pool.queue.push_back((p, 1));
             }
         }
-        let cfg = ReadCfg { skip: Skip { path: None, canonical: None }, want_all: false, timed: false, completion: false, max_depth: MAX_DEPTH, max_entries: 10 };
+        let cfg = ReadCfg {
+            skip: Skip { path: None, canonical: None },
+            want_all: false,
+            timed: false,
+            completion: false,
+            max_depth: MAX_DEPTH,
+            max_entries: 10,
+        };
         let listed = std::thread::scope(|scope| {
             let reader = scope.spawn(|| read_ahead(&shared, cfg));
             let t0 = std::time::Instant::now();
