@@ -38,6 +38,33 @@ done <"$members"
 
 rows=()
 bad=0
+
+# The pinned sha of each member against the PR's head today (one ls-remote for all of them): a moved head is a problem, so
+# a stale members.txt turns the run red (the merges below still use the pinned shas, which is what my build was made from).
+pulls=()
+while read -r pr _s _rest; do
+  case ${pr:-#} in \#*) continue ;; esac
+  [[ $pr =~ ^[0-9]+$ ]] && pulls+=("refs/pull/$pr/head")
+done <"$members"
+moved=()
+if [ ${#pulls[@]} -gt 0 ]; then
+  if heads=$(git ls-remote origin "${pulls[@]}" 2>/dev/null) && [ -n "$heads" ]; then
+    while read -r pr s _rest; do
+      case ${pr:-#} in \#*) continue ;; esac
+      [[ $pr =~ ^[0-9]+$ ]] || continue
+      cur=$(printf '%s\n' "$heads" | awk -v r="refs/pull/$pr/head" '$2 == r {print $1}')
+      if [ -z "$cur" ]; then
+        moved+=("| #$pr | \`${s:0:10}\` | no head ref on origin |")
+      elif [ "$cur" != "${s:-}" ]; then
+        moved+=("| #$pr | \`${s:0:10}\` | head is now \`${cur:0:10}\` |")
+      fi
+    done <"$members"
+  else
+    echo "::error::can't read the PR heads from $origin (ls-remote failed): the members' heads are unchecked"
+    moved+=("| all | | PR heads could not be read |")
+  fi
+fi
+bad=${#moved[@]}
 n=0
 while read -r pr sha _note; do
   case ${pr:-#} in \#*) continue ;; esac
@@ -96,6 +123,14 @@ done <"$members"
   echo "| PR | head | result |"
   echo "|---|---|---|"
   printf '%s\n' "${rows[@]:-}"
+  if [ ${#moved[@]} -gt 0 ]; then
+    echo ""
+    echo "**PR heads that differ from members.txt** (refresh with \`just hosted-members\`):"
+    echo ""
+    echo "| PR | pinned | now |"
+    echo "|---|---|---|"
+    printf '%s\n' "${moved[@]}"
+  fi
   echo ""
   echo "Problems: $bad"
 } >>"$summary"

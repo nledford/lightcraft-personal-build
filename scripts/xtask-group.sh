@@ -32,17 +32,30 @@ fi
 export LIGHTCRAFT_CONFIG_DIR="$native/lightcraft-test-config"
 mkdir -p "$out/lightcraft-test-config" "$out/result"
 log="$out/steps-$group.log"
+stepout="$out/step-last.log"
 timing="$out/timing-$group.txt"
 : >"$log"
 : >"$timing"
 failed=""
 started=$SECONDS
 
+# `must_run=1 step …` marks a filtered step: a filter that matches nothing (a misspelled name, a renamed module) runs zero
+# tests and cargo still exits 0, so such a step fails unless its test binaries reported at least one passed or failed test.
 step() {
-  local name=$1 t=$SECONDS r
+  local name=$1 t=$SECONDS r total=0
   shift
   echo "::group::$name"
-  if "$@" 2>&1 | tee -a "$log"; then r=ok; else r=FAIL; failed="$failed $name"; fi
+  : >"$stepout"
+  if "$@" 2>&1 | tee -a "$log" "$stepout"; then r=ok; else r=FAIL; fi
+  if [ "$r" = ok ] && [ "${must_run:-0}" = 1 ]; then
+    # passed + failed over every test binary ("test result: ok. 5 passed; 0 failed; ..."); awk, as BSD sed has no \n in replacements
+    total=$(awk '/^test result: [A-Za-z]+\. [0-9]+ passed; [0-9]+ failed/ { for (i = 1; i <= NF; i++) if ($i == "passed;" || $i == "failed;") s += $(i - 1) } END { print s + 0 }' "$stepout")
+    if [ "$total" -eq 0 ]; then
+      echo "::error::step $name ran zero tests: its filter matched nothing"
+      r=FAIL
+    fi
+  fi
+  [ "$r" = ok ] || failed="$failed $name"
   echo "::endgroup::"
   echo "$r $name"
   printf '| %s | %s | %ss |\n' "$name" "$r" "$((SECONDS - t))" >>"$timing"
@@ -59,7 +72,7 @@ checks() {
 }
 heif_tests() {
   step heif-test cargo test -p lightcraft-codecs -p lightcraft-heif --features lightcraft-codecs/heif --lib --bins --tests --no-fail-fast
-  step heif-engine cargo test -p lightcraft-engine --lib --features lightcraft-codecs/heif --no-fail-fast heic
+  must_run=1 step heif-engine cargo test -p lightcraft-engine --lib --features lightcraft-codecs/heif --no-fail-fast heic
 }
 workspace_tests() {
   step test cargo test --workspace --lib --bins --tests --no-fail-fast
@@ -73,7 +86,7 @@ wasm() {
 
 if [ ${#filter[@]} -gt 0 ]; then
   # one run of the workspace tests with the given filter words (substrings of test names, `::` paths allowed)
-  step test-filter cargo test --workspace --lib --bins --tests --no-fail-fast -- "${filter[@]}"
+  must_run=1 step test-filter cargo test --workspace --lib --bins --tests --no-fail-fast -- "${filter[@]}"
 else
   case $group in
     lint)
@@ -103,8 +116,8 @@ else
       step sysmem cargo test -p lightcraft-sysmem --no-fail-fast
       step segment cargo test -p lightcraft-segment --lib --no-fail-fast
       step mcp cargo test -p lightcraft-mcp --lib --no-fail-fast
-      step engine cargo test -p lightcraft-engine --lib --no-fail-fast -- trash:: apple_photos:: tests_export:: export:: memory:: devices:: config::
-      step ui-egui cargo test -p lightcraft-ui-egui --lib --no-fail-fast -- window_place:: menus:: tests_grading:: tests_dialog_fit:: photos
+      must_run=1 step engine cargo test -p lightcraft-engine --lib --no-fail-fast -- trash:: apple_photos:: tests_export:: export:: memory:: devices:: config::
+      must_run=1 step ui-egui cargo test -p lightcraft-ui-egui --lib --no-fail-fast -- window_place:: menus:: tests_grading:: tests_dialog_fit:: photos
       ;;
     *)
       echo "::error::unknown group '$group'"

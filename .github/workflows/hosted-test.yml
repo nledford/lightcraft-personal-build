@@ -185,7 +185,8 @@ jobs:
           cache-on-failure: true
 
       - if: needs.plan.outputs.cache == 'mbx'
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        id: downloads
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cargo/registry/index
@@ -220,6 +221,17 @@ jobs:
           # (FILTER words are split on spaces on purpose: several test names or paths)
           # shellcheck disable=SC2086
           bash personal-build-main/scripts/xtask-group.sh "$GROUP" $FILTER
+
+      # Only `ref` = integration (my build) writes caches.
+      - name: Save Cargo's downloads
+        if: needs.plan.outputs.cache == 'mbx' && needs.plan.outputs.save == 'true' && steps.downloads.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-downloads-${{ hashFiles('Cargo.lock') }}
 
       - name: Keep the result for the summary job
         if: always()

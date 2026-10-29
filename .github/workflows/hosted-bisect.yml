@@ -4,7 +4,7 @@
 # commit. It first checks that the test fails at <bad> and passes at <good>. NOT for performance: hosted runners are shared and
 # noisy, so a time is never evidence here. The compile cache is read only (only `integration` runs of build.yml write it).
 name: Hosted bisect
-run-name: bisect ${{ inputs.crate }} ${{ inputs.test }} (${{ inputs.os }})
+run-name: bisect ${{ inputs.bad }} ${{ inputs.crate }} ${{ inputs.test }} (${{ inputs.os }})
 
 on:
   workflow_dispatch:

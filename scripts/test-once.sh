@@ -9,6 +9,9 @@ set -uo pipefail
 crate=${1:?crate}
 test=${2:?test name}
 repeat=${3:-1}
+# Tests must not share (or touch) a settings folder across bisect steps: a fresh scratch one per run of this script.
+LIGHTCRAFT_CONFIG_DIR=$(mktemp -d "${RUNNER_TEMP:-/tmp}/lightcraft-test-config.XXXXXX")
+export LIGHTCRAFT_CONFIG_DIR
 log=${RUNNER_TEMP:-/tmp}/test-once-build.log
 if ! cargo test -p "$crate" --lib --bins --tests --no-run >"$log" 2>&1; then
   tail -n 30 "$log"

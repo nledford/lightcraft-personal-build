@@ -133,7 +133,8 @@ jobs:
       # generation, so the four jobs save four entries that never overwrite each other and each restores its own kind
       # of build (check, test, wasm) instead of whichever job saved last.
       - if: inputs.cache == 'mbx'
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        id: downloads
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cargo/registry/index
@@ -170,6 +171,17 @@ jobs:
           # (FILTER words are split on spaces on purpose: several test names or paths)
           # shellcheck disable=SC2086
           bash personal-build-main/scripts/xtask-group.sh "$GROUP" $FILTER
+
+      # Only my build (save-cache) writes the downloads cache, and only one group does, so no job races another's entry.
+      - name: Save Cargo's downloads
+        if: inputs.cache == 'mbx' && inputs.save-cache && inputs.group == 'lint' && steps.downloads.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-downloads-${{ hashFiles('Cargo.lock') }}
 
       - name: Keep the group's result for the summary job
         if: always()

@@ -83,8 +83,10 @@ runs:
         save-if: ${{ inputs.save-cache }}
         cache-on-failure: true
 
+    # Restore only: a composite action has no end-of-job hook, and only build.yml's and hosted-test.yml's own jobs (my build)
+    # save the downloads, so no run through this action writes a cache entry for it.
     - if: inputs.cache == 'mbx'
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: |
           ~/.cargo/registry/index
