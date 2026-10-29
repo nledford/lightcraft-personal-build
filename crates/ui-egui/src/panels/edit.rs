@@ -151,16 +151,8 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
             let below = r.rect.bottom();
             egui::Popup::menu(&r).show(|ui| profile_menu(app, ui, &d, below));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if crate::widgets::icon_button(
-                    ui,
-                    "profileBrowser",
-                    Icon::ProfileGrid,
-                    vec2(28.0, 28.0),
-                    false,
-                    true,
-                    crate::i18n::tr("Browse Profiles"),
-                )
-                .clicked()
+                if crate::widgets::icon_command(ui, "profileBrowser", Icon::ProfileGrid, vec2(28.0, 28.0), true, crate::i18n::tr("Browse Profiles"))
+                    .clicked()
                 {
                     app.act("panel.profiles", json!({}));
                 }

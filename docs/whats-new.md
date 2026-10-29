@@ -2,6 +2,9 @@
 
 ## 2026-10-28
 
+### Screen readers tell buttons, switches and choices apart
+- With VoiceOver, a button that does something (Reset, Auto, Choose…, Create Album, Back) is now a button, not a check box that is "unchecked". A button that is on or off (B&W, HDR) says whether it is on, and one of several choices (Format, Color space, Sharpen, a language, the view buttons: Photo Grid, Square Grid, Detail, Compare, Survey and People) is a radio button that says which one is chosen.
+
 ### Screen readers no longer read the shortcut with every button name
 - Icon-only buttons (the tool strip, the view buttons and Before/After and Filmstrip in the bottom bar, the top bar's
   Import Photos…, the mask overlay and White Balance Selector buttons, the slideshow controls) are now announced by

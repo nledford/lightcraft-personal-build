@@ -122,7 +122,10 @@ fn the_selection_keeps_its_fill_and_the_open_and_disabled_looks_hold_up() {
         // label 4.5:1 on it, and stays at least as far from the panel as it was)
         let off_fill = off_ctx.global_style().visuals.selection.bg_fill;
         assert_eq!(v.selection.bg_fill, on.selection_fill(), "{kind:?}");
-        assert!(contrast(v.selection.bg_fill, on.chrome) >= contrast(off_fill, Tokens::for_kind(kind).chrome), "{kind:?}: the selection fill weakened");
+        assert!(
+            contrast(v.selection.bg_fill, on.chrome) >= contrast(off_fill, Tokens::for_kind(kind).chrome),
+            "{kind:?}: the selection fill weakened"
+        );
         assert_eq!(v.selection.stroke.width, 1.5, "{kind:?}: a focused field keeps the outline's weight");
         assert_eq!(v.widgets.open.bg_stroke.color, on.button_border, "{kind:?}: the open drop-down's outline");
         assert!(contrast(v.widgets.open.bg_stroke.color, on.chrome) >= 3.0, "{kind:?}");

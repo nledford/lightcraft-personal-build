@@ -41,8 +41,8 @@ pub mod tasks;
 pub mod theme;
 mod thumb;
 pub mod toast;
-pub mod tree_state;
 pub mod transparency;
+pub mod tree_state;
 pub mod widgets;
 pub mod window_place;
 

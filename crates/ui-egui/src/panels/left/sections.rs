@@ -1,7 +1,7 @@
 use super::albums::top_level_drop_target;
 use super::local::folder_label;
 use super::rows::{MAX_ELIDE_CHARS, ROW_HEIGHT, current_mark, elide_end, note_width};
-use super::{Align2, Icon, LibrarySource, LightcraftApp, Rect, Sense, SidebarSection, Tokens, icon_button, json, paint, pos2, register, vec2};
+use super::{Align2, Icon, LibrarySource, LightcraftApp, Rect, Sense, SidebarSection, Tokens, icon_command, json, paint, pos2, register, vec2};
 use crate::menu_item::MenuItem;
 
 /// Space above a section's header.
@@ -364,7 +364,7 @@ fn header_button_rect(ui: &egui::Ui, header: Rect) -> Rect {
 fn show_header_button(app: &mut LightcraftApp, ui: &mut egui::Ui, header: Rect, button: &HeaderButton) {
     let mut hdr =
         ui.new_child(egui::UiBuilder::new().max_rect(header_button_rect(ui, header)).layout(egui::Layout::right_to_left(egui::Align::Center)));
-    let resp = icon_button(&mut hdr, button.id, button.icon, vec2(HEADER_BUTTON, HEADER_BUTTON), false, true, button.tooltip);
+    let resp = icon_command(&mut hdr, button.id, button.icon, vec2(HEADER_BUTTON, HEADER_BUTTON), true, button.tooltip);
     match button.action {
         HeaderAction::Run(run) => {
             if resp.clicked() {

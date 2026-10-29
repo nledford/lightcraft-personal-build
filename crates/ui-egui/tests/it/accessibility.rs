@@ -331,7 +331,7 @@ fn button_described(h: &Harness<'_, LightcraftApp>, name: &str, help: &str) -> b
     h.root()
         .children_recursive()
         .map(|n| n.accesskit_node())
-        .any(|n| n.role() == Role::Button && n.label().as_deref() == Some(name) && n.description().as_deref() == Some(help))
+        .any(|n| matches!(n.role(), Role::Button | Role::RadioButton) && n.label().as_deref() == Some(name) && n.description().as_deref() == Some(help))
 }
 
 /// A screen reader reads a control's name every time it lands on it: the shortcut belongs in the

@@ -13,7 +13,7 @@ use crate::button::Button;
 use crate::icons::{Icon, paint};
 use crate::menu_item::MenuItem;
 use crate::theme::{TextSize, Tokens};
-use crate::widgets::{divider, icon_button, one_line, register, slider, text_button};
+use crate::widgets::{choice_button, divider, icon_button, icon_command, one_line, register, slider, text_button};
 
 const fn spec(id: &'static str, label: &'static str, min: f64, max: f64, step: f64, decimals: u8, track: Track) -> ControlSpec {
     ControlSpec { id, label, section: Section::Light, min, max, default: 0.0, step, decimals, track }
@@ -385,7 +385,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
             if text_button(ui, "maskInvert", crate::i18n::tr("Invert"), m.invert).clicked() {
                 app.act("mask.invert", json!({}));
             }
-            if icon_button(ui, "maskDelete", Icon::Trash, vec2(26.0, 24.0), false, true, "Delete mask").clicked() {
+            if icon_command(ui, "maskDelete", Icon::Trash, vec2(26.0, 24.0), true, "Delete mask").clicked() {
                 app.act("mask.delete", json!({}));
             }
         });
@@ -889,10 +889,10 @@ fn brush_settings(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     egui::Frame::NONE.inner_margin(egui::Margin { left: 24, right: 22, top: 6, bottom: 0 }).show(ui, |ui| {
         ui.horizontal(|ui| {
             ui.label(egui::RichText::new(crate::i18n::tr("Brush")).font(t.semibold(13.0)));
-            if text_button(ui, "brushAdd", crate::i18n::tr("Add"), !app.ui.brush_erase).clicked() {
+            if choice_button(ui, "brushAdd", crate::i18n::tr("Add"), !app.ui.brush_erase).clicked() {
                 app.ui.brush_erase = false;
             }
-            if text_button(ui, "brushErase", crate::i18n::tr("Erase"), app.ui.brush_erase).clicked() {
+            if choice_button(ui, "brushErase", crate::i18n::tr("Erase"), app.ui.brush_erase).clicked() {
                 app.ui.brush_erase = true;
             }
         });

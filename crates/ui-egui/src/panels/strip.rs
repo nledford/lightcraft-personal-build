@@ -7,7 +7,7 @@ use crate::LightcraftApp;
 use crate::icons::Icon;
 use crate::state::RightPanel;
 use crate::theme::Tokens;
-use crate::widgets::icon_button;
+use crate::widgets::{icon_button, icon_command};
 
 /// Height of one tool button.
 const BUTTON_H: f32 = 40.0;
@@ -77,7 +77,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 {
                     app.act("panel.activity", json!({}));
                 }
-                if icon_button(ui, "more", Icon::More, sz, false, true, "More").clicked() {
+                if icon_command(ui, "more", Icon::More, sz, true, "More").clicked() {
                     app.ui.dialog = Some(crate::state::Dialog::About);
                 }
             });
