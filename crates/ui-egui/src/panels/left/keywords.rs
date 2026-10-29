@@ -1,25 +1,26 @@
 use super::albums::refuse_photos;
 use super::dates::browse_all_photos;
-use super::rows::{INDENT_STEP, Row, out_of_sight, tree_toggle};
-use super::{Branch, Icon, KeywordNode, LightcraftApp, json};
+use super::rows::{INDENT_STEP, Inside, Row, out_of_sight, tree_toggle};
+use super::{Branch, Icon, KeywordNode, LightcraftApp, Said, json};
 use crate::menu_item::MenuItem;
 
 /// "Keywords": the library's keyword tree with photo counts (`a|b|c` keywords nest). A click
 /// filters the grid by the keyword (children included), the triangle opens a level, and the
 /// context menu renames, merges or deletes the keyword across the library.
-pub(super) fn keyword_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[KeywordNode], indent: f32) {
+pub(super) fn keyword_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[KeywordNode], indent: f32, above: Option<Said>) {
     for n in nodes {
         // leaves (most keywords) have no open state to look up
         let branch = (!n.children.is_empty()).then(|| Branch::keyword(&n.path));
-        let mut open = branch.as_ref().is_some_and(|b| app.ui.sidebar_trees.is_open(b));
+        let mut open = branch.as_ref().is_some_and(|b| app.ui.sidebar_trees.is_open_under(b, above));
         let id = format!("keyword:{}", n.path);
         let sel_of = |app: &LightcraftApp| app.session.filter.keyword.as_deref().is_some_and(|k| k.eq_ignore_ascii_case(&n.path));
         if !out_of_sight(app, ui, &id, &n.name, Some(n.count), indent, false, || sel_of(app)) {
             let sel = sel_of(app);
             keyword_row(app, ui, n, &id, indent, branch.as_ref(), &mut open, sel);
         }
-        if open {
-            keyword_rows(app, ui, &n.children, indent + INDENT_STEP);
+        if let Some(branch) = branch.as_ref().filter(|_| open) {
+            let inside = app.ui.sidebar_trees.inside(branch, above);
+            keyword_rows(app, ui, &n.children, indent + INDENT_STEP, inside);
         }
     }
 }
@@ -45,7 +46,8 @@ fn keyword_row(
         crate::i18n::tr("Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there"),
     );
     if let Some(branch) = branch {
-        tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, branch, open, format!("keywordToggle:{}", n.path));
+        let inside = if n.children.iter().any(|c| !c.children.is_empty()) { Inside::OpensAndFolds } else { Inside::Alone };
+        tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, branch, open, format!("keywordToggle:{}", n.path), inside);
     }
     let resp = resp.on_hover_text(if n.children.is_empty() { n.path.clone() } else { format!("{} (includes the keywords below it)", n.path) });
     if super::side_keys::chosen(ui, &resp) {
