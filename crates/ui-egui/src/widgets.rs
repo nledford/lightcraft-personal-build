@@ -234,7 +234,9 @@ pub fn truncated_notice(ui: &mut Ui, key: &str) {
             ui.horizontal_top(|ui| {
                 let (ir, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
                 paint(ui.painter(), ir, Icon::Info, t.caution);
-                ui.label(egui::RichText::new(crate::i18n::tr("Damaged file: cut short, shown from the data present")).size(11.5).color(t.text_label));
+                ui.label(
+                    egui::RichText::new(crate::i18n::tr("Damaged file: cut short, shown from the data present")).font(t.label()).color(t.text_label),
+                );
             });
         })
         .response;
