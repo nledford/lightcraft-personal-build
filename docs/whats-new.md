@@ -17,6 +17,11 @@
 ### The macOS menu bar shows every row
 - File ▸ Export… no longer reads “Custom…”, File ▸ Export with Preset keeps its Custom… row, and Photo ▸ Add to Album keeps New Album…. When two menu rows ran the same command, the menu bar left the second one out and gave the first one its label; now each row is its own item and a click on either one runs the command. The View menu now also lists its second Layout Image row (without a key), as the in-window menu does.
 
+### Shortcut hints on macOS read like the menu bar
+- A shortcut shown in the menu bar's labels, in a button's tooltip, in the empty-library hint or in the Keyboard
+  Shortcuts dialog now lists its modifiers in the order macOS menus use, Control, Option, Shift, Command: `⇧⌘I`
+  where it used to say `⌘⇧I`. Windows and Linux are unchanged.
+
 ## 2026-10-26
 
 ### The sidebar from the keyboard
