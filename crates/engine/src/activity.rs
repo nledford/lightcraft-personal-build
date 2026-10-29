@@ -75,6 +75,21 @@ pub struct Request {
     /// What else is known of it while it waits (how many photos, how they come in), after the subject.
     pub facts: String,
 }
+
+/// The command of the app's import requests: their params are `{paths, params, auto}` (the app's `import_request`).
+pub const IMPORT_REQUEST: &str = "app:import";
+
+impl Request {
+    /// The files of an Auto Import's request: `library.autoImportScan` noted them as tried when it handed them over.
+    fn auto_import_paths(&self) -> Vec<String> {
+        if self.command != IMPORT_REQUEST || self.params.get("auto").and_then(Value::as_bool) != Some(true) {
+            return Vec::new();
+        }
+        let paths = self.params.get("paths").and_then(Value::as_array);
+        paths.into_iter().flatten().filter_map(|p| p.as_str().map(str::to_string)).collect()
+    }
+}
+
 /// A task waiting in line ([`Activity::enqueue`]), as [`Activity::take_ready`] hands it over to be started.
 #[derive(Debug)]
 pub struct Waiting {
@@ -120,6 +135,8 @@ struct Inner {
     keep_after_ms: AtomicU64,
     /// The tasks waiting in line, in the order they were asked for.
     waiting: Mutex<Vec<Waiting>>,
+    /// The files of Auto Imports taken out of the line without running ([`Activity::take_untried`]).
+    untried: Mutex<Vec<String>>,
     /// The id the waiting task being started keeps (its kind, its id): see [`Activity::take_ready`].
     reserved: Mutex<Option<(&'static str, u64)>>,
     next: AtomicU64,
@@ -132,6 +149,7 @@ impl Default for Inner {
             finished: Mutex::default(),
             keep_after_ms: AtomicU64::new(KEEP_AFTER_MS),
             waiting: Mutex::default(),
+            untried: Mutex::default(),
             reserved: Mutex::default(),
             next: AtomicU64::new(0),
         }
@@ -544,7 +562,9 @@ impl Activity {
         {
             let mut waiting = lock(&self.inner.waiting);
             if let Some(at) = waiting.iter().position(|w| w.id == id) {
-                waiting.remove(at);
+                let dropped = waiting.remove(at);
+                drop(waiting);
+                self.note_untried(std::slice::from_ref(&dropped));
                 return Ok(());
             }
         }
@@ -562,9 +582,10 @@ impl Activity {
     /// Ask every cancellable task to stop, and empty the line (what waits would start as soon as they stopped);
     /// returns how many were asked or taken out.
     pub fn cancel_all(&self) -> usize {
-        let dropped = std::mem::take(&mut *lock(&self.inner.waiting)).len();
+        let dropped = std::mem::take(&mut *lock(&self.inner.waiting));
+        self.note_untried(&dropped);
         let tasks = lock(&self.inner.tasks);
-        dropped + tasks.iter().filter(|e| e.try_cancel()).count()
+        dropped.len() + tasks.iter().filter(|e| e.try_cancel()).count()
     }
 
     /// Whether a task of one of `kinds` is in flight. Its guard's lifetime is the answer: a task that
@@ -664,6 +685,29 @@ impl Activity {
         });
     }
 
+    /// Keep the files of the Auto Imports among `dropped`, which left the line without running: they were noted as
+    /// tried when the scan handed them over, so nothing would ever import them ([`Activity::take_untried`]).
+    fn note_untried(&self, dropped: &[Waiting]) {
+        for w in dropped {
+            self.start_failed(&w.request);
+        }
+    }
+
+    /// The task [`Activity::take_ready_if`] handed over could not start (the Auto Import album was deleted while it
+    /// waited, say): like one taken out of the line, its Auto Import files are to be tried again.
+    pub fn start_failed(&self, request: &Request) {
+        let paths = request.auto_import_paths();
+        if !paths.is_empty() {
+            lock(&self.inner.untried).extend(paths);
+        }
+    }
+
+    /// The files of Auto Imports that were taken out of the line without running since the last call, once. The
+    /// session makes them eligible for the next Auto Import scan again (`Session::untry_auto_imports`).
+    pub fn take_untried(&self) -> Vec<String> {
+        std::mem::take(&mut *lock(&self.inner.untried))
+    }
+
     /// Ask again for the task that ended in row `id`: the row goes, and the task waits at the end of its lane's line
     /// (it starts at once if the lane is free). Returns its new id and its place. Only a row that kept its request and
     /// did not end well can be retried.
@@ -682,7 +726,8 @@ impl Activity {
     /// folders, so the line empties, the rows that ended stay only as a record, and the tasks still running (an old
     /// library's preview build goes on) leave rows that can't be retried. Returns how many tasks waited.
     pub fn library_changed(&self) -> usize {
-        let dropped = std::mem::take(&mut *lock(&self.inner.waiting)).len();
+        let dropped = std::mem::take(&mut *lock(&self.inner.waiting));
+        self.note_untried(&dropped);
         for e in lock(&self.inner.tasks).iter() {
             *lock(&e.request) = None;
         }
@@ -690,7 +735,7 @@ impl Activity {
             k.row.retryable = false;
             k.row.request = None;
         }
-        dropped
+        dropped.len()
     }
 }
 
@@ -1232,6 +1277,36 @@ mod tests {
         let rows = a.waiting();
         assert_eq!((rows[0].detail.chars().count(), rows[0].facts.as_str()), (200, "3 photos"));
         assert_eq!((rows[1].detail.as_str(), rows[1].facts.as_str()), ("", ""));
+    }
+    /// An Auto Import that leaves the line unrun (✕, `activity.cancel`, cancel all, another library) gives its files
+    /// back; an import someone asked for, and one that starts, give none.
+    #[test]
+    fn the_files_of_an_auto_import_taken_out_of_the_line_are_given_back() {
+        let a = Activity::default();
+        let running = a.start("import", "Importing", Cancel::Yes);
+        let import = |paths: &[&str], auto: bool| Request {
+            command: IMPORT_REQUEST.into(),
+            params: serde_json::json!({"paths": paths, "params": {}, "auto": auto}),
+            ..Default::default()
+        };
+        let (one, _) = a.enqueue("import", "Importing", import(&["/w/a.jpg"], true)).unwrap();
+        a.enqueue("import", "Importing", import(&["/w/asked.jpg"], false)).unwrap();
+        a.enqueue("import", "Importing", import(&["/w/b.jpg", "/w/c.jpg"], true)).unwrap();
+        assert!(a.take_untried().is_empty(), "nothing left the line yet");
+        a.cancel(one).unwrap();
+        assert_eq!(a.take_untried(), vec!["/w/a.jpg".to_string()]);
+        assert!(a.take_untried().is_empty(), "once");
+        assert_eq!(a.cancel_all(), 3, "the running one and the two that waited");
+        assert_eq!(a.take_untried(), vec!["/w/b.jpg".to_string(), "/w/c.jpg".to_string()]);
+        a.enqueue("import", "Importing", import(&["/w/d.jpg"], true)).unwrap();
+        assert_eq!(a.library_changed(), 1);
+        assert_eq!(a.take_untried(), vec!["/w/d.jpg".to_string()]);
+        a.enqueue("import", "Importing", import(&["/w/e.jpg"], true)).unwrap();
+        drop(running);
+        let started = a.take_ready().unwrap();
+        assert!(a.take_untried().is_empty(), "an import that starts keeps its files tried");
+        a.start_failed(&started.request);
+        assert_eq!(a.take_untried(), vec!["/w/e.jpg".to_string()], "one whose start was refused gives them back");
     }
 
     /// The engine starts only the requests it can run; one it can't (an app import) holds its lane for the app, and a
