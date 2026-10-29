@@ -144,8 +144,10 @@ fn same_answers_in_random_libraries(mut rng: Rng, loops: bool) -> usize {
             .collect();
         let albums: Vec<AlbumId> = [plain, folder].into_iter().chain(smarts.iter().copied()).collect();
         for (i, s) in smarts.iter().enumerate() {
-            // (without loops a smart album tests only the albums made before it)
-            let testable = if loops { &albums[..] } else { &albums[..2 + i] };
+            // (without loops a smart album tests only the albums made before it, and no folder: a folder as a
+            // source (#768) leads to the smart albums inside it, which could test the album that tests it)
+            let before: Vec<AlbumId> = albums[..2 + i].iter().copied().filter(|a| *a != folder).collect();
+            let testable = if loops { &albums[..] } else { &before[..] };
             let _ = c.apply(Op::SetAlbumRules { id: *s, rules: Box::new(filter(rule_set(&mut rng, testable, 0))) });
         }
         let queries: Vec<Filter> = (0..4).map(|_| filter(rule_set(&mut rng, &albums, 0))).collect();
