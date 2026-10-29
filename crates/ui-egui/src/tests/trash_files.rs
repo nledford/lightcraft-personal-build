@@ -360,7 +360,7 @@ fn photos_on_a_disk_without_a_trash_get_a_second_question_before_anything_is_era
                 crate::panels::left::fs_cached_running(&h.view.ctx),
                 h.app.caches.album_recount_running(),
                 h.app.caches.library.busy(),
-                h.app.tasks.len(),
+                !h.app.tasks.is_empty(),
                 h.app.session.activity.waiting().len(),
                 h.app.synthetic.len(),
                 h.events.len(),
