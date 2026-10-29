@@ -355,6 +355,7 @@
   "Cut": "Cortar",
   "Cut pages": "Cortar páginas",
   "Cycle Crop Overlay": "Alternar superposición de recorte",
+  "Crop Overlay": "Superposición de recorte",
   "Cycle Crop Overlay Orientation": "Alternar orientación de la superposición de recorte",
   "Cycle Info Overlay": "Alternar superposición de información",
   "Cycle Mask Overlay Color": "Alternar color de superposición de máscara",
@@ -1772,6 +1773,7 @@
   "XMP sidecars": "Archivos XMP complementarios",
   "Year": "Año",
   "Yellow": "Amarillo",
+  "White": "Blanco",
   "Yellow Hue": "Tono amarillo",
   "Yellow Luminance": "Luminancia amarilla",
   "Yellow Saturation": "Saturación amarilla",
@@ -2474,5 +2476,8 @@
   "This folder stays listed while the grid shows its photos": "Esta carpeta sigue en la lista mientras la cuadrícula muestre sus fotos",
   "Keyboard in Sidebar": "Teclado en la barra lateral",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Las teclas están en la barra lateral: las flechas mueven, Intro abre, escribe para buscar, Esc vuelve a las fotos",
-  "This row has no name to change": "Esta fila no tiene un nombre que cambiar"
+  "This row has no name to change": "Esta fila no tiene un nombre que cambiar",
+  "Loupe Overlay": "Superposición de la lupa",
+  "View Options…": "Opciones de vista…",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Vista → Superposición de la lupa → Opciones de vista elige las líneas que muestran Info 1 e Info 2."
 }

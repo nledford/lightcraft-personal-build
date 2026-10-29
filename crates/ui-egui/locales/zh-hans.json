@@ -140,6 +140,7 @@
   "Before": "修改前",
   "Before/After Settings": "修改前/修改后设置",
   "Before/After Split": "修改前/修改后分屏",
+  "Before/After": "修改前/修改后",
   "Before/After Split Top/Bottom": "修改前/修改后上下分屏",
   "Before/After Top/Bottom": "修改前/修改后上下排列",
   "Begin Interaction": "开始交互",
@@ -342,6 +343,7 @@
   "Cut": "剪切",
   "Cut pages": "剪切页面",
   "Cycle Crop Overlay": "切换裁切叠加",
+  "Crop Overlay": "裁切叠加",
   "Cycle Crop Overlay Orientation": "切换裁切叠加方向",
   "Cycle Info Overlay": "切换信息叠加",
   "Cycle Mask Overlay Color": "切换蒙版叠加颜色",
@@ -1587,6 +1589,7 @@
   "XMP sidecars": "XMP 附属文件",
   "Year": "年",
   "Yellow": "黄色",
+  "White": "白色",
   "Yellow Hue": "黄色色相",
   "Yellow Luminance": "黄色明度",
   "Yellow Saturation": "黄色饱和度",
@@ -2283,7 +2286,6 @@
   "Counting library": "正在统计图库",
   "Previous page": "上一页",
   "Next page": "下一页",
-  "Before/After": "修改前/修改后",
   "History & Activity": "历史记录与活动",
   "Show overlay": "显示叠加",
   "Stack — click to expand (S)": "堆叠 — 单击展开 (S)",
@@ -2316,5 +2318,8 @@
   "This folder stays listed while the grid shows its photos": "网格显示此文件夹的照片时，它会保留在列表中",
   "Keyboard in Sidebar": "在边栏中使用键盘",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "按键现在作用于边栏：方向键移动，回车打开，输入文字查找，Esc 返回照片",
-  "This row has no name to change": "此行没有可更改的名称"
+  "This row has no name to change": "此行没有可更改的名称",
+  "Loupe Overlay": "放大镜叠加",
+  "View Options…": "视图选项…",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "视图 → 放大镜叠加 → 视图选项 用于选择“信息 1”和“信息 2”显示的行。"
 }

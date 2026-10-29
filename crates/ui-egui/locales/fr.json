@@ -338,6 +338,7 @@
   "Cut": "Couper",
   "Cut pages": "Couper les pages",
   "Cycle Crop Overlay": "Parcourir les incrustations de recadrage",
+  "Crop Overlay": "Incrustation de recadrage",
   "Cycle Crop Overlay Orientation": "Parcourir les orientations de l'incrustation de recadrage",
   "Cycle Info Overlay": "Parcourir les incrustations d'informations",
   "Cycle Mask Overlay Color": "Parcourir les couleurs de l'incrustation du masque",
@@ -1592,6 +1593,7 @@
   "XMP sidecars": "Fichiers annexes XMP",
   "Year": "Année",
   "Yellow": "Jaune",
+  "White": "Blanc",
   "Yellow Hue": "Teinte jaune",
   "Yellow Luminance": "Luminance jaune",
   "Yellow Saturation": "Saturation jaune",
@@ -2506,5 +2508,8 @@
   "This folder stays listed while the grid shows its photos": "Ce dossier reste affiché tant que la grille montre ses photos",
   "Keyboard in Sidebar": "Clavier dans la barre latérale",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Les touches sont dans la barre latérale : les flèches déplacent, Entrée ouvre, tapez pour chercher, Échap revient aux photos",
-  "This row has no name to change": "Cette ligne n’a pas de nom à modifier"
+  "This row has no name to change": "Cette ligne n’a pas de nom à modifier",
+  "Loupe Overlay": "Incrustation de la loupe",
+  "View Options…": "Options d'affichage…",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Affichage → Incrustation de la loupe → Options d'affichage choisit les lignes que montrent Info 1 et Info 2."
 }

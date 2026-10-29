@@ -407,6 +407,7 @@
   "Crop": "Cắt",
   "Crop & Rotate": "Cắt và xoay",
   "Crop Aspect": "Tỷ lệ cắt",
+  "Crop Overlay": "Lớp phủ cắt",
   "Crop, Rotate, Geometry": "Cắt, xoay, hình học",
   "Cropped": "Đã cắt",
   "Cross Process": "Cross Process",
@@ -1006,6 +1007,7 @@
   "Manual": "Thủ công",
   "Marquee zoom": "Thu phóng vùng chọn",
   "Mask Adjustment": "Điều chỉnh mặt nạ",
+  "Mask Overlay": "Lớp phủ mặt nạ",
   "Masking": "Mặt nạ",
   "Masks": "Mặt nạ",
   "Match": "Khớp",
@@ -2215,7 +2217,6 @@
   "Edit Panel": "Bảng Chỉnh sửa",
   "Focus Point": "Điểm lấy nét",
   "Layout Image": "Ảnh bố cục",
-  "Mask Overlay": "Lớp phủ mặt nạ",
   "Mask Pins": "Ghim mặt nạ",
   "Photo Counts": "Số lượng ảnh",
   "An import is running": "Đang có một lần nhập chạy",
@@ -2351,5 +2352,9 @@
   "Drag any slider: the original never changes.": "Kéo bất kỳ thanh trượt nào: bản gốc không bao giờ thay đổi.",
   "That's your first edit.": "Đó là lần chỉnh sửa đầu tiên của bạn.",
   "View → Before/After Side by Side shows it beside the original.": "Xem → Trước/Sau cạnh nhau hiển thị nó cạnh bản gốc.",
-  "The original beside your edit: the file itself never changes.": "Bản gốc cạnh bản chỉnh sửa của bạn: bản thân tệp không bao giờ thay đổi."
+  "The original beside your edit: the file itself never changes.": "Bản gốc cạnh bản chỉnh sửa của bạn: bản thân tệp không bao giờ thay đổi.",
+  "White": "Trắng",
+  "Loupe Overlay": "Lớp phủ kính lúp",
+  "View Options…": "Tùy chọn xem…",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Xem → Lớp phủ kính lúp → Tùy chọn xem chọn các dòng mà Info 1 và Info 2 hiển thị."
 }

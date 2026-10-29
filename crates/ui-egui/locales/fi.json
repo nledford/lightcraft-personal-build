@@ -438,6 +438,7 @@
   "Crop": "Rajaus",
   "Crop & Rotate": "Rajaa ja kierrä",
   "Crop Aspect": "Rajauksen kuvasuhde",
+  "Crop Overlay": "Rajauksen peittokuva",
   "Crop, Rotate, Geometry": "Rajaus, kierto, geometria",
   "Cropped": "Rajattu",
   "Cross Process": "Ristiinkäsittely",
@@ -1098,6 +1099,7 @@
   "Marquee zoom": "Aluezoom",
   "Mask": "Maski",
   "Mask Adjustment": "Maskin säätö",
+  "Mask Overlay": "Maskin peittokuva",
   "Masking": "Maskaus",
   "Masks": "Maskit",
   "Masks keep their sliders. Export presets first to keep a copy.": "Maskit säilyttävät liukusäätimensä. Vie esiasetukset ensin säilyttääksesi kopion.",
@@ -2307,7 +2309,6 @@
   "Edit Panel": "Muokkauspaneeli",
   "Focus Point": "Tarkennuspiste",
   "Layout Image": "Asettelukuva",
-  "Mask Overlay": "Maskin peittokuva",
   "Mask Pins": "Maskin nastat",
   "Photo Counts": "Kuvamäärät",
   "An import is running": "Tuonti on käynnissä",
@@ -2441,5 +2442,9 @@
   "Drag any slider: the original never changes.": "Vedä mitä tahansa liukusäädintä: alkuperäinen ei muutu koskaan.",
   "That's your first edit.": "Tämä on ensimmäinen muokkauksesi.",
   "View → Before/After Side by Side shows it beside the original.": "Näytä → Ennen/jälkeen vierekkäin näyttää sen alkuperäisen vieressä.",
-  "The original beside your edit: the file itself never changes.": "Alkuperäinen muokkauksesi vieressä: itse tiedosto ei muutu koskaan."
+  "The original beside your edit: the file itself never changes.": "Alkuperäinen muokkauksesi vieressä: itse tiedosto ei muutu koskaan.",
+  "White": "Valkoinen",
+  "Loupe Overlay": "Luupin peittokuva",
+  "View Options…": "Näyttöasetukset…",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Näytä → Luupin peittokuva → Näyttöasetukset valitsee rivit, jotka Info 1 ja Info 2 näyttävät."
 }

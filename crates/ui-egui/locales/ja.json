@@ -327,6 +327,7 @@
   "Custom template…": "カスタムテンプレート…",
   "Custom…": "カスタム…",
   "Cycle Crop Overlay": "切り抜きの重ね表示を切り替え",
+  "Crop Overlay": "切り抜きの重ね表示",
   "Cycle Crop Overlay Orientation": "切り抜きの重ね表示の向きを切り替え",
   "Cycle Info Overlay": "情報オーバーレイを切り替え",
   "Cycle Mask Overlay Color": "マスクの重ね表示の色を切り替え",
@@ -1520,6 +1521,7 @@
   "XMP sidecars": "XMPサイドカーファイル",
   "Year": "年",
   "Yellow": "イエロー",
+  "White": "ホワイト",
   "Yellow Hue": "イエローの色相",
   "Yellow Luminance": "イエローの輝度",
   "Yellow Saturation": "イエローの彩度",
@@ -2472,5 +2474,9 @@
   "This folder stays listed while the grid shows its photos": "グリッドがこのフォルダの写真を表示している間は、一覧に残ります",
   "Keyboard in Sidebar": "サイドバーでキーボードを使う",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "キーはサイドバーにあります。矢印で移動、Enter で開く、入力で検索、Esc で写真に戻ります",
-  "This row has no name to change": "この行には変更できる名前がありません"
+  "This row has no name to change": "この行には変更できる名前がありません",
+  "Loupe Overlay": "ルーペのオーバーレイ",
+  "View Options…": "表示オプション…",
+  "View Options": "表示オプション",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "表示 → ルーペのオーバーレイ → 表示オプション で、情報1と情報2に表示する行を選びます。"
 }

@@ -437,6 +437,7 @@
   "Crop": "Pangkas",
   "Crop & Rotate": "Pangkas & putar",
   "Crop Aspect": "Aspek pangkas",
+  "Crop Overlay": "Overlay pangkas",
   "Crop, Rotate, Geometry": "Pangkas, putar, geometri",
   "Cropped": "Dipangkas",
   "Cross Process": "Cross Process",
@@ -1096,6 +1097,7 @@
   "Marquee zoom": "Zoom area pilihan",
   "Mask Adjustment": "Penyesuaian masker",
   "Mask Effect Presets": "Preset efek masker",
+  "Mask Overlay": "Overlay masker",
   "Masking": "Masker",
   "Masks": "Masker",
   "Match": "Cocokkan",
@@ -2319,7 +2321,6 @@
   "Edit Panel": "Panel Edit",
   "Focus Point": "Titik fokus",
   "Layout Image": "Gambar tata letak",
-  "Mask Overlay": "Overlay masker",
   "Mask Pins": "Pin masker",
   "Photo Counts": "Jumlah foto",
   "An import is running": "Impor sedang berjalan",
@@ -2456,5 +2457,9 @@
   "Drag any slider: the original never changes.": "Geser slider mana pun: file asli tidak pernah berubah.",
   "That's your first edit.": "Itulah suntingan pertama Anda.",
   "View → Before/After Side by Side shows it beside the original.": "Tampilan → Sebelum/Sesudah berdampingan menampilkannya di samping aslinya.",
-  "The original beside your edit: the file itself never changes.": "Aslinya berdampingan dengan suntingan Anda: file itu sendiri tidak pernah berubah."
+  "The original beside your edit: the file itself never changes.": "Aslinya berdampingan dengan suntingan Anda: file itu sendiri tidak pernah berubah.",
+  "White": "Putih",
+  "Loupe Overlay": "Overlay loupe",
+  "View Options…": "Opsi Tampilan…",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Tampilan → Overlay loupe → Opsi Tampilan memilih baris yang ditampilkan Info 1 dan Info 2."
 }

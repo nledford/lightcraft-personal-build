@@ -2543,5 +2543,10 @@
   "Drag any slider: the original never changes.": "Dra i valfritt reglage: originalet ändras aldrig.",
   "That's your first edit.": "Det är din första redigering.",
   "View → Before/After Side by Side shows it beside the original.": "Visa → Före/efter sida vid sida visar den bredvid originalet.",
-  "The original beside your edit: the file itself never changes.": "Originalet bredvid din redigering: själva filen ändras aldrig."
+  "The original beside your edit: the file itself never changes.": "Originalet bredvid din redigering: själva filen ändras aldrig.",
+  "White": "Vit",
+  "Crop Overlay": "Beskärningsöverlägg",
+  "Loupe Overlay": "Lupp-överlägg",
+  "View Options…": "Visningsalternativ…",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Visa → Lupp-överlägg → Visningsalternativ väljer vilka rader Info 1 och Info 2 visar."
 }

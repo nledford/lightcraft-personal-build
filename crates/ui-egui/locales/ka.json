@@ -513,6 +513,7 @@
   "Cut pages": "გვერდების ამოჭრა",
   "Cut, Copy, Paste and Select All. Esc in them gives back the text from before you started typing (in the Info panel it": "ხელმისაწვდომია ამოჭრა, კოპირება, ჩასმა და ყველაფრის მონიშვნა. Esc მათში აკრეფის დაწყებამდე არსებულ ტექსტს აბრუნებს (ინფორმაციის პანელში",
   "Cycle Crop Overlay": "ჩამოჭრის ზედდების მონაცვლეობა",
+  "Crop Overlay": "ჩამოჭრის ზედდება",
   "Cycle Crop Overlay Orientation": "ჩამოჭრის ზედდების ორიენტაციის მონაცვლეობა",
   "Cycle Info Overlay": "ინფორმაციის ზედდების მონაცვლეობა",
   "Cycle Mask Overlay Color": "ნიღბის ზედდების ფერის მონაცვლეობა",
@@ -2350,6 +2351,7 @@
   "XMP sidecars": "XMP თანმხლები ფაილები",
   "Year": "წელი",
   "Yellow": "ყვითელი",
+  "White": "თეთრი",
   "Yellow Hue": "ყვითლის ფერის ტონი",
   "Yellow Luminance": "ყვითლის სიკაშკაშე",
   "Yellow Saturation": "ყვითლის გაჯერება",
@@ -2850,5 +2852,8 @@
   "This folder stays listed while the grid shows its photos": "ეს საქაღალდე სიაში რჩება, სანამ ბადე მის ფოტოებს აჩვენებს",
   "Keyboard in Sidebar": "კლავიატურა გვერდით ზოლში",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "კლავიშები გვერდით ზოლს მართავს: ისრები გადაადგილებს, Enter ხსნის, აკრიფეთ საძებნად, Esc ფოტოებს უბრუნდება",
-  "This row has no name to change": "ამ მწკრივს შესაცვლელი სახელი არ აქვს"
+  "This row has no name to change": "ამ მწკრივს შესაცვლელი სახელი არ აქვს",
+  "Loupe Overlay": "ლუპის ზედდება",
+  "View Options…": "ხედის პარამეტრები…",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "ხედი → ლუპის ზედდება → ხედის პარამეტრები ირჩევს სტრიქონებს, რომლებსაც Info 1 და Info 2 აჩვენებს."
 }

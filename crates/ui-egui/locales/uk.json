@@ -327,6 +327,7 @@
   "Window": "Вікно",
   "Wrote the XMP sidecars that were waiting": "XMP-файли, що очікували, записано",
   "Yellow": "Жовтий",
+  "White": "Білий",
   "Yes": "Так",
   "Zoom": "Масштаб",
   "Zoom In": "Збільшити",
@@ -618,6 +619,7 @@
   "Culling": "Відбір",
   "Custom template…": "Власний шаблон…",
   "Cycle Crop Overlay": "Перемкнути накладання кадрування",
+  "Crop Overlay": "Накладання кадрування",
   "Cycle Crop Overlay Orientation": "Перемкнути орієнтацію накладання кадрування",
   "Cycle Info Overlay": "Перемкнути накладання інформації",
   "Cycle Mask Overlay Color": "Перемкнути колір накладання маски",
@@ -2470,5 +2472,8 @@
   "This folder stays listed while the grid shows its photos": "Ця тека лишається у списку, доки сітка показує її фотографії",
   "Keyboard in Sidebar": "Клавіатура в бічній панелі",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Клавіші працюють у бічній панелі: стрілки переміщують, Enter відкриває, набір тексту шукає, Esc повертає до фотографій",
-  "This row has no name to change": "Цей рядок не має назви, яку можна змінити"
+  "This row has no name to change": "Цей рядок не має назви, яку можна змінити",
+  "Loupe Overlay": "Накладання лупи",
+  "View Options…": "Параметри перегляду…",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Вигляд → Накладання лупи → Параметри перегляду вибирає рядки, які показують Info 1 та Info 2."
 }

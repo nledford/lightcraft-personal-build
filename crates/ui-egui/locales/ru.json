@@ -291,6 +291,7 @@
   "Cut": "Вырезать",
   "Cut pages": "Вырезать страницы",
   "Cycle Crop Overlay": "Переключить сетку кадрирования",
+  "Crop Overlay": "Сетка кадрирования",
   "Cycle Crop Overlay Orientation": "Переключить ориентацию сетки кадрирования",
   "Cycle Info Overlay": "Переключить информационную накладку",
   "Cycle Mask Overlay Color": "Переключить цвет наложения маски",
@@ -1358,6 +1359,7 @@
   "XMP sidecars": "XMP-файлы",
   "Year": "Год",
   "Yellow": "Жёлтый",
+  "White": "Белый",
   "Yellow Hue": "Тон жёлтого",
   "Yellow Luminance": "Яркость жёлтого",
   "Yellow Saturation": "Насыщенность жёлтого",
@@ -2465,5 +2467,8 @@
   "This folder stays listed while the grid shows its photos": "Эта папка остаётся в списке, пока сетка показывает её фотографии",
   "Keyboard in Sidebar": "Клавиатура в боковой панели",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Клавиши работают в боковой панели: стрелки перемещают, Enter открывает, набор текста ищет, Esc возвращает к фотографиям",
-  "This row has no name to change": "У этой строки нет имени, которое можно изменить"
+  "This row has no name to change": "У этой строки нет имени, которое можно изменить",
+  "Loupe Overlay": "Накладка лупы",
+  "View Options…": "Параметры вида…",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Вид → Накладка лупы → Параметры вида выбирает строки, которые показывают Info 1 и Info 2."
 }
