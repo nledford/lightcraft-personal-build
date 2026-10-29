@@ -9,6 +9,7 @@ mod albums_local;
 mod backup;
 mod backup_prune;
 mod backup_schedule;
+mod batch_sidebar;
 mod color;
 mod constrain_crop;
 mod crop_angle;
