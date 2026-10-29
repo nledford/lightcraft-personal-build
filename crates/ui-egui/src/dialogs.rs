@@ -343,26 +343,53 @@ fn cancel_label(dlg: &Dialog, sam: &SamState) -> &'static str {
 
 /// The label of a dialog's confirm button (empty: it has none).
 fn ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, sam: &SamState) -> String {
-    let label = match dlg {
-        Dialog::Import { opts } => {
-            let n = opts.selected_paths().len();
-            let verb = if opts.copy && opts.move_files { "Move" } else { "Import" };
-            return crate::i18n::tr_format!("{verb} {n} Photo{}", if n == 1 { "" } else { "s" }, verb = crate::i18n::tr(verb), n = n);
-        }
+    match dlg {
+        Dialog::Import { opts } => photos_ok_label(if opts.copy && opts.move_files { "Move" } else { "Import" }, opts.selected_paths().len()),
+        Dialog::Export { .. } => photos_ok_label("Export", app.session.selection.ids.len().max(1)),
+        Dialog::SamModel { .. } => sam_ok_label(dlg, sam).to_string(),
+        _ => fixed_ok_label(app, dlg, informational).to_string(),
+    }
+}
+
+/// "Import 3 Photos", "Export 1 Photo": a verb and how many photos it acts on.
+fn photos_ok_label(verb: &str, n: usize) -> String {
+    crate::i18n::tr_format!("{verb} {n} Photo{}", crate::i18n::plural_s(n), verb = crate::i18n::tr(verb), n = n)
+}
+
+/// The confirm labels that are one fixed phrase.
+fn fixed_ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool) -> &'static str {
+    match dlg {
+        // worded with a count or by the SAM state: `ok_label` builds them
+        Dialog::Import { .. } | Dialog::Export { .. } | Dialog::SamModel { .. } => "",
         Dialog::LightroomResult { first: Some(_), .. } => "Show in Library",
         Dialog::ContactSheet { .. } => "Choose PDF…",
         Dialog::SlideshowExport { .. } => "Export…",
         Dialog::Print => "Print to PDF…",
         Dialog::Merge { .. } => "Merge",
-        Dialog::DenoiseModel { info, .. } if info["download"].is_string() => "Accept & Download",
-        Dialog::DenoiseModel { .. } => "Install",
+        Dialog::DenoiseModel { info, .. } if !informational && info["download"].is_string() => "Accept & Download",
+        Dialog::DenoiseModel { .. } if !informational => "Install",
         Dialog::FaceModel { info, .. } if !informational && info["download"].is_string() => "Download",
         Dialog::FaceModel { .. } if !informational => "Install",
         Dialog::ConfirmDelete { .. } | Dialog::DeleteKeyword { .. } | Dialog::DeleteEffects { .. } => "Delete",
-        Dialog::SaveEffect { .. } => "Create",
+        Dialog::SaveEffect { .. }
+        | Dialog::NewAlbum { .. }
+        | Dialog::NewSmartAlbum { .. }
+        | Dialog::SmartRules { id: None, .. }
+        | Dialog::CreatePreset { .. } => "Create",
+        Dialog::SmartRules { .. } | Dialog::LabelNames { .. } => "Save",
+        Dialog::RenameKeyword { from, to } if app.session.catalog.has_keyword(to) && !lightcraft_catalog::keywords::same(from, to) => {
+            "Merge Keywords"
+        }
+        Dialog::RenameAlbum { .. } | Dialog::Rename { .. } | Dialog::RenameKeyword { .. } => "Rename",
+        Dialog::AutoStack { .. } => "Create Stacks",
+        Dialog::CaptureTime { .. } => "Change Time",
+        Dialog::Cull { .. } => "Cull",
+        Dialog::CopySettings { .. } => "Copy",
+        Dialog::PasteSettings { .. } => "Paste",
+        Dialog::TextPrompt { command, .. } => prompt_verb(command),
         Dialog::MovePhotos { .. } => "Move",
         // (not "Merge": that is photo merging, HDR / panorama, in some languages)
-        Dialog::MoveKeyword { .. } => "Merge Keywords",
+        Dialog::MoveKeyword { .. } | Dialog::MergeKeywords { .. } => "Merge Keywords",
         Dialog::KeywordSet { .. } => "Save",
         Dialog::KeywordTag { editing: None, .. } => "Create",
         Dialog::KeywordTag { .. } => "Save",
@@ -374,12 +401,21 @@ fn ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, sam: &SamSta
         // the scan need not be waited for
         Dialog::SynchronizeFolder { counts: None, .. } => "Continue in Background",
         Dialog::SynchronizeFolder { .. } => "Synchronize",
-        Dialog::SamModel { .. } => return sam_ok_label(dlg, sam).to_string(),
         Dialog::RenamePerson { from, to, .. } if person_rename_plan(&app.session.catalog, from, to).needs_merge => "Merge",
-        _ if informational => "Close",
-        _ => "OK",
-    };
-    label.to_string()
+        Dialog::RenamePerson { .. } => "Rename",
+        // the dialogs that only show something, or a model file that can't be used
+        Dialog::About
+        | Dialog::Shortcuts
+        | Dialog::Settings { .. }
+        | Dialog::SystemInfo { .. }
+        | Dialog::AllMetadata { .. }
+        | Dialog::WhatsNew
+        | Dialog::ManageEffects { .. }
+        | Dialog::ViewOptions
+        | Dialog::LightroomResult { .. }
+        | Dialog::DenoiseModel { .. }
+        | Dialog::FaceModel { .. } => "Close",
+    }
 }
 
 /// The label of the SAM 3 dialog's confirm button.
@@ -539,6 +575,19 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
 /// The last frame a dialog was drawn and stayed open, for [`clicked_backdrop`].
 const BACKDROP_SHOWN: &str = "dialog-backdrop-shown";
 
+/// What a one-field prompt's confirm button says, by the command it runs. A command that isn't
+/// listed (one opened by automation) has no verb to name and keeps "OK".
+fn prompt_verb(command: &str) -> &'static str {
+    match command {
+        "album.rename" | "folder.rename" | "version.rename" | "preset.rename" | "mask.renameEffect" => "Rename",
+        "folder.create" | "mask.setEffectGroup" | "app.newLibrary" => "Create",
+        "preset.move" => "Move",
+        "keyword.saveSet" | "filter.savePreset" | "curve.savePreset" | "metadata.savePreset" => "Save",
+        "photo.tagFromTracklog" => "Add Locations",
+        _ => "OK",
+    }
+}
+
 /// Whether a dialog stays open after its action succeeded (the SAM 3 dialog while the model
 /// downloads).
 pub fn keeps_open(app: &LightcraftApp, dlg: &Dialog) -> bool {
@@ -560,12 +609,16 @@ fn auto_stack_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: 
     let preview = app.session.execute("stack.auto", &json!({"gap": *gap, "preview": true})).unwrap_or_default();
     let scope = if app.session.selection.ids.len() > 1 { "the selected photos" } else { "the photos in view" };
     ui.label(
-        egui::RichText::new(crate::i18n::tr_format!(
-            "Creates {} stacks from {} of {scope}",
-            preview["stacks"],
-            preview["photos"],
-            scope = crate::i18n::tr(scope)
-        ))
+        egui::RichText::new({
+            let (stacks, photos) = (preview["stacks"].as_u64().unwrap_or(0), preview["photos"].as_u64().unwrap_or(0));
+            crate::i18n::tr_format!(
+                "Creates {stacks} stack{} from {photos} of {scope}",
+                if stacks == 1 { "" } else { "s" },
+                stacks = stacks,
+                photos = photos,
+                scope = crate::i18n::tr(scope)
+            )
+        })
         .color(t.text_dim),
     );
 }
@@ -936,7 +989,7 @@ fn rename_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut
     field(ui, "Start at", |ui| ui.add(egui::DragValue::new(start).range(0..=999_999)));
     ui.label(
         egui::RichText::new(crate::i18n::tr(
-            "Tags: see Tags beside the template. Files are renamed on disk (with their XMP sidecars); existing names get -1, -2…",
+            "The Tags button lists placeholders for the template, such as {date} or {seq}. Each file is renamed on disk along with its XMP sidecar; a name that is taken gets -1, -2…",
         ))
         .color(t.text_dim),
     );
@@ -1081,7 +1134,8 @@ fn contact_sheet_body(app: &mut LightcraftApp, ui: &mut egui::Ui, dlg: &mut Dial
     options.columns = options.columns.clamp(1, 8);
     options.rows = options.rows.clamp(1, 10);
     let n = app.session.selected().len();
-    ui.label(crate::i18n::tr_format!("{n} selected photos · {pages} pages", n = n, pages = n.div_ceil(options.columns * options.rows)));
+    let pages = n.div_ceil(options.columns * options.rows);
+    ui.label(contact_sheet_summary(n, pages));
     field(ui, "Paper", |ui| {
         let c = crate::widgets::combo_box("contactSheetPaper").selected_text(&options.paper).show_ui(ui, |ui| {
             if MenuItem::new("A4").selected(options.paper == "a4").show(ui).clicked() {
@@ -1103,6 +1157,11 @@ fn contact_sheet_body(app: &mut LightcraftApp, ui: &mut egui::Ui, dlg: &mut Dial
     check(ui, "contactSheetCaptions", &mut options.captions, "Filename captions");
     ui.label(crate::i18n::tr("150 dpi · sRGB · current edits · fit without cropping"));
     ui.label(crate::i18n::tr("Choose a PDF destination after confirming. Print the PDF from your viewer."));
+}
+
+/// "N selected photos · M pages".
+fn contact_sheet_summary(n: usize, pages: usize) -> String {
+    crate::i18n::tr_format!("{n} selected photo{} · {pages} page{}", crate::i18n::plural_s(n), crate::i18n::plural_s(pages), n = n, pages = pages)
 }
 
 /// The body of the Export dialog.
