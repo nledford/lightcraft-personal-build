@@ -799,7 +799,7 @@ fn cell(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, r: Rect, view: 
     register(ui, format!("thumb:{}", id.0), r);
     let state = app.session.selection.state_of(id);
     let selected = state != lightcraft_engine::SelectionState::NotSelected;
-    let spoken = cell_description(app, &photo);
+    let spoken = photo_spoken(&app.session.catalog, &photo);
     resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, true, selected, &spoken));
     let p = ui.painter();
     let img_rect = if square {
@@ -836,7 +836,9 @@ fn cell(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, r: Rect, view: 
     cell_interaction(app, ui, &resp, id, &photo, badge);
 }
 
-fn cell_description(app: &LightcraftApp, photo: &lightcraft_catalog::Photo) -> String {
+/// What a screen reader says for a photo's thumbnail, in the grid and in the filmstrip: the file,
+/// then rating / flag / label.
+pub(crate) fn photo_spoken(catalog: &lightcraft_catalog::Catalog, photo: &lightcraft_catalog::Photo) -> String {
     let mut spoken = photo.file_name.clone();
     if photo.rating > 0 {
         spoken.push_str(&crate::thumb::spoken_rating(photo.rating));
@@ -847,7 +849,7 @@ fn cell_description(app: &LightcraftApp, photo: &lightcraft_catalog::Photo) -> S
         lightcraft_catalog::Flag::None => {}
     }
     if let Some(l) = photo.label {
-        spoken.push_str(&crate::i18n::tr_format!(", {} label", crate::i18n::color_label(&app.session.catalog, l)));
+        spoken.push_str(&crate::i18n::tr_format!(", {} label", crate::i18n::color_label(catalog, l)));
     }
     spoken
 }
