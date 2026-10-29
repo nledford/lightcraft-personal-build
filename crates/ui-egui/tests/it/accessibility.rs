@@ -1094,7 +1094,7 @@ fn the_settings_filter_reads_the_tabs_without_touching_the_tree() {
         |h: &Harness<'_, LightcraftApp>| h.root().children_recursive().map(|n| n.accesskit_node()).filter(|n| n.role() == Role::Window).count();
     let before = windows(&h);
     // (what Settings leaves unnamed of its own is not this test's: the filter adds none to it)
-    let unnamed = |h: &Harness<'_, LightcraftApp>| audit(h, "settings").len();
+    let unnamed = |h: &Harness<'_, LightcraftApp>| audit(h).1.len();
     let unnamed_before = unnamed(&h);
     let filter = h.get_by_label("Filter settings");
     filter.click();

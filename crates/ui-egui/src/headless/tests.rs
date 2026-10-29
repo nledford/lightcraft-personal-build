@@ -883,7 +883,7 @@ fn people_and_the_name_box_offer_to_set_face_recognition_up() {
     h.step();
     assert_eq!(h.app.session.execute("faces.models.list", &json!({})).unwrap()["enabled"], true);
     assert_eq!(
-        h.app.ui.toast.as_ref().map(|toast| toast.0.as_str()),
+        h.app.ui.toast.as_ref().map(|toast| toast.text.as_str()),
         Some(crate::i18n::Locale::De.tr("Face recognition is on")),
         "the toast is looked up in the UI language"
     );
