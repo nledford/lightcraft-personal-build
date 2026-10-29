@@ -339,5 +339,6 @@
   "Showing {what}": "Mostra {what}",
   "{title}, showing {what}": "{title}, mostra {what}",
   " · {} damaged": " · danneggiate: {}",
-  "Copied {n} file paths": "Percorsi dei file copiati: {n}"
+  "Copied {n} file paths": "Percorsi dei file copiati: {n}",
+  "Photo: {name}": "Foto: {name}"
 }

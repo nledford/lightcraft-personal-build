@@ -7,4 +7,5 @@ mod dialog_role;
 mod docking_workflows;
 mod filmstrip_names;
 mod grid_names;
+mod photo_name;
 mod sidebar_names;

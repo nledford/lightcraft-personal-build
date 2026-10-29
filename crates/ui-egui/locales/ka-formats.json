@@ -339,5 +339,6 @@
   "Showing {what}": "ნაჩვენებია: {what}",
   "{title}, showing {what}": "{title}, ნაჩვენებია: {what}",
   " · {} damaged": " · დაზიანებულია: {}",
-  "Copied {n} file paths": "დაკოპირებული ფაილის მისამართები: {n}"
+  "Copied {n} file paths": "დაკოპირებული ფაილის მისამართები: {n}",
+  "Photo: {name}": "ფოტო: {name}"
 }

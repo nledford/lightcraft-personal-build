@@ -339,5 +339,6 @@
   "{title}, showing {what}": "{title}、{what} を表示中",
   "+{n} more": "ほか{n}件",
   " · {} damaged": "・{}件は破損",
-  "Copied {n} file paths": "{n} 件のファイルパスをコピーしました"
+  "Copied {n} file paths": "{n} 件のファイルパスをコピーしました",
+  "Photo: {name}": "写真: {name}"
 }

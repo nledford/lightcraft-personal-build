@@ -339,5 +339,6 @@
   "{title}, showing {what}": "{title}，正在顯示 {what}",
   "+{n} more": "還有 {n} 項",
   " · {} damaged": " · {} 個已損毀",
-  "Copied {n} file paths": "已複製 {n} 個檔案路徑"
+  "Copied {n} file paths": "已複製 {n} 個檔案路徑",
+  "Photo: {name}": "照片：{name}"
 }

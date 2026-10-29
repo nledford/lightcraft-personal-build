@@ -2,6 +2,10 @@
 
 ## 2026-10-28
 
+### The photo in Detail is named with its file for screen readers
+- With VoiceOver, the photo in Detail view is now announced with its file name, rating, flag and colour label ("Photo:
+  IMG_0042.JPG, rating 4 of 5, picked") instead of only "Photo", as the grid names the same photo.
+
 ### Dialogs are exposed to screen readers as dialogs
 - Export, Settings and the other dialogs, the library chooser and the prompts that stop the window (the quit question, a
   library that could not be opened, a settings file problem) are now exposed to screen readers as dialogs: modal ones, so the

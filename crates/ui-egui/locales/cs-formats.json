@@ -339,5 +339,6 @@
   "Showing {what}": "Zobrazeno: {what}",
   "{title}, showing {what}": "{title}, zobrazeno: {what}",
   " · {} damaged": " · poškozené: {}",
-  "Copied {n} file paths": "Zkopírované cesty k souborům: {n}"
+  "Copied {n} file paths": "Zkopírované cesty k souborům: {n}",
+  "Photo: {name}": "Fotografie: {name}"
 }
