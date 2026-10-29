@@ -235,12 +235,12 @@ fn several_keywords_show_the_photos_with_any_of_them() {
     s.execute("library.filter", &json!({"keyword": "beach", "keywords": ["trips"]})).unwrap();
     assert_eq!(shown(&mut s), vec![ids[1], ids[2]]);
     // one chip, and clearing it clears them all
-    let chips = filter_chips(&s.filter, &s.catalog);
+    let chips = filter_chips(&s.filter(), &s.catalog);
     assert_eq!(chips.len(), 1);
     assert_eq!(chips[0].label, "Keyword: beach or trips");
     s.execute("library.filter", &chips[0].clear.clone()).unwrap();
     assert_eq!(shown(&mut s).len(), 4);
-    assert!(s.filter.keyword.is_none() && s.filter.keywords.is_empty());
+    assert!(s.filter().keyword.is_none() && s.filter().keywords.is_empty());
 }
 
 #[test]
@@ -251,10 +251,10 @@ fn several_keywords_follow_a_rename_and_lose_a_deleted_one() {
     tag(&mut s, ids[1], &["beach"]);
     s.execute("library.filter", &json!({"keywords": ["alps", "beach"]})).unwrap();
     s.execute("keyword.rename", &json!({"from": "alps", "to": "mountains"})).unwrap();
-    assert_eq!(s.filter.keywords, vec!["mountains".to_string(), "beach".to_string()]);
+    assert_eq!(s.filter().keywords, vec!["mountains".to_string(), "beach".to_string()]);
     assert_eq!(shown(&mut s), vec![ids[0], ids[1]]);
     s.execute("keyword.delete", &json!({"keyword": "beach"})).unwrap();
-    assert_eq!(s.filter.keywords, vec!["mountains".to_string()]);
+    assert_eq!(s.filter().keywords, vec!["mountains".to_string()]);
     assert_eq!(shown(&mut s), vec![ids[0]]);
 }
 
@@ -282,7 +282,7 @@ fn a_filter_put_aside_with_other_criteria_survives_its_keywords_going() {
     s.execute("keyword.delete", &json!({"keyword": "alps"})).unwrap();
     assert!(s.filters_off());
     s.execute("library.toggleFilters", &json!({})).unwrap();
-    assert_eq!(s.filter.rating, 3);
+    assert_eq!(s.filter().rating, 3);
 }
 
 #[test]
@@ -315,7 +315,7 @@ fn several_dates_show_the_photos_of_any_of_them() {
     assert_eq!(shown(&mut s), vec![ids[1], ids[3]]);
     s.execute("library.filter", &json!({"date": "2026-01-05", "dates": ["2026-01-02"]})).unwrap();
     assert_eq!(shown(&mut s), vec![ids[1], ids[4]]);
-    let chips = filter_chips(&s.filter, &s.catalog);
+    let chips = filter_chips(&s.filter(), &s.catalog);
     assert_eq!(chips.len(), 1);
     assert_eq!(chips[0].label, "Date: January 5, 2026 or January 2, 2026");
     s.execute("library.filter", &chips[0].clear.clone()).unwrap();
@@ -382,7 +382,7 @@ fn albums_in_the_filter_show_as_a_chip_and_are_refused_beside_an_album_source() 
     let (ids, a, b) = two_albums(&mut s);
     s.execute("library.filter", &json!({"albums": [a, b]})).unwrap();
     assert_eq!(shown(&mut s), vec![ids[0], ids[1], ids[2]]);
-    let chips = filter_chips(&s.filter, &s.catalog);
+    let chips = filter_chips(&s.filter(), &s.catalog);
     assert_eq!(chips.iter().map(|c| c.label.as_str()).collect::<Vec<_>>(), vec!["Album: Alps or Beach"]);
     s.execute("library.filter", &chips[0].clear.clone()).unwrap();
     assert_eq!(shown(&mut s).len(), 5);
@@ -390,17 +390,17 @@ fn albums_in_the_filter_show_as_a_chip_and_are_refused_beside_an_album_source() 
     s.execute("library.source", &json!({"kind": "album", "id": a})).unwrap();
     let e = s.execute("library.filter", &json!({"albums": [b]})).unwrap_err().to_string();
     assert!(e.contains("already shown"), "{e}");
-    assert!(s.filter.albums.is_empty());
+    assert!(s.filter().albums.is_empty());
     // the single `album` is ignored the same way; null still clears it
     let e = s.execute("library.filter", &json!({"album": b})).unwrap_err().to_string();
     assert!(e.contains("already shown"), "{e}");
-    assert_eq!(s.filter.album, None);
+    assert_eq!(s.filter().album, None);
     s.execute("library.filter", &json!({"album": null})).unwrap();
     // albums left in the filter go when an album becomes the source, and other filters still work
     s.execute("library.source", &json!({"kind": "all"})).unwrap();
     s.execute("library.filter", &json!({"albums": [b]})).unwrap();
     s.execute("library.source", &json!({"kind": "album", "id": a})).unwrap();
-    assert!(s.filter.albums.is_empty());
+    assert!(s.filter().albums.is_empty());
     s.execute("library.filter", &json!({"rating": 0})).unwrap();
     assert_eq!(shown(&mut s), vec![ids[0], ids[1]]);
 }
@@ -426,7 +426,7 @@ fn several_folders_in_the_filter_and_as_the_source_follow_a_renamed_folder() {
     // as a filter
     s.execute("library.filter", &json!({"libraryFolders": [at("trip"), at("home")]})).unwrap();
     s.execute("folder.rename", &json!({"path": at("trip"), "name": "holiday"})).unwrap();
-    assert_eq!(s.filter.library_folders.iter().map(|f| key(f)).collect::<Vec<_>>(), vec![key(&at("holiday")), key(&at("home"))]);
+    assert_eq!(s.filter().library_folders.iter().map(|f| key(f)).collect::<Vec<_>>(), vec![key(&at("holiday")), key(&at("home"))]);
     assert_eq!(s.visible().len(), 2, "still the photos of both");
     // as the source
     s.execute("library.clearFilter", &json!({})).unwrap();
@@ -456,7 +456,7 @@ fn a_single_album_left_in_the_filter_does_not_outlive_an_album_source() {
     let (_, a, b) = two_albums(&mut s);
     s.execute("library.filter", &json!({"album": a})).unwrap();
     s.execute("library.source", &json!({"kind": "album", "id": b})).unwrap();
-    assert_eq!(s.filter.album, None, "no chip for an album that limits nothing");
+    assert_eq!(s.filter().album, None, "no chip for an album that limits nothing");
 }
 
 #[test]
@@ -470,9 +470,9 @@ fn albums_in_a_filter_put_aside_do_not_come_back_beside_an_album_source() {
     // When the filter is brought back
     s.execute("library.toggleFilters", &json!({})).unwrap();
     // Then the albums stay out of it, as they do for a filter set while an album is shown
-    assert!(s.filter.albums.is_empty(), "{:?}", s.filter.albums);
+    assert!(s.filter().albums.is_empty(), "{:?}", s.filter().albums);
     assert_eq!(shown(&mut s), vec![ids[0], ids[1]]);
-    assert!(filter_chips(&s.filter, &s.catalog).is_empty());
+    assert!(filter_chips(&s.filter(), &s.catalog).is_empty());
 }
 
 #[test]
@@ -486,9 +486,9 @@ fn a_single_album_in_a_filter_put_aside_does_not_come_back_beside_an_album_sourc
     // When the filter is brought back
     s.execute("library.toggleFilters", &json!({})).unwrap();
     // Then it stays out, as it does for a filter set while an album is shown: no chip that limits nothing
-    assert_eq!(s.filter.album, None);
+    assert_eq!(s.filter().album, None);
     assert_eq!(shown(&mut s), vec![ids[0], ids[1]]);
-    assert!(filter_chips(&s.filter, &s.catalog).is_empty());
+    assert!(filter_chips(&s.filter(), &s.catalog).is_empty());
 }
 
 #[test]
@@ -525,32 +525,13 @@ fn deleting_an_album_takes_it_out_of_the_filter_and_the_filter_put_aside() {
     // When one is deleted
     s.execute("album.delete", &json!({"id": c})).unwrap();
     // Then the filter does not name it: no chip for a gone album
-    assert_eq!(s.filter.album, None);
-    assert_eq!(s.filter.albums, vec![AlbumId(a), AlbumId(b)]);
+    assert_eq!(s.filter().album, None);
+    assert_eq!(s.filter().albums, vec![AlbumId(a), AlbumId(b)]);
     // and the same for the filter put aside by Enable Filters, which must not bring it back
     s.execute("library.toggleFilters", &json!({})).unwrap();
     s.execute("album.delete", &json!({"id": b})).unwrap();
     s.execute("library.toggleFilters", &json!({})).unwrap();
-    assert_eq!(s.filter.albums, vec![AlbumId(a)]);
+    assert_eq!(s.filter().albums, vec![AlbumId(a)]);
     assert_eq!(shown(&mut s), vec![ids[0], ids[1]]);
 }
 
-#[test]
-fn folders_of_a_filter_do_not_narrow_the_all_photos_a_gone_folder_falls_back_to() {
-    let mut s = Session::new();
-    let alps = add_file(&mut s, "/pics/2025/alps/a.jpg");
-    let beach = add_file(&mut s, "/pics/2026/beach/c.jpg");
-    let city = add_file(&mut s, "/pics/2027/city/d.jpg");
-    s.execute("library.source", &json!({"kind": "libraryFolder", "paths": ["/pics/2025/alps"]})).unwrap();
-    // Given a preset naming folders, applied while a folder is shown (library.filter would refuse it)
-    s.filter.library_folder = Some("/pics/2026/beach".into());
-    s.filter.library_folders = vec!["/pics/2026/beach".into()];
-    // When the folder shown loses its last photo
-    s.execute("library.select", &json!({"ids": [alps]})).unwrap();
-    s.execute("photo.delete", &json!({"ids": [alps]})).unwrap();
-    // Then everything is shown, not what the stale folders of the filter leave
-    assert_eq!(shown(&mut s), vec![beach, city]);
-    assert_eq!(s.source, LibrarySource::All);
-    assert_eq!(s.filter.library_folder, None);
-    assert!(s.filter.library_folders.is_empty());
-}

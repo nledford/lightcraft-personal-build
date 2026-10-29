@@ -65,7 +65,7 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
     let cell_w = 120.0;
     let ppp = ui.ctx().pixels_per_point();
     if ids.is_empty() {
-        let why = if app.session.filter != Default::default() { "No photos match the filters (View → Clear Filters)" } else { "No photos" };
+        let why = if *app.session.filter() != Default::default() { "No photos match the filters (View → Clear Filters)" } else { "No photos" };
         ui.painter().text(r.center(), Align2::CENTER_CENTER, why, t.label(), t.text_dim);
         return;
     }

@@ -24,7 +24,7 @@ pub(super) fn date_rows(app: &mut LightcraftApp, ui: &mut egui::Ui) {
 fn date_row(app: &mut LightcraftApp, ui: &mut egui::Ui, key: &str, label: &str, count: usize, indent: f32, above: Option<Said>) -> bool {
     let branch = Branch::date(key);
     let mut open = app.ui.sidebar_trees.is_open_under(&branch, above);
-    let sel = app.session.filter.date.as_deref() == Some(key);
+    let sel = app.session.filter().date.as_deref() == Some(key);
     let resp = Row::new(&format!("date:{key}"), Icon::Clock, label).count(Some(count)).selected(sel).indent(indent).show(app, ui);
     if key.len() < 10 {
         // (a year's months open and fold with it; a month's days have nothing to open)

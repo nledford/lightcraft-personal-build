@@ -665,8 +665,7 @@ impl Session {
         self.library_folder = None;
         // what names albums and photos by number means others in another library: no filter
         // (as after a restart; the view file keeps none), no target album, no photo come from
-        self.filter = Default::default();
-        self.shelved_filter = None;
+        self.filters.clear();
         self.target_album = None;
         self.previous_active = None;
         self.active_mask = None;
@@ -782,6 +781,8 @@ impl Session {
         }
         // the saved view may name an album the library no longer has
         self.reconcile_view();
+        // the filter stays across libraries: what the source restored here owns leaves it, as when that source is shown
+        self.filters.source_shown(self.source);
         // not on Missing Photos: working that view out checks every original (minutes on a
         // sleeping NAS), and the app checks them in the background once it runs
         if self.selection.active.is_none()
