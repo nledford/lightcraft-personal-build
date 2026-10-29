@@ -2306,6 +2306,7 @@
   "Drop to import": "放開滑鼠以匯入",
   "Dropped Files": "拖放的檔案",
   "Import dropped files without review": "不經檢查直接匯入拖放的檔案",
+  "An import is running": "正在匯入",
   "Finish Lightroom catalog import before adding photos": "新增照片前，請先完成 Lightroom 目錄的匯入",
   "Same Content as Another Photo": "與另一張照片內容相同",
   "Counting library": "正在統計照片庫",

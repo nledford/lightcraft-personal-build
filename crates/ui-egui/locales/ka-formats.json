@@ -328,7 +328,7 @@
   "Move {n} file{} to “{}”": "Move {n} file{} to “{}”",
   "Move {n} file{} to “{}”?": "Move {n} file{} to “{}”?",
   "Listing folders — folders: {folders}, files: {files}": "საქაღალდეების ჩამოთვლა — საქაღალდეები: {folders}, ფაილები: {files}",
-  "Moved {n} file{} to “{}”. Edit → Undo moves them back.": "„{1}“-ში გადატანილია ფოტო: {n}{0:.0}. რედაქტირება → გაუქმება დააბრუნებს მათ.",
+  "Moved {n} file{} to “{}”. Edit → Undo moves them back.": "Moved {n} file{} to “{}”. Edit → Undo moves them back.",
   "Drop to review {n} item{} for import": "ჩააგდეთ იმპორტამდე გადასახედად (ელემენტები: {n}){:.0}",
   "Drop to import {n} item{}": "ჩააგდეთ იმპორტისთვის (ელემენტები: {n}){:.0}",
   "Drop to import {n} preset{}": "ჩააგდეთ პრესეტების იმპორტისთვის: {n}{:.0}",

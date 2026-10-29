@@ -2506,6 +2506,7 @@
   "Drop to import": "Suelta para importar",
   "Dropped Files": "Archivos soltados",
   "Import dropped files without review": "Importar los archivos soltados sin revisión",
+  "An import is running": "Hay una importación en curso",
   "Finish Lightroom catalog import before adding photos": "Termina la importación del catálogo de Lightroom antes de añadir fotos",
   "Same Content as Another Photo": "Mismo contenido que otra foto",
   "Counting library": "Contando la biblioteca",

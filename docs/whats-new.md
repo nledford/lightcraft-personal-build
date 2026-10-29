@@ -9,6 +9,7 @@
   them, and folders you keep in Local with Browse Folder…, rename as before, starting from their real name. The
   `folder.rename` and `folder.move` commands now refuse the home folder and its Pictures, Desktop and Downloads too,
   so a script or an agent can't do it either.
+
 ### Text typed in a box goes where you typed it
 - A box that saves when you finish now belongs to what you were typing for. If the Info panel moves to another photo
   while you are typing in it (Select by, a command, an agent), the text is saved to the photo you typed it for and the
@@ -73,6 +74,7 @@
   shows a notification. It says what the job reported ("Exported 24 photos"), or names it, or says how many ended
   when several did. The first time, macOS asks whether LightCraft may notify you. Turn it off in Settings ▸ General ▸
   Notifications.
+
 ### Text typed in a box is kept however you leave it
 - Text typed in a box that saves when you finish (the Info panel's fields, Copyright and Creator in Settings, the Auto
   Import album, the slideshow's title, overlay and template-name boxes, and Manage Effect Presets' rename) is now saved
@@ -251,6 +253,7 @@
   `folder.metadataPump` again and again (the app doesn't yet), and then the row's ✕ stops it between photos: a stopped
   save keeps the sidecars it wrote, a stopped read commits what it read as one undo step. A photo whose file can't be
   written or read is listed in `failed` and the rest go on. The Folders menu items that use them come later.
+
 ### A folder's menu has one order, in Folders and in Local
 - Right-clicking a folder in Folders or in Local opens a menu in the same order, in groups: what it does with the
   library's photos (Import to This Folder… or Add to My Photos…, Synchronize Folder…, Locate Missing Files…), then
@@ -497,6 +500,7 @@
   its content is the photo's.
 - Agents and the CLI: `folder.updateLocation {folder, path}`. In the running app it looks for the files in the
   background too and answers at once; `ui.inspect` → `relocate` says how it went.
+
 ### A right-click on a text field while you carry photos opens no menu
 - While you drag photos from the grid, a right-click on a text field, such as the search box, opens no Cut, Copy and
   Paste menu. Before, the menu opened over the field the photos were on. Right-clicking a field without a drag works
@@ -612,6 +616,7 @@
 - The short messages at the bottom of the photo view used to replace one another: a label set right after an export
   ended hid the export's message. Now a new message appears where they always did and the ones still showing move up
   above it, up to three, each going at its own time (at the top during a slideshow, the newest on top).
+
 ### Settings asks before it does what can't be taken back
 - Settings asks before it does what is slow or impossible to take back. Clear Cache says that thumbnails and
   previews are made again as you browse. The prompt for removing a model says that the model's file is deleted.
@@ -700,6 +705,7 @@
   (up to five, then a count) and why: the name is taken in the folder, two photos being moved share a name, the file is
   missing or offline, or the photo has no file. It says what to do and offers to move the rest, and it asks even when
   you turned off the confirmation. Dropping a Local photo is still refused on the row, with its own reason.
+
 ### Quitting on macOS leaves no lock note
 - Quitting LightCraft on macOS no longer leaves `catalog.lock.owner` in the library folder. The note, which names the
   program that has the library open, stayed behind after Quit and the window's close button, pointing at a process
@@ -798,6 +804,7 @@
   both folders and how many photos go along; "Don't ask again" (Settings → Confirm before moving photos to another
   folder on disk) moves it at once. Esc gives the drag up, and Edit ▸ Undo moves the folder back. A click on a row
   still chooses it.
+
 ### Panel layout messages, face recognition prompts and the second window's title in your language
 - The messages shown when a panel layout cannot be restored or a panel move is not applied, the face recognition
   prompts (the banner and the name box's offer, with their buttons), the "Face recognition is on" and "is installed"
@@ -1224,6 +1231,7 @@
 - In the left panel's Local, a folder eight levels below its place used to open onto nothing. It now says **Go Deeper**:
   click it to add that folder to Local as a place of its own (a message says so), where it opens further. A folder
   that is already a place of its own says "Opens as its own place" there instead, where the listing stops.
+
 ### Dialog buttons say what they do
 - The confirm button in dialogs now names its action instead of "OK": Create for a new album, smart album, folder or
   preset, Rename for photos, albums, keywords, people and presets, Create Stacks for Auto-Stack, Change Time for Capture Time,
