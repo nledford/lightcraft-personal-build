@@ -62,6 +62,11 @@
   you typed and shows the reason, so you can change the name. Before, it closed without a word. A New Folder on Disk
   that works now says so: “Created folder “Selects” in “2026/Shoot””. Cancel and Esc still close the prompt.
 
+### `--no-update-check` for throwaway copies
+- Starting LightCraft with `--no-update-check` skips the look for a newer release at start, so a throwaway copy (a test
+  or scripted run) makes no request to GitHub and never opens the update prompt. Help ▸ Check for Updates… still
+  checks when you ask; without the option nothing changes.
+
 ## 2026-10-26
 
 ### The sidebar from the keyboard
