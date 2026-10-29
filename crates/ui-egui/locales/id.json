@@ -2426,7 +2426,7 @@
   "Try one word, or part of one: the names of tabs and sections, labels and explanations are all looked through.": "Coba satu kata atau sebagiannya: yang dicari adalah nama tab dan bagian, label, serta penjelasan.",
   "Continue in Background": "Lanjutkan di Latar Belakang",
   "Folder not found": "Folder tidak ditemukan",
-  "Dismiss": "Tutup",
+  "Dismiss": "Abaikan",
   "Review…": "Tinjau…",
   "Open Synchronize Folder with what the scan found": "Buka Sinkronkan Folder dengan hasil pemindaian",
   "You can go on working: a notice at the top left says when the scan is done.": "Anda dapat terus bekerja: pemberitahuan di kiri atas memberi tahu saat pemindaian selesai.",
@@ -2440,5 +2440,9 @@
   "Imports, exports and other long jobs show here while they run.": "Impor, ekspor, dan tugas panjang lainnya ditampilkan di sini selama berjalan.",
   "No tasks are running": "Tidak ada tugas yang berjalan",
   "Tasks": "Tugas",
-  "cancelled": "dibatalkan"
+  "cancelled": "dibatalkan",
+  "Copy all": "Salin semua",
+  "Finished": "Selesai",
+  "Needs attention": "Perlu perhatian",
+  "Running": "Berjalan"
 }
