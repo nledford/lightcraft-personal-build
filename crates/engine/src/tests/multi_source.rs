@@ -534,4 +534,3 @@ fn deleting_an_album_takes_it_out_of_the_filter_and_the_filter_put_aside() {
     assert_eq!(s.filter().albums, vec![AlbumId(a)]);
     assert_eq!(shown(&mut s), vec![ids[0], ids[1]]);
 }
-

@@ -54,6 +54,7 @@ mod slide;
 mod slideshow_export;
 mod spots;
 mod sync;
+mod undo_filters;
 mod view_follow;
 mod view_reconcile;
 pub(super) mod xmp;
