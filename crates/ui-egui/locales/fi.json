@@ -2368,5 +2368,6 @@
   "There are no backups in this folder.": "Tässä kansiossa ei ole varmuuskopioita.",
   "another library": "toinen kirjasto",
   "Choose a backup first": "Valitse ensin varmuuskopio",
-  "The library becomes what it was when the backup was made. What it holds now is kept in Replaced in the library folder.": "Kirjastosta tulee sellainen kuin se oli varmuuskopiota tehtäessä. Sen nykyinen sisältö säilytetään kirjastokansion Replaced-kansiossa."
+  "The library becomes what it was when the backup was made. What it holds now is kept in Replaced in the library folder.": "Kirjastosta tulee sellainen kuin se oli varmuuskopiota tehtäessä. Sen nykyinen sisältö säilytetään kirjastokansion Replaced-kansiossa.",
+  "What restores replaced (Replaced in the library folder) goes by the same rule.": "Palautusten korvaama sisältö (Replaced kirjastokansiossa) noudattaa samaa sääntöä."
 }

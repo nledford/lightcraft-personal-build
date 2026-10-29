@@ -2380,5 +2380,6 @@
   "There are no backups in this folder.": "Tidak ada cadangan di folder ini.",
   "another library": "pustaka lain",
   "Choose a backup first": "Pilih cadangan terlebih dahulu",
-  "The library becomes what it was when the backup was made. What it holds now is kept in Replaced in the library folder.": "Pustaka menjadi seperti saat cadangan dibuat. Isinya saat ini disimpan di Replaced di folder pustaka."
+  "The library becomes what it was when the backup was made. What it holds now is kept in Replaced in the library folder.": "Pustaka menjadi seperti saat cadangan dibuat. Isinya saat ini disimpan di Replaced di folder pustaka.",
+  "What restores replaced (Replaced in the library folder) goes by the same rule.": "Apa yang digantikan oleh pemulihan (Replaced di folder pustaka) mengikuti aturan yang sama."
 }

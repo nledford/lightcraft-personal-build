@@ -2276,5 +2276,6 @@
   "There are no backups in this folder.": "Không có bản sao lưu nào trong thư mục này.",
   "another library": "thư viện khác",
   "Choose a backup first": "Hãy chọn một bản sao lưu trước",
-  "The library becomes what it was when the backup was made. What it holds now is kept in Replaced in the library folder.": "Thư viện trở lại như lúc tạo bản sao lưu. Nội dung hiện tại của nó được giữ trong Replaced trong thư mục thư viện."
+  "The library becomes what it was when the backup was made. What it holds now is kept in Replaced in the library folder.": "Thư viện trở lại như lúc tạo bản sao lưu. Nội dung hiện tại của nó được giữ trong Replaced trong thư mục thư viện.",
+  "What restores replaced (Replaced in the library folder) goes by the same rule.": "Những gì các lần khôi phục đã thay thế (Replaced trong thư mục thư viện) cũng theo quy tắc này."
 }
