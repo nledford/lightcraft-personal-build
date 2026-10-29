@@ -8,6 +8,7 @@ mod backup_status;
 mod before_after;
 mod browse_active;
 mod button;
+mod button_migration;
 mod canvas_keys;
 mod canvas_pan;
 mod capture_time;

@@ -2299,5 +2299,7 @@
   "For scripts and agents: `folder.scanChanges` now returns `duplicates` as a list of those files, each with the photo it matches (`existing`), where it used to return a count; `library.importPreview` still returns a number under `duplicates`, and `folder.synchronize` takes `importDuplicates`.": "Dành cho tập lệnh và tác nhân: `folder.scanChanges` giờ trả về `duplicates` dưới dạng danh sách các tệp đó, mỗi tệp kèm ảnh mà nó khớp (`existing`), trước đây là một con số; `library.importPreview` vẫn trả về một số trong `duplicates`, và `folder.synchronize` nhận `importDuplicates`.",
   "A file with the same content as a photo of the library, under another name or in another folder. Untick to bring such files in as photos of their own. Remembered for the next Synchronize.": "Tệp có nội dung giống một ảnh trong thư viện, dưới tên khác hoặc ở thư mục khác. Bỏ chọn để đưa các tệp như vậy vào thành ảnh riêng. Được nhớ cho lần đồng bộ tiếp theo.",
   "Same Content as Another Photo": "Cùng nội dung với ảnh khác",
-  "Counting library": "Đang đếm thư viện"
+  "Counting library": "Đang đếm thư viện",
+  "Next page": "Trang sau",
+  "Previous page": "Trang trước"
 }

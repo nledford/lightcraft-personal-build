@@ -2425,5 +2425,7 @@
   "the backup was cancelled": "il backup è stato annullato",
   "the restore was stopped; the library is as it was": "il ripristino è stato interrotto; la libreria è com'era",
   "Same Content as Another Photo": "Stesso contenuto di un'altra foto",
-  "Counting library": "Conteggio della libreria"
+  "Counting library": "Conteggio della libreria",
+  "Previous page": "Pagina precedente",
+  "Next page": "Pagina successiva"
 }

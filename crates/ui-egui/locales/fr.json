@@ -2454,5 +2454,7 @@
   "Open a library first, then drop the presets again": "Ouvrez d'abord une bibliothèque, puis déposez à nouveau les préréglages",
   "This library couldn't be checked:": "Impossible de vérifier cette bibliothèque :",
   "Same Content as Another Photo": "Même contenu qu'une autre photo",
-  "Counting library": "Comptage de la bibliothèque"
+  "Counting library": "Comptage de la bibliothèque",
+  "Previous page": "Page précédente",
+  "Next page": "Page suivante"
 }
