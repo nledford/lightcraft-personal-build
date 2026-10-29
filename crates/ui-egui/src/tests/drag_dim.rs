@@ -154,13 +154,12 @@ fn a_dragged_photos_marks_are_not_dimmed() {
         let during = carry(&mut h);
         // Then the tag's white strokes are as bright as before, while the photo under it is dimmed
         let c = centre(&h, 2);
-        let cell = h.app.widgets.iter().find(|(w, _)| *w == "thumb:2").unwrap().1;
+        // (the tag as the shared thumbnail overlay registers it, #2164: its place follows the picture's, not the cell's)
+        let tag = h.app.widgets.iter().find(|(w, _)| *w == "copy:2").unwrap().1;
         let brightest = |image: &ColorImage| {
-            let top = if view == ViewMode::SquareGrid { cell.top() + 24.0 } else { cell.top() } + 4.0;
-            let right = if view == ViewMode::SquareGrid { cell.right() - 10.0 } else { cell.right() } - 8.0;
             let mut best = 0;
-            for y in (top as usize)..(top as usize + 20) {
-                for x in ((right - 40.0) as usize)..(right as usize) {
+            for y in (tag.top() as usize)..(tag.bottom() as usize) {
+                for x in (tag.left() as usize)..(tag.right() as usize) {
                     best = best.max(brightness(pixel(image, Pos2::new(x as f32, y as f32))));
                 }
             }
