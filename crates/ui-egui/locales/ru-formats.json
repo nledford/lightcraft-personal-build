@@ -364,5 +364,7 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "Фото с одним из них: {count}. Вложенные ключевые слова тоже удаляются. Отмена вернёт их.",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "Убрать папки ({n}) из библиотеки? Импортированных из них фото: {count}.",
   "…and {n} more": "…и ещё {n}",
-  "{n} keywords": "Ключевые слова: {n}"
+  "{n} keywords": "Ключевые слова: {n}",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Условие {n} из {m}: {what}. Перемещение стрелками",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Группа {n} из {m}: совпадение {mode}, внутри {count}. Перемещение стрелками"
 }

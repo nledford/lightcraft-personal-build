@@ -3598,5 +3598,8 @@
   "Duplicate Album": "Album duplizieren",
   "Paste Inside This Keyword": "In dieses Stichwort einfügen",
   "Paste Into This Folder": "In diesen Ordner einfügen",
-  "Paste at Top Level": "Auf oberster Ebene einfügen"
+  "Paste at Top Level": "Auf oberster Ebene einfügen",
+  "Drag to move, or use the arrow keys": "Zum Verschieben ziehen oder die Pfeiltasten verwenden",
+  "A group can't go inside itself": "Eine Gruppe kann nicht in sich selbst liegen",
+  "Groups can't nest any deeper": "Gruppen lassen sich nicht tiefer verschachteln"
 }

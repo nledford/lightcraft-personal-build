@@ -364,5 +364,7 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "Kuvia, joilla on jokin niistä: {count}. Niiden alla olevat avainsanat poistetaan myös. Kumoa palauttaa ne.",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "Poistetaanko {n} kansiota kirjastosta? Niistä tuotuja kuvia: {count}.",
   "…and {n} more": "…ja {n} muuta",
-  "{n} keywords": "{n} avainsanaa"
+  "{n} keywords": "{n} avainsanaa",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Sääntö {n}/{m}: {what}. Siirrä nuolinäppäimillä",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Ryhmä {n}/{m}: täsmää {mode}, sisällä: {count}. Siirrä nuolinäppäimillä"
 }

@@ -2517,5 +2517,8 @@
   "Duplicate Album": "アルバムを複製",
   "Paste Inside This Keyword": "このキーワードの中に貼り付け",
   "Paste Into This Folder": "このフォルダに貼り付け",
-  "Paste at Top Level": "最上位に貼り付け"
+  "Paste at Top Level": "最上位に貼り付け",
+  "Drag to move, or use the arrow keys": "ドラッグして移動、または矢印キーを使います",
+  "A group can't go inside itself": "グループを自分自身の中に入れることはできません",
+  "Groups can't nest any deeper": "グループはこれ以上深く入れ子にできません"
 }

@@ -2363,5 +2363,8 @@
   "Duplicate Album": "Duplicar álbum",
   "Paste Inside This Keyword": "Colar dentro desta palavra-chave",
   "Paste Into This Folder": "Colar nesta pasta",
-  "Paste at Top Level": "Colar no nível superior"
+  "Paste at Top Level": "Colar no nível superior",
+  "Drag to move, or use the arrow keys": "Arraste para mover ou use as setas",
+  "A group can't go inside itself": "Um grupo não pode ficar dentro de si mesmo",
+  "Groups can't nest any deeper": "Os grupos não podem ser aninhados mais fundo"
 }

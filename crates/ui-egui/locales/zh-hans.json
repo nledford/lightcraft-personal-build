@@ -2361,5 +2361,8 @@
   "Duplicate Album": "创建相册副本",
   "Paste Inside This Keyword": "粘贴到此关键字中",
   "Paste Into This Folder": "粘贴到此文件夹",
-  "Paste at Top Level": "粘贴到顶层"
+  "Paste at Top Level": "粘贴到顶层",
+  "Drag to move, or use the arrow keys": "拖动以移动，或使用方向键",
+  "A group can't go inside itself": "组不能放入它自己里面",
+  "Groups can't nest any deeper": "组不能再嵌套得更深"
 }

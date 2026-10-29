@@ -2395,5 +2395,8 @@
   "Duplicate Album": "Nhân bản album",
   "Paste Inside This Keyword": "Dán vào từ khóa này",
   "Paste Into This Folder": "Dán vào thư mục này",
-  "Paste at Top Level": "Dán ở cấp cao nhất"
+  "Paste at Top Level": "Dán ở cấp cao nhất",
+  "Drag to move, or use the arrow keys": "Kéo để di chuyển, hoặc dùng phím mũi tên",
+  "A group can't go inside itself": "Nhóm không thể nằm trong chính nó",
+  "Groups can't nest any deeper": "Không thể lồng nhóm sâu hơn"
 }

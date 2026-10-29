@@ -364,5 +364,7 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "包含其中任意一个的照片：{count} 张。其下的关键字也会被删除。撤销可恢复。",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "要从图库中移除 {n} 个文件夹吗？从中导入的照片：{count} 张。",
   "…and {n} more": "…以及另外 {n} 个",
-  "{n} keywords": "{n} 个关键字"
+  "{n} keywords": "{n} 个关键字",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "规则 {n}/{m}：{what}。用方向键移动",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "组 {n}/{m}：匹配{mode}，内含 {count} 项。用方向键移动"
 }

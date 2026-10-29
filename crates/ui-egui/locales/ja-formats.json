@@ -364,5 +364,7 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "いずれかを含む写真: {count}枚。下位のキーワードも削除されます。取り消すと元に戻ります。",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "{n}個のフォルダをライブラリから除去しますか？ 読み込まれた写真: {count}枚。",
   "…and {n} more": "…ほか{n}個",
-  "{n} keywords": "{n}個のキーワード"
+  "{n} keywords": "{n}個のキーワード",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "条件 {n}/{m}：{what}。矢印キーで移動",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "グループ {n}/{m}：一致条件 {mode}、中に {count} 件。矢印キーで移動"
 }

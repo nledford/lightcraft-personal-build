@@ -364,5 +364,7 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "Фото з одним із них: {count}. Вкладені ключові слова теж видаляються. Скасування поверне їх.",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "Вилучити теки ({n}) з бібліотеки? Імпортованих із них фото: {count}.",
   "…and {n} more": "…і ще {n}",
-  "{n} keywords": "Ключові слова: {n}"
+  "{n} keywords": "Ключові слова: {n}",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Правило {n} з {m}: {what}. Переміщення стрілками",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Група {n} з {m}: збіг {mode}, усередині {count}. Переміщення стрілками"
 }

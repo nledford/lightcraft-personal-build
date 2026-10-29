@@ -364,5 +364,7 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "Fotografie, které mají některé z nich: {count}. Smažou se i klíčová slova pod nimi. Zpět je vrátí.",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "Odebrat složky ({n}) z knihovny? Fotografie z nich importované: {count}.",
   "…and {n} more": "…a dalších {n}",
-  "{n} keywords": "Klíčová slova: {n}"
+  "{n} keywords": "Klíčová slova: {n}",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Pravidlo {n} z {m}: {what}. Přesun pomocí šipek",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Skupina {n} z {m}: shoda {mode}, uvnitř {count}. Přesun pomocí šipek"
 }

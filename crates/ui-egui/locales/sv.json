@@ -2587,5 +2587,8 @@
   "Duplicate Album": "Duplicera album",
   "Paste Inside This Keyword": "Klistra in i det här nyckelordet",
   "Paste Into This Folder": "Klistra in i den här mappen",
-  "Paste at Top Level": "Klistra in på översta nivån"
+  "Paste at Top Level": "Klistra in på översta nivån",
+  "Drag to move, or use the arrow keys": "Dra för att flytta, eller använd piltangenterna",
+  "A group can't go inside itself": "En grupp kan inte läggas inuti sig själv",
+  "Groups can't nest any deeper": "Grupper kan inte nästlas djupare"
 }

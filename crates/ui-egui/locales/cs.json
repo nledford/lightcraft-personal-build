@@ -2566,5 +2566,8 @@
   "Duplicate Album": "Duplikovat album",
   "Paste Inside This Keyword": "Vložit do tohoto klíčového slova",
   "Paste Into This Folder": "Vložit do této složky",
-  "Paste at Top Level": "Vložit na nejvyšší úroveň"
+  "Paste at Top Level": "Vložit na nejvyšší úroveň",
+  "Drag to move, or use the arrow keys": "Přetažením přesunete, nebo použijte šipky",
+  "A group can't go inside itself": "Skupinu nelze vložit do sebe samé",
+  "Groups can't nest any deeper": "Skupiny nelze vnořovat hlouběji"
 }

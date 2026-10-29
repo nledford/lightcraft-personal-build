@@ -2318,5 +2318,8 @@
   "Duplicate Album": "複製相簿",
   "Paste Inside This Keyword": "貼到此關鍵字中",
   "Paste Into This Folder": "貼到此資料夾",
-  "Paste at Top Level": "貼到最上層"
+  "Paste at Top Level": "貼到最上層",
+  "Drag to move, or use the arrow keys": "拖曳以移動，或使用方向鍵",
+  "A group can't go inside itself": "群組不能放進它自己裡面",
+  "Groups can't nest any deeper": "群組不能再巢狀得更深"
 }

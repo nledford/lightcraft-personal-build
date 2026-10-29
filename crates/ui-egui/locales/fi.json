@@ -2485,5 +2485,8 @@
   "Duplicate Album": "Monista albumi",
   "Paste Inside This Keyword": "Liitä tämän avainsanan sisään",
   "Paste Into This Folder": "Liitä tähän kansioon",
-  "Paste at Top Level": "Liitä ylimmälle tasolle"
+  "Paste at Top Level": "Liitä ylimmälle tasolle",
+  "Drag to move, or use the arrow keys": "Siirrä vetämällä tai käytä nuolinäppäimiä",
+  "A group can't go inside itself": "Ryhmää ei voi siirtää itsensä sisään",
+  "Groups can't nest any deeper": "Ryhmiä ei voi sisentää syvemmälle"
 }

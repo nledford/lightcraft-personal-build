@@ -2510,5 +2510,8 @@
   "Duplicate Album": "Дублировать альбом",
   "Paste Inside This Keyword": "Вставить в это ключевое слово",
   "Paste Into This Folder": "Вставить в эту папку",
-  "Paste at Top Level": "Вставить на верхний уровень"
+  "Paste at Top Level": "Вставить на верхний уровень",
+  "Drag to move, or use the arrow keys": "Перетащите, чтобы переместить, или используйте стрелки",
+  "A group can't go inside itself": "Группу нельзя поместить внутрь самой себя",
+  "Groups can't nest any deeper": "Группы нельзя вкладывать глубже"
 }

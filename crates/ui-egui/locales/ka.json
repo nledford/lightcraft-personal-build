@@ -2894,5 +2894,8 @@
   "Duplicate Album": "ალბომის დუბლირება",
   "Paste Inside This Keyword": "ამ საკვანძო სიტყვაში ჩასმა",
   "Paste Into This Folder": "ამ საქაღალდეში ჩასმა",
-  "Paste at Top Level": "ზედა დონეზე ჩასმა"
+  "Paste at Top Level": "ზედა დონეზე ჩასმა",
+  "Drag to move, or use the arrow keys": "გადასატანად გადაიტანეთ ან გამოიყენეთ ისრები",
+  "A group can't go inside itself": "ჯგუფს საკუთარ თავში ვერ ჩადებთ",
+  "Groups can't nest any deeper": "ჯგუფების უფრო ღრმად ჩადგმა შეუძლებელია"
 }

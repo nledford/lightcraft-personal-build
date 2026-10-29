@@ -2519,5 +2519,8 @@
   "Duplicate Album": "Duplicar álbum",
   "Paste Inside This Keyword": "Pegar dentro de esta palabra clave",
   "Paste Into This Folder": "Pegar en esta carpeta",
-  "Paste at Top Level": "Pegar en el nivel superior"
+  "Paste at Top Level": "Pegar en el nivel superior",
+  "Drag to move, or use the arrow keys": "Arrastra para mover, o usa las teclas de flecha",
+  "A group can't go inside itself": "Un grupo no puede ir dentro de sí mismo",
+  "Groups can't nest any deeper": "Los grupos no se pueden anidar más"
 }

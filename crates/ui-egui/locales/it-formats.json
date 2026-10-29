@@ -364,5 +364,7 @@
   "Photos that have one of them: {count}. The keywords below them go too. Undo brings them back.": "Foto che ne hanno uno: {count}. Vengono eliminate anche le parole chiave sotto di esse. Annulla le ripristina.",
   "Remove {n} folders from the library? Photos imported from them: {count}.": "Rimuovere {n} cartelle dalla libreria? Foto importate da esse: {count}.",
   "…and {n} more": "…e altri {n}",
-  "{n} keywords": "{n} parole chiave"
+  "{n} keywords": "{n} parole chiave",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Regola {n} di {m}: {what}. Sposta con le frecce",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Gruppo {n} di {m}: corrispondenza {mode}, {count} all’interno. Sposta con le frecce"
 }
