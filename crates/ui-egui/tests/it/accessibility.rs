@@ -619,6 +619,9 @@ fn every_actionable_control_is_named_or_a_listed_gap() {
     assert!(report.new.is_empty(), "{}", failure_message(&report, &places));
 }
 
+/// The baseline is a ceiling per problem, so one file serves every platform: a count that is lower on one platform
+/// only prints a "fixed" hint. Where a platform draws more (Linux and Windows draw Enter Full Screen as a tick box
+/// in the View menu, `menus::menubar::checked`, where macOS draws a button), the file lists the larger count.
 const KEYBOARD_BASELINE_FILE: &str = "a11y-keyboard-gaps.json";
 
 /// More Tab presses than any screen has controls: a screen where every press still reaches a control
