@@ -468,7 +468,8 @@ impl NativeMenu {
         let _ = app_menu.append(&about);
         // Check for Updates… follows About LightCraft (Help keeps it on other platforms)
         let update_rows: Vec<MenuNode> = app_rows.into_iter().filter(|n| !matches!(n, MenuNode::Item { id, .. } if id == "app.about")).collect();
-        self.append_nodes(&app_menu, &update_rows, &app.ui.settings.keymap, true);
+        let mut ids = RowIds::default();
+        self.append_nodes(&app_menu, &update_rows, &app.ui.settings.keymap, true, &mut ids);
         let _ = app_menu.append_items(&[
             &PredefinedMenuItem::separator(),
             &settings,
@@ -499,7 +500,6 @@ impl NativeMenu {
         }
         let _ = self.menu.append(&app_menu);
 
-        let mut ids = RowIds::default();
         let mut windows_menu = None;
         let mut help_menu = None;
 
@@ -512,7 +512,7 @@ impl NativeMenu {
                     &PredefinedMenuItem::separator(),
                 ]);
             }
-            let nodes = install_nodes(nodes.clone());
+            let nodes = install_nodes(nodes);
             // Swapping an item in the Help menu leaves the old row in place and adds a second one
             // (measured on macOS 27 with muda 0.21): the Help menu is not addressed row for row.
             self.append_nodes(&sub, &nodes, &app.ui.settings.keymap, title != "Help", &mut ids);
