@@ -216,7 +216,7 @@ fn a_library_on_disk_has_its_smart_previews_folder_under_library() {
     drop(h);
     let _ = std::fs::remove_dir_all(&dir);
     // (where a library keeps its files is the library's; Performance keeps rendering and the cache)
-    assert_eq!(on_library, ["Library", "Smart previews", "Local folders"]);
+    assert_eq!(on_library, ["Library", "Backups", "Smart previews", "Local folders"]);
     assert_eq!(on_performance, ["Rendering", "Thumbnail cache"]);
 }
 
