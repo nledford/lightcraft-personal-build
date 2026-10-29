@@ -175,6 +175,8 @@ impl From<lightcraft_engine::EngineError> for Refusal {
     }
 }
 
+/// A toast with more to read (where something went).
+const TOAST_READ_SECONDS: f64 = 4.0;
 /// The `path` of a display profile read from the screen rather than chosen as a file.
 pub const SCREEN_PROFILE: &str = "screen";
 

@@ -2527,5 +2527,8 @@
   "Imports, exports and other long jobs show here while they run.": "Importer, exporter och andra långa jobb visas här medan de pågår.",
   "No tasks are running": "Inga uppgifter körs",
   "Tasks": "Uppgifter",
-  "cancelled": "avbruten"
+  "cancelled": "avbruten",
+  "Add Sample Photos": "Lägg till exempelfoton",
+  "Sample Photos": "Exempelfoton",
+  "Remove Sample Photos": "Ta bort exempelfoton"
 }
