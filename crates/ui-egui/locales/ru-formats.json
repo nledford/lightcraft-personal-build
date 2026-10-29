@@ -362,5 +362,7 @@
   "Too many tasks are waiting ({n}): wait for some to finish": "В очереди слишком много задач: {n}. Подождите, пока часть завершится",
   "{n} waiting": "Ожидают: {n}",
   "{n} tasks waiting in line won't run.": "Задачи в очереди ({n}) не будут запущены.",
-  "Without review: copy to {destination}": "Без проверки: копировать в {destination}"
+  "Without review: copy to {destination}": "Без проверки: копировать в {destination}",
+  "{label} finished": "Завершено: {label}",
+  "{n} jobs finished": "Завершено задач: {n}"
 }

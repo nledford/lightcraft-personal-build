@@ -362,5 +362,7 @@
   "Too many tasks are waiting ({n}): wait for some to finish": "Zbyt wiele zadań czeka ({n}): poczekaj, aż część się zakończy",
   "{n} waiting": "Oczekujące: {n}",
   "{n} tasks waiting in line won't run.": "Oczekujące w kolejce zadania ({n}) nie zostaną uruchomione.",
-  "Without review: copy to {destination}": "Bez sprawdzania: kopiuj do {destination}"
+  "Without review: copy to {destination}": "Bez sprawdzania: kopiuj do {destination}",
+  "{label} finished": "Zakończono: {label}",
+  "{n} jobs finished": "Zakończone zadania: {n}"
 }

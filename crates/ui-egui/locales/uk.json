@@ -2497,5 +2497,7 @@
   "A folder is already being scanned": "Тека вже сканується",
   "Without review: add in place": "Без перевірки: додати на місці",
   "Without review: copy into the library": "Без перевірки: копіювати до бібліотеки",
-  "Close the open dialog, then choose Review… again": "Закрийте відкрите вікно та ще раз виберіть «Перевірити…»"
+  "Close the open dialog, then choose Review… again": "Закрийте відкрите вікно та ще раз виберіть «Перевірити…»",
+  "Notifications": "Сповіщення",
+  "Notify me when a job finishes while LightCraft is in the background": "Сповіщати, коли завдання завершиться, поки LightCraft працює у фоні"
 }

@@ -362,5 +362,7 @@
   "Too many tasks are waiting ({n}): wait for some to finish": "Terlalu banyak tugas mengantre ({n}): tunggu sampai sebagian selesai",
   "{n} waiting": "{n} menunggu",
   "{n} tasks waiting in line won't run.": "{n} tugas yang menunggu dalam antrean tidak akan dijalankan.",
-  "Without review: copy to {destination}": "Tanpa tinjauan: salin ke {destination}"
+  "Without review: copy to {destination}": "Tanpa tinjauan: salin ke {destination}",
+  "{label} finished": "{label} selesai",
+  "{n} jobs finished": "Tugas selesai: {n}"
 }

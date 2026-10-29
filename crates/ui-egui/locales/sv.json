@@ -2570,5 +2570,7 @@
   "A folder is already being scanned": "En mapp skannas redan",
   "Without review: add in place": "Utan granskning: lägg till på plats",
   "Without review: copy into the library": "Utan granskning: kopiera till biblioteket",
-  "Close the open dialog, then choose Review… again": "Stäng den öppna dialogrutan och välj sedan Granska… igen"
+  "Close the open dialog, then choose Review… again": "Stäng den öppna dialogrutan och välj sedan Granska… igen",
+  "Notifications": "Aviseringar",
+  "Notify me when a job finishes while LightCraft is in the background": "Meddela mig när ett jobb är klart medan LightCraft ligger i bakgrunden"
 }

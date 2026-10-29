@@ -2300,5 +2300,7 @@
   "A folder is already being scanned": "正在掃描另一個資料夾",
   "Without review: add in place": "不經檢視：原地加入",
   "Without review: copy into the library": "不經檢視：複製到照片庫",
-  "Close the open dialog, then choose Review… again": "請先關閉開啟的對話框，然後再次選擇「檢視…」"
+  "Close the open dialog, then choose Review… again": "請先關閉開啟的對話框，然後再次選擇「檢視…」",
+  "Notifications": "通知",
+  "Notify me when a job finishes while LightCraft is in the background": "LightCraft 在背景執行時，工作完成後通知我"
 }

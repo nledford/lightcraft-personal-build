@@ -362,5 +362,7 @@
   "Too many tasks are waiting ({n}): wait for some to finish": "Liian monta tehtävää odottaa: {n}. Odota, että osa valmistuu",
   "{n} waiting": "{n} odottaa",
   "{n} tasks waiting in line won't run.": "{n} jonossa odottavaa tehtävää ei suoriteta.",
-  "Without review: copy to {destination}": "Ilman tarkistusta: kopioi kohteeseen {destination}"
+  "Without review: copy to {destination}": "Ilman tarkistusta: kopioi kohteeseen {destination}",
+  "{label} finished": "Valmis: {label}",
+  "{n} jobs finished": "Valmistuneet työt: {n}"
 }

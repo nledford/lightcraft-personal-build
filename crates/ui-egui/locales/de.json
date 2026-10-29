@@ -3581,5 +3581,7 @@
   "A folder is already being scanned": "Ein Ordner wird bereits durchsucht",
   "Without review: add in place": "Ohne Prüfung: am Speicherort hinzufügen",
   "Without review: copy into the library": "Ohne Prüfung: in die Bibliothek kopieren",
-  "Close the open dialog, then choose Review… again": "Schließe den geöffneten Dialog und wähle dann erneut Prüfen…"
+  "Close the open dialog, then choose Review… again": "Schließe den geöffneten Dialog und wähle dann erneut Prüfen…",
+  "Notifications": "Benachrichtigungen",
+  "Notify me when a job finishes while LightCraft is in the background": "Benachrichtige mich, wenn ein Auftrag fertig ist, während LightCraft im Hintergrund läuft"
 }

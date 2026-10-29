@@ -362,5 +362,7 @@
   "Too many tasks are waiting ({n}): wait for some to finish": "Hay demasiadas tareas en espera ({n}): espera a que terminen algunas",
   "{n} waiting": "{n} en espera",
   "{n} tasks waiting in line won't run.": "{n} tareas en cola no se ejecutarán.",
-  "Without review: copy to {destination}": "Sin revisar: copiar en {destination}"
+  "Without review: copy to {destination}": "Sin revisar: copiar en {destination}",
+  "{label} finished": "{label}: terminado",
+  "{n} jobs finished": "Tareas terminadas: {n}"
 }

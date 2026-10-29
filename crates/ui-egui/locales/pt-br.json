@@ -2345,5 +2345,7 @@
   "A folder is already being scanned": "Uma pasta já está sendo analisada",
   "Without review: add in place": "Sem revisão: adicionar no local",
   "Without review: copy into the library": "Sem revisão: copiar para a biblioteca",
-  "Close the open dialog, then choose Review… again": "Feche a caixa de diálogo aberta e escolha Revisar… novamente"
+  "Close the open dialog, then choose Review… again": "Feche a caixa de diálogo aberta e escolha Revisar… novamente",
+  "Notifications": "Notificações",
+  "Notify me when a job finishes while LightCraft is in the background": "Avisar quando uma tarefa terminar enquanto o LightCraft estiver em segundo plano"
 }

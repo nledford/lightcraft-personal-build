@@ -362,5 +362,7 @@
   "Too many tasks are waiting ({n}): wait for some to finish": "Ve frontě čeká příliš mnoho úloh: {n}. Počkejte, až některé skončí",
   "{n} waiting": "{n} čeká",
   "{n} tasks waiting in line won't run.": "Úlohy čekající ve frontě ({n}) se nespustí.",
-  "Without review: copy to {destination}": "Bez kontroly: kopírovat do {destination}"
+  "Without review: copy to {destination}": "Bez kontroly: kopírovat do {destination}",
+  "{label} finished": "Dokončeno: {label}",
+  "{n} jobs finished": "Dokončené úlohy: {n}"
 }

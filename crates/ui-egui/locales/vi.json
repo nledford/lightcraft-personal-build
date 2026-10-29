@@ -2378,5 +2378,7 @@
   "A folder is already being scanned": "Một thư mục đang được quét",
   "Without review: add in place": "Không xem lại: thêm tại chỗ",
   "Without review: copy into the library": "Không xem lại: sao chép vào thư viện",
-  "Close the open dialog, then choose Review… again": "Hãy đóng hộp thoại đang mở, rồi chọn lại Xem lại…"
+  "Close the open dialog, then choose Review… again": "Hãy đóng hộp thoại đang mở, rồi chọn lại Xem lại…",
+  "Notifications": "Thông báo",
+  "Notify me when a job finishes while LightCraft is in the background": "Thông báo cho tôi khi một tác vụ hoàn tất trong lúc LightCraft chạy nền"
 }

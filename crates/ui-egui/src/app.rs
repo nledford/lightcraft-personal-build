@@ -142,6 +142,7 @@ impl LightcraftApp {
             system_reduce_motion_read: None,
             awake_told: None,
             badge_told: 0,
+            job_watch: Default::default(),
             library_problem: None,
             library_window_input: Default::default(),
             alt_asks_for_library: false,

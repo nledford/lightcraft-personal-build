@@ -2426,5 +2426,7 @@
   "A folder is already being scanned": "Folder jest już skanowany",
   "Without review: add in place": "Bez sprawdzania: dodaj bez kopiowania plików",
   "Without review: copy into the library": "Bez sprawdzania: kopiuj do biblioteki",
-  "Close the open dialog, then choose Review… again": "Zamknij otwarte okno dialogowe, a potem ponownie wybierz Sprawdź…"
+  "Close the open dialog, then choose Review… again": "Zamknij otwarte okno dialogowe, a potem ponownie wybierz Sprawdź…",
+  "Notifications": "Powiadomienia",
+  "Notify me when a job finishes while LightCraft is in the background": "Powiadom mnie, gdy zadanie się zakończy, gdy LightCraft działa w tle"
 }

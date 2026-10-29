@@ -258,6 +258,7 @@ fn services(originals: Originals, backend: Option<Backend>, files: Files, frozen
         system_theme: None,
         keep_awake: None,
         dock_badge: None,
+        notify: None,
     }
 }
 

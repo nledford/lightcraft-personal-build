@@ -362,5 +362,7 @@
   "Too many tasks are waiting ({n}): wait for some to finish": "等待中的任务过多（{n} 个）：请等待部分任务完成",
   "{n} waiting": "{n} 个等待中",
   "{n} tasks waiting in line won't run.": "队列中等待的 {n} 个任务不会运行。",
-  "Without review: copy to {destination}": "不经查看：拷贝到 {destination}"
+  "Without review: copy to {destination}": "不经查看：拷贝到 {destination}",
+  "{label} finished": "已完成：{label}",
+  "{n} jobs finished": "已完成的任务：{n}"
 }
