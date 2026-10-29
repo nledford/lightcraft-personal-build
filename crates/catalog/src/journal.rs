@@ -74,7 +74,8 @@
 //! - **Opening an older format upgrades it**: right after loading, [`Journal::open`] writes a
 //!   snapshot in this build's format (also for a new library), before anything is appended — so a
 //!   library is never a mix, and older builds refuse it from then on instead of reading part of it.
-//!   [`LoadReport::upgraded_from`] says when that happened.
+//!   (Except where the upgrade can't be written or its files can't be kept: see the next rule.)
+//!   [`LoadReport::upgraded_from`] says when the upgrade happened at open.
 //! - **An upgrade keeps what it replaces**: older builds can't read the upgraded library, so the
 //!   files it was are first kept beside it as `catalog.snap.v<format>-<seq>` and
 //!   `catalog.log.v<format>-<seq>` (`seq`: the last change they hold), byte for byte

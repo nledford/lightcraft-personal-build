@@ -211,32 +211,61 @@ mod download {
     const MAX_ZIP: u64 = 64 * 1024 * 1024;
     const MAX_TEXT: usize = 256 * 1024 * 1024;
 
-    fn get(name: &str, base: &str, dir: &Path, cancel: &AtomicBool, task: &crate::activity::TaskHandle) -> std::result::Result<(), String> {
+    /// Why the download stopped: the person canceled it, or something failed. Only the first is `Stopped`; a disk or
+    /// mirror error that arrives after the cancel flag was set is still a failure and keeps its reason.
+    #[derive(Debug, PartialEq)]
+    pub(super) enum Stop {
+        Cancelled,
+        Failed(String),
+    }
+
+    impl From<String> for Stop {
+        fn from(e: String) -> Self {
+            Self::Failed(e)
+        }
+    }
+
+    impl std::fmt::Display for Stop {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::Cancelled => f.write_str("cancelled"),
+                Self::Failed(e) => f.write_str(e),
+            }
+        }
+    }
+
+    impl From<lightcraft_fetch::DownloadError> for Stop {
+        fn from(e: lightcraft_fetch::DownloadError) -> Self {
+            match e {
+                lightcraft_fetch::DownloadError::Cancelled => Self::Cancelled,
+                e => Self::Failed(e.to_string()),
+            }
+        }
+    }
+
+    fn get(name: &str, base: &str, dir: &Path, cancel: &AtomicBool, task: &crate::activity::TaskHandle) -> std::result::Result<(), Stop> {
         let _ = std::fs::remove_file(dir.join(name));
         let file = lightcraft_fetch::FileSpec { name, size: None, sha256: None, max: MAX_ZIP };
         lightcraft_fetch::download_url(&file, &format!("{base}{name}"), dir, &lightcraft_fetch::Options::default(), cancel, &mut |pr| {
             task.progress(pr.done, pr.total.max(pr.done))
         })
-        .map_err(|e| e.to_string())
+        .map_err(Stop::from)
     }
 
     /// Fetch the optional files (without them states stay blank and countries are ISO codes) and save the ones that
-    /// came. Returns how many could not be fetched; a failure with the cancel flag set is the cancel (`Err`), not a
-    /// missing file.
+    /// came. Returns how many could not be fetched; only a real cancel (`Stop::Cancelled`) stops the rest, any other
+    /// failure is a missing file, even when the cancel flag is set by then.
     pub(super) fn fetch_optional(
         names: &[&str],
-        cancel: &AtomicBool,
-        mut fetch: impl FnMut(&str) -> std::result::Result<Vec<u8>, String>,
+        mut fetch: impl FnMut(&str) -> std::result::Result<Vec<u8>, Stop>,
         mut save: impl FnMut(&str, &[u8]) -> std::result::Result<(), String>,
-    ) -> std::result::Result<usize, String> {
+    ) -> std::result::Result<usize, Stop> {
         let mut missing = 0;
         for name in names {
             match fetch(name) {
                 Ok(b) => save(name, &b)?,
-                Err(e) => {
-                    if cancel.load(std::sync::atomic::Ordering::Relaxed) {
-                        return Err("cancelled".into());
-                    }
+                Err(Stop::Cancelled) => return Err(Stop::Cancelled),
+                Err(Stop::Failed(e)) => {
                     log::warn!("place names: {name}: {e}");
                     missing += 1;
                 }
@@ -247,12 +276,7 @@ mod download {
 
     /// Fetch and unpack the place names into `dir`; the new files replace the old ones only when complete. Returns how
     /// many places there are and how many optional files could not be fetched.
-    pub(super) fn run(
-        base: &str,
-        dir: &Path,
-        cancel: &AtomicBool,
-        task: &crate::activity::TaskHandle,
-    ) -> std::result::Result<(usize, usize), String> {
+    pub(super) fn run(base: &str, dir: &Path, cancel: &AtomicBool, task: &crate::activity::TaskHandle) -> std::result::Result<(usize, usize), Stop> {
         let staging = dir.join(".download");
         std::fs::create_dir_all(&staging).map_err(|e| format!("could not create {}: {e}", staging.display()))?;
         get(GEONAMES_ZIP, base, &staging, cancel, task)?;
@@ -260,15 +284,15 @@ mod download {
         let cities = lightcraft_geocode::unzip::extract(&zip, GEONAMES_FILES[0], MAX_TEXT).map_err(|e| e.to_string())?;
         let places = GeoNames::parse(&String::from_utf8_lossy(&cities), None, None).len();
         if places == 0 {
-            return Err("the downloaded place list is empty".into());
+            return Err(Stop::Failed("the downloaded place list is empty".into()));
         }
         let _ = std::fs::remove_file(staging.join(GEONAMES_ZIP));
         let write = |name: &str, data: &[u8]| std::fs::write(dir.join(name), data).map_err(|e| format!("could not save {name}: {e}"));
         let missing = fetch_optional(
             &GEONAMES_FILES[1..],
-            cancel,
             |name| {
-                let r = get(name, base, &staging, cancel, task).and_then(|()| std::fs::read(staging.join(name)).map_err(|e| e.to_string()));
+                let r =
+                    get(name, base, &staging, cancel, task).and_then(|()| std::fs::read(staging.join(name)).map_err(|e| Stop::Failed(e.to_string())));
                 let _ = std::fs::remove_file(staging.join(name));
                 r
             },
@@ -277,6 +301,19 @@ mod download {
         write(GEONAMES_FILES[0], &cities)?;
         let _ = std::fs::remove_dir(&staging);
         Ok((places, missing))
+    }
+
+    /// How the download ended, from what the worker returned (or the panic it died of). Only a real cancel is `Cancelled`:
+    /// a failure is a failure even when the cancel flag happens to be set by then.
+    pub(super) fn outcome_of(r: std::thread::Result<std::result::Result<usize, Stop>>) -> DownloadOutcome {
+        match r {
+            Ok(Ok(n)) => DownloadOutcome::Done(n),
+            Ok(Err(Stop::Cancelled)) => DownloadOutcome::Cancelled,
+            Ok(Err(Stop::Failed(e))) => {
+                DownloadOutcome::Failed(format!("Could not download the place names: {e}. Check the connection and try again."))
+            }
+            Err(_) => DownloadOutcome::Failed("The place names download stopped unexpectedly. Try again.".into()),
+        }
     }
 
     /// A download base: https, or plain http to this machine's loopback address only (a test
@@ -316,12 +353,7 @@ mod download {
             let panicked = outcome.is_err();
             // optional files that could not be fetched: the places work, but states stay blank
             let missing = outcome.as_ref().ok().and_then(|r| r.as_ref().ok()).map_or(0, |&(_, missing)| missing);
-            let outcome = match outcome {
-                Ok(Ok((n, _))) => DownloadOutcome::Done(n),
-                _ if cancel.load(std::sync::atomic::Ordering::Relaxed) => DownloadOutcome::Cancelled,
-                Ok(Err(e)) => DownloadOutcome::Failed(format!("Could not download the place names: {e}. Check the connection and try again.")),
-                Err(_) => DownloadOutcome::Failed("The place names download stopped unexpectedly. Try again.".into()),
-            };
+            let outcome = outcome_of(outcome.map(|r| r.map(|(n, _)| n)));
             if let DownloadOutcome::Failed(e) = &outcome {
                 log::warn!("{e}");
             }
@@ -452,7 +484,9 @@ mod tests {
         set_gps(&mut s, ids[0], Some((48.86, 2.34)), "");
         set_gps(&mut s, ids[1], Some((51.5, -0.1)), "");
         s.execute("metadata.reverseGeocode", &json!({"ids": [ids[0].0, ids[1].0], "dataset": dir})).unwrap();
-        assert!(s.activity.finished().iter().all(|r| r.ending == crate::activity::Ending::Done), "every photo found a place");
+        let rows = s.activity.finished();
+        assert!(!rows.is_empty(), "a row for the lookup");
+        assert!(rows.iter().all(|r| r.ending == crate::activity::Ending::Done), "every photo found a place");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -607,6 +641,22 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// What the worker returned decides the ending, not the cancel flag (which may be set when a disk or mirror error
+    /// arrives): the row says `Failed` with the reason, and only the downloader's own `Cancelled` is `Stopped`.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn a_download_error_is_not_a_cancel_even_with_the_cancel_flag_set() {
+        use lightcraft_fetch::DownloadError;
+        for e in [DownloadError::Disk("disk full".into()), DownloadError::AllMirrorsFailed { file: "f".into(), errors: vec!["404".into()] }] {
+            let reason = e.to_string();
+            let DownloadOutcome::Failed(why) = download::outcome_of(Ok(Err(download::Stop::from(e)))) else { panic!("a failure") };
+            assert!(why.contains(&reason), "{why}");
+        }
+        assert_eq!(download::outcome_of(Ok(Err(download::Stop::from(DownloadError::Cancelled)))), DownloadOutcome::Cancelled);
+        assert_eq!(download::outcome_of(Ok(Ok(3))), DownloadOutcome::Done(3));
+        assert!(matches!(download::outcome_of(Err(Box::new("boom"))), DownloadOutcome::Failed(_)));
+    }
+
     #[test]
     fn download_base_is_https_or_loopback_only() {
         assert!(download::base_allowed("https://download.geonames.org/export/dump/"));
@@ -618,22 +668,26 @@ mod tests {
     }
 
     /// Given optional place-name files, when some cannot be fetched, then the others are saved and the misses are
-    /// counted (the download ends with problems, not done); when the cancel flag is set the failure is the cancel.
+    /// counted (the download ends with problems, not done); a real cancel stops the rest, and a failure that is not a
+    /// cancel stays a miss even when the cancel flag is set.
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn optional_place_name_files_that_did_not_come_are_counted_and_a_cancel_is_not_a_miss() {
-        use std::sync::atomic::{AtomicBool, Ordering};
-        let cancel = AtomicBool::new(false);
+        use download::Stop;
         let mut saved = Vec::new();
-        let fetch = |name: &str| if name == "b" { Err("no route".to_string()) } else { Ok(name.as_bytes().to_vec()) };
-        let missing = download::fetch_optional(&["a", "b", "c"], &cancel, fetch, |n, _| {
+        let fetch = |name: &str| match name {
+            "b" => Err(Stop::Failed("no route".to_string())),
+            "x" => Err(Stop::Cancelled),
+            _ => Ok(name.as_bytes().to_vec()),
+        };
+        let missing = download::fetch_optional(&["a", "b", "c"], fetch, |n, _| {
             saved.push(n.to_string());
             Ok(())
         });
         assert_eq!(missing, Ok(1));
         assert_eq!(saved, ["a", "c"]);
-        assert_eq!(download::fetch_optional(&["a", "c"], &cancel, fetch, |_, _| Ok(())), Ok(0));
-        cancel.store(true, Ordering::Relaxed);
-        assert_eq!(download::fetch_optional(&["b", "a"], &cancel, fetch, |_, _| Ok(())), Err("cancelled".to_string()));
+        assert_eq!(download::fetch_optional(&["a", "c"], fetch, |_, _| Ok(())), Ok(0));
+        assert_eq!(download::fetch_optional(&["b", "a"], fetch, |_, _| Ok(())), Ok(1));
+        assert_eq!(download::fetch_optional(&["x", "a"], fetch, |_, _| Ok(())), Err(Stop::Cancelled));
     }
 }

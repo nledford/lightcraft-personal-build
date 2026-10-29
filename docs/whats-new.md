@@ -955,8 +955,9 @@
 - Messages that tell you something failed (a command that couldn't run, a refused drop, a scan that failed) stay
   at least 6 seconds, including some that used to vanish after 1.4 seconds. In the web version, a dropped photo that
   couldn't be read is among them.
-- Rest the pointer on a toast and it stays; after you move away it stays another second and a half. It never takes
-  a click from what is underneath it.
+- Rest the pointer on a toast and it stays; after you move away it stays another second and a half, or as long as it
+  had left if that is more (a message about a failure keeps its six seconds). It never takes a click from what is
+  underneath it.
 - A toast fades in over a fraction of a second, as it already faded out.
 
 ### Editing a smart album made from an album keeps the album
@@ -1248,7 +1249,8 @@
 - While an import or Synchronize Folder adds photos to a large library, the sidebar's counts (Folders, By Date,
   Keywords, All Photos, Picks, Recently Deleted) take in each batch as it lands instead of counting every photo of
   the library again, which made the window slow and at times unresponsive for as long as the import ran. A change
-  too large to follow, such as opening a library, is counted in the background while the sidebar keeps its counts.
+  too large to follow, such as thousands of photos at once, is counted in the background while the sidebar keeps the
+  counts it showed; a large library just opened shows its counts once its first count is done.
 - The Folders list takes in a batch by changing only the rows of the folders the photos came into, so the time a
   batch costs no longer grows with the number of folders in the library (about 0.1 s at 22,000 folders before,
   microseconds now).
@@ -1341,8 +1343,8 @@
   other album is asked about them. The photos in the album and their order are the same, and the rules still show in
   the order you wrote them. (A library whose smart albums test each other in a circle, which LightCraft doesn't let
   you make, or test each other 32 deep, keeps testing the rules as written.) On a 312,000-photo test library, opening
-  one such album went from about 224 ms to about 100 ms, and opening 51 of them in turn from about 19 s to about
-  5.8 s (a busy machine, so rough numbers).
+  51 such albums in turn went from about 19 s to about 5.8 s (about 377 ms to 113 ms each; a busy machine,
+  so rough numbers).
 
 ### Listing a folder tree on a network share reads folders side by side
 - Folder walks (the import and Add Photos review, Synchronize Folder, Local's Include Subfolders, Find Missing Photos,
@@ -1350,7 +1352,8 @@
   of one after another, so a tree with many folders on a network share waits for the share's answers together instead
   of in a chain. The photos found, their order, the limits on depth and number of entries, how links to folders are
   followed, and the folders left out are as before. Once the entry limit is reached, the readers take no more folders:
-  the up to eight folders already being read are finished, each listing no more entries than the limit allows. A tree
+  the up to eight folders already being read are finished, each listing no more entries than the limit allows, unless
+  the walk stops first (at the limit, or when canceled): then each stops at its next entry. A tree
   whose folders hold fewer than two subfolders or links is read without starting anything extra. A share that answers
   one listing at a time gains less than the number of folders read together suggests.
 
