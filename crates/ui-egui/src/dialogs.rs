@@ -379,19 +379,29 @@ fn lane_ahead(app: &LightcraftApp, dlg: &Dialog) -> Option<String> {
 /// The label of a dialog's confirm button (empty: it has none); `queues`: the job it starts waits in line.
 fn ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, sam: &SamState, queues: bool) -> String {
     match dlg {
-        Dialog::Import { opts } => {
-            let verb = match (queues, opts.copy && opts.move_files) {
-                (true, true) => "Queue Move",
-                (true, false) => "Queue",
-                (false, true) => "Move",
-                (false, false) => "Import",
-            };
-            photo_count_label(verb, opts.selected_paths().len())
-        }
+        Dialog::Import { opts } => import_ok_label(opts, queues),
         Dialog::MovePhotos { problems, movable, .. } => move_photos_ok_label(problems.len(), *movable),
         Dialog::Export { .. } => photo_count_label("Export", app.session.selection.ids.len().max(1)),
         Dialog::SamModel { .. } => sam_ok_label(dlg, sam).to_string(),
         _ => fixed_ok_label(app, dlg, informational, queues).to_string(),
+    }
+}
+
+/// The import review's confirm: "Import 3 Photos", or with Move "Move 3 Photos" (`queues`: the job waits in line, so
+/// "Queue 3 Photos", "Queue Move 3 Photos"). A checked file whose photo is in Recently Deleted is restored, not
+/// moved (its files stay where they are), so Move counts those apart: "Move 2 Photos · Restore 1 Photo", or
+/// "Restore 1 Photo" when nothing is left to move.
+fn import_ok_label(opts: &crate::import::ImportDialog, queues: bool) -> String {
+    let n = opts.selected_paths().len();
+    let (plain, moving) = if queues { ("Queue", "Queue Move") } else { ("Import", "Move") };
+    if !(opts.copy && opts.move_files) {
+        return photo_count_label(plain, n);
+    }
+    let restored = opts.restored_count();
+    match (n - restored, restored) {
+        (_, 0) => photo_count_label(moving, n),
+        (0, r) => photo_count_label("Restore", r),
+        (m, r) => format!("{} · {}", photo_count_label(moving, m), photo_count_label("Restore", r)),
     }
 }
 

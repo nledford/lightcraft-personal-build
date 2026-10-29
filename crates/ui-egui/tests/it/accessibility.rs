@@ -3,8 +3,8 @@
 //! name, a slider without its value and range, a dialog without a title, or a canvas tool no key
 //! can reach.
 //!
-//! The naming check is a gate with a baseline. A control counts as unnamed when its accessible
-//! name (its label, else its value) is empty or has no letter or digit in it: an icon-only
+//! The naming check is a gate with a baseline. A control counts as unnamed when its name (its label; for a plain
+//! label, its text, which is its value) is empty or has no letter or digit in it: an icon-only
 //! button is announced as just "button". Today's gaps are listed in `tests/a11y-gaps.json`
 //! (screen, then the control, then how many of them): a gap not listed there, or one that occurs more often than its count, fails. A
 //! control that gets a name does not have to touch the file: a stale entry is tolerated and
@@ -418,7 +418,7 @@ fn context_menu(what: &'static str, label: &'static str) -> Screen {
 }
 
 /// The screens the gate walks: every view, every right panel, the dialogs, Settings' tabs, the
-/// import review, the menus and a context menu. The left sidebar is part of every one of them.
+/// import review, the menus and two context menus. The left sidebar is part of every one of them.
 fn screens() -> Vec<Screen> {
     let mut all = Vec::new();
     for view in VIEWS {
