@@ -33,6 +33,16 @@
   it), nothing is followed or removed, because another program may be making the move: use File ▸ Find Missing
   Photos… to relink files that moved.
 
+## 2026-10-28
+
+### Local's standard places can't be renamed by mistake
+- The Pictures, Desktop, Downloads and Home rows of Local no longer offer Rename Folder… or Move Folder To…. Before,
+  the Rename prompt began with the row's translated label rather than the folder's name, so in German pressing OK
+  on “Bilder” renamed your real Pictures folder to “Bilder”, and Home could be renamed the same way. Folders inside
+  them, and folders you keep in Local with Browse Folder…, rename as before, starting from their real name. The
+  `folder.rename` and `folder.move` commands now refuse the home folder and its Pictures, Desktop and Downloads too,
+  so a script or an agent can't do it either.
+
 ## 2026-10-24
 
 ### A library keeps a copy of itself before it is upgraded

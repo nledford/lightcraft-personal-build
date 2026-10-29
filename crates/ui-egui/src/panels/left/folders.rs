@@ -1,5 +1,5 @@
 use super::albums::pointer_over_row;
-use super::local::{same_folder, subfolders};
+use super::local::{is_builtin_place, same_folder, subfolders};
 use super::rows::{INDENT_STEP, Inside, LIBFOLDER_REVEALED, Row, drawn_indent, note_width, out_of_sight, tree_toggle};
 use super::{Album, Branch, FolderNode, Icon, LibrarySource, LightcraftApp, Said, Sense, Tokens, TreeState, json, pos2, register, vec2};
 use crate::menu_item::MenuItem;
@@ -87,22 +87,26 @@ pub(super) fn folder_tree(
                 app.act("local.hide", json!({"path": path}));
                 ui.close();
             }
-            if MenuItem::new(crate::i18n::tr("Rename Folder…")).show(ui).clicked() {
-                app.ui.dialog = Some(crate::state::Dialog::TextPrompt {
-                    title: crate::i18n::tr_format!("Rename “{name}”", name = name),
-                    hint: "Folder name (renamed on disk; its photos follow)".into(),
-                    value: name.to_string(),
-                    command: "folder.rename".into(),
-                    params: json!({"path": path}),
-                    key: "name".into(),
-                });
-            }
-            if app.services.pick_folder.is_some() && MenuItem::new(crate::i18n::tr("Move Folder To…")).show(ui).clicked() {
-                let into = app.services.pick_folder.as_mut().and_then(|f| f());
-                if let Some(into) = into {
-                    match app.run("folder.move", json!({"path": path, "into": into})) {
-                        Ok(r) => app.toast(ui.ctx(), crate::i18n::tr_format!("Moved; {} photo(s) relinked", r["relinked"])),
-                        Err(e) => app.toast_error(ui.ctx(), e),
+            // a built-in place is one of the computer's own folders under a translated label (Home is
+            // the user's whole home): Local offers no Rename or Move for it (the other items stay)
+            if !(indent == 0.0 && is_builtin_place(app, path)) {
+                if MenuItem::new(crate::i18n::tr("Rename Folder…")).show(ui).clicked() {
+                    app.ui.dialog = Some(crate::state::Dialog::TextPrompt {
+                        title: crate::i18n::tr_format!("Rename “{name}”", name = name),
+                        hint: "Folder name (renamed on disk; its photos follow)".into(),
+                        value: name.to_string(),
+                        command: "folder.rename".into(),
+                        params: json!({"path": path}),
+                        key: "name".into(),
+                    });
+                }
+                if app.services.pick_folder.is_some() && MenuItem::new(crate::i18n::tr("Move Folder To…")).show(ui).clicked() {
+                    let into = app.services.pick_folder.as_mut().and_then(|f| f());
+                    if let Some(into) = into {
+                        match app.run("folder.move", json!({"path": path, "into": into})) {
+                            Ok(r) => app.toast(ui.ctx(), crate::i18n::tr_format!("Moved; {} photo(s) relinked", r["relinked"])),
+                            Err(e) => app.toast_error(ui.ctx(), e),
+                        }
                     }
                 }
             }
