@@ -6,8 +6,6 @@ name: Build
 run-name: ${{ inputs.ref }} (${{ inputs.save-cache && 'my build' || 'candidate' }})
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       ref:
