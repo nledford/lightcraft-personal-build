@@ -39,10 +39,29 @@
   inside a folder that is closed. The grid shows the photos of any of them, each once, and the title says how many
   albums or folders are shown. A plain click chooses one row alone, as before.
 - In the Keyword List (right panel, Keywords) the same clicks pick several keywords. Picking does not change the grid.
-- With several albums shown, Remove from Album is not offered and the Delete key is the photos' Delete (it asks first
-  while Settings ▸ Confirm before moving photos to Recently Deleted is on), because there is no telling which album is meant.
-- Menus, dragging and the Keyword List's − button still act on one row; choosing several rows for those comes in a
-  later change. When several albums are shown, Delete stays the photos' Delete, as above.
+- With several albums shown, Remove from Album is not offered and the Delete key is the photos' Delete once you click
+  elsewhere (it asks first while Settings ▸ Confirm before moving photos to Recently Deleted is on), because there is no
+  telling which album is meant.
+- Right-click one of several rows chosen to act on them all, as one step to undo: move albums into a folder, export
+  them, or delete them; give folders a color label or remove them from the library; give keywords to the selected
+  photos, take them away, merge them or delete them. Deleting or removing several asks first and says what goes.
+  Right-click a row that is not among them and you get that row's own menu; the others stay chosen.
+- Dragging one of several albums or keywords moves them all (albums go into the folder they are dropped in or
+  beside; placing an album by hand among its neighbors moves only that album).
+- Right after choosing several rows with Cmd or Shift, the Delete key asks about those rows. Click anywhere else,
+  or select photos or change what is shown in any other way, and Delete is about the photos again; after a plain
+  click on an album it always was.
+- For agents: `album.delete` and `album.move` take `ids`, `keyword.delete` and `keyword.move` take `keywords`,
+  `library.removeFolder` and `folder.label` take `paths`, as one undo step each.
+
+### Cut, Copy and Paste for albums and keywords
+- In the menus of albums and keywords in the left panel and the Keyword List, Cut and Copy take the rows (one or
+  several chosen) and Paste puts them down: cut albums move into the folder where you choose Paste (the Albums +
+  menu pastes at the top level), copied albums are duplicated there with their photos, a copied smart album keeps its
+  rules and a copied folder everything inside it; cut keywords are nested inside the keyword where you choose Paste;
+  copied keywords are text you can paste in a keyword box. Paste is grayed out where it can't work, such as a
+  folder inside itself, and one Edit ▸ Undo takes back a paste.
+- For agents: the new `album.duplicate` takes `id` or `ids` and an optional `parent` (null: the top level).
 
 ## 2026-10-28
 

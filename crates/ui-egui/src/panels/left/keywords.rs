@@ -46,6 +46,7 @@ fn keyword_row(
         crate::i18n::tr("Add keywords in the Keyword List"),
         crate::i18n::tr("Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there"),
     );
+    crate::panels::side_select::outline(app, ui, crate::panels::side_select::SideList::Keywords, sel, resp.rect, 8.0);
     if let Some(branch) = branch {
         let inside = if n.children.iter().any(|c| !c.children.is_empty()) { Inside::OpensAndFolds } else { Inside::Alone };
         tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, branch, open, format!("keywordToggle:{}", n.path), inside);
@@ -55,6 +56,11 @@ fn keyword_row(
         crate::panels::side_select::keyword_clicked(app, ui, &n.path);
     }
     crate::widgets::context_menu(&resp, |ui| {
+        // one of several keywords chosen: what can be done to them all
+        let several = crate::panels::side_select::keyword_targets(app, &n.path);
+        if several.len() > 1 {
+            return crate::panels::side_select::keywords_menu(app, ui, &several, false);
+        }
         let has_sel = app.session.active().is_some();
         if MenuItem::new(crate::i18n::tr("Add to Selected Photos")).enabled(has_sel).show(ui).clicked() {
             app.act("photo.setMeta", json!({"addKeywords": [n.path]}));
@@ -63,6 +69,8 @@ fn keyword_row(
             app.act("photo.setMeta", json!({"removeKeywords": [n.path]}));
         }
         ui.separator();
+        crate::panels::side_select::keyword_clip_items(app, ui, std::slice::from_ref(&n.path));
+        crate::panels::side_select::keyword_paste_item(app, ui, &n.path);
         if MenuItem::new(crate::i18n::tr("Rename Keyword…")).show(ui).clicked() {
             app.ui.dialog = Some(crate::state::Dialog::RenameKeyword { from: n.path.clone(), to: n.path.clone() });
         }
