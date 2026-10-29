@@ -154,8 +154,12 @@ pub fn empty_message(ui: &egui::Ui, rect: Rect, title: &str, body: &str) {
     let body = centred(crate::i18n::tr(body), t.body(), t.text_dim);
     let top = rect.center().y - (title.size().y + 6.0 + body.size().y) / 2.0;
     let below = top + title.size().y + 6.0;
-    p.galley(pos2(rect.center().x, top), title, t.text_label);
-    p.galley(pos2(rect.center().x, below), body, t.text_dim);
+    let (title_at, body_at) = (pos2(rect.center().x, top), pos2(rect.center().x, below));
+    // read by a screen reader, as the welcome's words are
+    readable(ui, title.rect.translate(title_at.to_vec2()), "message-title", title.text(), false);
+    readable(ui, body.rect.translate(body_at.to_vec2()), "message-body", body.text(), false);
+    p.galley(title_at, title, t.text);
+    p.galley(body_at, body, t.text_dim);
 }
 
 /// A button under an empty state's message: the command it runs, its label, and the id it is
