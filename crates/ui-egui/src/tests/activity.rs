@@ -1366,6 +1366,7 @@ fn a_task_waiting_in_line_has_a_row_and_starts_when_the_lane_frees() {
     let waiting = queued["queued"].as_u64().expect("it waits");
     assert_eq!(h.app.session.activity.list().len(), 2);
     wait_visible(&mut h);
+    open_list(&mut h);
     assert!(has(&h, &format!("activity:row:{}", running.id())));
     assert!(has(&h, &format!("activity:row:{waiting}")) && rows(&h) == 2, "a waiting task draws a row, under the running one");
     // the lane frees with no command asked: the frame loop starts it
