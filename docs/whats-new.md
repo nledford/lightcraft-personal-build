@@ -202,7 +202,7 @@
 ## 2026-10-26
 
 ### The sidebar from the keyboard
-- **View ▸ Keyboard in Sidebar** (Cmd+Alt+B) gives the keys to the left sidebar: a ring shows the row they are
+- **Window ▸ Keyboard in Sidebar** (Cmd+Alt+B) gives the keys to the left sidebar: a ring shows the row they are
   on, starting at what the grid shows. ↑ ↓ move (Home, End, Page Up, Page Down too), → unfolds a folder or
   section or steps into it, ← folds it or steps out, Enter or Space chooses the row as a click does, typing goes
   to the next row that starts so (the same letter again: the one after), and F2 renames an album, a keyword or
@@ -1146,6 +1146,18 @@
   none bound it leaves the key out ("That's your first edit. View → Before/After Side by Side shows it beside the
   original."). A rating or a keyword is not an edit; another unedited sample, or an undo back to the start, is invited
   again.
+
+### Menus that fit the screen
+- The View menu is down from 63 rows to 36, so it opens without scrolling on a laptop's menu bar. Its overlays,
+  before/after and slideshow items sit in submenus: Loupe Overlay, Before/After, Mask Overlay (every overlay mode and
+  colour, with the current one checked), Crop Overlay and Slideshow.
+- The panel toggles (My Photos Panel, Right Panel, Sidebar Sections, Photo Counts, Filmstrip, Histogram, Navigator) moved to
+  the Window menu. Photo ▸ Metadata gathers the metadata commands, including Metadata Preset, Save Metadata to File
+  and Detect Faces.
+- File no longer lists Discard Preview Cache twice (it is one command), View no longer lists
+  Choose and Layout Image twice, and every command has a fixed place instead of sitting in a pile at the end of
+  its menu.
+- Keyboard shortcuts are unchanged.
 
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a
