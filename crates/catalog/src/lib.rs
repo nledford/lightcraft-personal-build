@@ -1491,6 +1491,8 @@ mod tests_local;
 #[cfg(test)]
 mod tests_lock;
 #[cfg(test)]
+mod tests_policy;
+#[cfg(test)]
 mod tests_repair;
 #[cfg(test)]
 mod tests_rule_order;
