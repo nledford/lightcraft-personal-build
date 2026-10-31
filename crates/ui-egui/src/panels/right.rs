@@ -10,7 +10,7 @@ use crate::button::Button;
 use crate::icons::{Icon, paint};
 use crate::state::RightPanel;
 use crate::theme::Tokens;
-use crate::widgets::{divider, register, slider, text_button};
+use crate::widgets::{choice_button, divider, register, slider, text_button};
 
 mod crop;
 mod history;

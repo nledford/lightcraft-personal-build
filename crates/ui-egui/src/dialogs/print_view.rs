@@ -18,7 +18,7 @@ use crate::LightcraftApp;
 use crate::button::Button;
 use crate::menu_item::MenuItem;
 use crate::theme::Tokens;
-use crate::widgets::{register, text_button};
+use crate::widgets::{choice_button, register};
 
 /// Width of the settings column.
 const SETTINGS_W: f32 = 290.0;
@@ -120,7 +120,7 @@ fn choice<V: PartialEq + Copy>(ui: &mut Ui, id: &str, options: &[(V, &str)], cur
     let mut out = None;
     ui.spacing_mut().item_spacing.x = 3.0;
     for (i, (v, l)) in options.iter().enumerate() {
-        if text_button(ui, &format!("{id}-{i}"), l, current == *v).clicked() && current != *v {
+        if choice_button(ui, &format!("{id}-{i}"), l, current == *v).clicked() && current != *v {
             out = Some(*v);
         }
     }
