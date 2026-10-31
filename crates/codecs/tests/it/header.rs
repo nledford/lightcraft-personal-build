@@ -227,14 +227,17 @@ fn samsung_sef_trailer_without_eoi() {
     assert_eq!(read_header(&eoi_in_data).unwrap().width, 160);
     let small = decode(&eoi_in_data, DecodeOptions::fit(32, 32)).unwrap();
     assert_eq!((small.source_width, small.source_height), (160, 96));
-    // still truncated: no trailer, offsets outside the file or past `SEFH`, no `SEFH`, an empty
-    // entry, an entry whose type isn't its block's, a cut before the first scan
-    assert!(read_header(scan).is_err());
+    // still cut short: no trailer, or a broken one, leaves the file without its end-of-image
+    // marker. With data to show it is read and says so (`truncated`, shown from the data present,
+    // #2705); it is refused only when the bytes the trailer left read as malformed (an offset
+    // outside the file) or the cut is before the first scan
+    let read = |b: &[u8]| read_header(b).map(|h| (h.width, h.truncated));
+    assert_eq!(read(scan), Ok((160, true)));
+    assert_eq!(read(&with_sef_trailer(scan, block - 1, b"SEFH")), Ok((160, true)));
+    assert_eq!(read(&with_sef_trailer(scan, block, b"SEFX")), Ok((160, true)));
+    assert_eq!(read(&sef_file(scan, 0, b"SEFH", 0x08E0, &[], Some(0))), Ok((160, true)));
+    assert_eq!(read(&sef_file(scan, block, b"SEFH", 0x0A01, &[0; 18], None)), Ok((160, true)));
     assert!(read_header(&with_sef_trailer(scan, u32::MAX, b"SEFH")).is_err());
-    assert!(read_header(&with_sef_trailer(scan, block - 1, b"SEFH")).is_err());
-    assert!(read_header(&with_sef_trailer(scan, block, b"SEFX")).is_err());
-    assert!(read_header(&sef_file(scan, 0, b"SEFH", 0x08E0, &[], Some(0))).is_err());
-    assert!(read_header(&sef_file(scan, block, b"SEFH", 0x0A01, &[0; 18], None)).is_err());
     let cut_in_headers = with_sef_trailer(&jpeg[..40], block, b"SEFH");
     assert!(read_header(&cut_in_headers).is_err());
     assert!(decode(&cut_in_headers, DecodeOptions::fit(32, 32)).is_err());
