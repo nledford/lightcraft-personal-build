@@ -280,6 +280,8 @@
   "· {in_source} identical copies": "· {in_source} cópias idênticas",
   "Backed up the library to {}": "Backup da biblioteca salvo em {}",
   "The library was not backed up: {}": "O backup da biblioteca não foi feito: {}",
+  "Restored the library. What it held before is in {}": "Biblioteca restaurada. O conteúdo anterior está em {}",
+  "The library was not restored: {}": "A biblioteca não foi restaurada: {}",
   "{count} more warnings.": "Mais {count} avisos.",
   "{in_trash} catalog photos are in this library's Recently Deleted and stay there; restore them from Recently Deleted to see them.": "{in_trash} fotos do catálogo estão em Excluídos recentemente desta biblioteca e continuam lá; restaure-as de Excluídos recentemente para vê-las.",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "{skipped} imagens do catálogo não foram importadas porque seus registros no catálogo estão incompletos.",

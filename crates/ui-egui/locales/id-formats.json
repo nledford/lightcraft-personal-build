@@ -322,5 +322,7 @@
   "{n} selected photo{} · {pages} page{}": "{n} foto dipilih · {pages} halaman{:.0}{:.0}",
   "{n} photo{} in view · {slides} slide{} · {time}": "{n} foto di tampilan · {slides} slide · {time}{:.0}{:.0}",
   "Backed up the library to {}": "Pustaka dicadangkan ke {}",
-  "The library was not backed up: {}": "Pustaka tidak dicadangkan: {}"
+  "The library was not backed up: {}": "Pustaka tidak dicadangkan: {}",
+  "Restored the library. What it held before is in {}": "Pustaka dipulihkan. Isinya sebelumnya ada di {}",
+  "The library was not restored: {}": "Pustaka tidak dipulihkan: {}"
 }

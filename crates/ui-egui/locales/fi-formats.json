@@ -319,5 +319,7 @@
   "{name} is installed": "{name} on asennettu",
   "{name} is installed and in use: face recognition is on": "{name} on asennettu ja käytössä: kasvojentunnistus on päällä",
   "Backed up the library to {}": "Kirjasto varmuuskopioitu kohteeseen {}",
-  "The library was not backed up: {}": "Kirjastoa ei varmuuskopioitu: {}"
+  "The library was not backed up: {}": "Kirjastoa ei varmuuskopioitu: {}",
+  "Restored the library. What it held before is in {}": "Kirjasto palautettu. Sen aiempi sisältö on kohteessa {}",
+  "The library was not restored: {}": "Kirjastoa ei palautettu: {}"
 }

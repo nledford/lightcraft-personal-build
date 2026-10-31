@@ -137,6 +137,7 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "file.backupLibrary",
             "file.restoreLibrary",
             "library.backup",
+            "library.restore",
             "---",
             "dialog.newAlbum",
             "dialog.newFolder",
@@ -362,12 +363,16 @@ pub(crate) fn selection_deleted(app: &LightcraftApp) -> bool {
 
 /// Items only some hosts have are left out of the others' menus (the web build's library backup);
 /// Restore and Delete Permanently replace Delete for photos in Recently Deleted.
-fn host_supports(app: &LightcraftApp, id: &str) -> bool {
+pub(crate) fn host_supports(app: &LightcraftApp, id: &str) -> bool {
     match id {
         "file.backupLibrary" => app.services.backup_library.is_some(),
         "file.restoreLibrary" => app.services.restore_library.is_some(),
         // a library that is a folder on disk is backed up to a folder (the browser's has its own backup, above)
         "library.backup" => app.session.library.as_ref().is_some_and(|l| l.on_disk),
+        // put back from a folder that is chosen: where there is a folder dialog
+        "library.restore" => {
+            app.session.library.as_ref().is_some_and(|l| l.on_disk) && (app.services.pick_folder.is_some() || app.services.picker.is_some())
+        }
         "photo.restore" | "photo.deletePermanently" => selection_deleted(app),
         "photo.delete" => !selection_deleted(app),
         // only in an album that holds its photos (not a smart one)

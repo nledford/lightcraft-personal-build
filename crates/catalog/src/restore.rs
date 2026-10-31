@@ -406,6 +406,22 @@ pub fn finish(library: &Path) -> Result<Option<RestoreReport>, BackupError> {
     }
 }
 
+/// Remove what a restore that never got to move a file left in `library`: the copy of a backup
+/// (`restore.partial`), when no restore is under way (no note) and the folder holds nothing but
+/// what such a copy holds. Whoever opens a library calls this after [`finish`], with its lock.
+pub fn clear_leftover(library: &Path) {
+    let staged = library.join(STAGED);
+    if there(&library.join(PENDING)) || !real_dir(&staged) {
+        return;
+    }
+    let of_a_copy = |n: &String| n == SNAPSHOT || n == LOG || segments::valid_name(n) || (movable(n) && n.ends_with(".json"));
+    if backup::held(&staged).is_ok_and(|names| names.iter().all(of_a_copy))
+        && let Err(e) = std::fs::remove_dir_all(&staged)
+    {
+        log::warn!("restore: can't remove {}: {e}", staged.display());
+    }
+}
+
 /// Start what `note_of` describes: write it down, then do it. Refused with nothing changed when
 /// it asks for more than a restore does. `begun` is called once the note is written: from there
 /// on the restore is completed, now or by [`finish`].
@@ -508,6 +524,10 @@ pub fn stage(backup: &Path, library: &Path, options: &RestoreOptions<'_>, watch:
         return Err(BackupError::Exists(options.aside.to_string()));
     }
     let wanted = |name: &str| name == SNAPSHOT || name == LOG || segments::valid_name(name) || options.also.contains(&name);
+    // (stopped or given up before it began: it must not clear away a copy that is not its own)
+    if watch.cancelled() {
+        return Err(BackupError::Cancelled);
+    }
     std::fs::create_dir_all(library).map_err(|e| backup::io("can't make the folder", library, e))?;
     // what a restore that never got to move a file left: a folder of that name that holds
     // anything else is somebody's, and stays

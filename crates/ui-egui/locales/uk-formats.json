@@ -276,6 +276,8 @@
   "· {in_source} identical copies": "· ідентичних копій: {in_source}",
   "Backed up the library to {}": "Резервну копію бібліотеки збережено в {}",
   "The library was not backed up: {}": "Резервну копію бібліотеки не створено: {}",
+  "Restored the library. What it held before is in {}": "Бібліотеку відновлено. Попередній вміст міститься в {}",
+  "The library was not restored: {}": "Бібліотеку не відновлено: {}",
   "{count} more warnings.": "Інших попереджень: {count}.",
   "{in_trash} catalog photos are in this library's Recently Deleted and stay there; restore them from Recently Deleted to see them.": "Фото каталогу в нещодавно видалених цієї бібліотеки: {in_trash}. Вони залишаються там; щоб побачити їх, відновіть їх із нещодавно видалених.",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "Не імпортовано зображення каталогу: {skipped}. Їхні записи в каталозі неповні.",
