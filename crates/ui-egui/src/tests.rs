@@ -90,6 +90,7 @@ mod quit_unsaved;
 mod rating;
 mod recheck;
 mod reduce_motion;
+mod reduce_transparency;
 mod refusals;
 mod rename_person;
 mod restore_list;

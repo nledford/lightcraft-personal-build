@@ -103,7 +103,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
     let title_bar = title_bar_band(app);
     egui::Area::new(egui::Id::unique("dialog-dim")).order(egui::Order::Middle).fixed_pos(screen.min).interactable(false).show(ctx, |ui| {
         let screen = below_title_bar(screen, title_bar);
-        ui.painter().rect_filled(screen, 0.0, egui::Color32::from_black_alpha(140));
+        ui.painter().rect_filled(screen, 0.0, crate::transparency::scrim(ui.ctx(), 140));
     });
     let mut close = false;
     let mut confirm = false;

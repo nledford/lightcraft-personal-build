@@ -186,7 +186,7 @@ fn card(app: &mut LightcraftApp, ui: &mut egui::Ui, person: &Person, r: Rect, ed
         pos2((face.right() - g.size().x - 14.0).max(face.left() + 2.0), face.bottom() - g.size().y - 11.0),
         g.size() + vec2(10.0, 6.0),
     );
-    p.rect_filled(pill, 4.0, Color32::from_black_alpha(175));
+    p.rect_filled(pill, 4.0, crate::transparency::hud(p.ctx(), 175));
     p.galley(pill.min + vec2(5.0, 3.0), g, Color32::WHITE);
     if selected {
         super::grid::selection_ring(p, &t, face, lightcraft_engine::SelectionState::Active);
