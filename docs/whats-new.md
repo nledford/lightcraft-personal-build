@@ -2,6 +2,15 @@
 
 ## 2026-10-30
 
+### Rating a photo in a big view no longer stalls the grid
+- The photo count the grid shows beside the source's name ("1,234 of 5,678") was worked out again from every photo in the
+  library after each edit, so in a library of hundreds of thousands of photos each rating, flag or label in a large
+  smart album or folder took about half a second to show. After an edit it now asks only the photos the edit touched, the
+  way the grid's list already did; an edit to many photos at once, to an album's rules or photos, or a source that
+  reads the clock is still counted from every photo. Opening a source with nothing narrowing it takes the count from the
+  pass that builds the grid instead of a second pass.
+
+
 ### A keyboard shortcut for Clear Color Label
 - Clear Color Label is now a command of its own in Help ▸ Keyboard Shortcuts, so it can have a key like Set Rating or
   Set Flag; before, only the red, yellow, green and blue labels (6–9) had keys and clearing a label was menu-only. It has
