@@ -104,7 +104,16 @@
   selected Object mask, and a click on the selected mask's own pin adds nothing. Subject, Sky, Background and the
   range masks still have no pin.
 
+### A dialog no longer dims the macOS title bar
+- On macOS the top bar is the window's title bar, and the window buttons drawn over it stayed bright while a dialog dimmed
+  the bar under them. As under a macOS sheet, the dialog's backdrop now leaves the bar alone: its buttons are inactive, a
+  click on it does not close the dialog, and dragging its empty space still moves the window. Windows, Linux and full
+  screen are unchanged.
+
 ## 2026-10-28
+
+### The grid's title, count and empty messages are read by screen readers
+- VoiceOver and other screen readers now read the photo grid's heading (for example "All Photos") and its photo count ("0 of 24 photos"), and the messages an empty view shows: "No photos match the active filters" with its reason, "No photos in this folder", and the same for the compare, survey, detail, reference and people views and the right panel's "No photo selected".
 
 ### The empty photo grid names Import Photos' shortcut as it is bound
 - When a view is empty and the way in is File ▸ Import Photos…, the message under "No photos" used a fixed "Cmd+Shift+I" (or a translation's fixed copy of it) whatever the platform or the binding. It now shows the key as the menu bar writes it (on a Mac its glyphs, elsewhere Ctrl+Shift+I) on its own line under the sentence, follows a remapped key, and names no key when Import Photos has none. The sentence now wraps in a narrow window instead of running off its edge.
@@ -126,6 +135,26 @@
   `folder.rename` and `folder.move` commands now refuse the home folder and its Pictures, Desktop and Downloads too,
   so a script or an agent can't do it either.
 
+### The window's parts are named for screen readers
+- The top bar, the tool strip and the bottom bar are now announced as toolbars (Top bar, Tool strip, Bottom bar), and the
+  sidebar (Library), the photos, the Tools panel (or Presets) and the filmstrip as landmarks, so a screen reader can list
+  them and jump to one instead of walking every control. Nothing on screen changes. Not yet tried with a real VoiceOver session.
+
+### Dialogs are exposed to screen readers as dialogs
+- Export, Settings and the other dialogs, the library chooser and the prompts that stop the window (the quit question, a
+  library that could not be opened, a settings file problem) are now exposed to screen readers as dialogs: modal ones, so the
+  rest of the window is marked as blocked while one is open, and an alert dialog for the prompts. The answer to Check for
+  Updates is a dialog too, but not a modal one. Before, each was a plain group that only carried the dialog's title.
+- An alert dialog also carries what it says as its description: a screen reader can read the library problem's path, error and
+  explanation, or a prompt's text, together with the dialog.
+
+### Screen readers no longer read the shortcut with every button name
+- Icon-only buttons (the tool strip, the view buttons and Before/After and Filmstrip in the bottom bar, the top bar's
+  Import Photos…, the mask overlay and White Balance Selector buttons, the slideshow controls) are now announced by
+  their label alone ("Edit", "Presets", "Photo Grid"), and the shortcut is the button's description ("E", "Shift+P",
+  "G"), which VoiceOver reads after a pause or on request. Before, it read "Edit (E)" every time it landed on the
+  button. This holds in every language, including Japanese and Traditional Chinese, which write the shortcut in
+  full-width brackets. The tooltip you see on hover is unchanged.
 
 ## 2026-10-27
 
@@ -170,36 +199,19 @@
   drag to change it" is its description. It was named "Exposure: Click to type a value, drag to change it", so
   VoiceOver read the whole sentence each time it reached the field, once for every slider in the Edit panel.
 
-## 2026-10-29
+## 2026-10-26
 
-### A dialog no longer dims the macOS title bar
-- On macOS the top bar is the window's title bar, and the window buttons drawn over it stayed bright while a dialog dimmed
-  the bar under them. As under a macOS sheet, the dialog's backdrop now leaves the bar alone: its buttons are inactive, a
-  click on it does not close the dialog, and dragging its empty space still moves the window. Windows, Linux and full
-  screen are unchanged.
-
-## 2026-10-28
-
-### The window's parts are named for screen readers
-- The top bar, the tool strip and the bottom bar are now announced as toolbars (Top bar, Tool strip, Bottom bar), and the
-  sidebar (Library), the photos, the Tools panel (or Presets) and the filmstrip as landmarks, so a screen reader can list
-  them and jump to one instead of walking every control. Nothing on screen changes. Not yet tried with a real VoiceOver session.
-
-### Dialogs are exposed to screen readers as dialogs
-- Export, Settings and the other dialogs, the library chooser and the prompts that stop the window (the quit question, a
-  library that could not be opened, a settings file problem) are now exposed to screen readers as dialogs: modal ones, so the
-  rest of the window is marked as blocked while one is open, and an alert dialog for the prompts. The answer to Check for
-  Updates is a dialog too, but not a modal one. Before, each was a plain group that only carried the dialog's title.
-- An alert dialog also carries what it says as its description: a screen reader can read the library problem's path, error and
-  explanation, or a prompt's text, together with the dialog.
-
-### Screen readers no longer read the shortcut with every button name
-- Icon-only buttons (the tool strip, the view buttons and Before/After and Filmstrip in the bottom bar, the top bar's
-  Import Photos…, the mask overlay and White Balance Selector buttons, the slideshow controls) are now announced by
-  their label alone ("Edit", "Presets", "Photo Grid"), and the shortcut is the button's description ("E", "Shift+P",
-  "G"), which VoiceOver reads after a pause or on request. Before, it read "Edit (E)" every time it landed on the
-  button. This holds in every language, including Japanese and Traditional Chinese, which write the shortcut in
-  full-width brackets. The tooltip you see on hover is unchanged.
+### The sidebar from the keyboard
+- **View ▸ Keyboard in Sidebar** (Cmd+Alt+B) gives the keys to the left sidebar: a ring shows the row they are
+  on, starting at what the grid shows. ↑ ↓ move (Home, End, Page Up, Page Down too), → unfolds a folder or
+  section or steps into it, ← folds it or steps out, Enter or Space chooses the row as a click does, typing goes
+  to the next row that starts so (the same letter again: the one after), and F2 renames an album, a keyword or
+  a folder.
+- Esc, Tab, the shortcut again, Find or a click on the photos gives the keys back. While they are in the sidebar,
+  keys without Cmd / Ctrl / Alt are not shortcuts (P finds a row, it does not flag a photo), and keys with Shift
+  are not the sidebar's either, except Shift+Tab, which gives the keys back like Tab, and capital letters typed; with it off
+  nothing changes: a click on a row never takes the keys.
+- For agents: `view.sidebarKeys` `{on?}`; the ring is widget `sidebarCursor`.
 
 ## 2026-10-25
 
@@ -223,9 +235,6 @@
 - JPEG ICC profiles are assembled only when every chunk is present exactly once, the sequence numbers and
   declared totals agree, and every APP2 segment is complete. Reordered valid chunks still work. An invalid
   sequence uses the existing unsupported-profile sRGB fallback, including when the JPEG is a raw preview.
-
-
-## 2026-10-25
 
 ### `>=` and `<=` work in the search box
 - Fielded search tokens now take inclusive comparisons: `rating:>=3`, `iso:<=400`, `f:>=2.8`, `focal:<=50`. Before,
@@ -253,20 +262,6 @@
   about 18 ms to about 10 ms between a frame being handed to macOS and macOS compositing it, with the same 120 frames
   a second. On a Mac the window also holds one drawable less: its width × height × 4 bytes, 15–22 MB for a
   1200–1500-point-wide window on a Retina display.
-
-## 2026-10-26
-
-### The sidebar from the keyboard
-- **View ▸ Keyboard in Sidebar** (Cmd+Alt+B) gives the keys to the left sidebar: a ring shows the row they are
-  on, starting at what the grid shows. ↑ ↓ move (Home, End, Page Up, Page Down too), → unfolds a folder or
-  section or steps into it, ← folds it or steps out, Enter or Space chooses the row as a click does, typing goes
-  to the next row that starts so (the same letter again: the one after), and F2 renames an album, a keyword or
-  a folder.
-- Esc, Tab, the shortcut again, Find or a click on the photos gives the keys back. While they are in the sidebar,
-  keys without Cmd / Ctrl / Alt are not shortcuts (P finds a row, it does not flag a photo), and keys with Shift
-  are not the sidebar's either, except Shift+Tab, which gives the keys back like Tab, and capital letters typed; with it off
-  nothing changes: a click on a row never takes the keys.
-- For agents: `view.sidebarKeys` `{on?}`; the ring is widget `sidebarCursor`.
 
 ## 2026-10-24
 
@@ -1126,6 +1121,18 @@
   Photos is a button as before. A session whose library couldn't be opened offers no Try Sample Photos there (Help ▸ Add
   Sample Photos still adds them).
 - The welcome's buttons are drawn by the button component: Import Photos… is primary, the others secondary.
+
+### The welcome reads for everyone
+- Screen readers now hear the empty library's welcome, not only its buttons: the title (as a heading), what it says,
+  the hint and the sample row's caption, and the right panel's note beside it.
+- A new library's welcome puts the keyboard on Import Photos…, so Enter or Space starts; the welcome's buttons show an
+  accent ring where the keyboard is. On the welcome's buttons, the sample photos and the samples banner, a focused
+  button no longer takes the keyboard from shortcuts such as Import Photos…'s own: it keeps only Enter, Space, Tab, Esc
+  and the arrows. Holding Alt as the window opens, to choose a library, takes the keyboard from the welcome's button.
+- Whether the row of sample photos fits the window is measured from the message instead of guessed, so a shorter window
+  than before still shows it.
+- The welcome also says that a folder can be looked through without importing it, under Local in the sidebar (the
+  desktop app).
 
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a

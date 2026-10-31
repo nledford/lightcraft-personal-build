@@ -323,9 +323,12 @@ fn show_inner(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             let title = crate::widgets::elide_head(&full, room, |s| ui.painter().layout_no_wrap(s.to_string(), font.clone(), t.text).size().x);
             let title_rect = ui.painter().text(pos2(hr.left() + 20.0, hr.center().y), Align2::LEFT_CENTER, &title, font, t.text);
             crate::widgets::register(ui, "grid:title", title_rect);
+            // read by a screen reader: the whole name even when trimmed, and the count
+            super::readable(ui, title_rect, "grid-title", &full, true);
             if !cnt.is_empty() {
-                let count_rect = ui.painter().text(pos2(hr.right() - 20.0, hr.center().y), Align2::RIGHT_CENTER, cnt, t.label(), t.text_dim);
+                let count_rect = ui.painter().text(pos2(hr.right() - 20.0, hr.center().y), Align2::RIGHT_CENTER, &cnt, t.label(), t.text_dim);
                 crate::widgets::register(ui, "grid:count", count_rect);
+                super::readable(ui, count_rect, "grid-count", &cnt, false);
             }
             if title != full {
                 ui.interact(title_rect, ui.scope_id().with("grid-title"), Sense::hover()).on_hover_text(full);
@@ -363,7 +366,7 @@ fn show_inner(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             let mac = ui.ctx().os() == egui::os::OperatingSystem::Mac;
             // wrapped to the grid's width, the shortcut on its own line under it
             let (way, key) = import_way_in(&app.ui.settings.keymap, mac);
-            super::empty_state(ui, ui.max_rect(), "No photos", way, &[], key.as_deref(), 0.0);
+            super::empty_state(ui, ui.max_rect(), "No photos", way, &[], key.as_deref(), super::EmptyMore::default());
         }
         return;
     }
