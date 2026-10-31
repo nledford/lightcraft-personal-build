@@ -850,7 +850,7 @@
   "In library": "Trong thư viện",
   "In memory — nothing is saved": "Trong bộ nhớ — chưa lưu gì",
   "In use": "Đang dùng",
-  "In-memory session: these settings last until LightCraft quits.": "Phiên trong bộ nhớ: các cài đặt này chỉ tồn tại đến khi LightCraft thoát.",
+  "In-memory session: the library's settings last until LightCraft quits.": "Phiên trong bộ nhớ: các cài đặt của thư viện chỉ tồn tại đến khi LightCraft thoát.",
   "Include on Export": "Bao gồm khi xuất",
   "Include selected photos": "Bao gồm ảnh đã chọn",
   "Include subfolders": "Bao gồm thư mục con",
@@ -2643,7 +2643,6 @@
   "This is a file, not a library folder": "Đây là một tệp, không phải thư mục thư viện",
   "This library couldn't be checked": "Không thể kiểm tra thư viện này",
   "This library couldn't be checked:": "Không thể kiểm tra thư viện này:",
-  "To be asked again: Settings → General → When importing a Lightroom catalog.": "Để được hỏi lại: Cài đặt → Chung → Khi nhập danh mục Lightroom.",
   "Tool Overlay: Always": "Lớp phủ công cụ: Luôn hiện",
   "Tool Overlay: Auto": "Lớp phủ công cụ: Tự động",
   "Tool Overlay: Never": "Lớp phủ công cụ: Không bao giờ",
@@ -2756,5 +2755,7 @@
   "Reduce motion": "Giảm chuyển động",
   "Turns off zoom and spinner animations. Fades stay.": "Tắt hiệu ứng phóng to và biểu tượng xoay. Hiệu ứng mờ dần vẫn được giữ nguyên.",
   "Turns off zoom and spinner animations. Fades stay. Follows the system's Reduce Motion until you change it here.": "Tắt hiệu ứng phóng to và biểu tượng xoay. Hiệu ứng mờ dần vẫn được giữ nguyên. Theo cài đặt Giảm chuyển động của hệ thống cho đến khi bạn thay đổi tại đây.",
-  "Use the system setting": "Dùng cài đặt của hệ thống"
+  "Use the system setting": "Dùng cài đặt của hệ thống",
+  "Files": "Tệp",
+  "Monitor": "Màn hình"
 }
