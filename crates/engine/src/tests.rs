@@ -2,9 +2,9 @@ use serde_json::{Value, json};
 
 use crate::{Selection, Session, command_specs};
 
+mod album_folder_source;
 mod album_loops;
 mod album_missing;
-mod album_folder_source;
 mod album_order;
 mod album_remove;
 mod albums_local;
@@ -56,6 +56,7 @@ mod slideshow_export;
 mod spots;
 mod sync;
 mod view_follow;
+mod view_reconcile;
 pub(super) mod xmp;
 
 fn demo() -> Session {
