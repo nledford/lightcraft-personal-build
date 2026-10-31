@@ -35,10 +35,10 @@ pub(crate) use body::thumb_edge;
 use body::{DEFAULT_BELOW_GRID, badge_rect, dup_counts};
 pub use body::{DEFAULT_FOLDER_TEMPLATE, body, example_destination, source_summary};
 pub(crate) use body::{DIALOG_SIZE, READ_HINT, THUMB_SIZE_DEFAULT, note_dialog_bottom, read_choices, remember_read, thumb_size};
-pub(crate) use scan::library_busy;
-pub use scan::{IMPORT_REQUEST, ScanTask, browse, drop_blocked, open, poll_scan, running};
+pub use scan::{IMPORT_REQUEST, ScanTask, browse, drop_refusal, open, poll_scan, running};
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use scan::{auto_import_listed, cards_seen};
+pub(crate) use scan::{lane_ahead_text, library_busy};
 #[cfg(test)]
 pub(crate) use scan::{stall_scan, stall_scan_of};
 pub(crate) use tags::{tag_field_width, tag_help, tag_toggle, unknown_tags_warning};

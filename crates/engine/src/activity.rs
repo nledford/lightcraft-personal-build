@@ -65,10 +65,15 @@ impl Lane {
 }
 /// What a job was asked: the command and its parameters, with everything that depends on the moment (the
 /// selection, the photos in view) written out, so that running it later does the same work.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Request {
     pub command: String,
     pub params: Value,
+    /// What it works on, for its row while it waits (a folder's name), worded as the frontend shows it; empty: nothing
+    /// more than its label.
+    pub subject: String,
+    /// What else is known of it while it waits (how many photos, how they come in), after the subject.
+    pub facts: String,
 }
 /// A task waiting in line ([`Activity::enqueue`]), as [`Activity::take_ready`] hands it over to be started.
 #[derive(Debug)]
@@ -89,13 +94,14 @@ impl Waiting {
             done: 0,
             total: 0,
             unit: Unit::Count,
-            detail: String::new(),
+            detail: capped(&self.request.subject),
             cancellable: true,
             cancelling: false,
             age_ms: millis(self.queued.elapsed()),
             waiting: true,
             place,
             lane: Some(self.lane),
+            facts: capped(&self.request.facts),
         }
     }
 }
@@ -116,6 +122,8 @@ struct Inner {
     waiting: Mutex<Vec<Waiting>>,
     /// The id the waiting task being started keeps (its kind, its id): see [`Activity::take_ready`].
     reserved: Mutex<Option<(&'static str, u64)>>,
+    /// Set while a question about the line is open: nothing leaves it ([`Activity::hold_line`]).
+    line_held: AtomicBool,
     next: AtomicU64,
 }
 
@@ -127,6 +135,7 @@ impl Default for Inner {
             keep_after_ms: AtomicU64::new(KEEP_AFTER_MS),
             waiting: Mutex::default(),
             reserved: Mutex::default(),
+            line_held: AtomicBool::new(false),
             next: AtomicU64::new(0),
         }
     }
@@ -324,6 +333,8 @@ pub struct TaskInfo {
     /// Its place in its lane's line, from 1; 0 for a running task.
     pub place: usize,
     pub lane: Option<Lane>,
+    /// Waiting tasks: what else is known of the task besides what it works on (`detail`).
+    pub facts: String,
 }
 
 struct Entry {
@@ -405,6 +416,7 @@ impl Entry {
             waiting: false,
             place: 0,
             lane: Lane::of(self.kind),
+            facts: String::new(),
         }
     }
 }
@@ -569,7 +581,7 @@ impl Activity {
         let lane = Lane::of(kind).ok_or_else(|| format!("{kind} tasks don't wait in line"))?;
         let mut waiting = lock(&self.inner.waiting);
         if waiting.len() >= MAX_WAITING {
-            return Err(format!("{MAX_WAITING} tasks are waiting already"));
+            return Err(Self::line_full_error());
         }
         let id = self.inner.next.fetch_add(1, Ordering::Relaxed).saturating_add(1);
         waiting.push(Waiting { id, kind, label: capped(label), lane, request, queued: web_time::Instant::now() });
@@ -587,16 +599,36 @@ impl Activity {
         lock(&self.inner.waiting).iter().any(|w| w.lane == lane)
     }
 
+    /// Whether the line is as long as it can be: nothing more is taken in ([`Activity::enqueue`]).
+    pub fn line_full(&self) -> bool {
+        lock(&self.inner.waiting).len() >= MAX_WAITING
+    }
+
+    /// What [`Activity::enqueue`] says when the line is full (English; a frontend words it for its person).
+    pub fn line_full_error() -> String {
+        format!("{MAX_WAITING} tasks are waiting already")
+    }
+
     /// Take the first waiting task whose lane is free out of the line, to be started now. The next task of its
     /// kind started ([`Activity::start`]) keeps its id, until [`Activity::started`] says the attempt is over.
     pub fn take_ready(&self) -> Option<Waiting> {
         self.take_ready_if(|_| true)
     }
 
+    /// While `held`, no task leaves the line ([`Activity::take_ready`] hands none over): a question about the line is
+    /// open (switching libraries would drop it), and what the person answers must still be true when they answer. The
+    /// frontend that asks sets it and clears it when the question is gone.
+    pub fn hold_line(&self, held: bool) {
+        self.inner.line_held.store(held, Ordering::Relaxed);
+    }
+
     /// [`Activity::take_ready`] among the tasks whose request `runs` can run: each frontend starts what it knows how to
     /// (the engine its commands, the app its own). Only the first in each lane's line is looked at: one the caller
     /// can't run holds its lane, as it would if it had started.
     pub fn take_ready_if(&self, runs: impl Fn(&Request) -> bool) -> Option<Waiting> {
+        if self.inner.line_held.load(Ordering::Relaxed) {
+            return None;
+        }
         let mut waiting = lock(&self.inner.waiting);
         let mut held: Vec<Lane> = lock(&self.inner.tasks).iter().filter_map(|e| Lane::of(e.kind)).collect();
         let mut at = None;
@@ -1087,7 +1119,7 @@ mod tests {
     }
 
     fn request(command: &str) -> Request {
-        Request { command: command.into(), params: serde_json::json!({}) }
+        Request { command: command.into(), params: serde_json::json!({}), ..Default::default() }
     }
 
     #[test]
@@ -1141,6 +1173,17 @@ mod tests {
     }
 
     #[test]
+    fn a_held_line_hands_nothing_over_until_it_is_let_go() {
+        let a = Activity::default();
+        a.enqueue("previews", "P", request("engine")).unwrap();
+        a.hold_line(true);
+        assert!(a.take_ready().is_none(), "the lane is free but the line is held");
+        assert_eq!(a.waiting().len(), 1, "it stays in line");
+        a.hold_line(false);
+        assert!(a.take_ready().is_some());
+    }
+
+    #[test]
     fn take_ready_if_skips_what_the_caller_cannot_run_but_keeps_its_lane_held() {
         let a = Activity::default();
         a.enqueue("previews", "mine", request("engine")).unwrap();
@@ -1175,13 +1218,27 @@ mod tests {
         assert!(a.take_ready().is_none());
     }
 
+    /// Given a task asked for with a subject and facts, when it waits, then its row says them (`detail`, `facts`),
+    /// capped like any detail; a task asked for without says nothing.
+    #[test]
+    fn a_waiting_task_says_what_it_is_about() {
+        let a = Activity::default();
+        let _running = a.start("import", "Importing", Cancel::Yes);
+        let named = Request { subject: "é".repeat(300), facts: "3 photos".into(), ..request("app:import") };
+        a.enqueue("import", "Importing", named).unwrap();
+        a.enqueue("import", "Importing", request("app:import")).unwrap();
+        let rows = a.waiting();
+        assert_eq!((rows[0].detail.chars().count(), rows[0].facts.as_str()), (200, "3 photos"));
+        assert_eq!((rows[1].detail.as_str(), rows[1].facts.as_str()), ("", ""));
+    }
+
     /// The engine starts only the requests it can run; one it can't (an app import) holds its lane for the app, and a
     /// later one in that lane never jumps it. Other lanes go on.
     #[test]
     fn each_frontend_starts_only_what_it_can_run_and_no_task_jumps_its_line() {
         let a = Activity::default();
-        let app = |p: u64| Request { command: "app:import".into(), params: serde_json::json!({ "n": p }) };
-        let engine = |p: u64| Request { command: "library.import".into(), params: serde_json::json!({ "n": p }) };
+        let app = |p: u64| Request { command: "app:import".into(), params: serde_json::json!({ "n": p }), ..Default::default() };
+        let engine = |p: u64| Request { command: "library.import".into(), params: serde_json::json!({ "n": p }), ..Default::default() };
         let (first, _) = a.enqueue("import", "Importing", app(1)).unwrap();
         let (second, _) = a.enqueue("import", "Importing", engine(2)).unwrap();
         let (previews, _) = a.enqueue("previews", "Building previews", request("library.buildPreviews")).unwrap();

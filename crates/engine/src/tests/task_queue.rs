@@ -213,7 +213,7 @@ fn a_build_that_can_not_start_does_not_hold_up_the_line() {
     let mut s = Session::with_demo();
     let ids = build_ids(&s, 1);
     let h = hold(&mut s);
-    let bad = Request { command: "library.buildPreviews".into(), params: json!({"size": "huge"}) };
+    let bad = Request { command: "library.buildPreviews".into(), params: json!({"size": "huge"}), ..Default::default() };
     s.activity.enqueue("previews", "Building previews", bad).unwrap();
     s.execute("library.buildPreviews", &json!({"ids": ids, "edge": 256, "queue": true})).unwrap();
     release(h);
@@ -331,7 +331,7 @@ fn a_build_that_could_not_start_says_why_and_the_line_goes_on() {
     let ids = build_ids(&s, 1);
     let h = hold(&mut s);
     // (a request no build accepts: as if what it needs went away while it waited)
-    let bad = Request { command: "library.buildPreviews".into(), params: json!({"size": "huge"}) };
+    let bad = Request { command: "library.buildPreviews".into(), params: json!({"size": "huge"}), ..Default::default() };
     let (bad_id, _) = s.activity.enqueue("previews", "Building previews", bad).unwrap();
     let good = s.execute("library.buildPreviews", &json!({"ids": ids, "edge": 256, "queue": true})).unwrap()["queued"].as_u64().unwrap();
     release(h);
@@ -375,7 +375,11 @@ fn a_smart_preview_build_that_did_not_go_well_can_be_asked_for_again() {
     s.activity.keep_after(0);
     let ids = build_ids(&s, 1);
     let g = s.activity.start("smartPreviews", "Building smart previews", Cancel::Yes);
-    g.set_request(Request { command: "library.smartPreviews".into(), params: json!({"ids": ids, "background": true, "discard": true}) });
+    g.set_request(Request {
+        command: "library.smartPreviews".into(),
+        params: json!({"ids": ids, "background": true, "discard": true}),
+        ..Default::default()
+    });
     let old = g.id();
     g.finish(crate::activity::Outcome::failed("the disk is full"));
     let r = s.execute("activity.retry", &json!({"id": old})).unwrap();
@@ -393,7 +397,7 @@ fn another_library_drops_what_could_be_retried() {
     let mut s = Session::with_demo();
     let ids = build_ids(&s, 1);
     let h = hold(&mut s);
-    let r = Request { command: "library.buildPreviews".into(), params: json!({"size": "huge"}) };
+    let r = Request { command: "library.buildPreviews".into(), params: json!({"size": "huge"}), ..Default::default() };
     let g = s.activity.start("previews", "Building previews", Cancel::Yes);
     g.set_request(r.clone());
     let failed = g.id();

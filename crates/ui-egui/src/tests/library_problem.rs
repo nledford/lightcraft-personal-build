@@ -846,13 +846,15 @@ fn waiting_files_wait_for_a_running_import_instead_of_being_dropped() {
     assert_eq!(line.len(), 1, "the waiting file is kept, in line behind the running import: {line:?}");
     let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.starts_with("Queued"), "{toast}");
-    // the files belong to this library: no switch while they wait, also when what they wait for
+    // the files belong to this library: a switch asks first while they wait, also when what they wait for
     // is a Synchronize Folder, which doesn't hold switching back by itself (the import set aside)
     let running = h.app.import.take();
     let r = h.app.run("app.openLibrary", json!({"path": dir.join("other").to_string_lossy()}));
     h.app.import = running;
-    assert!(r.as_ref().is_err_and(|e| e.contains("waiting")), "{r:?}");
+    assert!(r.as_ref().is_ok_and(|v| v["asked"] == true), "the switch asks before it drops what waits in line: {r:?}");
     assert_eq!(h.app.session.library.as_ref().map(|l| l.dir.clone()), Some(lib.clone()));
+    // (answered Cancel)
+    h.app.switch_prompt = None;
 
     // quitting while the file waits asks first
     assert!(!crate::panels::notices::may_close(&mut h.app));

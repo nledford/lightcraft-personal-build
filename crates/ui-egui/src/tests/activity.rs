@@ -81,6 +81,7 @@ fn info(label: &str, done: u64, total: u64) -> TaskInfo {
         waiting: false,
         place: 0,
         lane: None,
+        facts: String::new(),
     }
 }
 
@@ -1301,7 +1302,11 @@ fn a_build_that_did_not_go_well_offers_retry() {
     let mut h = demo();
     let photo = h.app.session.catalog.photos().next().map(|p| p.id.0).unwrap();
     let g = h.app.session.activity.start("previews", "Building previews", Cancel::Yes);
-    let request = lightcraft_engine::activity::Request { command: "library.buildPreviews".into(), params: json!({"ids": [photo], "edge": 256}) };
+    let request = lightcraft_engine::activity::Request {
+        command: "library.buildPreviews".into(),
+        params: json!({"ids": [photo], "edge": 256}),
+        ..Default::default()
+    };
     g.set_request(request);
     let failed = g.id();
     g.finish(Outcome::failed("The disk is full"));
@@ -1320,7 +1325,11 @@ fn a_retry_asked_by_an_agent_that_starts_at_once_does_not_say_it_was_queued() {
     let mut h = demo();
     let photo = h.app.session.catalog.photos().next().map(|p| p.id.0).unwrap();
     let g = h.app.session.activity.start("previews", "Building previews", Cancel::Yes);
-    g.set_request(lightcraft_engine::activity::Request { command: "library.buildPreviews".into(), params: json!({"ids": [photo], "edge": 256}) });
+    g.set_request(lightcraft_engine::activity::Request {
+        command: "library.buildPreviews".into(),
+        params: json!({"ids": [photo], "edge": 256}),
+        ..Default::default()
+    });
     let failed = g.id();
     g.finish(Outcome::failed("The disk is full"));
     h.app.ui.toast = None;
