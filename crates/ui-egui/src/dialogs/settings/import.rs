@@ -190,7 +190,7 @@ fn auto_import(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         {
             let reason = e.strip_prefix(folder.as_str()).and_then(|r| r.strip_prefix(": ")).unwrap_or(e);
             row(ui, t, "", |ui| {
-                ui.label(RichText::new(crate::i18n::tr_format!("Can't read this folder: {}", reason)).size(11.0).color(t.caution));
+                ui.label(RichText::new(crate::i18n::tr_format!("Can't read this folder: {}", reason)).font(t.caption()).color(t.caution));
             });
         }
         if d.auto_folder.is_some() {
