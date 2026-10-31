@@ -42,8 +42,8 @@ fn albums_tree(
                 open = true;
                 app.ui.sidebar_trees.show(&branch, above);
             }
-            // a folder is a source: the photos of the albums inside it, each once (no count: it
-            // would be a pass over the library per folder, for a number the albums already give)
+            // a folder is a source: the photos of the albums inside it, each once (no count shown on its row, for a
+            // number the albums already give; `albums.list` counts it from theirs, kept with theirs)
             let sel = crate::panels::side_select::album_shown(app, a.id);
             let resp = Row::new(&format!("folder:{}", a.id.0), Icon::Folder, &a.name)
                 .selected(sel)
