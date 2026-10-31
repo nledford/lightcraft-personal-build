@@ -516,8 +516,6 @@ pub(super) fn folder_rows(
         }
         let branch = folder_branch(n, &key);
         let mut open = app.ui.sidebar_trees.is_open_under(&branch, said);
-        // a row whose path would cover other disks' photos too only opens and closes
-        let sel = n.selectable && crate::panels::side_select::folder_shown(app, &n.path);
         if n.selectable {
             app.ui.side.folders.saw(n.path.clone());
         }

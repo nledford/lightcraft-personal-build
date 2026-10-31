@@ -532,9 +532,9 @@ fn can_confirm(app: &LightcraftApp, ctx: &egui::Context, dlg: &Dialog, informati
             // (a backup is chosen before it is restored)
             | Dialog::RestoreBackup { selected: None, .. }
     )
-    // (Synchronize, just after its button stopped being Continue in Background)
-    || (matches!(dlg, Dialog::SynchronizeFolder { counts: Some(_), .. }) && !crate::sync::settled(app, ctx));
-    // (the folders' Synchronize, while any of its scans runs)
+    // (Synchronize, just after its button stopped being Continue in Background; the folders' Synchronize, while any
+    // of its scans runs)
+    || (matches!(dlg, Dialog::SynchronizeFolder { counts: Some(_), .. }) && !crate::sync::settled(app, ctx))
     || (matches!(dlg, Dialog::SynchronizeFolders { .. }) && !crate::sync::many_scanned(dlg));
     let bad_rules =
         matches!(dlg, Dialog::SmartRules { id, rules, .. } if !rules.check_for(&app.session.catalog, id.map(lightcraft_catalog::AlbumId)).is_empty());
@@ -578,7 +578,7 @@ fn button_row(app: &LightcraftApp, ui: &mut egui::Ui, dlg: &Dialog, close: &mut 
         let line = crate::i18n::tr_format!("Starts after: {what}", what = what);
         ui.allocate_ui_with_layout(egui::vec2(room, row_h), egui::Layout::left_to_right(egui::Align::Center), |ui| {
             ui.set_width(room);
-            let r = ui.add(egui::Label::new(egui::RichText::new(line).size(11.0).color(t.text_dim)).truncate());
+            let r = ui.add(egui::Label::new(egui::RichText::new(line).font(t.font(11.0)).color(t.text_dim)).truncate());
             crate::widgets::register(ui, "dialog:startsAfter", r.rect);
         });
     } else {
@@ -657,30 +657,15 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
             toast_created_folder(app, ctx, dlg, &r);
             closed = true;
         }
-        Ok(r) if matches!(dlg, Dialog::NewAlbum { .. }) && r.get("skipped").and_then(serde_json::Value::as_u64).is_some_and(|n| n > 0) => {
-            // albums hold library photos (issue #684): say which part of the selection stayed out
-            crate::panels::grid::toast_skipped(app, ctx, &r);
-            closed = true;
-        }
-        // a move says how it went, or why nothing moved
-        Ok(r) if matches!(dlg, Dialog::MovePhotos { .. }) => {
-            if let Dialog::MovePhotos { name, .. } = dlg {
-                let moved = r["moved"].as_u64().unwrap_or(0);
-                let text = crate::panels::left::moved_text(moved, name);
-                if moved > 0 {
-                    app.toast_undoable(ctx, text);
-                } else {
-                    app.toast(ctx, text);
-                }
-            }
-            closed = true;
+        // what a made thing says (a new album with photos left out, a move, a folder move)
+        Ok(r)
+            if matches!(dlg, Dialog::MovePhotos { .. } | Dialog::MoveFolder { .. })
+                || (matches!(dlg, Dialog::NewAlbum { .. }) && r.get("skipped").and_then(serde_json::Value::as_u64).is_some_and(|n| n > 0)) =>
+        {
+            closed = said_what_it_made(app, ctx, dlg, &r);
         }
         Err(e) if matches!(dlg, Dialog::MovePhotos { .. } | Dialog::MoveFolder { .. }) => {
             app.toast_error(ctx, e);
-            closed = true;
-        }
-        Ok(r) if matches!(dlg, Dialog::MoveFolder { .. }) => {
-            crate::panels::left::toast_folder_moved(app, ctx, &r);
             closed = true;
         }
         // photos whose capture time doesn't read are left as they were: say so
@@ -703,6 +688,32 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
     }
 
     closed
+}
+
+/// What a dialog's confirm says of what it made (its `Ok` result): whether the dialog closes. Called for the
+/// dialogs [`confirmed`] names (a new album with photos left out, a move of photos, a folder move); all close.
+fn said_what_it_made(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &Dialog, r: &serde_json::Value) -> bool {
+    if matches!(dlg, Dialog::NewAlbum { .. }) && r.get("skipped").and_then(serde_json::Value::as_u64).is_some_and(|n| n > 0) {
+        // albums hold library photos (issue #684): say which part of the selection stayed out
+        crate::panels::grid::toast_skipped(app, ctx, r);
+        return true;
+    }
+    // a move says how it went, or why nothing moved
+    if let Dialog::MovePhotos { name, .. } = dlg {
+        let moved = r["moved"].as_u64().unwrap_or(0);
+        let text = crate::panels::left::moved_text(moved, name);
+        if moved > 0 {
+            app.toast_undoable(ctx, text);
+        } else {
+            app.toast(ctx, text);
+        }
+        return true;
+    }
+    if matches!(dlg, Dialog::MoveFolder { .. }) {
+        crate::panels::left::toast_folder_moved(app, ctx, r);
+        return true;
+    }
+    false
 }
 
 /// The last frame a dialog was drawn and stayed open, for [`clicked_backdrop`].
