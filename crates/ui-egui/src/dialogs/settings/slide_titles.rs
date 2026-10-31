@@ -104,7 +104,7 @@ fn text(app: &mut LightcraftApp, ui: &mut egui::Ui, id: &str, t: Title, value: &
         .show(ui);
     crate::text_field::keep_draft(ui, mem, &library, r.editing, &s);
     if let Some(save) = r.save {
-        let _ = app.run(save.command, save.params);
+        app.act(save.command, save.params);
         set_preview_shows(ui.ctx(), Some(t));
     }
 }

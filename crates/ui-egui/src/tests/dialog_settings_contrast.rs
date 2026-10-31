@@ -191,7 +191,8 @@ fn the_borders_of_a_box_a_button_a_checkbox_and_a_radio_stand_3_to_1_in_every_th
     for kind in ThemeKind::ALL {
         let mut h = demo(kind);
         let t = Tokens::for_kind(kind);
-        show(&mut h, "general");
+        // A text box's border: the top edge of Files' "Other editor"
+        show(&mut h, "files");
         scroll_to_end(&mut h);
         let image = h.paint();
         let field = rect(&h, "field:externalEditor");
@@ -201,6 +202,7 @@ fn the_borders_of_a_box_a_button_a_checkbox_and_a_radio_stand_3_to_1_in_every_th
         assert!(share >= STRAIGHT, "{kind:?}: only {share:.2} of a text box's border stands 3:1");
         // A button's border: the top edge of Performance's "Clear Cache"
         show(&mut h, "performance");
+        assert!(h.bring_into_view("button:settingsClearCache"), "Clear Cache is on the page");
         let image = h.paint();
         let button = rect(&h, "button:settingsClearCache");
         let edge = egui::Rect::from_min_max(
@@ -265,7 +267,7 @@ fn a_text_box_in_use_is_outlined_so_it_stands_out_in_every_theme() {
     for kind in ThemeKind::ALL {
         let mut h = demo(kind);
         let t = Tokens::for_kind(kind);
-        show(&mut h, "general");
+        show(&mut h, "files");
         scroll_to_end(&mut h);
         // Given the text box as it is without the keyboard, then with it (a click in it), the pointer away
         let unfocused = h.paint();

@@ -408,7 +408,8 @@ fn menu(title: &'static str) -> Screen {
     screen(format!("Menu {title}"), move || {
         let mut h = harness(ViewMode::PhotoGrid, RightPanel::None);
         let before = audit(&h).0;
-        h.get_by_label(title).click();
+        // (a tool strip button of the same name, "Edit", carries its key as a description: the menu title has none)
+        h.query_all_by_label(title).find(|n| n.accesskit_node().description().is_none()).unwrap_or_else(|| panic!("no menu titled {title}")).click();
         h.run_steps(8);
         assert!(audit(&h).0 > before, "the {title} menu did not open");
         h
@@ -765,8 +766,13 @@ fn tab_round<S>(h: &mut Harness<'_, S>) -> Result<(Vec<u64>, BTreeMap<u64, bool>
 fn keyboard_problems<S>(h: &mut Harness<'_, S>) -> Result<(Vec<(String, String)>, usize), String> {
     let all = controls(h);
     let (order, shows) = tab_round(h)?;
+    // (a row of choices or the tabs of Settings is one Tab stop, and the arrow keys reach the rest of it)
+    let roving = lightcraft_ui_egui::widgets::roving_members(&h.ctx);
     let mut keys = Vec::new();
     for c in &all {
+        if roving.contains(&c.id) && !order.contains(&c.id) {
+            continue;
+        }
         if !order.contains(&c.id) {
             keys.push((c.key("not reached by Tab"), c.at.clone()));
         } else if shows.get(&c.id) == Some(&false) {
@@ -1232,7 +1238,8 @@ fn the_settings_tab_strip_is_a_tab_list_of_tabs_that_control_their_page() {
         .map(|(n, _)| n)
         .collect();
     let names: Vec<String> = found.iter().map(|n| n.label().unwrap_or_default()).collect();
-    let want: Vec<String> = tabs.iter().map(|(_, l)| lightcraft_ui_egui::i18n::tr(l).to_string()).collect();
+    let want: Vec<String> =
+        tabs.iter().map(|(id, l)| lightcraft_ui_egui::i18n::tr(lightcraft_ui_egui::panels::settings::tab_label(id, l)).to_string()).collect();
     assert_eq!(names, want, "one tab per section");
     // the open one, and only it, is selected, and it is no toggle (a check box to VoiceOver)
     for (tab, (id, _)) in found.iter().zip(tabs) {
