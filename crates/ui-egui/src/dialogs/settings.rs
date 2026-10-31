@@ -31,6 +31,8 @@ mod performance;
 mod slideshow;
 mod widgets;
 
+#[cfg(test)]
+pub(crate) use appearance::favorite_star_colour;
 pub use display::display_profile;
 #[cfg(test)]
 pub(crate) use display::info_line_rows;
@@ -40,8 +42,13 @@ use general::{files_tab, general_tab, library_tab};
 use import::import_tab;
 pub(crate) use libraries::{can_switch_library, free_name};
 pub use libraries::{forget_library, library_name, new_library, open_library, open_library_name, recent_libraries, remember_library};
+#[cfg(test)]
+pub(crate) use performance::gpu_line;
 use performance::performance_tab;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+pub(crate) use performance::smart_folder_default;
 use slideshow::slideshow_tab;
+use widgets::legible_controls;
 pub(crate) use widgets::{ask_first, choices, heading, hint, row};
 
 pub mod slide_layout;
@@ -136,6 +143,11 @@ const PINNED_PAGE_MIN_HEIGHT: f32 = 100.0;
 pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_height: f32) {
     ui.set_width((ui.ctx().content_rect().width() - 64.0).clamp(240.0, PAGE_SIZE.x));
     let top = ui.cursor().top();
+    let t = Tokens::get(ui.ctx());
+    // What says where a control is, and what a text box says while it is empty, are made legible
+    // here for everything in the window: a theme's border is 1.6 to 1.7:1 against the window and
+    // its weak text under 4.3:1 in a box (the tokens keep their values for the rest of the app).
+    legible_controls(ui, &t);
     // The filter, above the tabs it looks through. What is typed is kept from one frame of the
     // window to the next only: Settings opened again starts with it empty.
     let filter_id = egui::Id::unique("settings-filter");
