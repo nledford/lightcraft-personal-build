@@ -109,6 +109,7 @@ mod thumb;
 mod titlebar;
 mod toast_timing;
 mod tool_overlay;
+mod tree_branch;
 mod tree_state;
 mod type_contrast;
 mod type_fit;
