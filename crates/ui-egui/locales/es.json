@@ -2454,5 +2454,7 @@
   "Bottom bar": "Barra inferior",
   "Prevent G-SYNC/FreeSync flicker (applies at next launch)": "Evitar el parpadeo de G-SYNC/FreeSync (se aplica al reiniciar)",
   "Same Content as Another Photo": "Mismo contenido que otra foto",
-  "Counting library": "Contando la biblioteca"
+  "Counting library": "Contando la biblioteca",
+  "Previous page": "Página anterior",
+  "Next page": "Página siguiente"
 }

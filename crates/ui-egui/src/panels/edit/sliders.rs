@@ -2,6 +2,7 @@ use super::{
     Align2, ControlSpec, DevelopSettings, Icon, LightcraftApp, PhotoId, Section, Sense, SliderOut, Tokens, Track, Value, controls, divider, json,
     pos2, register, section_header, slider, vec2,
 };
+use crate::button::Button;
 use crate::check::Check;
 
 /// Commit a slider interaction: begin → live updates → end, so a drag is one undo step.
@@ -260,18 +261,9 @@ pub(super) fn quick_develop(app: &mut LightcraftApp, ui: &mut egui::Ui, n: usize
                     ("▶", Icon::ChevronRight, small),
                     ("▶▶", Icon::ChevronDoubleRight, big),
                 ] {
-                    let r = crate::widgets::arrow_button(ui, "", icon, false);
-                    r.widget_info(|| {
-                        egui::WidgetInfo::labeled(
-                            egui::Role::Button,
-                            ui.is_enabled(),
-                            crate::i18n::tr_format!("{label} {d:+} on every selected photo", d = d, label = crate::i18n::tr(label)),
-                        )
-                    });
-                    crate::widgets::register(ui, format!("button:quick-{ctl}-{txt}"), r.rect);
-                    if r.on_hover_text(crate::i18n::tr_format!("{label} {d:+} on every selected photo", d = d, label = crate::i18n::tr(label)))
-                        .clicked()
-                    {
+                    let name = crate::i18n::tr_format!("{label} {d:+} on every selected photo", d = d, label = crate::i18n::tr(label));
+                    let r = crate::button::Button::icon_only(icon, &name).ghost().small().widget(format!("button:quick-{ctl}-{txt}")).show(ui);
+                    if r.clicked() {
                         let _ = app.run("develop.quickAdjust", json!({"control": ctl, "delta": d}));
                     }
                 }
@@ -318,7 +310,7 @@ pub(super) fn header_buttons(ui: &mut egui::Ui, bw: bool, hdr: bool, reset_tip: 
     let mut row: Vec<usize> = Vec::new();
     let mut used = 0.0;
     for (i, (_, label, _)) in left.iter().enumerate() {
-        let w = crate::widgets::text_button_size(ui, label);
+        let w = if i == 0 { Button::new(label).small().desired_size(ui).x } else { crate::widgets::text_button_size(ui, label) };
         if row.is_empty() {
             used = w;
         } else if used + GAP + w > avail {
@@ -330,10 +322,10 @@ pub(super) fn header_buttons(ui: &mut egui::Ui, bw: bool, hdr: bool, reset_tip: 
         row.push(i);
     }
     rows.push(row);
-    let reset_on_last = used + GAP + crate::widgets::text_button_size(ui, "Reset") <= avail;
+    let reset_on_last = used + GAP + Button::new("Reset").small().desired_size(ui).x <= avail;
     let reset = |ui: &mut egui::Ui, clicks: &mut HeaderClicks| {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            clicks.reset = crate::widgets::text_button(ui, "reset", crate::i18n::tr("Reset"), false).on_hover_text(reset_tip).clicked();
+            clicks.reset = Button::new("Reset").small().widget("button:reset").tooltip(reset_tip).show(ui).clicked();
         });
     };
     let last = rows.len() - 1;
@@ -342,7 +334,11 @@ pub(super) fn header_buttons(ui: &mut egui::Ui, bw: bool, hdr: bool, reset_tip: 
             ui.spacing_mut().item_spacing.x = GAP;
             for &i in row {
                 let (id, label, active) = left[i];
-                let mut resp = crate::widgets::text_button(ui, id, crate::i18n::tr(label), active);
+                let mut resp = if id == "auto" {
+                    Button::new(label).small().widget("button:auto").show(ui)
+                } else {
+                    crate::widgets::text_button(ui, id, crate::i18n::tr(label), active)
+                };
                 if id == "hdr" {
                     // HDR editing, next to B&W as Lightroom has it
                     resp = resp.on_hover_text(crate::i18n::tr("Edit in HDR: highlights above SDR white, for HDR exports and displays"));
