@@ -120,8 +120,7 @@ fn an_album_that_comes_back_is_not_shown_again_by_itself() {
     photos(&mut s, 3);
     let id = run(&mut s, "album.create", json!({"name": "First"}))["id"].as_u64().unwrap();
     show(&mut s, id);
-    run(&mut s, "library.filter", json!({"album": id}));
-    // the filter is no undo step: this undoes the album
+    // showing the album is no undo step: this undoes the album
     run(&mut s, "edit.undo", json!({}));
     assert!(s.catalog.album(AlbumId(id)).is_none(), "the album's creation was undone");
     assert_eq!((s.source, s.filter.album), (LibrarySource::All, None));
