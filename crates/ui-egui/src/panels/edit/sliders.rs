@@ -296,6 +296,8 @@ pub(super) struct HeaderClicks {
 /// covers another; Reset stays right-aligned on whichever row it lands.
 pub(super) fn header_buttons(ui: &mut egui::Ui, bw: bool, hdr: bool, reset_tip: &str) -> HeaderClicks {
     const GAP: f32 = 8.0;
+    // the right panel draws its rows with no vertical gap; the header's wrapped rows keep the 6 pt gap #2902 gave them
+    ui.spacing_mut().item_spacing.y = 6.0;
     let mut clicks = HeaderClicks::default();
     let avail = ui.available_width();
     let left = [("auto", "Auto", false), ("bw", "B&W", bw), ("hdr", "HDR", hdr)];
