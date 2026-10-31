@@ -1140,7 +1140,7 @@ impl Session {
     }
 
     /// Makes the view show only albums the library holds: one that is gone is no longer the
-    /// source (All Photos is) or the filter's album. THE place this is checked: commands, undo
+    /// source (the last of the other albums shown takes its place, else All Photos) or the filter's album. THE place this is checked: commands, undo
     /// and redo, opening a library and every look at the grid run it, so whatever removed an
     /// album (a command, an undo, a background task) or named one (a saved filter, a saved view)
     /// need not know. Two lookups: it runs every time.

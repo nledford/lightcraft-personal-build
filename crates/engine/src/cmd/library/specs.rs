@@ -1070,8 +1070,8 @@ pub fn specs() -> Vec<CommandSpec> {
                     }
                 }
                 let ops = order.into_iter().rev().map(|id| Op::RemoveAlbum { id }).collect();
-                // a deleted album that was being shown gives way to All Photos, as after any
-                // other way it goes (`Session::reconcile_view`)
+                // a deleted album that was being shown gives way to another of those shown, else to All Photos,
+                // as after any other way it goes (`Session::reconcile_view`)
                 s.commit(if folder { "Delete Folder" } else { "Delete Album" }, Op::Batch { ops })?;
                 // an album chip of the filter, or of one put aside by Enable Filters, must not name a deleted album
                 s.filter.album = s.filter.album.filter(|a| !removed.contains(a));
