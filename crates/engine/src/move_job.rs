@@ -92,6 +92,7 @@ pub fn start(s: &mut Session, p: &Value, cancellable: bool) -> Result<Option<(Mo
     let folder = crate::cmd::browse::folder_param(p, "folder").ok_or_else(|| bad(C, "missing folder"))?;
     let dir = Path::new(folder);
     s.refuse_while_moving()?;
+    s.refuse_while_trashing(C)?;
     // refused before anything touches the disk, as it always was (one look at one folder; the
     // worker looks again before the first file moves)
     if !dir.is_dir() {
