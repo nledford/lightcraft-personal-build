@@ -21,6 +21,12 @@ fn app() -> Headless {
     h
 }
 
+/// Open the list under the bell, where the rows are drawn.
+fn open_list(h: &mut Headless) {
+    let r = h.request("engine.execute", json!({"command": "view.tasks", "params": {"show": true}}), T);
+    assert_eq!(r["result"]["tasks"], true, "{r}");
+}
+
 /// A review of `n` photos from `folder`, as the scan hands it over.
 fn review(folder: &str, n: usize) -> ImportDialog {
     let candidates = (0..n)
@@ -93,6 +99,7 @@ fn a_waiting_row_gives_the_folder_and_what_is_known_beside_when_it_starts() {
     let mut h = app();
     let _running = h.app.session.activity.start("import", "Importing", Cancel::Yes);
     crate::import::start(&mut h.app, &review("/photos/Rome", 3)).expect("waits");
+    open_list(&mut h);
     for _ in 0..4 {
         h.step();
     }
@@ -488,6 +495,7 @@ fn a_waiting_row_with_long_facts_stays_inside_the_stack_with_its_timing_whole() 
     crate::import::start(&mut h.app, &review("/photos/Rome", 3)).expect("waits");
     crate::import::start(&mut h.app, &review(&format!("/photos/{long}"), 3)).expect("waits");
     crate::i18n::set_language(crate::i18n::Locale::De);
+    open_list(&mut h);
     for _ in 0..4 {
         h.step();
     }
@@ -498,8 +506,8 @@ fn a_waiting_row_with_long_facts_stays_inside_the_stack_with_its_timing_whole() 
     let at = |what: &str| h.app.widgets.iter().find(|(w, _)| *w == format!("activity:{what}:{id}")).map(|(_, r)| *r).expect("drawn");
     let (row, timing) = (at("row"), at("starts"));
     assert!(timing.right() <= row.right() + 0.5, "the timing ends inside its row: {timing:?} in {row:?}");
-    // (rows are laid out in the stack's width less its frame: 280 less a margin and a stroke each side)
-    assert!(row.width() <= crate::panels::activity::WIDTH - 18.0 + 0.5, "{row:?}");
+    // (rows are laid out in the list's width under the bell)
+    assert!(row.width() <= crate::panels::activity::WIDTH + 0.5, "{row:?}");
     assert!(painted.iter().any(|t| t.ends_with(&after)), "the timing is whole: {painted:?}");
 }
 
