@@ -1314,8 +1314,13 @@ impl Session {
         if matches!(&self.source, LibrarySource::Album(a) if !held(a)) {
             self.source = self.also_albums.pop().map_or(LibrarySource::All, LibrarySource::Album);
         }
+        // (a put-aside filter that held only a gone album has nothing left to bring back; one that was empty
+        // before, put aside on purpose by an undo, is left alone)
+        let aside_held_album = self.filters.aside().is_some_and(|f| f.album.is_some());
         self.filters.follow(|f| f.album = f.album.filter(held));
-        self.filters.drop_aside_if_empty();
+        if aside_held_album {
+            self.filters.drop_aside_if_empty();
+        }
     }
 
     /// Photos shown in the grid/filmstrip for the current source, filter and sort.
