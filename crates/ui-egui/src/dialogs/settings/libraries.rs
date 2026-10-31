@@ -99,6 +99,9 @@ fn switch_library(app: &mut LightcraftApp, path: &str) -> Result<Value, String> 
     app.ui.brief_info = crate::state::BriefInfo::default();
     // a keyword picked in the Keyword List belongs to the library being left
     app.ui.keyword_list_selected = None;
+    // (samples seen in the library just left say nothing about this one: the banner's reset of "hidden" waits for samples
+    // that appear in it)
+    app.samples_present = None;
     if app.ui.view == crate::state::ViewMode::Reference {
         app.ui.view = crate::state::ViewMode::PhotoGrid;
     }

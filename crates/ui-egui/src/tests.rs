@@ -94,6 +94,7 @@ mod restore_list;
 mod rules_editor;
 mod sam_setup;
 mod samples;
+mod samples_banner;
 mod scroll;
 mod side_keys;
 mod side_keys_sidebar;
