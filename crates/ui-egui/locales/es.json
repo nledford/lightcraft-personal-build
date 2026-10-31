@@ -2545,5 +2545,6 @@
   "Only a photo file LightCraft reads can be opened this way": "Solo se puede abrir así un archivo de foto que LightCraft lea",
   "Recently Added always shows the newest imports first.": "Añadidas recientemente siempre muestra primero las importaciones más recientes.",
   "Recently Deleted shows no date groups.": "Eliminadas recientemente no muestra grupos por fecha.",
-  "Previous Shuffle": "Mezcla anterior"
+  "Previous Shuffle": "Mezcla anterior",
+  "Waiting to write XMP sidecars": "Esperando para escribir los archivos XMP"
 }

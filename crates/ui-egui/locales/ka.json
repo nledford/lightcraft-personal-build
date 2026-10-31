@@ -3811,5 +3811,6 @@
   "Only a photo file LightCraft reads can be opened this way": "ასე მხოლოდ ისეთი ფოტოს ფაილი იხსნება, რომელსაც LightCraft კითხულობს",
   "Recently Added always shows the newest imports first.": "„ბოლოს დამატებული“ ყოველთვის ჯერ უახლეს იმპორტებს აჩვენებს.",
   "Recently Deleted shows no date groups.": "„ახლახან წაშლილი“ თარიღის მიხედვით დაჯგუფებას არ აჩვენებს.",
-  "Previous Shuffle": "წინა არევა"
+  "Previous Shuffle": "წინა არევა",
+  "Waiting to write XMP sidecars": "XMP თანმხლები ფაილების ჩაწერის მოლოდინი"
 }

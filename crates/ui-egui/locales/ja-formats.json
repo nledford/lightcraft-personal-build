@@ -350,5 +350,6 @@
   "{title}, showing {what}": "{title}、{what} を表示中",
   "+{n} more": "ほか{n}件",
   " · {} damaged": "・{}件は破損",
-  "Copied {n} file paths": "{n} 件のファイルパスをコピーしました"
+  "Copied {n} file paths": "{n} 件のファイルパスをコピーしました",
+  "Photos waiting: {n}": "待機中の写真：{n}枚"
 }

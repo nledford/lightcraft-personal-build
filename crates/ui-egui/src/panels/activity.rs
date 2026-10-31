@@ -22,6 +22,18 @@ pub const SHOW_AFTER_MS: u64 = 500;
 /// The list's width (points), where the window has that much.
 pub const WIDTH: f32 = 340.0;
 
+/// Whether the stack must look again within a tenth of a second: a young task becomes due, bars move. Not when every
+/// row is one that only waits on something outside the app (`xmpWaiting`) and is old enough to show: nothing on it
+/// changes until the cause is gone, and the app looks again by itself then (a redraw every 10 s re-checks it).
+pub fn needs_poll(tasks: &[TaskInfo]) -> bool {
+    tasks.iter().any(|t| !only_waits(t) || t.age_ms < SHOW_AFTER_MS)
+}
+
+/// A row that only waits on something outside the app: it has a count but no progress to draw, so no bar (its `total`
+/// is how many wait and `done` stays 0, so a bar would sit at 0 %).
+fn only_waits(t: &TaskInfo) -> bool {
+    t.kind == "xmpWaiting"
+}
 const CROSS: f32 = 16.0;
 /// The ring round the bell: its radius and line width.
 const RING: f32 = 12.0;
@@ -55,9 +67,13 @@ fn percent(t: &TaskInfo) -> u64 {
 }
 
 /// The row's second line: "Stopping…" once cancelled, else the count and what is being worked on.
-fn detail_line(t: &TaskInfo) -> String {
+pub(crate) fn detail_line(t: &TaskInfo) -> String {
     if t.cancelling {
         return tr("Stopping…").to_string();
+    }
+    if only_waits(t) {
+        // the count is the row's `total` (for `activity.list`), said as a line: "0 of 2" would read as a stalled job
+        return tr_format!("Photos waiting: {n}", n = t.total);
     }
     let count = count_text(t);
     match (count.is_empty(), t.detail.is_empty()) {
@@ -125,8 +141,9 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
     // newest first: the one just started is the one looked for
     let mut all = app.session.activity.list();
     all.reverse();
-    if !all.is_empty() {
-        // look again soon: a young task becomes due, the ring and the bars move
+    // look again soon: a young task becomes due, the ring and the bars move (not for rows that only wait on
+    // something outside the app, see [`needs_poll`])
+    if needs_poll(&all) {
         ctx.request_repaint_after(std::time::Duration::from_millis(100));
     }
     // the bell shows the tasks old enough not to be a flash; the open list shows them all
@@ -439,7 +456,9 @@ fn row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> bool {
                 clicked = resp.on_hover_text(tr("Cancel")).clicked();
             }
         });
-        bar(ui, task, width);
+        if !only_waits(task) {
+            bar(ui, task, width);
+        }
         let line = detail_line(task);
         if !line.is_empty() {
             ui.add(egui::Label::new(RichText::new(line).font(t.font(11.0)).color(t.text_dim)).truncate());

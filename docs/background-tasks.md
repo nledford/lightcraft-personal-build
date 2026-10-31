@@ -70,6 +70,12 @@ guard.detail(&file_name);
   toast that says how it went: the row is the record, not the announcement. A guard that is only dropped leaves
   nothing, as before, unless a panic dropped it: then the row says the task stopped unexpectedly. A scan or Local folder read
   that another replaced leaves nothing either: only the row's ✕ makes it a stopped task.
+- **A wait on something outside the app** (XMP writes waiting for a folder that is offline) is one row, `xmpWaiting`,
+  held for as long as the wait lasts and with `Cancel::No`. The periodic re-checks (every 10 s) neither drop nor remake
+  it, so the row never flaps. Its `total` is how many wait and `done` stays 0, so `activity.list` and `ui.inspect`
+  show 0 of N for a row that isn't stalled: the stack says "Photos waiting: N", draws no bar, and stops redrawing
+  (`panels::activity::only_waits`, also read by `needs_poll`, picks the row by its kind). A later wait row needs
+  the same treatment.
 
 ## Examples in the code
 

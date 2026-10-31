@@ -64,6 +64,12 @@
 
 ## 2026-10-29
 
+### Waiting XMP writes show in the activity stack
+- When automatic XMP sidecar writes can't reach their folder (a network share that dropped out, a read-only or full
+  folder), the activity stack now has a row, "Waiting to write XMP sidecars", with "Photos waiting: N" under it (no
+  progress bar, as nothing counts up). The row
+  stays until they are written, and then goes. The one-time message and the retry every 10 seconds are unchanged.
+
 ### Loading thumbnails look different from unreadable ones
 - A grid cell or filmstrip tile whose thumbnail hasn't arrived yet now shows three small dots on its gray placeholder.
   One whose file can't be read still shows "!". The dots stand still (so a Reduce motion setting has nothing

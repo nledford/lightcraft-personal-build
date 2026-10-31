@@ -143,6 +143,8 @@ impl LightcraftApp {
             system_increase_contrast_read: None,
             system_reduce_transparency: None,
             system_reduce_transparency_read: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            sidecars_row: None,
             library_problem: None,
             library_window_input: Default::default(),
             alt_asks_for_library: false,
