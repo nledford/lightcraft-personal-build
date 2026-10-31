@@ -3,7 +3,9 @@
 //! names the task beside it when there is room. A click opens the list: a row each with its name, a progress bar,
 //! what it is working on, and ✕ for the ones that can be cancelled. Nothing floats over the panels, so the list
 //! covers them only while it is open. The tasks come from the engine's registry
-//! ([`lightcraft_engine::activity`]); ✕ runs `activity.cancel` like any other frontend would.
+//! ([`lightcraft_engine::activity`]); ✕ runs `activity.cancel` like any other frontend would. A task that waits on something that does not answer (an import's
+//! file on a drive that stopped responding) says what and for how long, in the caution colour, and offers Skip
+//! (`activity.skip`) next to ✕.
 
 use std::f32::consts::{FRAC_PI_2, TAU};
 
@@ -54,10 +56,14 @@ fn percent(t: &TaskInfo) -> u64 {
     t.done.min(t.total).saturating_mul(100).checked_div(t.total).unwrap_or(0)
 }
 
-/// The row's second line: "Stopping…" once cancelled, else the count and what is being worked on.
-fn detail_line(t: &TaskInfo) -> String {
+/// The row's second line: "Stopping…" once cancelled, else what the task waits on without an answer ("Waiting for
+/// IMG_0457.jpg · 14 s"), else the count and what is being worked on.
+pub(crate) fn detail_line(t: &TaskInfo) -> String {
     if t.cancelling {
         return tr("Stopping…").to_string();
+    }
+    if let Some(stalled) = &t.stalled {
+        return tr_format!("Waiting for {name} · {secs} s", name = stalled.what, secs = stalled.secs);
     }
     let count = count_text(t);
     match (count.is_empty(), t.detail.is_empty()) {
@@ -212,6 +218,7 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
     };
     let resp = if was_open { resp } else { resp.on_hover_text(label.as_str()) };
     let mut cancel = None;
+    let mut skip = None;
     let mut notice = None;
     egui::Popup::from_response(&resp)
         .id(popup_id())
@@ -219,8 +226,11 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
         .align(egui::RectAlign::BOTTOM_END)
         .gap(6.0)
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| (cancel, notice) = list(ui, t, &all, ready.as_ref()));
+        .show(|ui| (cancel, skip, notice) = list(ui, t, &all, ready.as_ref()));
     app.activity_open = is_open(&ctx);
+    if let Some(id) = skip {
+        self::skip(app, id);
+    }
     if let Some(id) = cancel {
         self::cancel(app, id);
     }
@@ -295,11 +305,12 @@ fn contrast(a: egui::Color32, b: egui::Color32) -> f32 {
 }
 
 /// The list under the bell: its name, then a row a task (or that nothing runs). The id of the task whose ✕ was
-/// clicked, and what was done with the notice of a scan that finished in the background, if one waits.
-fn list(ui: &mut egui::Ui, t: &Tokens, tasks: &[TaskInfo], ready: Option<&crate::sync::SyncReady>) -> (Option<u64>, Option<Notice>) {
+/// clicked, the id of the one whose Skip was, and what was done with the notice of a scan that finished in the background, if one waits.
+fn list(ui: &mut egui::Ui, t: &Tokens, tasks: &[TaskInfo], ready: Option<&crate::sync::SyncReady>) -> (Option<u64>, Option<u64>, Option<Notice>) {
     let screen = ui.ctx().content_rect();
     let width = WIDTH.min(screen.width() - 40.0).max(160.0);
     let mut cancel = None;
+    let mut skip = None;
     let mut notice = None;
     // A popup lays out in the size it had last frame, and the scroll area would take that as all the room there is:
     // the list would never grow when rows are added. Give it the whole height below the top bar instead (the scroll
@@ -338,15 +349,19 @@ fn list(ui: &mut egui::Ui, t: &Tokens, tasks: &[TaskInfo], ready: Option<&crate:
                     if i > 0 {
                         ui.add_space(8.0);
                     }
-                    if row(ui, t, task, width) {
+                    let (clicked_cancel, clicked_skip) = row(ui, t, task, width);
+                    if clicked_cancel {
                         cancel = Some(task.id);
+                    }
+                    if clicked_skip {
+                        skip = Some(task.id);
                     }
                 }
             });
         })
         .response;
     register(ui, "activity:list", r.rect);
-    (cancel, notice)
+    (cancel, skip, notice)
 }
 
 /// ✕ on task `id`'s row. The task may have just finished or stopped being cancellable: nothing to tell the user then,
@@ -415,8 +430,8 @@ fn scan_notice(ui: &mut egui::Ui, t: &Tokens, ready: &crate::sync::SyncReady, wi
     reviewed.then_some(Notice::Review)
 }
 
-/// Carry what a job's reads are doing onto its task each frame: the file that has stopped answering is published
-/// (`TaskInfo::stalled`, in `activity.list`), and a Skip asked for (`activity.skip`) reaches the reads.
+/// Carry what a job's reads are doing onto its row, each frame: the file that has stopped answering is named there
+/// (and the row offers Skip), and a Skip asked for on the row (`activity.skip`) reaches the reads.
 pub(crate) fn follow_reads(guard: &lightcraft_engine::activity::TaskGuard, reads: &lightcraft_engine::import::ReadWatch) {
     if guard.take_skip() {
         reads.skip();
@@ -427,40 +442,73 @@ pub(crate) fn follow_reads(guard: &lightcraft_engine::activity::TaskGuard, reads
     }
 }
 
-/// One task: name and ✕, the bar, the detail line. True when ✕ was clicked.
-fn row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> bool {
-    let mut clicked = false;
+/// Skip on task `id`'s row: give up the file it waits for. The task may have just got its answer: nothing to tell the
+/// user then, so the command goes to the engine directly, as ✕ does.
+pub(crate) fn skip(app: &mut LightcraftApp, id: u64) {
+    let _ = app.session.execute("activity.skip", &json!({"id": id}));
+}
+
+/// Whether the row shows the file the task waits for with Skip: not once ✕ was clicked ("Stopping…" comes first).
+pub(crate) fn offers_skip(task: &TaskInfo) -> bool {
+    task.stalled.is_some() && !task.cancelling
+}
+
+/// One task: name, Skip and ✕, the bar, the detail line. True for each of ✕ and Skip that was clicked.
+fn row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> (bool, bool) {
+    let (mut cancel, mut skip) = (false, false);
     let r = ui.vertical(|ui| {
         ui.set_width(width);
         ui.horizontal(|ui| {
             let cross = task.cancellable && !task.cancelling;
-            let label_w = if cross { width - CROSS - 6.0 } else { width };
+            let can_skip = offers_skip(task);
+            let skip_text = tr("Skip");
+            let skip_w = if can_skip { ui.painter().layout_no_wrap(skip_text.to_string(), t.font(11.5), t.accent).size().x } else { 0.0 };
+            let mut label_w = width;
+            if cross {
+                label_w -= CROSS + 6.0;
+            }
+            if can_skip {
+                label_w -= skip_w + 8.0;
+            }
             ui.allocate_ui_with_layout(vec2(label_w, 18.0), Layout::left_to_right(Align::Center), |ui| {
                 // the whole width, so the cross lands at the right edge however short the name
                 ui.set_width(label_w);
                 ui.add(egui::Label::new(RichText::new(tr(&task.label)).font(t.body()).color(t.text)).truncate());
             });
+            if can_skip {
+                // ids tied to the task, not to the layout's running counter: Skip comes and goes before ✕ in this row, and a
+                // counted id would hand ✕'s keyboard focus to Skip when a stall starts
+                let (rect, _) = ui.allocate_exact_size(vec2(skip_w, 18.0), Sense::hover());
+                let resp = ui.interact(rect, egui::Id::unique(("activity-skip", task.id)), Sense::click());
+                crate::widgets::announce(&resp, tr("Skip"));
+                let colour = if resp.hovered() { t.text } else { t.accent };
+                ui.painter().text(rect.left_center(), egui::Align2::LEFT_CENTER, tr("Skip"), t.font(11.5), colour);
+                register(ui, format!("activity:skip:{}", task.id), rect);
+                skip = resp.on_hover_text(tr("Give up on this file and go on")).clicked();
+            }
             if cross {
-                let (rect, resp) = ui.allocate_exact_size(vec2(CROSS, CROSS), Sense::click());
+                let (rect, _) = ui.allocate_exact_size(vec2(CROSS, CROSS), Sense::hover());
+                let resp = ui.interact(rect, egui::Id::unique(("activity-cancel", task.id)), Sense::click());
                 crate::widgets::announce(&resp, format!("{}: {}", tr("Cancel"), tr(&task.label)));
                 paint(ui.painter(), rect.shrink(2.0), Icon::Close, if resp.hovered() || resp.has_focus() { t.text } else { t.icon });
                 // (a row scrolled out of view has nothing to click: its ✕ is the list's to bring back first)
                 if ui.is_rect_visible(rect) {
                     register(ui, format!("activity:cancel:{}", task.id), rect);
                 }
-                clicked = resp.on_hover_text(tr("Cancel")).clicked();
+                cancel = resp.on_hover_text(tr("Cancel")).clicked();
             }
         });
         bar(ui, task, width);
         let line = detail_line(task);
         if !line.is_empty() {
-            ui.add(egui::Label::new(RichText::new(line).font(t.font(11.0)).color(t.text_dim)).truncate());
+            let colour = if offers_skip(task) { t.caution } else { t.text_dim };
+            ui.add(egui::Label::new(RichText::new(line).font(t.font(11.0)).color(colour)).truncate());
         }
     });
     if ui.is_rect_visible(r.response.rect) {
         register(ui, format!("activity:row:{}", task.id), r.response.rect);
     }
-    clicked
+    (cancel, skip)
 }
 
 /// The progress bar, named after its task for screen readers; while the amount of work isn't

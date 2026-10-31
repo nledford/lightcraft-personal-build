@@ -462,6 +462,10 @@
   one says) are not looked through. The heading of the section opened is marked for a moment. Scripts:
   `settingsLanded:<section>` while it is.
 
+### Skip a file that stops answering during an import or scan
+- When a file on a network drive stops answering while an import, the Add Photos review, a Local folder or Synchronize Folder reads it, the task's row in the activity stack says "Waiting for IMG_0457.jpg" with the seconds it has gone without progress, and offers Skip next to ✕. A big file that is slow but still being read is not reported.
+- Skip gives up that one file: an import lists it as not readable ("skipped: no answer after 14 s"), the review and Synchronize Folder list it as unreadable, and the work goes on with the next files. When several files wait, Skip takes the one that is named, then the next is named.
+
 ### Relative-date filters and smart albums follow the clock
 - A current view or source count using “in the last” rules now refreshes when the session clock moves into a new
   minute, even when no catalog edit occurred. This fixes stale photos remaining in the grid and stale counts for
