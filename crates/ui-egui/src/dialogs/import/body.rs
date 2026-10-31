@@ -2,6 +2,7 @@ use serde_json::json;
 
 use super::tags::{tag_field_width, tag_help, tag_toggle, unknown_tags_warning};
 use super::{Color32, ImportDialog, LightcraftApp, Rect, Sense, Slot, Stroke, StrokeKind, Tokens, Vec2, pos2, register, vec2};
+use crate::check::check;
 
 /// The review dialog's first size (points). It can be resized; the photo grid takes the height.
 pub(crate) const DIALOG_SIZE: [f32; 2] = [960.0, 720.0];
@@ -282,8 +283,7 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
         }
         if !d.move_files {
             field(ui, "Raw files", |ui| {
-                let r = ui.checkbox(&mut d.dng, crate::i18n::tr("Copy as DNG"));
-                register(ui, "check:importDng", r.rect);
+                check(ui, "importDng", &mut d.dng, "Copy as DNG");
             });
         }
         let rename_id = egui::Id::unique("import-rename");
