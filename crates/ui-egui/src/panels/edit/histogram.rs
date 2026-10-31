@@ -1,10 +1,9 @@
-#[cfg(test)]
-use super::sliders::reset_tip;
 use super::{
     Align2, Color32, Histogram, Icon, LightcraftApp, Mesh, PhotoId, Pos2, Rect, RichText, RightPanel, Sense, Slot, Stroke, Tokens, Vertex, divider,
     hex, json, paint, pos2, register, vec2,
 };
 use crate::check::check;
+use crate::menu_item::MenuItem;
 
 // ------------------------------------------------------------------------------ histogram
 
@@ -269,14 +268,14 @@ pub(super) fn soft_proofing(app: &mut LightcraftApp, ui: &mut egui::Ui, id: Phot
             let mut pick = false;
             let combo = crate::widgets::combo_box("proof-space").width(170.0).selected_text(shown).show_ui(ui, |ui| {
                 for s in OutputSpace::ALL {
-                    if ui.selectable_label(device.is_none() && cur == s, s.label()).clicked() {
+                    if MenuItem::new(s.label()).selected(device.is_none() && cur == s).show(ui).clicked() {
                         let _ = app.run("view.softProof", json!({"space": s}));
                     }
                 }
                 if let Some(n) = &device {
-                    let _ = ui.selectable_label(true, n);
+                    let _ = MenuItem::new(n).selected(true).inert().show(ui);
                 }
-                if app.services.pick_display_profile.is_some() && ui.selectable_label(false, crate::i18n::tr("Other…")).clicked() {
+                if app.services.pick_display_profile.is_some() && MenuItem::picker(crate::i18n::tr("Other…")).show(ui).clicked() {
                     pick = true;
                 }
             });
@@ -391,6 +390,9 @@ mod tests {
     #[test]
     fn reset_tooltip_names_the_shortcut_of_this_platform() {
         let keymap = crate::shortcuts::Keymap::new();
+        let reset_tip = |keymap: &crate::shortcuts::Keymap, mac: bool| {
+            crate::kbd::tip_with_shortcut(crate::i18n::tr("Reset all edits"), "develop.reset", keymap, mac)
+        };
         assert_eq!(reset_tip(&keymap, false), "Reset all edits (Ctrl+Shift+R)");
         assert_eq!(reset_tip(&keymap, true), "Reset all edits (⇧⌘R)");
         let rebound: crate::shortcuts::Keymap = [("develop.reset".to_string(), "Cmd+Alt+R".to_string())].into();

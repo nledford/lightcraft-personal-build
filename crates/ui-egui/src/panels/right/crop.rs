@@ -1,5 +1,6 @@
 use super::{Button, LightcraftApp, PhotoId, Tokens, divider, header, json, padded, register, slider, text_button};
 use crate::check::check;
+use crate::menu_item::MenuItem;
 
 /// The aspect presets of the Crop panel: (menu label, `crop.aspect` value).
 const ASPECT_PRESETS: [(&str, &str); 10] = [
@@ -85,7 +86,7 @@ pub(super) fn crop(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
 
             egui::Popup::menu(&r).show(|ui| {
                 for (label, a) in ASPECT_PRESETS {
-                    if ui.button(crate::i18n::tr(label)).clicked() {
+                    if MenuItem::new(crate::i18n::tr(label)).show(ui).clicked() {
                         let _ = app.run("crop.aspect", json!({"aspect": a}));
                     }
                 }
@@ -412,8 +413,7 @@ pub(crate) fn tool_overlay_options(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             .on_hover_text(crate::i18n::tr("When pins show on the photo (Shift+H cycles)"));
         egui::Popup::menu(&r).show(|ui| {
             for m in ToolOverlay::ALL {
-                let item = ui.selectable_label(m == current, crate::i18n::tr(m.label()));
-                register(ui, format!("toolOverlay:{}", m.name()), item.rect);
+                let item = MenuItem::new(crate::i18n::tr(m.label())).selected(m == current).widget(format!("toolOverlay:{}", m.name())).show(ui);
                 if item.clicked() {
                     let _ = app.run("view.toolOverlay", json!({"mode": m.name()}));
                 }
