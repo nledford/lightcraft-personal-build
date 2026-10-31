@@ -30,6 +30,15 @@ fn find_item<'a>(nodes: &'a [MenuNode], id: &str) -> Option<&'a MenuNode> {
     })
 }
 
+/// The first submenu called `label` in `nodes`, however deep.
+fn find_submenu<'a>(nodes: &'a [MenuNode], label: &str) -> Option<&'a MenuNode> {
+    nodes.iter().find_map(|n| match n {
+        MenuNode::Submenu { label: l, .. } if l == label => Some(n),
+        MenuNode::Submenu { children, .. } => find_submenu(children, label),
+        _ => None,
+    })
+}
+
 /// Any registered command as a row, with or without a place in the menu bar.
 fn registered(app: &LightcraftApp, infos: &[CommandInfo], id: &str) -> Option<MenuNode> {
     let keymap = &app.ui.settings.keymap;
@@ -86,6 +95,8 @@ fn recheck(app: &LightcraftApp, photo: PhotoId, mut sub: MenuNode) -> MenuNode {
                     Some(c) => format!("{c:?}").to_lowercase() == l,
                     None => l == "none",
                 }),
+                // (Set Color Label ▸ None is a command of its own)
+                "photo.clearLabel" => Some(p.label.is_none()),
                 _ => None,
             };
             if on.is_some() {
@@ -162,7 +173,11 @@ fn nodes_with(app: &LightcraftApp, photo: PhotoId, infos: &[CommandInfo], preset
     // a hint row for Add to My Photos)
     let top = |id: &str| bar.iter().find_map(|(_, n)| n.iter().find(|x| matches!(x, MenuNode::Item { id: i, .. } if i == id))).cloned();
     let row = |id: &str| top(id).or_else(|| bar.iter().find_map(|(_, n)| find_item(n, id)).cloned()).or_else(|| registered(app, infos, id));
-    let sub = |title: &str, label: &str| menu(title).iter().find(|n| matches!(n, MenuNode::Submenu { label: l, .. } if l == label)).cloned();
+    // (a submenu of the menu itself, else one inside another: Photo ▸ Metadata ▸ Metadata Preset)
+    let sub = |title: &str, label: &str| {
+        let nodes = menu(title);
+        nodes.iter().find(|n| matches!(n, MenuNode::Submenu { label: l, .. } if l == label)).or_else(|| find_submenu(nodes, label)).cloned()
+    };
     let submenu =
         |label: &str, children: Vec<Option<MenuNode>>| MenuNode::Submenu { label: label.into(), children: children.into_iter().flatten().collect() };
     let selected = app.session.selected();
