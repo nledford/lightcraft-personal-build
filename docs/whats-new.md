@@ -329,6 +329,16 @@
 - A disk's row now offers Show in Finder and New Folder on Disk…, and a folder in Local offers New Folder on Disk…,
   whose new folder is listed in Local.
 
+### Undo puts the filter back with the keyword, person or folder
+- Deleting or renaming a keyword, renaming a person and removing a library folder change the filter that names them, and
+  undo brought the keyword, name or folder back but left the filter as it was changed, so the grid showed everything or
+  nothing. Now undo gives the filter its old keyword, name or folder, also in the filter View ▸ Enable Filters put aside,
+  and redo changes it again. Only what the step changed moves, and only while you have not changed that part of the
+  filter since; a filter you built after emptying or replacing the old one is left alone. Redo leaves alone a keyword,
+  name or folder you had picked yourself when you undid the step, as undo did, for as long as you keep it. When View ▸
+  Enable Filters had the filter put aside, a folder that undo restores while another folder is shown stays in it and
+  comes back with Enable Filters once that other folder is no longer shown.
+
 ## 2026-10-24
 
 ### A library keeps a copy of itself before it is upgraded

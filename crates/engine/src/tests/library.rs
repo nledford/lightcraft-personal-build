@@ -240,8 +240,8 @@ fn profile_favorites_and_recent_survive_reopen() {
 }
 
 #[test]
-fn opening_a_library_on_picks_takes_out_the_flag_filter_carried_over() {
-    // the filter stays when another library opens, and this library was left on Picks, which owns the flag
+fn opening_a_library_on_picks_leaves_no_flag_filter_carried_over() {
+    // a filter set before another library opens, which was left on Picks (the source that owns the flag)
     let dir = temp_dir("picksflag");
     drop(open(&dir, true));
     std::fs::write(dir.join("view.json"), br#"{"source": {"kind": "picks"}}"#).unwrap();
@@ -249,7 +249,8 @@ fn opening_a_library_on_picks_takes_out_the_flag_filter_carried_over() {
     s.set_filter(lightcraft_catalog::Filter { flag: Some(lightcraft_catalog::Flag::Reject), rating: 2, ..Default::default() });
     s.open_library(&dir, false).unwrap();
     assert_eq!(s.source, crate::LibrarySource::Picks);
-    assert_eq!((s.filter().flag, s.filter().rating), (None, 2), "no flag chip over the picks; the rest of the filter stays");
+    // (this build starts a library unfiltered, as after a restart: ids in the filter mean others in another library)
+    assert_eq!(*s.filter(), lightcraft_catalog::Filter::default(), "no flag chip over the picks, and nothing carried over");
     let _ = std::fs::remove_dir_all(&dir);
 }
 

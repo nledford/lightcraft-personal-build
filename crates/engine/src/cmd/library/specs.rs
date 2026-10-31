@@ -196,7 +196,7 @@ pub fn specs() -> Vec<CommandSpec> {
                 if p.get("album").is_some_and(|a| !a.is_null()) && f.album.is_some_and(|a| s.catalog.album(a).is_none()) {
                     return Err(bad("library.filter", "no such album"));
                 }
-                s.set_filter(f);
+                s.filters.set(s.source, f);
                 Ok(json!({"count": s.visible().len()}))
             }
         ),
