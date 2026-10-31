@@ -112,6 +112,13 @@
 
 ## 2026-10-28
 
+### Previous Shuffle brings back the order a Reshuffle replaced
+- Both Sort menus (the bottom bar's popup and View ▸ Sort) have a new Previous Shuffle row under Reshuffle. It goes back to
+  the exact random order the last Reshuffle replaced, and again for the one before, up to 32 steps in this session. It is
+  on only while you sort at random and a Reshuffle has replaced something; the steps are forgotten when you leave Random
+  or open another library, and are never saved with it. Reshuffle is now ⌘⌥⇧R (Ctrl+Alt+Shift+R) and Previous Shuffle ⌘⌥⇧P
+  (Ctrl+Alt+Shift+P); both rows show their keys.
+
 ### A shuffled grid says so, and Reshuffle is one click away
 - When the photos are sorted at random, the grid's header now shows "Shuffled" beside the photo count with a Reshuffle
   button (bordered, so it reads as an action beside the state): one click gives a new order, with the Sort menu's
