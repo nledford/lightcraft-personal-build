@@ -2778,8 +2778,12 @@
   "Keyboard in Sidebar": "Bàn phím trong thanh bên",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Phím đang điều khiển thanh bên: phím mũi tên di chuyển, Enter mở, gõ để tìm, Esc quay lại ảnh",
   "This row has no name to change": "Hàng này không có tên để đổi",
+  "Finished": "Đã xong",
+  "Needs attention": "Cần chú ý",
+  "Running": "Đang chạy",
   "Imports, exports and other long jobs show here while they run.": "Nhập, xuất và các tác vụ dài khác hiển thị tại đây khi đang chạy.",
   "No tasks are running": "Không có tác vụ nào đang chạy",
   "Tasks": "Tác vụ",
+  "Copy all": "Sao chép tất cả",
   "cancelled": "đã hủy"
 }

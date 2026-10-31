@@ -2451,8 +2451,12 @@
   "Keyboard in Sidebar": "Näppäimistö sivupalkissa",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Näppäimet toimivat sivupalkissa: nuolet liikuttavat, Enter avaa, kirjoita etsiäksesi, Esc palaa kuviin",
   "This row has no name to change": "Tällä rivillä ei ole nimeä, jota voisi muuttaa",
+  "Finished": "Valmistuneet",
+  "Needs attention": "Vaatii huomiota",
+  "Running": "Käynnissä",
   "Imports, exports and other long jobs show here while they run.": "Tuonnit, viennit ja muut pitkät työt näkyvät tässä, kun ne ovat käynnissä.",
   "No tasks are running": "Ei käynnissä olevia tehtäviä",
   "Tasks": "Tehtävät",
+  "Copy all": "Kopioi kaikki",
   "cancelled": "peruttu"
 }

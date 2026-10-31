@@ -2554,8 +2554,12 @@
   "Keyboard in Sidebar": "Tangentbord i sidofältet",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Tangenterna styr sidofältet: piltangenterna flyttar, Enter öppnar, skriv för att söka, Esc går tillbaka till fotona",
   "This row has no name to change": "Raden har inget namn att ändra",
+  "Finished": "Klara",
+  "Needs attention": "Kräver uppmärksamhet",
+  "Running": "Pågår",
   "Imports, exports and other long jobs show here while they run.": "Importer, exporter och andra långa jobb visas här medan de pågår.",
   "No tasks are running": "Inga uppgifter körs",
   "Tasks": "Uppgifter",
+  "Copy all": "Kopiera alla",
   "cancelled": "avbruten"
 }
