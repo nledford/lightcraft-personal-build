@@ -329,39 +329,7 @@ impl ImportJob {
         // ✕ stops the planning. An import that cannot go on does not: the reads that already returned are planned (the
         // failures of the files skipped, and the files added in place), and the files it never reached are passed over.
         let halted = || cancel.load(Relaxed);
-        let mut todo = Vec::new();
-        // browsed files replaced since: probed again with `todo`, their records brought up to date as they join the library
-        let mut changed: HashMap<String, PhotoId> = HashMap::new();
-        for f in files {
-            match self.by_path.get(f.as_str()).cloned() {
-                Some((id, true, hash)) if !opts.local => {
-                    if super::scan::local_file_changed(&f, self.local_sizes.get(f.as_str()).copied().unwrap_or(0)) {
-                        changed.insert(f.clone(), id);
-                        todo.push(f);
-                        continue;
-                    }
-                    // a library photo with the same content comes first, and a file promoted earlier
-                    // (here or in a previous batch) counts as the library's from then on
-                    if let Some(h) = &hash {
-                        if let Some(existing) = self.by_hash.get(h) {
-                            out.items.push(PreparedItem::Duplicate { path: f, existing: *existing, reason: "content", hash, file: None });
-                            self.done.fetch_add(1, Relaxed);
-                            continue;
-                        }
-                        self.by_hash.insert(h.clone(), Some(id));
-                    }
-                    // a file that was only browsed (Local) joins the library when it is imported for real
-                    self.by_path.insert(f, (id, false, hash));
-                    out.items.push(PreparedItem::Promote(id, None));
-                    self.done.fetch_add(1, Relaxed);
-                }
-                Some((id, _, _)) => {
-                    out.items.push(PreparedItem::Duplicate { path: f, existing: Some(id), reason: "path", hash: None, file: None });
-                    self.done.fetch_add(1, Relaxed);
-                }
-                None => todo.push(f),
-            }
-        }
+        let (todo, mut changed) = self.sort_known_files(files, &mut out);
 
         // files a preceding scan already probed are not read again (a network share is slow to read),
         // as long as they are still there, as they were: a file gone or changed since is probed again.
@@ -588,6 +556,47 @@ impl ImportJob {
             }
             out.items.push(item);
         }
+    }
+
+    /// The files [`ImportJob::expand`] returned that the library knows (promoted, or counted as
+    /// duplicates), and the rest to read. Browsed files replaced since go back with the rest
+    /// (`changed`), their records brought up to date as they join the library.
+    fn sort_known_files(&mut self, files: Vec<String>, out: &mut Prepared) -> (Vec<String>, HashMap<String, PhotoId>) {
+        use std::sync::atomic::Ordering::Relaxed;
+        let opts = self.opts.clone();
+        let mut todo = Vec::new();
+        let mut changed: HashMap<String, PhotoId> = HashMap::new();
+        for f in files {
+            match self.by_path.get(f.as_str()).cloned() {
+                Some((id, true, hash)) if !opts.local => {
+                    if super::scan::local_file_changed(&f, self.local_sizes.get(f.as_str()).copied().unwrap_or(0)) {
+                        changed.insert(f.clone(), id);
+                        todo.push(f);
+                        continue;
+                    }
+                    // a library photo with the same content comes first, and a file promoted earlier
+                    // (here or in a previous batch) counts as the library's from then on
+                    if let Some(h) = &hash {
+                        if let Some(existing) = self.by_hash.get(h) {
+                            out.items.push(PreparedItem::Duplicate { path: f, existing: *existing, reason: "content", hash, file: None });
+                            self.done.fetch_add(1, Relaxed);
+                            continue;
+                        }
+                        self.by_hash.insert(h.clone(), Some(id));
+                    }
+                    // a file that was only browsed (Local) joins the library when it is imported for real
+                    self.by_path.insert(f, (id, false, hash));
+                    out.items.push(PreparedItem::Promote(id, None));
+                    self.done.fetch_add(1, Relaxed);
+                }
+                Some((id, _, _)) => {
+                    out.items.push(PreparedItem::Duplicate { path: f, existing: Some(id), reason: "path", hash: None, file: None });
+                    self.done.fetch_add(1, Relaxed);
+                }
+                None => todo.push(f),
+            }
+        }
+        (todo, changed)
     }
 }
 

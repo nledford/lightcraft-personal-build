@@ -465,7 +465,7 @@ impl SyncCounts {
     /// so with some there is something to choose. A scan that stopped ([`SyncCounts::stopped`]) only offers Import new
     /// photos, so with no new photo it has nothing else to choose.
     pub fn nothing_to_choose(&self) -> bool {
-        !self.offline && self.new == 0 && self.copies == 0 && (self.stopped || self.moved + self.missing + self.metadata == 0)
+        !self.offline && self.new == 0 && self.copies == 0 && (self.stopped || (self.moved, self.missing, self.metadata) == (0, 0, 0))
     }
 
     /// The scan ran to its end and every photo of the folder was checked: a photo whose check was skipped, or a scan
@@ -485,7 +485,7 @@ impl SyncCounts {
     /// stopped has switched the other choices off.
     pub fn nothing_to_do(&self, import_new: bool, import_duplicates: bool) -> bool {
         let has_incoming = import_new && (self.new != 0 || (import_duplicates && self.copies != 0));
-        let others = !self.stopped && self.moved + self.missing + self.metadata != 0;
+        let others = !self.stopped && (self.moved, self.missing, self.metadata) != (0, 0, 0);
         !self.offline && !has_incoming && !others
     }
 }

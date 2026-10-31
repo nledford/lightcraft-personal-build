@@ -208,6 +208,52 @@ fn trashed_file_is_gone(cat: &lightcraft_catalog::Catalog, id: PhotoId) -> bool 
         }
 }
 
+/// Which of this batch's contents a photo of the library already has, when files whose content a photo already
+/// has are imported ([`ImportOptions::import_duplicates`]): such a file's photo gets a key of its own. Only the
+/// batch's contents are kept (no table of the whole library: the commit runs on the session's thread, batch after
+/// batch), and a trashed photo a Fresh import replaces holds nothing.
+fn held_contents(s: &Session, opts: &ImportOptions, prepared: &Prepared) -> std::collections::HashSet<String> {
+    if !opts.import_duplicates {
+        return Default::default();
+    }
+    let batch: std::collections::HashSet<&str> = prepared
+        .items
+        .iter()
+        .filter_map(|it| match it {
+            PreparedItem::Ready(r) => r.info.content_hash.as_deref(),
+            _ => None,
+        })
+        .collect();
+    let fresh = opts.on_deleted == OnDeleted::Fresh;
+    let mut held = std::collections::HashSet::new();
+    if !batch.is_empty() {
+        for p in s.catalog.photos().filter(|p| !(fresh && p.deleted)) {
+            if let Some(h) = p.content_hash.as_deref().map(crate::sync::base_hash)
+                && batch.contains(h)
+            {
+                held.insert(h.to_string());
+            }
+        }
+    }
+    held
+}
+
+/// Fresh: trashed photos a new import replaces, by content and by file (each removed once).
+fn trashed_lookups(s: &Session, opts: &ImportOptions) -> (HashMap<String, (bool, PhotoId)>, HashMap<String, PhotoId>) {
+    let (mut trash_content, mut trash_path) = (HashMap::new(), HashMap::new());
+    if opts.on_deleted == OnDeleted::Fresh {
+        for p in s.catalog.photos().filter(|p| p.deleted) {
+            if let Some(h) = &p.content_hash {
+                note_content(&mut trash_content, h, p.id);
+            }
+            if let Source::File { path } = &p.source {
+                trash_path.insert(path.clone(), p.id);
+            }
+        }
+    }
+    (trash_content, trash_path)
+}
+
 /// The catalog half of an import: add the photos [`ImportJob::prepare`] readied (one undoable op;
 /// a Move's sources are removed once it is saved). On a failed commit a Move's placed files are
 /// taken back.
@@ -226,43 +272,8 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
     // a key of its own. Only the batch's contents are kept (no table of the whole library: this runs
     // on the session's thread, batch after batch), and a trashed photo a Fresh import replaces holds
     // nothing.
-    let held: std::collections::HashSet<String> = if opts.import_duplicates {
-        let batch: std::collections::HashSet<&str> = prepared
-            .items
-            .iter()
-            .filter_map(|it| match it {
-                PreparedItem::Ready(r) => r.info.content_hash.as_deref(),
-                _ => None,
-            })
-            .collect();
-        let fresh = opts.on_deleted == OnDeleted::Fresh;
-        let mut held = std::collections::HashSet::new();
-        if !batch.is_empty() {
-            for p in s.catalog.photos().filter(|p| !(fresh && p.deleted)) {
-                if let Some(h) = p.content_hash.as_deref().map(crate::sync::base_hash)
-                    && batch.contains(h)
-                {
-                    held.insert(h.to_string());
-                }
-            }
-        }
-        held
-    } else {
-        Default::default()
-    };
-    // Fresh: trashed photos a new import replaces (by content or by file), each removed once
-    let mut trash_content: HashMap<String, (bool, PhotoId)> = HashMap::new();
-    let mut trash_path: HashMap<String, PhotoId> = HashMap::new();
-    if opts.on_deleted == OnDeleted::Fresh {
-        for p in s.catalog.photos().filter(|p| p.deleted) {
-            if let Some(h) = &p.content_hash {
-                note_content(&mut trash_content, h, p.id);
-            }
-            if let Source::File { path } = &p.source {
-                trash_path.insert(path.clone(), p.id);
-            }
-        }
-    }
+    let held = held_contents(s, opts, &prepared);
+    let (trash_content, trash_path) = trashed_lookups(s, opts);
     let mut purge: Vec<PhotoId> = Vec::new();
     let mut purged: std::collections::HashSet<PhotoId> = Default::default();
     for it in prepared.items {
