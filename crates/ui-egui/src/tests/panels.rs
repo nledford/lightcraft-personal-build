@@ -2441,8 +2441,14 @@ fn removing_a_disk_from_the_library_asks_first() {
 /// A library with a photo in every folder down `deep` and two folders below it, in a window
 /// `size` big, with every level but the last opened. (Every level holds a photo, so it has a row
 /// of its own and starts closed, whether or not the sidebar passes over folders that only lead on.)
-fn narrow_chain_of_folders_app(deep: &str, size: [f32; 2]) -> Headless {
+fn deep_folders_app(deep: &str, size: [f32; 2]) -> Headless {
+    deep_folders_app_with(deep, size, 0)
+}
+
+/// [`deep_folders_app`] with `siblings` more folders (`s00`, `s01`…) beside `x` and `y`, so there are rows below them.
+pub(crate) fn deep_folders_app_with(deep: &str, size: [f32; 2], siblings: usize) -> Headless {
     let mut paths = vec![format!("{deep}/x/1.jpg"), format!("{deep}/y/2.jpg")];
+    paths.extend((0..siblings).map(|i| format!("{deep}/s{i:02}/3.jpg")));
     let mut levels = Vec::new();
     let mut level = String::new();
     for name in deep.split('/').filter(|n| !n.is_empty()) {
@@ -2484,7 +2490,7 @@ fn chevron_xs(h: &Headless, path: &str) -> Vec<f32> {
 fn a_deep_chain_keeps_its_nesting_and_the_sidebar_scrolls_sideways() {
     let deep = "/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z";
     // (tall enough for the whole chain: Recently Deleted is above it now)
-    let mut h = narrow_chain_of_folders_app(deep, [1400.0, 1700.0]);
+    let mut h = deep_folders_app(deep, [1400.0, 1700.0]);
     let xs = chevron_xs(&h, deep);
     let step = crate::panels::left::MIN_INDENT_STEP;
     assert_eq!(crate::panels::left::indent_step(&h.view.ctx), step, "26 levels do not fit the default panel even at the narrowest step");
@@ -2510,7 +2516,7 @@ fn a_deep_chain_keeps_its_nesting_and_the_sidebar_scrolls_sideways() {
 #[test]
 fn a_deep_library_path_narrows_the_indent_instead_of_cutting_the_names() {
     let deep = "/Users/someone/Library/CloudStorage/Nextcloud-cloud.example.com/RAW/Club/2026-09-24 Team/RAW";
-    let mut h = narrow_chain_of_folders_app(deep, [1400.0, 1200.0]);
+    let mut h = deep_folders_app(deep, [1400.0, 1200.0]);
     let full = crate::panels::left::INDENT_STEP;
     let narrow = crate::panels::left::indent_step(&h.view.ctx);
     assert!(narrow < full && narrow >= crate::panels::left::MIN_INDENT_STEP, "the step narrows in the default panel: {narrow}");
@@ -2618,7 +2624,7 @@ fn a_long_name_alone_does_not_make_the_sidebar_scroll() {
 #[test]
 fn the_selection_bar_stays_inside_the_panel() {
     let deep = "/a/b/c/d/e/f/g/h/i/j/k/l/m";
-    let mut h = narrow_chain_of_folders_app(deep, [1400.0, 1000.0]);
+    let mut h = deep_folders_app(deep, [1400.0, 1000.0]);
     click(&mut h, "source:libfolder:/a/b/c/d/e/f/g/h/i/j/k/l");
     let panel = widget(&h, "panel:left_panel");
     let bar = widget(&h, "highlight:libfolder:/a/b/c/d/e/f/g/h/i/j/k/l");
