@@ -3698,5 +3698,15 @@
   "The library's own folder can't be moved": "Le dossier de la bibliothèque elle-même ne peut pas être déplacé",
   "A folder can't move into itself or a folder inside it": "Un dossier ne peut pas être déplacé dans lui-même ni dans un dossier qu'il contient",
   "The folder, its files and XMP sidecars move on disk. Edit → Undo moves it back.": "Le dossier, ses fichiers et fichiers annexes XMP sont déplacés sur le disque. Modifier → Annuler le remet en place.",
-  "Another library was opened since the folder was dropped: nothing was moved": "Une autre bibliothèque a été ouverte depuis le dépôt du dossier : rien n’a été déplacé"
+  "Another library was opened since the folder was dropped: nothing was moved": "Une autre bibliothèque a été ouverte depuis le dépôt du dossier : rien n’a été déplacé",
+  "A folder can't go inside itself": "Un dossier ne peut pas aller dans lui-même",
+  "A keyword can't go inside itself": "Un mot-clé ne peut pas aller dans lui-même",
+  "Copied as text: paste it in a keyword box to give the keywords to photos": "Copié comme texte : collez-le dans un champ de mots-clés pour donner les mots-clés à des photos",
+  "Copied: Paste is in a folder's menu, and in the Albums + menu for the top level": "Copié : Coller se trouve dans le menu d'un dossier et, pour le niveau supérieur, dans le menu + des Albums",
+  "Cut: Paste is in a folder's menu, and in the Albums + menu for the top level": "Coupé : Coller se trouve dans le menu d'un dossier et, pour le niveau supérieur, dans le menu + des Albums",
+  "Cut: Paste is in the menu of the keyword they go inside": "Coupé : Coller se trouve dans le menu du mot-clé dans lequel ils vont",
+  "Duplicate Album": "Dupliquer l'album",
+  "Paste Inside This Keyword": "Coller dans ce mot-clé",
+  "Paste Into This Folder": "Coller dans ce dossier",
+  "Paste at Top Level": "Coller au niveau supérieur"
 }
