@@ -272,7 +272,7 @@ pub(crate) fn fs_cached_running(ctx: &egui::Context) -> usize {
 
 /// The counter behind [`fs_cached_running`]: a worker adds one before it starts and takes it off
 /// after its answer is stored.
-pub(super) fn fs_running_counter(ctx: &egui::Context) -> std::sync::Arc<std::sync::atomic::AtomicUsize> {
+pub(crate) fn fs_running_counter(ctx: &egui::Context) -> std::sync::Arc<std::sync::atomic::AtomicUsize> {
     ctx.data_mut(|d| d.get_temp_mut_or_default::<std::sync::Arc<std::sync::atomic::AtomicUsize>>(egui::Id::unique("fs-cached-running")).clone())
 }
 
@@ -311,7 +311,7 @@ pub(crate) fn fs_cached<T: Clone + Send + 'static>(ui: &egui::Ui, kind: &'static
         let running = fs_running_counter(ui.ctx());
         running.fetch_add(1, Ordering::AcqRel);
         // (settled when the work ends however it ends: a listing that panics must not stay running, nor keep
-        // the count up, which `Headless::busy` waits on)
+        // the count up, which the sweep of Missing Photos waits on)
         struct Settle<T> {
             cell: Cell<T>,
             count: std::sync::Arc<std::sync::atomic::AtomicUsize>,

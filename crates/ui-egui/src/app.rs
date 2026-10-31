@@ -69,8 +69,6 @@ impl LightcraftApp {
             ui_passes: 0,
             #[cfg(test)]
             library_passes: vec![],
-            #[cfg(test)]
-            missing_count_test_delay: None,
             shadow: None,
             drawing_offscreen: false,
             synthetic: vec![],

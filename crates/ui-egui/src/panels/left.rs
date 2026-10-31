@@ -30,7 +30,7 @@ pub(crate) use folders::follow_shown;
 pub(crate) use folders::{FolderPlace, created_text, folder_place, folder_row_of, moved_text};
 use folders::{folder_rows, reveal_chosen};
 use keywords::keyword_rows;
-pub(crate) use local::{fs_cached, fs_cached_running, same_folder};
+pub(crate) use local::{fs_cached, fs_cached_running, fs_running_counter, same_folder};
 use local::{local_now, local_rows};
 pub(crate) use rows::disclosure_name;
 #[cfg(test)]
@@ -106,7 +106,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                     app.act("library.source", json!({"kind": id}));
                 }
             }
-            // photos whose files can't be found (checked every few seconds, not every frame)
+            // photos whose files can't be found (the background checks of each file)
             let missing = missing_count(app, ui);
             if (missing > 0 || src == LibrarySource::Missing) && {
                 let resp =
