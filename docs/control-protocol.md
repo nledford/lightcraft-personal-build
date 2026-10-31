@@ -61,6 +61,9 @@ empty value disables the settings directory, while the emergency panic log retai
 Explicit model-directory environment variables still take precedence over their defaults.
 Also pass `--library DIR` with a separate scratch library: the configuration override does not change
 the default photo-library location. Do not use `--memory` or `LIGHTCRAFT_NO_PREFS` when testing persistence.
+Pass `--no-update-check` as well: the startup check for a newer release (a request to GitHub) is skipped, so a
+throwaway run makes no network request at start, and a newer release can't open the update prompt, which takes the
+keyboard. Help ▸ Check for Updates… (`app.checkForUpdates`) still checks when asked.
 
 A native acceptance run must reject the stderr message `rendering headlessly`: `ui.screenshot`
 automatically uses the CPU fallback after two seconds without a presented frame. That fallback is useful
@@ -126,6 +129,7 @@ filmstrip is visible.
 
 White balance (`develop.set` with `wb.temp` / `wb.tint`, `develop.wb`, `develop.wbPick`) is in Kelvin and tint on
 raws with colour matrices — in the file (DNG) or measured for the camera model (`lightcraft_raw::spectral`; issue
+
 #730) — and on raws whose white-balance presets give the scale (`lightcraft_raw::kelvin_presets`), where As Shot
 reads the file's as-shot white; rendered files and raws without matrices use a relative scale
 whose 6500 K / 0 is the as-shot look (the Edit panel shows it as −100..+100). The stored `wb` of such a Kelvin raw

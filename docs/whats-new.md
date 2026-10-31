@@ -190,6 +190,11 @@
 - Renaming or moving a Local folder you browsed earlier no longer narrows All Photos to it, and no longer replaces the
   filter View ▸ Enable Filters put aside: the browsed folder follows the rename, and the filter is left as it was.
 
+### `--no-update-check` for throwaway copies
+- Starting LightCraft with `--no-update-check` skips the look for a newer release at start, so a throwaway copy (a test
+  or scripted run) makes no request to GitHub and never opens the update prompt. Help ▸ Check for Updates… still
+  checks when you ask; without the option nothing changes.
+
 ## 2026-10-29
 
 ### A dialog no longer dims the macOS title bar
