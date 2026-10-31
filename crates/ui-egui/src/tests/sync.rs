@@ -460,6 +460,7 @@ fn a_synchronize_and_an_import_never_run_at_once() {
         relink_moved: true,
         remove_missing: false,
         read_metadata: false,
+        read: Default::default(),
     };
     let r = crate::panels::dialogs::confirm_dialog(&mut h.app, &d);
     assert!(r.is_err() && h.app.sync_run.is_none(), "no synchronize while importing: {r:?}");
@@ -606,6 +607,7 @@ fn the_dialogs_choices_read_in_the_chosen_language_with_their_counts() {
         remove_missing: false,
         read_metadata: false,
         import_duplicates: false,
+        read: Default::default(),
     };
     let ctx = egui::Context::default();
     crate::theme::install_fonts(&ctx);
