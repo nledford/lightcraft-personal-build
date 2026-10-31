@@ -525,7 +525,7 @@ fn candidate_cell(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDial
         p.galley(br.min + vec2(4.0, 2.0), g, Color32::WHITE);
     }
     let color = if ok { t.text_label } else { t.text_dim };
-    let mut name = egui::text::LayoutJob::simple_singleline(c.name.clone(), t.font(10.5), color);
+    let mut name = egui::text::LayoutJob::simple_singleline(c.name.clone(), t.caption(), color);
     name.wrap.max_width = (rect.width() - 4.0).max(1.0);
     name.wrap.max_rows = 1;
     let name = p.layout_job(name);

@@ -181,7 +181,7 @@ fn card(app: &mut LightcraftApp, ui: &mut egui::Ui, person: &Person, r: Rect, ed
         p.image(tex.tex.id(), face, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
     }
     // how many photos they are in, on the picture
-    let g = p.layout_no_wrap(badge_count(person.count), t.font(11.5), Color32::WHITE);
+    let g = p.layout_no_wrap(badge_count(person.count), t.caption(), Color32::WHITE);
     let pill = Rect::from_min_size(
         pos2((face.right() - g.size().x - 14.0).max(face.left() + 2.0), face.bottom() - g.size().y - 11.0),
         g.size() + vec2(10.0, 6.0),
