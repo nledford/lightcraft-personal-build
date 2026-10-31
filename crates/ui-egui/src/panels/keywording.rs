@@ -156,7 +156,7 @@ fn menu(app: &mut LightcraftApp, ui: &mut egui::Ui, chip: &Chip) {
     }
     if item(ui, "show", crate::i18n::tr("Show Photos with Keyword")) {
         super::left::browse_all_photos(app, true);
-        app.act("library.filter", json!({"keyword": chip.path}));
+        app.act("library.filter", json!({"keyword": chip.path, "keywords": []}));
     }
     ui.separator();
     if item(ui, "edit", crate::i18n::tr("Edit Keyword Tag…")) {

@@ -1,6 +1,6 @@
 use super::folders::{folder_menu, is_within};
 use super::rows::{INDENT_STEP, Inside, Row, indent_x, tree_toggle};
-use super::{Album, AlbumId, Align2, Branch, Icon, LibrarySource, LightcraftApp, Rect, Said, Sense, Tokens, json, pos2, register, vec2};
+use super::{Album, AlbumId, Align2, Branch, Icon, LightcraftApp, Rect, Said, Sense, Tokens, json, pos2, register, vec2};
 
 /// Albums: the tree of albums and the folders they are sorted into. `reveal`: an album just made,
 /// whose folders open down to it.
@@ -44,7 +44,7 @@ fn albums_tree(
             }
             // a folder is a source: the photos of the albums inside it, each once (no count: it
             // would be a pass over the library per folder, for a number the albums already give)
-            let sel = app.session.source == LibrarySource::Album(a.id);
+            let sel = crate::panels::side_select::album_shown(app, a.id);
             let resp = Row::new(&format!("folder:{}", a.id.0), Icon::Folder, &a.name)
                 .selected(sel)
                 .indent(indent)
@@ -92,7 +92,8 @@ fn albums_tree(
                 albums_tree(app, ui, all, Some(a.id), indent + INDENT_STEP, open_to, inside);
             }
         } else {
-            let sel = app.session.source == LibrarySource::Album(a.id);
+            let sel = crate::panels::side_select::album_shown(app, a.id);
+            app.ui.side.albums.saw(a.id.0);
             let icon = if a.is_smart() { Icon::SmartAlbum } else { Icon::Album };
             // cached: a smart album's count scans the catalog (in the background: no number until it is known)
             let now = (app.session.clock)();
@@ -142,7 +143,7 @@ fn albums_tree(
                 resp = resp.on_hover_text(tip);
             }
             if super::side_keys::chosen(ui, &resp) {
-                app.act("library.source", json!({"kind": "album", "id": a.id.0}));
+                crate::panels::side_select::album_clicked(app, ui, a.id);
             }
             folder_menu(app, &resp, a);
         }

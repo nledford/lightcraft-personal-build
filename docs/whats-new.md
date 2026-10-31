@@ -268,6 +268,17 @@
   nothing changes: a click on a row never takes the keys.
 - For agents: `view.sidebarKeys` `{on?}`; the ring is widget `sidebarCursor`.
 
+### Choose several albums, folders, keywords or dates in the sidebars
+- In the left panel, Cmd+click (Ctrl+click on Windows and Linux) adds an album, a folder, a keyword or a date to the
+  ones chosen, or takes it away; Shift+click takes every row between the last one clicked and this one, except rows
+  inside a folder that is closed. The grid shows the photos of any of them, each once, and the title says how many
+  albums or folders are shown. A plain click chooses one row alone, as before.
+- In the Keyword List (right panel, Keywords) the same clicks pick several keywords. Picking does not change the grid.
+- With several albums shown, Remove from Album is not offered and the Delete key is the photos' Delete (it asks first
+  while Settings ▸ Confirm before moving photos to Recently Deleted is on), because there is no telling which album is meant.
+- Menus, dragging and the Keyword List's − button still act on one row; choosing several rows for those comes in a
+  later change. When several albums are shown, Delete stays the photos' Delete, as above.
+
 ## 2026-10-24
 
 ### A library keeps a copy of itself before it is upgraded

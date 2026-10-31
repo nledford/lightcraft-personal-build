@@ -431,11 +431,6 @@ fn only_leads_on(n: &FolderNode) -> bool {
     !n.volume && n.own == 0 && n.children.len() == 1 && n.label.is_none()
 }
 
-/// Whether the grid shows the folder at `path` (the Local / library folder source).
-fn shown_folder(app: &LightcraftApp, path: &str) -> bool {
-    app.session.source == LibrarySource::LibraryFolder && app.session.library_folder.as_deref().is_some_and(|f| same_folder(f, path))
-}
-
 /// Where a folder stands in the Folders tree, for Show Parent Folder.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum FolderPlace {
@@ -474,7 +469,7 @@ pub(crate) fn folder_place<'a>(app: &LightcraftApp, tree: &'a [FolderNode], key:
             // (the tree is at most `folders::MAX_DEPTH` deep)
             if lightcraft_catalog::query::folder_within(key, &n.path) {
                 // a folder on the way that is drawn brings every one below it with it
-                let drawn = leads && (app.ui.folder_parents.contains(&own) || shown_folder(app, &n.path));
+                let drawn = leads && (app.ui.folder_parents.contains(&own) || crate::panels::side_select::folder_shown(app, &n.path));
                 let below = below.or(drawn.then_some(n));
                 if let Some(found) = find(app, &n.children, key, n.volume || leads, below) {
                     return Some(found);
@@ -506,17 +501,20 @@ pub(super) fn folder_rows(
         let key = lightcraft_catalog::query::folder_key(&n.path);
         let on_the_way = leading && only_leads_on(n);
         let asked_for = on_the_way && app.ui.folder_parents.contains(&key);
-        if on_the_way && !asked_for && !shown_folder(app, &n.path) {
+        if on_the_way && !asked_for && !crate::panels::side_select::folder_shown(app, &n.path) {
             folder_rows(app, ui, &n.children, indent, true, Some(n), said);
             continue;
         }
         let branch = folder_branch(n, &key);
         let mut open = app.ui.sidebar_trees.is_open_under(&branch, said);
         // a row whose path would cover other disks' photos too only opens and closes
+        if n.selectable {
+            app.ui.side.folders.saw(n.path.clone());
+        }
         let name = if n.selectable { n.name.clone() } else { crate::i18n::tr("This Computer").to_string() };
         let id = format!("libfolder:{}", n.path);
         // (worked out for a row that is drawn, or listed for the keys: not for every row out of sight)
-        let sel_of = |app: &LightcraftApp| n.selectable && shown_folder(app, &n.path);
+        let sel_of = |app: &LightcraftApp| n.selectable && crate::panels::side_select::folder_shown(app, &n.path);
         if !out_of_sight(app, ui, &id, &name, Some(n.count), indent, n.label.is_some(), || sel_of(app)) {
             let sel = sel_of(app);
             folder_row(app, ui, n, &id, &name, indent, &branch, &mut open, FolderParents { above, asked_for }, said, sel);
@@ -586,8 +584,7 @@ fn folder_row(
     let resp = resp.on_hover_text(tip);
     if super::side_keys::chosen(ui, &resp) && !toggled {
         if n.selectable {
-            // a source like an album or a Local folder: it replaces what the grid showed
-            app.act("library.source", json!({"kind": "libraryFolder", "path": n.path}));
+            crate::panels::side_select::folder_clicked(app, ui, &n.path);
         } else {
             *open = !*open;
             app.ui.sidebar_trees.set(branch, *open);
@@ -622,7 +619,7 @@ fn folder_parent_items(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNod
     }
     if parents.asked_for {
         // what the grid shows keeps its row whatever is asked: say so instead of doing nothing
-        let shown = shown_folder(app, &n.path);
+        let shown = crate::panels::side_select::folder_shown(app, &n.path);
         let why = crate::i18n::tr("This folder stays listed while the grid shows its photos");
         let hide = MenuItem::new(crate::i18n::tr("Hide This Parent")).enabled(!shown).disabled_reason(why).show(ui);
         let hide = hide.on_hover_text(crate::i18n::tr("Hides this row. Nothing on disk or in the library changes"));

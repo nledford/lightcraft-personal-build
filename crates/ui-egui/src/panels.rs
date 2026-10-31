@@ -27,6 +27,7 @@ pub mod profiles;
 pub mod right;
 pub mod second;
 pub(crate) mod side_keys;
+pub mod side_select;
 pub mod slideshow;
 pub mod strip;
 pub mod topbar;
