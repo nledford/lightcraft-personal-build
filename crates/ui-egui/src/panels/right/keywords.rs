@@ -168,7 +168,7 @@ fn keywording(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 .clicked()
                 || returned
             {
-                let _ = app.run("tool.keywordPainter", json!({"keyword": if painting.is_some() { serde_json::Value::Null } else { json!(k) }}));
+                app.act("tool.keywordPainter", json!({"keyword": if painting.is_some() { serde_json::Value::Null } else { json!(k) }}));
             }
         });
         ui.add_space(10.0);
@@ -193,7 +193,7 @@ fn keywording(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                     // the keyword's own path, never looked up in the catalog
                     let r = if grouped { r.on_hover_text(&whole) } else { r };
                     if r.clicked() {
-                        let _ = app.run("photo.setMeta", json!({"addKeywords": [k]}));
+                        app.act("photo.setMeta", json!({"addKeywords": [k]}));
                     }
                 }
             });
@@ -251,7 +251,7 @@ fn keyword_set(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                         .show(ui)
                         .clicked()
                     {
-                        let _ = app.run("keyword.useSet", json!({"name": name}));
+                        app.act("keyword.useSet", json!({"name": name}));
                     }
                 }
                 ui.separator();
@@ -282,7 +282,7 @@ fn keyword_set(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 if current != lightcraft_engine::cmd::keywords::RECENT
                     && MenuItem::new(&crate::i18n::tr_format!("Delete “{current}”", current = current)).check_slot(true).show(ui).clicked()
                 {
-                    let _ = app.run("keyword.deleteSet", json!({"name": current}));
+                    app.act("keyword.deleteSet", json!({"name": current}));
                 }
             });
         crate::widgets::name_combo(&combo.response, crate::i18n::tr("Keyword Set"));
@@ -318,7 +318,7 @@ fn keyword_set(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 register(ui, format!("kwSetSome:{}", i + 1), r.rect);
             }
             if r.clicked() {
-                let _ = app.run("keyword.toggleFromSet", json!({"index": i + 1}));
+                app.act("keyword.toggleFromSet", json!({"index": i + 1}));
             }
             if i % 3 == 2 {
                 ui.end_row();
