@@ -613,8 +613,9 @@ fn a_waiting_synchronize_never_acts_on_another_library() {
     assert!(said.contains("Another library was opened"), "{said}");
 }
 
-/// Given a waiting synchronize that has started scanning its folder again, when a photo of the folder changes before the
-/// scan is in (the scan did not see it), then nothing is done and it says so: what the scan saw is not what is there.
+/// Given a waiting synchronize that has started scanning its folder again, when a photo of the folder is taken out of the
+/// library before the scan is in (the scan did not see it), then nothing is done and it says so: what the scan saw is not
+/// what is there. (Work that leaves the files as they were, a rating say, leaves a scan current.)
 #[test]
 fn a_waiting_synchronize_does_nothing_on_a_scan_the_library_moved_past() {
     let dir = Scratch::new("moved-past");
@@ -624,8 +625,8 @@ fn a_waiting_synchronize_does_nothing_on_a_scan_the_library_moved_past() {
     let hold = h.app.session.activity.start("import", "Importing", lightcraft_engine::activity::Cancel::Yes);
     let dlg = h.app.ui.dialog.take().expect("the dialog is open");
     assert!(crate::panels::dialogs::confirm_dialog(&mut h.app, &dlg).is_ok_and(|v| v["queued"].as_u64().is_some()), "it waits");
-    // the scan reads the new file through a probe that waits for the gate: it starts before the rating and ends after it,
-    // however fast the machine is (a scan that ended within its first frame would run before the rating was made)
+    // the scan reads the new file through a probe that waits for the gate: it starts before the deletion and ends after it,
+    // however fast the machine is (a scan that ended within its first frame would run before the photo was deleted)
     let gate = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let g = gate.clone();
     h.app.session.media.file_probe = Some(std::sync::Arc::new(move |p: &str| {
@@ -638,12 +639,12 @@ fn a_waiting_synchronize_does_nothing_on_a_scan_the_library_moved_past() {
     drop(hold);
     assert!(h.step_until(T, |h| h.app.sync_queued.is_some()), "it started scanning again");
     let a = h.app.session.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
-    let r = h.request("engine.execute", json!({"command": "photo.rate", "params": {"ids": [a.0], "rating": 3}}), T);
+    let r = h.request("engine.execute", json!({"command": "photo.delete", "params": {"ids": [a.0]}}), T);
     assert_eq!(r["ok"], true, "{r}");
     assert!(h.app.sync_queued.is_some(), "the scan is still going when the photo changed");
     gate.store(true, std::sync::atomic::Ordering::Release);
     assert!(h.step_until(SETTLE, idle), "it ended");
-    assert_eq!(in_library(&h), vec!["a.png", "b.png"], "the missing b stays, c did not come in");
+    assert_eq!(in_library(&h), vec!["b.png"], "the missing b stays, c did not come in");
     let said = h.app.ui.toast.iter().map(|t| t.text.clone()).collect::<String>();
     assert!(said.contains("Photos of the folder changed while it was read"), "{said}");
 }

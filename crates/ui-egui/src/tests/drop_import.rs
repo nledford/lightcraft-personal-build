@@ -952,7 +952,9 @@ fn a_waiting_import_shows_a_row_and_its_cross_takes_it_out_of_the_line() {
     let waiting = h.app.session.activity.waiting();
     assert_eq!(waiting.len(), 2, "{waiting:?}");
     let (first, second) = (waiting[0].id, waiting[1].id);
-    for _ in 0..3 {
+    // (rows are drawn in the list under the bell, once it is open)
+    assert_eq!(h.request("engine.execute", json!({"command": "view.tasks", "params": {"show": true}}), T)["result"]["tasks"], true);
+    for _ in 0..4 {
         h.step();
     }
     let drawn = |h: &Headless, id: &str| h.app.widgets.iter().any(|(w, _)| w == id);
