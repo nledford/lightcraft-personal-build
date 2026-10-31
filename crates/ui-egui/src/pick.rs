@@ -158,7 +158,7 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
                     app.toast(ctx, text);
                 }
             }
-            Err(e) => app.toast_error(ctx, e),
+            Err(e) => app.toast_error(ctx, crate::i18n::refusal_text(&e)),
         }
     }
 }

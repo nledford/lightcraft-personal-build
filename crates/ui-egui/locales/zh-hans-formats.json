@@ -287,6 +287,7 @@
   "Backups in {}": "{} 中的备份",
   "Folders of what restores replaced, removed: {}": "已移除的恢复时被替换内容的文件夹：{}",
   "Folders of what restores replaced that could not be removed: {}": "未能移除的恢复时被替换内容的文件夹：{}",
+  "Not available right now: {}": "目前无法使用：{}",
   "{count} more warnings.": "另有 {count} 条警告。",
   "{in_trash} catalog photos are in this library's Recently Deleted and stay there; restore them from Recently Deleted to see them.": "目录中有 {in_trash} 张照片位于此图库的“最近删除”中，并将保留在那里；如需查看，请从“最近删除”中恢复。",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "有 {skipped} 张图像未导入，因为它们在目录中的记录不完整。",
