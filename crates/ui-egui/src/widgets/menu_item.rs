@@ -39,6 +39,10 @@ pub struct MenuItem<'a> {
 }
 
 impl<'a> MenuItem<'a> {
+    /// The auto ids a drawn row uses (its space, then the one its interaction id skips), for a list that
+    /// skips the rows out of view and keeps the ids of the rows after them.
+    pub(crate) const AUTO_IDS: usize = 2;
+
     /// The "Other…" row that ends a list of choices and opens a file picker: it stands in the
     /// choices' column but is an action, so it is a plain button, not an unselected radio.
     pub fn picker(label: &'a str) -> Self {
