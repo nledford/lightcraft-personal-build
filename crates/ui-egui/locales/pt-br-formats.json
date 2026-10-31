@@ -284,6 +284,7 @@
   "Older backups that could not be removed: {}": "Backups antigos que não puderam ser removidos: {}",
   "Restored the library. What it held before is in {}": "Biblioteca restaurada. O conteúdo anterior está em {}",
   "The library was not restored: {}": "A biblioteca não foi restaurada: {}",
+  "Backups in {}": "Backups em {}",
   "{count} more warnings.": "Mais {count} avisos.",
   "{in_trash} catalog photos are in this library's Recently Deleted and stay there; restore them from Recently Deleted to see them.": "{in_trash} fotos do catálogo estão em Excluídos recentemente desta biblioteca e continuam lá; restaure-as de Excluídos recentemente para vê-las.",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "{skipped} imagens do catálogo não foram importadas porque seus registros no catálogo estão incompletos.",

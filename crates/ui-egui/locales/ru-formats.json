@@ -280,6 +280,7 @@
   "Older backups that could not be removed: {}": "Не удалось удалить старых резервных копий: {}",
   "Restored the library. What it held before is in {}": "Библиотека восстановлена. Прежнее содержимое находится в {}",
   "The library was not restored: {}": "Библиотека не восстановлена: {}",
+  "Backups in {}": "Резервные копии в {}",
   "{count} more warnings.": "Других предупреждений: {count}.",
   "{in_trash} catalog photos are in this library's Recently Deleted and stay there; restore them from Recently Deleted to see them.": "Фото каталога в «Недавно удалённых» этой библиотеки: {in_trash}. Они остаются там; чтобы увидеть их, восстановите их из «Недавно удалённых».",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "Не импортированы изображения каталога: {skipped}. Их записи в каталоге неполные.",
