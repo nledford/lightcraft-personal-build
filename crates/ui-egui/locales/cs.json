@@ -2585,5 +2585,7 @@
   "This photo has no file on disk": "Tato fotografie nemá soubor na disku",
   "This photo is not in a folder of the library": "Tato fotografie není ve složce knihovny",
   "Opening other programs needs the desktop app": "Otevírání jiných programů vyžaduje desktopovou aplikaci",
-  "Only a photo file LightCraft reads can be opened this way": "Takto lze otevřít jen soubor fotografie, který LightCraft umí načíst"
+  "Only a photo file LightCraft reads can be opened this way": "Takto lze otevřít jen soubor fotografie, který LightCraft umí načíst",
+  "Recently Added always shows the newest imports first.": "Nedávno přidané vždy zobrazuje nejnovější importy jako první.",
+  "Recently Deleted shows no date groups.": "Nedávno odstraněné nezobrazuje skupiny podle data."
 }

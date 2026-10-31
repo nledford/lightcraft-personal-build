@@ -2539,5 +2539,7 @@
   "This photo has no file on disk": "Esta foto no tiene archivo en el disco",
   "This photo is not in a folder of the library": "Esta foto no está en una carpeta de la biblioteca",
   "Opening other programs needs the desktop app": "Abrir otros programas requiere la aplicación de escritorio",
-  "Only a photo file LightCraft reads can be opened this way": "Solo se puede abrir así un archivo de foto que LightCraft lea"
+  "Only a photo file LightCraft reads can be opened this way": "Solo se puede abrir así un archivo de foto que LightCraft lea",
+  "Recently Added always shows the newest imports first.": "Añadidas recientemente siempre muestra primero las importaciones más recientes.",
+  "Recently Deleted shows no date groups.": "Eliminadas recientemente no muestra grupos por fecha."
 }

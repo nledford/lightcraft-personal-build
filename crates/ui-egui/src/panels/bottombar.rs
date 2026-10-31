@@ -7,6 +7,7 @@ use serde_json::json;
 use crate::LightcraftApp;
 use crate::icons::{Icon, paint};
 use crate::menu_item::MenuItem;
+use crate::menus::sort_menu::{SortMenu, SortNote};
 use crate::state::{ViewMode, Zoom};
 use crate::theme::Tokens;
 use crate::widgets::{icon_button, icon_choice, icon_command, register};
@@ -331,11 +332,35 @@ fn click_zoom_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     }
 }
 
+/// One row of the Sort popup, registered as `sortMenu:{id}`: a check row where `checked` is `Some`, a plain
+/// row where it is `None`; a row that is off can't be clicked.
+fn sort_row(ui: &mut egui::Ui, id: &str, label: &str, enabled: bool, checked: Option<bool>) -> bool {
+    let mut item = MenuItem::new(crate::i18n::tr(label)).enabled(enabled).widget(format!("sortMenu:{id}"));
+    if let Some(on) = checked {
+        item = item.selected(on);
+    }
+    item.show(ui).clicked()
+}
+
+/// The dim line saying why part of the menu is off.
+fn sort_note(ui: &mut egui::Ui, note: Option<SortNote>) {
+    let Some(note) = note else { return };
+    let r = ui
+        .scope(|ui| {
+            ui.set_max_width(200.0);
+            ui.add(egui::Label::new(egui::RichText::new(crate::i18n::tr(note.text())).weak().small()).wrap())
+        })
+        .inner;
+    register(ui, "sortMenu:note", r.rect);
+}
+
 fn sort_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     use lightcraft_catalog::GroupBy;
     use lightcraft_catalog::SortKey::*;
-    let cur = app.session.sort;
+    // what is on, checked and why not comes from one model shared with View ▸ Sort
+    let m = SortMenu::of(&app.session);
     ui.label(egui::RichText::new(crate::i18n::tr("Sort by")).weak());
+    sort_note(ui, m.keys_note());
     for (label, key, k) in [
         ("Capture Date", CaptureDate, "captureDate"),
         ("Import Date", ImportDate, "importDate"),
@@ -345,11 +370,12 @@ fn sort_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         ("File Size", FileSize, "fileSize"),
         ("Random", Random, "random"),
     ] {
-        if MenuItem::new(crate::i18n::tr(label)).selected(cur.key == key).show(ui).clicked() {
+        if sort_row(ui, &format!("key:{k}"), label, m.keys_enabled(), Some(m.key_checked(key))) {
             app.act("library.sort", json!({"key": k}));
         }
     }
-    if cur.key == Random && MenuItem::new(crate::i18n::tr("Reshuffle")).show(ui).clicked() {
+    ui.separator();
+    if sort_row(ui, "reshuffle", "Reshuffle", m.reshuffle_enabled(), None) {
         app.act("library.shuffle", json!({}));
     }
     // a view that holds its photos shows what matches now when asked to
@@ -360,17 +386,15 @@ fn sort_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         }
     }
     ui.separator();
-    // a shuffle has no direction worth choosing
-    ui.add_enabled_ui(cur.key != Random, |ui| {
-        if MenuItem::new(crate::i18n::tr("Ascending")).selected(cur.key != Random && cur.ascending).show(ui).clicked() {
-            app.act("library.sort", json!({"ascending": true}));
+    for (label, id, ascending) in [("Ascending", "ascending", true), ("Descending", "descending", false)] {
+        let checked = m.direction_checked(ascending).unwrap_or(false);
+        if sort_row(ui, id, label, m.direction_enabled(), Some(checked)) {
+            app.act("library.sort", json!({"ascending": ascending}));
         }
-        if MenuItem::new(crate::i18n::tr("Descending")).selected(cur.key != Random && !cur.ascending).show(ui).clicked() {
-            app.act("library.sort", json!({"ascending": false}));
-        }
-    });
+    }
     ui.separator();
     ui.label(egui::RichText::new(crate::i18n::tr("Group by date")).weak());
+    sort_note(ui, m.groups_note());
     for (label, g, k) in [
         ("Automatic", GroupBy::Auto, "auto"),
         ("Day", GroupBy::Day, "day"),
@@ -378,7 +402,7 @@ fn sort_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         ("Year", GroupBy::Year, "year"),
         ("None", GroupBy::None, "none"),
     ] {
-        if MenuItem::new(crate::i18n::tr(label)).selected(cur.group == g).show(ui).clicked() {
+        if sort_row(ui, &format!("group:{k}"), label, m.groups_enabled(), Some(m.group_checked(g))) {
             app.act("library.sort", json!({"group": k}));
         }
     }

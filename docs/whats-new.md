@@ -112,6 +112,15 @@
 
 ## 2026-10-28
 
+### The Sort menus offer only what the view uses
+- In Recently Added, which always shows the newest imports first, the sort keys, Ascending / Descending and Reshuffle in
+  the bottom bar's Sort popup and in View ▸ Sort are now off and nothing is checked as the order shown; a dim line says
+  "Recently Added always shows the newest imports first." Before, they checked the saved sort (and, under Random, offered
+  a Reshuffle that changed nothing). Outside Recently Added, the Group by Date choices are off too where the grid draws no date headers —
+  under Random, File Name, Rating and File Size, and in Recently Deleted — and your choice is kept for when you pick a
+  date sort again or leave Recently Deleted, as the direction already was for Random. Reshuffle is always listed, in both menus, under its own
+  separator below the sort keys, and is on only while you sort at random.
+
 ### Screen readers tell buttons, switches and choices apart
 - With VoiceOver, a button that does something (Reset, Auto, Choose…, Create Album, Back) is now a button, not a check box that is "unchecked". A button that is on or off (B&W, HDR) says whether it is on, and one of several choices (Format, Color space, Sharpen, a language, the view buttons: Photo Grid, Square Grid, Detail, Compare, Survey and People) is a radio button that says which one is chosen.
 

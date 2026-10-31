@@ -105,6 +105,7 @@ mod side_keys_sidebar;
 mod slider_reset;
 mod slideshow;
 mod solo_sections;
+mod sort_menu;
 mod space_hand;
 mod switch_library;
 mod sync;
