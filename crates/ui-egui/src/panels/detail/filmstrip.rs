@@ -169,7 +169,7 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                     app.run("library.select", json!({"ids": [id.0], "mode": mode}))
                 };
                 if compare && let Err(e) = r {
-                    app.toast(ui.ctx(), e);
+                    app.toast_error(ui.ctx(), e);
                 }
             }
             // drag the selection to a sidebar row, as from the grid (a plain click never starts one); in
