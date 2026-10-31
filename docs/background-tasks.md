@@ -2,6 +2,13 @@
 
 Everything that takes a while runs off the UI thread and shows up in **one** place: the activity stack, the listunder the bell in the top bar (issue #345). While something runs the bell wears a ring (how far along the work is, asweep while that isn't known) and a line beside it names the task ("Exporting · 40 %") or says how many run("3 tasks"). The line takes the room between the filter icon and the bell, so it depends on the window's width: awide window has the name (cut short where it must be) and the percentage, a narrower one only the percentage or thecount, and a narrow one the ring alone, with the count on the bell when several run and the rest in the bell'stooltip. A click on the bell or the line opensthe list (Window ▸ Tasks, `view.tasks`): each task has a row with its name, a progress bar, the count and what it'sworking on, and ✕ if it can stop, the task started last at the top. "No tasks are running" when none is. Esc, a clickelsewhere or a dialog closes it. Nothing floats over the panels: the list covers them only while it is open.Quitting asks first while a task that can stop is running. Agents see the same list through `activity.list` /`activity.cancel`, and `ui.inspect` reports it as `activity` (and whether the list is open as `activityOpen`); the tasks that ended and left a row are `activity.finished` / `activity.dismiss` and `activityFinished`. A task stuck on something that doesn't answer (an import's file on a networkdrive that stopped responding) names it on its row and offers Skip (`activity.skip`).
 
+On macOS a running job the person started also keeps the Mac awake: `Activity::wake_reason` names the oldest such job
+(housekeeping that starts by itself, like the thumbnail-cache tidy, the focus-point reading and the face scan, doesn't count, and neither does a job that was asked to stop), the UI tells
+the host when that changes (`Services::keep_awake`), and the app holds an `NSProcessInfo` activity (user initiated,
+idle system sleep disabled) with that reason until the last job ends, is cancelled or the app quits.
+`pmset -g assertions` lists it. A new `kind` that is background housekeeping rather than something the person asked for
+goes in `holds_awake` in `activity.rs`.
+
 The registry is `lightcraft_engine::activity` (`crates/engine/src/activity.rs`, `Session::activity`). The stack is
 `crates/ui-egui/src/panels/activity.rs`. Every job that can last more than a moment uses it; **don't add a progress
 window, panel or progress toast of your own**. A dialog may still show progress inline (the Synchronize Folder

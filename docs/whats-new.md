@@ -129,6 +129,11 @@
 
 ## 2026-10-27
 
+### On macOS, a long job keeps the Mac awake
+- While an export, import, preview build, merge or other job you started is running, the Mac no longer goes to sleep
+  on its own and macOS no longer slows the app down when its window is hidden or minimized. Both end as soon as the
+  last job finishes or is canceled.
+
 ### The Edit menu groups Select Only Active Photo and Paste Settings from Previous with their kin
 - Select Only Active Photo now sits under Deselect All, and Paste Settings from Previous under Paste Selected Settings…, instead of both after Settings…, near the end of the Edit menu. On macOS, where Settings… lives in the application menu, the Edit menu no longer shows two separator lines in a row.
 
