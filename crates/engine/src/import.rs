@@ -42,15 +42,17 @@ mod reads;
 mod scan;
 mod types;
 
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) use commit::workers;
 pub use commit::{batch_size, civil, commit_prepared, system_clock};
 pub use defaults::{CameraDefault, ImportDefaults, ReadDialog, ReadLast, apply_import_defaults, has_import_look, import_defaults};
 #[cfg(test)]
 use files::expand_knowing;
+#[cfg(test)]
+pub(crate) use files::tests_reads;
 pub use files::{
     EXTENSIONS, LAUNCH_PROBE_LIMIT, LaunchPath, accept_list, expand, expand_within, is_supported, launch_deadline, launch_path, launch_path_until,
 };
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use files::{Pooled, pooled};
 pub(crate) use files::{expand_noting, probe_all, probe_paths, probe_with};
 #[cfg(test)]
 use job::PreparedItem;
