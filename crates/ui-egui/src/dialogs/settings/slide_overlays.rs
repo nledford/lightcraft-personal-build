@@ -173,9 +173,9 @@ pub fn sections(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             row(ui, t, "Image", |ui| {
                 if app.services.pick_files.is_some()
                     && crate::button::Button::new("Choose…").small().widget("button:slideshowPlateChoose").show(ui).clicked()
-                    && let Some(f) = app.services.pick_files.as_mut().and_then(|pick| pick().into_iter().next())
                 {
-                    set(app, plate(json!({"image": f})));
+                    // the dialog runs off the UI thread; the image is set when it closes
+                    crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::SlidePlateImage);
                 }
                 text(app, ui, "slideshowPlateImage", &p.image, "logo.png", &|v| plate(json!({"image": v})));
             });

@@ -3,6 +3,7 @@ mod album_picker;
 mod album_remove;
 mod alt_preview;
 mod appearance;
+mod background_dialogs;
 mod backup_folder;
 mod backup_schedule;
 mod backup_status;
