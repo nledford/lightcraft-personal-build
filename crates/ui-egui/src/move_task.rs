@@ -18,6 +18,8 @@ pub struct MoveRun {
     folder: String,
     /// The folder's name, as the toast says it.
     name: String,
+    /// The question this move answers had "Don't ask again" ticked: the question is turned off once a photo has moved.
+    dont_ask: bool,
     /// The worker, so a test can wait until it has sent its result.
     #[cfg(all(test, not(target_arch = "wasm32")))]
     pub(crate) worker: Option<std::thread::JoinHandle<()>>,
@@ -41,16 +43,11 @@ pub(crate) fn stalled(app: &mut LightcraftApp) -> (std::sync::mpsc::Sender<MoveO
         finish: None,
         folder: String::new(),
         name: String::new(),
+        dont_ask: false,
         #[cfg(all(test, not(target_arch = "wasm32")))]
         worker: None,
     });
     (tx, guard)
-}
-
-/// The name a toast gives the folder `path`.
-fn name_of(path: &str) -> String {
-    let trimmed = path.trim_end_matches(['/', '\\']);
-    std::path::Path::new(trimmed).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.to_string())
 }
 
 /// Start moving photos into a folder on disk: `params` as `photo.moveToFolder` takes them
@@ -60,17 +57,24 @@ fn name_of(path: &str) -> String {
 /// running…), also logged, shown in the status line as `LightcraftApp::run` does, and told in an error toast
 /// (a menu, key or button caller drops the returned error, so the toast is what tells the person why nothing moved).
 pub fn start(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value) -> Result<Value, String> {
-    start_inner(app, ctx, params).inspect_err(|e| {
+    start_asked(app, ctx, params, false)
+}
+
+/// [`start`] for the answer to a question: `dont_ask` (its "Don't ask again") turns the question off once a photo has moved,
+/// not before: a move refused, stopped at once or found done already leaves it as it was.
+pub fn start_asked(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value, dont_ask: bool) -> Result<Value, String> {
+    start_inner(app, ctx, params, dont_ask).inspect_err(|e| {
         log::warn!("photo.moveToFolder: {e}");
         app.ui.status = e.clone();
         app.toast_error(ctx, e.clone());
     })
 }
 
-fn start_inner(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value) -> Result<Value, String> {
+fn start_inner(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value, dont_ask: bool) -> Result<Value, String> {
     let raw = params.get("folder").and_then(Value::as_str).unwrap_or_default();
     let path = raw.trim_end_matches(['/', '\\']).to_string();
-    let name = name_of(raw);
+    // (which folder, when another row of the Folders tree has the name: as the drag label and the question said it)
+    let name = crate::destination::folder(&app.caches.folder_tree(&app.session.catalog, app.session.library_generation()), &path);
     let started = lightcraft_engine::move_job::start(&mut app.session, params, true).map_err(|e| e.to_string())?;
     let Some((work, finish)) = started else {
         app.toast(ctx, crate::panels::left::moved_text(0, &name));
@@ -97,6 +101,7 @@ fn start_inner(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value) -> 
         finish: Some(finish),
         folder: path,
         name,
+        dont_ask,
         #[cfg(all(test, not(target_arch = "wasm32")))]
         worker: Some(worker),
     });
@@ -161,6 +166,9 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
                 // (said in files, as the question and the hint are: `moved` counts photos, virtual copies included)
                 crate::panels::left::moved_text(r["files"].as_u64().unwrap_or(moved), &run.name)
             };
+            if moved > 0 && run.dont_ask {
+                app.ui.settings.ask_before_move = false;
+            }
             app.toast(ctx, text);
         }
         Err(e) => app.toast_for(ctx, e.clone(), 12.0),

@@ -279,12 +279,6 @@ fn the_label_counts_only_the_photos_a_drop_moves() {
 }
 
 #[test]
-fn a_photo_without_a_file_is_refused_not_moved_or_already_there() {
-    let text = hint_over_home("demo", 0, true, |h| vec![id_of(h, "demo.jpg")]);
-    assert_eq!(text.as_deref(), Some("Can't be moved here"));
-}
-
-#[test]
 fn virtual_copies_of_one_file_count_once() {
     // the master and a virtual copy of beach.png: one file moves
     let text =
@@ -472,12 +466,14 @@ fn dont_ask_again_is_kept_only_when_the_move_began() {
     click(&mut h, &format!("libraryFolderToggle:{}", folder_key(&root)));
     let target = folder_row(&h, &home).unwrap();
     let beach = id_of(&h, "beach.png");
-    // a file of that name is in the folder already (not in the library): the move is refused
-    std::fs::copy(trip.join("beach.png"), home.join("beach.png")).unwrap();
     drop_beach(&mut h, beach, target);
     click(&mut h, "check:moveDontAsk");
     assert!(matches!(h.app.ui.dialog, Some(crate::state::Dialog::MovePhotos { dont_ask: true, .. })), "ticked");
+    // a file of that name gets into the folder while the question is open (not in the library): the move is refused
+    // (a name taken before the drop is found by the check and listed in the question, #2897)
+    std::fs::copy(trip.join("beach.png"), home.join("beach.png")).unwrap();
     click(&mut h, "button:dialogOk");
+    settle(&mut h);
     assert!(h.app.ui.dialog.is_none(), "the refusal closes the question");
     assert!(trip.join("beach.png").is_file(), "nothing moved");
     assert!(h.app.ui.settings.ask_before_move, "a refused move leaves the question on");
@@ -500,6 +496,7 @@ fn dont_ask_again_is_kept_only_when_a_photo_moved() {
     h.app.run("photo.moveToFolder", json!({"folder": home.to_string_lossy(), "ids": [beach]})).unwrap();
     assert!(home.join("beach.png").is_file());
     click(&mut h, "button:dialogOk");
+    settle(&mut h);
     assert!(h.app.ui.dialog.is_none());
     assert!(h.app.ui.settings.ask_before_move, "nothing moved: the question stays on");
     let _ = std::fs::remove_dir_all(&root);
@@ -566,6 +563,7 @@ fn two_folders_with_one_name_are_told_apart_in_the_label_the_question_and_the_to
     // and so does the toast
     h.step();
     click(&mut h, "button:dialogOk");
+    settle(&mut h);
     assert!(toast(&h).starts_with("Moved 1 file to “home (") && toast(&h).contains("/b)”"), "{}", toast(&h));
     assert!(b.join("beach.png").is_file(), "moved into the one that was asked about");
     let _ = std::fs::remove_dir_all(&root);
@@ -604,10 +602,10 @@ fn a_background_move_has_a_cancellable_row_and_holds_back_other_moves_until_it_e
     let photo = h.app.session.catalog.photo(lightcraft_catalog::PhotoId(beach)).unwrap();
     assert!(matches!(&photo.source, lightcraft_catalog::Source::File { path } if Path::new(path) == home.join("beach.png")));
     assert!(h.app.session.activity.list().is_empty());
-    assert!(toast(&h).starts_with("Moved 1 photo to “home”."), "{}", toast(&h));
+    assert!(toast(&h).starts_with("Moved 1 file to “home”."), "{}", toast(&h));
     let inspect = crate::control::inspect(&h.app, &h.view.ctx);
     assert_eq!(inspect["move"]["running"], serde_json::Value::Null);
-    assert_eq!(inspect["move"]["last"], json!({"moved": 1, "of": 1, "folder": home.to_string_lossy(), "stopped": false}));
+    assert_eq!(inspect["move"]["last"], json!({"files": 1, "moved": 1, "of": 1, "folder": home.to_string_lossy(), "stopped": false, "skipped": []}));
     let _ = std::fs::remove_dir_all(&root);
 }
 
@@ -788,6 +786,7 @@ fn the_question_lists_a_name_clash_and_moves_the_rest_when_told_to_skip() {
     );
     assert!(trip.join("beach.png").is_file(), "nothing moved before the click");
     click(&mut h, "button:dialogOk");
+    settle(&mut h);
     assert!(home.join("beach.png").is_file() && !trip.join("beach.png").exists(), "the others moved");
     assert!(trip.join("dunes.png").is_file(), "the clashing one stayed");
     assert_eq!(toast(&h), "Moved 1 photo to “home”, skipped 1. Edit → Undo moves them back.");
@@ -823,6 +822,7 @@ fn a_file_that_is_offline_is_found_before_the_move_and_asks_even_when_not_asking
     assert_eq!(problems.iter().map(|p| (p.id, p.kind)).collect::<Vec<_>>(), [(dunes, MoveProblemKind::Missing)]);
     assert!(trip.join("beach.png").is_file(), "nothing moved yet");
     click(&mut h, "button:dialogOk");
+    settle(&mut h);
     assert!(home.join("beach.png").is_file());
     assert!(toast(&h).starts_with("Moved 1 photo to “home”, skipped 1."), "{}", toast(&h));
     let _ = std::fs::remove_dir_all(&root);
@@ -873,6 +873,7 @@ fn a_photo_with_no_file_is_listed_as_one_that_cannot_be_moved_and_the_rest_go() 
         (vec![crate::state::MoveProblem { id: demo, name: "demo.jpg".into(), kind: MoveProblemKind::Unmovable }], 2)
     );
     click(&mut h, "button:dialogOk");
+    settle(&mut h);
     assert!(home.join("beach.png").is_file() && home.join("dunes.png").is_file() && !trip.join("beach.png").exists(), "the others moved");
     let _ = std::fs::remove_dir_all(&root);
 }

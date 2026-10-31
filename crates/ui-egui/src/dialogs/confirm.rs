@@ -235,13 +235,8 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
             if !problems.is_empty() {
                 params["skip"] = json!(problems.iter().map(|p| p.id).collect::<Vec<u64>>());
             }
-            let started = crate::move_task::start(app, &ctx, &params)?;
-            // only a move that began turns the question off: one refused, or that found the photos there already
-            // (`moved: 0` at once), leaves it as it was
-            if *dont_ask && started["background"] == json!(true) {
-                app.ui.settings.ask_before_move = false;
-            }
-            Ok(started)
+            // (the question is turned off by the move itself, once a photo has moved: see `move_task::start_asked`)
+            crate::move_task::start_asked(app, &ctx, &params, *dont_ask)
         }
         Dialog::TrashFiles(ask) => crate::panels::trash_files::run(app, ask),
         // the catalog found: no file dialog; none: File ▸ Import Lightroom Catalog… asks for it
