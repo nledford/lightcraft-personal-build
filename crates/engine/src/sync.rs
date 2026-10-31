@@ -7,7 +7,7 @@
 //! - **new** files: supported files the library doesn't have, by path or by content (the import
 //!   scan's duplicate rules, [`crate::import::scan_with`]);
 //! - **missing** photos: library photos in the folder whose file is gone (the Missing Photos rule,
-//!   [`crate::cmd::missing::checked_path`]);
+//!   [`lightcraft_catalog::Photo::library_file`]);
 //! - **metadata** updates: photos whose XMP sidecar file was saved after the photo came into the
 //!   library or was last edited here, and says something the library doesn't (rating, flag,
 //!   label, metadata, capture time or develop settings). Reading one makes the sidecar win, as
@@ -306,7 +306,7 @@ pub fn scan_with(input: SyncInput, progress: &SyncProgress) -> FolderChanges {
     let mut changes =
         FolderChanges { path: folder, seen, stopped: out.stopped.clone().or_else(|| progress.files.reads.ended()), ..Default::default() };
     for ((p, _), check) in photos.iter().zip(checks) {
-        let Some(file) = crate::cmd::missing::checked_path(p) else { continue };
+        let Some(file) = p.library_file() else { continue };
         let found = FolderPhoto { id: p.id.0, path: file.to_string() };
         match check {
             Check::Missing => changes.missing.push(found),
@@ -634,7 +634,7 @@ fn check_hook(file: &Path) {
 }
 
 fn check_photo(p: &Photo, naming: SidecarLookup, labels: &Catalog, listing: &Listing) -> Check {
-    let Some(file) = crate::cmd::missing::checked_path(p) else { return Check::Nothing };
+    let Some(file) = p.library_file() else { return Check::Nothing };
     let file = Path::new(file);
     #[cfg(test)]
     check_hook(file);
@@ -666,7 +666,7 @@ fn check_photos(photos: &[(Arc<Photo>, SidecarLookup)], labels: &Arc<Catalog>, l
         let label = |i: usize| {
             photos
                 .get(i)
-                .and_then(|(p, _)| crate::cmd::missing::checked_path(p))
+                .and_then(|(p, _)| p.library_file())
                 .map(|f| Path::new(f).file_name().map_or_else(|| f.to_string(), |n| n.to_string_lossy().to_string()))
                 .unwrap_or_default()
         };
