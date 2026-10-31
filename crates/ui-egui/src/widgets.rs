@@ -949,7 +949,8 @@ pub fn text_button(ui: &mut Ui, id: &str, label: &str, active: bool) -> Response
 /// One of a row of choices of which exactly one holds (`button:{id}`) and that is one Tab stop
 /// ([`Roving`]), drawn as [`text_button`] is, except that the one chosen is also outlined in the
 /// label colour: its fill alone stands about 1.4:1 against the others, the outline 3:1 or more in
-/// every theme. A screen reader is told it is a radio button.
+/// every theme. The border of one that is not chosen is made to stand 3:1 against the window as
+/// well. A screen reader is told it is a radio button.
 pub fn choice_button_in(ui: &mut Ui, row: &mut Roving, id: &str, label: &str, chosen: bool) -> Response {
     chip(ui, id, label, chosen, true, Some(row))
 }
@@ -1062,7 +1063,7 @@ fn chip(ui: &mut Ui, id: &str, label: &str, active: bool, choice: bool, row: Opt
     // there in every theme, where a button's own border is 1.6 to 1.7:1)
     let border = match (choice, active) {
         (true, true) => t.text_label,
-        (true, false) => t.legible(t.button_border, t.chrome, 3.0),
+        (true, false) => t.legible(button_border(ui, &t), t.chrome, 3.0),
         (false, _) => button_border(ui, &t),
     };
     let p = ui.painter();

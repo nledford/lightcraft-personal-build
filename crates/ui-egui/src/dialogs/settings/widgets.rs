@@ -174,7 +174,7 @@ pub(crate) fn heading(ui: &mut egui::Ui, t: &Tokens, text: &str) {
         if left > 0.0 {
             let strength = (left * 2.0).min(1.0);
             let around = r.rect.expand2(egui::vec2(6.0, 2.0));
-            let outline = egui::Stroke::new(1.0, t.accent.gamma_multiply(strength));
+            let outline = egui::Stroke::new(1.0, t.legible(t.accent, t.chrome, 3.0).gamma_multiply(strength));
             ui.painter().set(behind, egui::Shape::rect_filled(around, egui::CornerRadius::same(4), t.hover.gamma_multiply(strength)));
             ui.painter().rect_stroke(around, egui::CornerRadius::same(4), outline, egui::StrokeKind::Inside);
             register_geometry(ui.ctx(), format!("settingsLanded:{name}"), around);
