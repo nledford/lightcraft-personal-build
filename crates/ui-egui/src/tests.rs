@@ -5,6 +5,7 @@ mod alt_preview;
 mod appearance;
 mod backup_folder;
 mod backup_schedule;
+mod backup_status;
 mod before_after;
 mod browse_active;
 mod button;
