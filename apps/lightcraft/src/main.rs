@@ -199,6 +199,11 @@ fn main() -> eframe::Result {
     // what the arguments name, resolved now: an empty or relative argument never becomes a drive
     // root, and a whole drive or home folder is not walked (issue #374)
     let LaunchArgs { files, library: launch_library, notices: launch_notices } = launch_imports(&files);
+    // "Auto" follows the system's preferred languages, as the web build follows the browser's:
+    // installed before the settings load, since a library without saved settings starts in it.
+    if let Some(language) = lightcraft_ui_egui::i18n::locale_from_tags(&sys_locale::get_locales().collect::<Vec<_>>()) {
+        lightcraft_ui_egui::i18n::set_default_language(language);
+    }
     // a library double-clicked (its catalog.snap or folder) is the one that opens, not the last one
     // used; --library and LIGHTCRAFT_LIBRARY still win
     let env_library: Option<std::path::PathBuf> = std::env::var_os("LIGHTCRAFT_LIBRARY").filter(|p| !p.is_empty()).map(Into::into);
