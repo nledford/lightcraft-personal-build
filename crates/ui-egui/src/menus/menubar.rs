@@ -1361,7 +1361,8 @@ pub(crate) struct Rows<'a> {
     /// name is the user's or already in the UI language).
     pub sub: &'static str,
     pub keyed: bool,
-    /// A row's second id (older names kept for scripts), and why it is off when it is.
+    /// A row's second id (older names kept for scripts), and a hover note: why it is off when it
+    /// is, or a note on a row that is on (an Export preset's TIFF LZW warning).
     pub extra: Option<&'a dyn Fn(&MenuNode) -> (Option<String>, Option<String>)>,
     /// The rows of a submenu kept elsewhere (borrowed, not copied every frame), asked with the
     /// submenu: the photo menu's Apply Preset, which can hold 10 000+ presets.
@@ -1499,8 +1500,8 @@ fn nodes_ui(ui: &mut egui::Ui, nodes: &[MenuNode], clicked: &mut Option<(String,
                 if let Some(alias) = alias {
                     crate::widgets::register(ui, alias, r.rect);
                 }
-                if let Some(why) = reason.filter(|_| !*enabled) {
-                    r = r.on_disabled_hover_text(why);
+                if let Some(why) = reason {
+                    r = if *enabled { r.on_hover_text(why) } else { r.on_disabled_hover_text(why) };
                 }
                 if r.clicked() {
                     *clicked = Some((id.clone(), params.clone()));

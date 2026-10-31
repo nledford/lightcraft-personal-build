@@ -200,7 +200,7 @@ impl LibraryWork {
         let (cat, count, wake) = (cat.clone(), self.count_with.clone(), self.wake.clone());
         let revision = cat.revision;
         // (the row lives as long as the count: the worker owns the guard)
-        let guard = self.activity.as_ref().map(|a| a.start("cache", "Counting library", Cancel::No));
+        let guard = self.activity.as_ref().map(|a| a.start("cache", "Counting library", Cancel::Quick));
         let started = std::thread::Builder::new().name("lc-library-counts".into()).spawn(move || {
             let _guard = guard;
             // last-resort guard: a panic is this count's failure, not the app's
