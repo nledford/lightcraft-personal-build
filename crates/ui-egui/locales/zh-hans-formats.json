@@ -386,6 +386,7 @@
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "有 {n} 个任务在排队等待：{names}。切换图库将丢弃它们。",
   "Waiting tasks dropped: {n}": "已丢弃排队等待的任务：{n} 个",
   "Too many tasks are waiting ({n}): wait for some to finish": "等待中的任务过多（{n} 个）：请等待部分任务完成",
+  "Without review: copy to {destination}": "不经查看：拷贝到 {destination}",
   "Queued: it starts after {n} more": "已加入队列：再过 {n} 个后开始",
   "{n} tasks waiting in line won't run.": "队列中等待的 {n} 个任务不会运行。",
   "Left alone: {n} (synchronize again to review them)": "未处理：{n}（再次同步以查看）"

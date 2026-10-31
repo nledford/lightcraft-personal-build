@@ -386,6 +386,7 @@
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "有 {n} 個工作在排隊等待：{names}。切換照片庫將捨棄它們。",
   "Waiting tasks dropped: {n}": "已捨棄排隊等待的工作：{n} 個",
   "Too many tasks are waiting ({n}): wait for some to finish": "等待中的工作過多（{n} 個）：請等待部分工作完成",
+  "Without review: copy to {destination}": "不經檢視：複製至 {destination}",
   "Queued: it starts after {n} more": "已加入佇列：再過 {n} 個後開始",
   "{n} tasks waiting in line won't run.": "佇列中等待的 {n} 個工作不會執行。",
   "Left alone: {n} (synchronize again to review them)": "未處理：{n}（再次同步以檢視）"

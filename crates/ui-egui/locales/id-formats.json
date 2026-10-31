@@ -389,6 +389,7 @@
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} tugas mengantre: {names}. Jika pustaka diganti, semua tugas ini akan dibuang.",
   "Waiting tasks dropped: {n}": "Tugas antrean yang dibuang: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Terlalu banyak tugas mengantre ({n}): tunggu sampai sebagian selesai",
+  "Without review: copy to {destination}": "Tanpa tinjauan: salin ke {destination}",
   "Queued: it starts after {n} more": "Dalam antrean: dimulai setelah {n} lagi",
   "{n} tasks waiting in line won't run.": "{n} tugas yang menunggu dalam antrean tidak akan dijalankan.",
   "Left alone: {n} (synchronize again to review them)": "Dibiarkan: {n} (sinkronkan lagi untuk meninjau)"

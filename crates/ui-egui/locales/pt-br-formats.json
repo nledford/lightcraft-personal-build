@@ -386,6 +386,7 @@
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} tarefas esperam na fila: {names}. Trocar de biblioteca as descarta.",
   "Waiting tasks dropped: {n}": "Tarefas na fila descartadas: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Há tarefas demais na fila ({n}): espere algumas terminarem",
+  "Without review: copy to {destination}": "Sem revisão: copiar para {destination}",
   "Queued: it starts after {n} more": "Na fila: começa depois de mais {n}",
   "{n} tasks waiting in line won't run.": "{n} tarefas na fila não serão executadas.",
   "Left alone: {n} (synchronize again to review them)": "Deixados como estavam: {n} (sincronize de novo para revisá-los)"

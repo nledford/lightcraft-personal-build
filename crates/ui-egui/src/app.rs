@@ -113,6 +113,8 @@ impl LightcraftApp {
             scan: None,
             waiting_import: Default::default(),
             review_listed: None,
+            last_import: None,
+            unreviewed: Vec::new(),
             sync: None,
             sync_owns_changes: false,
             sync_scanned_at: f64::NEG_INFINITY,

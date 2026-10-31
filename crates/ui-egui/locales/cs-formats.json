@@ -386,6 +386,7 @@
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "Ve frontě čekají úlohy: {n}: {names}. Přepnutí knihovny je zahodí.",
   "Waiting tasks dropped: {n}": "Zahozené čekající úlohy: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Ve frontě čeká příliš mnoho úloh: {n}. Počkejte, až některé skončí",
+  "Without review: copy to {destination}": "Bez kontroly: kopírovat do {destination}",
   "Queued: it starts after {n} more": "Ve frontě: začne po dalších úlohách: {n}",
   "{n} tasks waiting in line won't run.": "Úlohy čekající ve frontě ({n}) se nespustí.",
   "Left alone: {n} (synchronize again to review them)": "Ponecháno: {n} (pro kontrolu synchronizujte znovu)"

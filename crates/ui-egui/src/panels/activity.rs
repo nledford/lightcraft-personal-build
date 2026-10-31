@@ -7,7 +7,9 @@
 //! and puts a mark on the bell until it is dismissed; Retry asks for it again when it kept what it was asked. Tasks
 //! waiting in line for the ones ahead of them (a second preview build) are listed under the running ones, with ✕ to
 //! take them out of the line. The tasks come from the engine's registry ([`lightcraft_engine::activity`]); ✕ runs
-//! `activity.cancel` and Retry `activity.retry`, like any other frontend would.
+//! `activity.cancel` and Retry `activity.retry`, like any other frontend would. While the library lane is busy, the
+//! row of the review's folder scan offers Queue without review, and a folder queued that way offers Review… on its
+//! waiting row ([`crate::import`]).
 
 use std::f32::consts::{FRAC_PI_2, TAU};
 
@@ -248,6 +250,10 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
     };
     let resp = if was_open { resp } else { resp.on_hover_text(label.as_str()) };
     let mut act = None;
+    // (imports queued without a review that have left the line are forgotten)
+    crate::import::prune_unreviewed(app);
+    let queue_scan = crate::import::queueable_scan(app);
+    let unreviewed: Vec<(u64, String)> = app.unreviewed.iter().map(|u| (u.id, crate::import_queue::describe(&u.transfer))).collect();
     let (activity, opened, reveal) = (app.session.activity.clone(), app.activity_failures, app.services.reveal.is_some());
     egui::Popup::from_response(&resp)
         .id(popup_id())
@@ -258,7 +264,20 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
         .show(|ui| {
             // (the ended tasks with all their failed files are only read while the list is on screen)
             let finished = activity.finished();
-            act = list(ui, t, &Rows { tasks: &all, waiting: &waiting, finished: &finished, opened, reveal, ready: ready.as_ref() });
+            act = list(
+                ui,
+                t,
+                &Rows {
+                    tasks: &all,
+                    waiting: &waiting,
+                    finished: &finished,
+                    opened,
+                    reveal,
+                    ready: ready.as_ref(),
+                    queue_scan,
+                    unreviewed: &unreviewed,
+                },
+            );
         });
     app.activity_open = is_open(&ctx);
     match act {
@@ -293,6 +312,16 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
         }
         Some(Act::Notice(Notice::Review)) => crate::sync::review(app),
         Some(Act::Notice(Notice::Dismiss)) => crate::sync::dismiss(app),
+        Some(Act::QueueScan) => {
+            if let Err(e) = crate::import::queue_scan(app) {
+                app.toast(&ctx, e);
+            }
+        }
+        Some(Act::Review(id)) => {
+            if let Err(e) = crate::import::review_queued(app, id) {
+                app.toast(&ctx, e);
+            }
+        }
         None => {}
     }
 }
@@ -311,6 +340,10 @@ struct Rows<'a> {
     reveal: bool,
     /// The scan that finished in the background and waits to be looked at.
     ready: Option<&'a crate::sync::SyncReady>,
+    /// The review scan that can be queued without its review (its task id).
+    queue_scan: Option<u64>,
+    /// The imports in line that were queued without a review: task id and how their files come in.
+    unreviewed: &'a [(u64, String)],
 }
 
 /// What was asked for in the list.
@@ -326,6 +359,10 @@ enum Act {
     Reveal(String),
     /// What was done with the notice of a scan that finished in the background.
     Notice(Notice),
+    /// Put the folder being scanned in line without its review.
+    QueueScan,
+    /// Open the review of an import waiting in line.
+    Review(u64),
 }
 
 /// What an ended task says of itself; one that said nothing is worded from its name and how it ended.
@@ -517,6 +554,9 @@ fn list(ui: &mut egui::Ui, t: &Tokens, rows: &Rows) -> Option<Act> {
                     if row(ui, t, task, width) {
                         act = Some(Act::Cancel(task.id));
                     }
+                    if rows.queue_scan == Some(task.id) && link(ui, t, tr("Queue without review"), "activity:queueScan") {
+                        act = Some(Act::QueueScan);
+                    }
                 }
                 if !rows.waiting.is_empty() {
                     group(ui, "Waiting");
@@ -527,6 +567,11 @@ fn list(ui: &mut egui::Ui, t: &Tokens, rows: &Rows) -> Option<Act> {
                     }
                     if waiting_row(ui, t, task, width) {
                         act = Some(Act::Cancel(task.id));
+                    }
+                    if let Some((_, how)) = rows.unreviewed.iter().find(|(id, _)| *id == task.id)
+                        && let Some(id) = review_line(ui, t, how, task.id, width)
+                    {
+                        act = Some(Act::Review(id));
                     }
                 }
                 if !done.is_empty() {
@@ -660,6 +705,23 @@ fn ending_mark(ui: &egui::Ui, t: &Tokens, rect: Rect, ending: Ending) {
             p.circle_filled(c + vec2(0.0, h * 0.55), 0.8, t.caution);
         }
     }
+}
+
+/// The line under a waiting row of a folder queued without its review: how it brings its files in, and Review…
+/// (the link is laid out first, from the right: a long destination is cut short, never the link).
+fn review_line(ui: &mut egui::Ui, t: &Tokens, how: &str, id: u64, width: f32) -> Option<u64> {
+    let mut asked = None;
+    ui.allocate_ui_with_layout(vec2(width, 16.0), Layout::right_to_left(Align::Center), |ui| {
+        if link(ui, t, tr("Review…"), format!("activity:review:{id}")) {
+            asked = Some(id);
+        }
+        let room = ui.available_width();
+        ui.allocate_ui_with_layout(vec2(room, 16.0), Layout::left_to_right(Align::Center), |ui| {
+            ui.set_width(room);
+            ui.add(egui::Label::new(RichText::new(how).font(t.font(11.0)).color(t.text_dim)).truncate());
+        });
+    });
+    asked
 }
 
 /// ✕ on task `id`'s row. The task may have just finished or stopped being cancellable: nothing to tell the user then,
