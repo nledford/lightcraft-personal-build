@@ -4,6 +4,7 @@
 //! ```text
 //! LightCraft Library/
 //!   catalog.snap   catalog.log      (lightcraft-catalog journal)
+//!   segments/      (the snapshot's photos: JSON files that catalog.snap lists)
 //!   presets.json   view.json        (user presets + favourites; last source/sort/selection)
 //!   prefs.json     (library preferences: XMP sidecars, import defaults, cache size, last export)
 //!   thumbs/        (rendered thumbnail cache, safe to delete)
@@ -541,6 +542,11 @@ impl Session {
         #[cfg(not(target_arch = "wasm32"))]
         self.faces.library_changed();
         let (mut journal, mut catalog, report) = Journal::open(catalog)?;
+        if lock.as_ref().is_some_and(|l| l.held()) {
+            // (only with the library's lock actually held, not one the file system could not give:
+            // see `Journal::remove_unlisted_segments`)
+            journal.remove_unlisted_segments();
+        }
         // A loaded catalog counts revisions from 0, like every other one. Caches (sidebar counts,
         // keyword tree, the grid's list…) are keyed on the revision, so give each library loaded
         // in this process its own range: otherwise an empty library opened after one that was
@@ -813,6 +819,14 @@ impl Session {
         }
         let result = match (persisted, snapshot) {
             (_, Ok(())) => Ok(()),
+            // everything is in the log and only the compaction failed (a library whose upgrade is
+            // put off, with no room to keep its old files): the next open replays the log, so
+            // closing (also to switch libraries) is not refused for it
+            (_, Err(s)) if saved => {
+                log::warn!("library: closed without compacting: {s}");
+                lib.last_error = Some(format!("compaction: {s}"));
+                Ok(())
+            }
             // neither the log nor the snapshot took the queued ops
             (Err(EngineError::NotSaved(e)), Err(s)) if lib.journal.seq() == before => Err(EngineError::NotSaved(format!("{e}; snapshot: {s}"))),
             (_, Err(s)) => Err(s.into()),
