@@ -721,21 +721,26 @@ impl Session {
         if lightcraft_catalog::query::folder_key(&c.path) != lightcraft_catalog::query::folder_key(path) {
             return None;
         }
-        let f = Filter { library_folder: Some(path.to_string()), ..Default::default() };
+        self.scan_is_current(&c).then_some(c)
+    }
+
+    /// Whether the library still holds the photos `changes` saw in its folder, none of them changed since: a scan that
+    /// ran on a worker thread from a snapshot (a waiting synchronize's) is acted on only while this holds.
+    pub fn scan_is_current(&self, changes: &FolderChanges) -> bool {
+        let f = Filter { library_folder: Some(changes.path.clone()), ..Default::default() };
         // (virtual copies made or deleted meanwhile are not files: the folder holds what it held,
         // except for copies of photos the scan relinks or removes, which are acted on by id and
         // would be left behind)
-        let acted: std::collections::HashSet<u64> = c.moved.iter().map(|m| m.id).chain(c.missing.iter().map(|m| m.id)).collect();
+        let acted: std::collections::HashSet<u64> = changes.moved.iter().map(|m| m.id).chain(changes.missing.iter().map(|m| m.id)).collect();
         let counts = |p: &Photo| p.copy_of.is_none_or(|o| acted.contains(&o.0));
         let mut now: Vec<PhotoId> =
             self.catalog.query(&f, &Sort::default()).into_iter().filter(|id| self.catalog.photo(*id).is_some_and(|p| counts(p))).collect();
-        let mut then: Vec<PhotoId> = c.seen.iter().filter(|p| counts(p)).map(|p| p.id).collect();
+        let mut then: Vec<PhotoId> = changes.seen.iter().filter(|p| counts(p)).map(|p| p.id).collect();
         now.sort();
         then.sort();
-        let read: std::collections::HashSet<u64> = c.metadata.iter().map(|m| m.id).collect();
+        let read: std::collections::HashSet<u64> = changes.metadata.iter().map(|m| m.id).collect();
         let same = |p: &Arc<Photo>, q: &Arc<Photo>| if read.contains(&p.id.0) { same_for_sync(p, q) } else { same_file(p, q) };
-        let unchanged = now == then && c.seen.iter().filter(|p| p.copy_of.is_none()).all(|p| self.catalog.photo(p.id).is_some_and(|q| same(p, q)));
-        unchanged.then_some(c)
+        now == then && changes.seen.iter().filter(|p| p.copy_of.is_none()).all(|p| self.catalog.photo(p.id).is_some_and(|q| same(p, q)))
     }
 }
 

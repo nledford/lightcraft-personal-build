@@ -116,6 +116,11 @@ fn a_rating_or_an_album_asks_about_no_file_and_a_photo_moved_to_a_missing_file_i
     // a photo nobody has asked about since the cache was cleared: its file is not known to be fresh
     let log = Arc::new(Mutex::new(Vec::new()));
     h.app.session.media.availability.set_probe(logging(&log));
+    // the grid's failed cells ask once about their files when the answers were cleared: let those
+    // panel asks land and be answered, so what is counted from here is what an edit asks
+    for _ in 0..5 {
+        h.step();
+    }
     assert!(h.step_until(T, |h| h.file_checks_done()));
     let seen: std::collections::HashSet<String> = log.lock().unwrap_or_else(PoisonError::into_inner).iter().cloned().collect();
     let quiet = h

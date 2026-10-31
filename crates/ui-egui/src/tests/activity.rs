@@ -1115,6 +1115,7 @@ fn the_row_words_what_a_task_waits_for() {
 fn skip_on_a_stalled_import_row_fails_that_file_and_goes_on() {
     let (mut h, dir, gate) = hanging_import("skip");
     crate::import::start_paths(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
+    open_list(&mut h);
     let row = stalled_row(&mut h);
     assert_eq!(row.kind, "import");
     assert_eq!(row.stalled.as_ref().map(|s| s.what.as_str()), Some("IMG_hang.jpg"));

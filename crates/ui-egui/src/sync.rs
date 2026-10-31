@@ -480,7 +480,13 @@ pub fn confirm(app: &mut LightcraftApp, dlg: &Dialog) -> Result<Value, String> {
     // (before the busy checks: nothing is imported or written, so a running import or
     // synchronize can't clash with it, and the dialog closes either way. Like every result the
     // dialog shows, it is the scan's: a file added since is found by the next Synchronize)
-    if counts.nothing_to_do(*import_new, *import_duplicates) {
+    // (a scan that went stale is refused and made again below, keeping the choices the person
+    // made, also when these choices would do nothing: what the person would decline is another
+    // folder's news. The peek takes nothing; the scan is only handed over down there)
+    let stale = app.session.folder_changes.as_ref().is_none_or(|c| {
+        lightcraft_catalog::query::folder_key(&c.path) != lightcraft_catalog::query::folder_key(path) || !app.session.scan_is_current(c)
+    });
+    if !stale && counts.nothing_to_do(*import_new, *import_duplicates) {
         remember_import_duplicates(app, *import_duplicates);
         return Ok(json!({"upToDate": counts.complete()}));
     }

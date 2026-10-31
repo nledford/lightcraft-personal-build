@@ -1091,8 +1091,10 @@ fn a_rescan_after_a_stopped_scan_starts_from_the_default_choices() {
         // (the one choice the person can still make)
         *import_new = false;
     }
-    let a = h.app.session.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
-    let r = h.request("engine.execute", json!({"command": "photo.rate", "params": {"ids": [a.0], "rating": 3}}), T);
+    // the folder gets another photo some other way while the dialog is open (work on the
+    // folder's own photos no longer makes the scan stale)
+    write_png(&dir.path("trip/d.png"), 4);
+    let r = h.request("engine.execute", json!({"command": "library.import", "params": {"paths": [dir.path("trip/d.png")]}}), T);
     assert_eq!(r["ok"], true, "{r}");
     let r = h.request("ui.dialog.confirm", json!({}), T);
     assert_eq!(r["ok"], false, "{r}");
