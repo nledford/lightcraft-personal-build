@@ -49,6 +49,7 @@ mod print;
 mod process;
 mod recheck;
 mod restore;
+mod samples;
 mod segment;
 mod settings_files;
 mod shelved_folder;
