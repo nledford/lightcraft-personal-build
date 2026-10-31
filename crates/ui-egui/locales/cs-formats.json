@@ -387,6 +387,13 @@
   "Waiting tasks dropped: {n}": "Zahozené čekající úlohy: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Ve frontě čeká příliš mnoho úloh: {n}. Počkejte, až některé skončí",
   "Without review: copy to {destination}": "Bez kontroly: kopírovat do {destination}",
+  "Synchronizing {n} folders one after another: see them under the bell": "Synchronizace složek ({n}) jedné po druhé: najdete je pod zvonkem",
+  "Too many tasks are waiting: only {n} more can wait in line": "Čeká příliš mnoho úloh: do fronty se vejde už jen {n}",
+  "Synchronize {n} Folders…": "Synchronizovat složky ({n})…",
+  "{n} new": "nové: {n}",
+  "{n} moved": "přesunuté: {n}",
+  "{n} missing": "chybějící: {n}",
+  "{n} with changed sidecars": "se změněným přidruženým souborem: {n}",
   "Queued: it starts after {n} more": "Ve frontě: začne po dalších úlohách: {n}",
   "{n} tasks waiting in line won't run.": "Úlohy čekající ve frontě ({n}) se nespustí.",
   "Left alone: {n} (synchronize again to review them)": "Ponecháno: {n} (pro kontrolu synchronizujte znovu)"

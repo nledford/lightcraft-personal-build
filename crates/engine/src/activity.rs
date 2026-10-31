@@ -1250,6 +1250,22 @@ mod tests {
         assert!(a.waiting().is_empty() && !a.lane_waiting(Lane::Previews));
     }
 
+    /// Given a request that says what it is about, then its waiting row's detail is that (capped), and a request
+    /// without one leaves the detail empty.
+    #[test]
+    fn a_waiting_task_names_what_it_is_about() {
+        let a = Activity::default();
+        let running = a.start("import", "Importing", Cancel::Yes);
+        let about = |subject: &str| Request { subject: subject.into(), ..request("x") };
+        a.enqueue("sync", "Synchronizing folder", about("photos/Garden")).unwrap();
+        a.enqueue("sync", "Synchronizing folder", request("x")).unwrap();
+        a.enqueue("sync", "Synchronizing folder", about(&"é".repeat(300))).unwrap();
+        let details: Vec<usize> = a.waiting().iter().map(|t| t.detail.chars().count()).collect();
+        assert_eq!(a.waiting()[0].detail, "photos/Garden");
+        assert_eq!(details, vec![13, 0, 200]);
+        drop(running);
+    }
+
     #[test]
     fn a_library_change_empties_the_line() {
         let a = Activity::default();

@@ -110,6 +110,10 @@ Jobs that must not run side by side share a lane (`activity::Lane`). There are t
   add in place, or copy for a card). Its waiting row says so ("Without review: add in place", "…copy to <folder>") and
   has Review…, which takes it out of the line and scans it for the usual review, or is refused with a toast while
   another folder is being scanned or a finished scan's review waits for a dialog to close. The notes of the last review and of the queued rows are kept in memory only.
+  Synchronize N Folders (several Folders rows) scans its folders one after another under one
+  "Looking for changes" row, then puts one Synchronize per folder with something to do in this line, in the
+  sidebar's order, each removing, relinking or reading sidecars of only the photos its scan found; a waiting row names its folder
+  (`Request::subject`, the row's detail).
 
 A call that sets `queue: true` while its lane is busy does not fail, as long as the waiting line has room (a full line is refused, as described below):
 `Activity::enqueue` keeps what it was asked (`Request`: the command and its parameters, with the photos written out)

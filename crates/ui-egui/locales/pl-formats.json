@@ -387,6 +387,13 @@
   "Waiting tasks dropped: {n}": "Odrzucone zadania z kolejki: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Zbyt wiele zadań czeka ({n}): poczekaj, aż część się zakończy",
   "Without review: copy to {destination}": "Bez sprawdzania: kopiuj do {destination}",
+  "Synchronizing {n} folders one after another: see them under the bell": "Synchronizacja folderów ({n}) jeden po drugim: zobacz pod dzwonkiem",
+  "Too many tasks are waiting: only {n} more can wait in line": "Czeka zbyt wiele zadań: w kolejce zmieści się jeszcze tylko {n}",
+  "Synchronize {n} Folders…": "Synchronizuj foldery ({n})…",
+  "{n} new": "nowe: {n}",
+  "{n} moved": "przeniesione: {n}",
+  "{n} missing": "brakujące: {n}",
+  "{n} with changed sidecars": "ze zmienionym plikiem XMP: {n}",
   "Queued: it starts after {n} more": "W kolejce: rozpocznie się po kolejnych zadaniach ({n})",
   "{n} tasks waiting in line won't run.": "Oczekujące w kolejce zadania ({n}) nie zostaną uruchomione.",
   "Left alone: {n} (synchronize again to review them)": "Pominięto: {n} (zsynchronizuj ponownie, aby je sprawdzić)"

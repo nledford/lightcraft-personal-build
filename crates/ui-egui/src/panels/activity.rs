@@ -805,6 +805,14 @@ pub(crate) fn waiting_name(task: &TaskInfo) -> String {
     if task.detail.is_empty() { tr(&task.label).to_string() } else { format!("{} · {}", tr(&task.label), task.detail) }
 }
 
+/// The same line as one text, for tests.
+#[cfg(test)]
+pub(crate) fn waiting_line_text(task: &TaskInfo) -> String {
+    let starts = if task.place <= 1 { tr("Starts next").to_string() } else { tr_format!("Starts after {n} more", n = task.place - 1) };
+    let head = [task.detail.as_str(), task.facts.as_str()].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" · ");
+    if head.is_empty() { starts } else { format!("{head} · {starts}") }
+}
+
 /// A waiting task's second line: what it works on and what else is known of it, then when it starts. The timing stays
 /// whole; the name and the facts are what give way when the line is too long.
 fn waiting_line(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) {

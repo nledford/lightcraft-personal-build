@@ -387,6 +387,13 @@
   "Waiting tasks dropped: {n}": "Tarefas na fila descartadas: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Há tarefas demais na fila ({n}): espere algumas terminarem",
   "Without review: copy to {destination}": "Sem revisão: copiar para {destination}",
+  "Synchronizing {n} folders one after another: see them under the bell": "Sincronizando {n} pastas uma após a outra: veja sob o sino",
+  "Too many tasks are waiting: only {n} more can wait in line": "Tarefas demais aguardando: vagas restantes na fila: {n}",
+  "Synchronize {n} Folders…": "Sincronizar {n} pastas…",
+  "{n} new": "novas: {n}",
+  "{n} moved": "movidas: {n}",
+  "{n} missing": "ausentes: {n}",
+  "{n} with changed sidecars": "com arquivo auxiliar alterado: {n}",
   "Queued: it starts after {n} more": "Na fila: começa depois de mais {n}",
   "{n} tasks waiting in line won't run.": "{n} tarefas na fila não serão executadas.",
   "Left alone: {n} (synchronize again to review them)": "Deixados como estavam: {n} (sincronize de novo para revisá-los)"
