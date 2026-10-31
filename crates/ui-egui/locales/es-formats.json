@@ -373,5 +373,7 @@
   "Move {n}, skip {m}": "Mover {n}, omitir {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} foto{0} movida{0} a “{1}”; omitidas: {skipped}. Editar → Deshacer las devuelve.",
   "{} can't be moved": "{0} no se puede mover",
-  "{} has the same name as another photo being moved": "{0} tiene el mismo nombre que otra foto que se está moviendo"
+  "{} has the same name as another photo being moved": "{0} tiene el mismo nombre que otra foto que se está moviendo",
+  "{label} finished": "{label}: terminado",
+  "{n} jobs finished": "Tareas terminadas: {n}"
 }

@@ -373,5 +373,7 @@
   "Move {n}, skip {m}": "移動 {n} 張，略過 {m} 張",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "已將 {n} 張照片移到「{1}」{0:.0}，略過 {skipped} 張。編輯 → 復原 可移回。",
   "{} can't be moved": "{0} 無法移動",
-  "{} has the same name as another photo being moved": "{0} 與另一張要移動的照片同名"
+  "{} has the same name as another photo being moved": "{0} 與另一張要移動的照片同名",
+  "{label} finished": "已完成：{label}",
+  "{n} jobs finished": "已完成的工作：{n}"
 }

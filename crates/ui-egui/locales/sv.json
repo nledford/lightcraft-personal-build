@@ -2614,5 +2614,7 @@
   "Keywords and presets apply to new files only, not to photos already in Local": "Nyckelord och förinställningar gäller bara nya filer, inte foton som redan finns i Lokalt",
   "Rename a clashing photo, or choose another folder, to move it too.": "Byt namn på fotot med samma namn eller välj en annan mapp så kan det flyttas.",
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Anslut disken igen eller använd Fil → Sök efter saknade foton… och försök igen.",
-  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ett foto utan fil kan inte flyttas. Ett lokalt foto kan det, när du har använt Lägg till i Mina foton."
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ett foto utan fil kan inte flyttas. Ett lokalt foto kan det, när du har använt Lägg till i Mina foton.",
+  "Notifications": "Aviseringar",
+  "Notify me when a job finishes while LightCraft is in the background": "Meddela mig när ett jobb är klart medan LightCraft ligger i bakgrunden"
 }

@@ -376,5 +376,7 @@
   "Move {n}, skip {m}": "გადატანა: {n}, გამოტოვება: {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "„{1}“-ში გადატანილია ფოტო: {n}{0:.0}, გამოტოვებულია: {skipped}. რედაქტირება → დაბრუნება დააბრუნებს მათ.",
   "{} can't be moved": "{0} ვერ გადაიტანება",
-  "{} has the same name as another photo being moved": "{0}-ს იგივე სახელი აქვს, რაც გადასატან სხვა ფოტოს"
+  "{} has the same name as another photo being moved": "{0}-ს იგივე სახელი აქვს, რაც გადასატან სხვა ფოტოს",
+  "{label} finished": "დასრულდა: {label}",
+  "{n} jobs finished": "დასრულებული დავალებები: {n}"
 }

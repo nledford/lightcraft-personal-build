@@ -29,6 +29,7 @@ mod frame_rate;
 pub mod headless;
 pub mod i18n;
 pub mod icons;
+mod job_notice;
 pub mod library_work;
 pub mod lightroom_import;
 pub mod links;
@@ -112,8 +113,8 @@ pub use clock::{monotonic_ms, now_ms};
 #[cfg(target_os = "linux")]
 pub use services::OpenModelFolderFn;
 pub use services::{
-    CheckEditorFn, DockBadgeFn, HostAction, KeepAwakeFn, OpenAllWithFn, OpenUrlFn, OpenWithFn, PickFiles, PickFolder, PngEncode, RevealFn, SaveFile,
-    ScreenProfileFn, Services, SharedWrite, SystemReduceMotionFn, SystemThemeFn, WriteFn,
+    CheckEditorFn, DockBadgeFn, HostAction, KeepAwakeFn, Notice, NotifyFn, OpenAllWithFn, OpenUrlFn, OpenWithFn, PickFiles, PickFolder, PngEncode,
+    RevealFn, SaveFile, ScreenProfileFn, Services, SharedWrite, SystemReduceMotionFn, SystemThemeFn, WriteFn,
 };
 use state::{GestureFrame, InjectedPress};
 
@@ -521,6 +522,8 @@ pub struct LightcraftApp {
     pub(crate) awake_told: Option<String>,
     /// The job count the host was last told for the Dock badge (`services.dock_badge`).
     pub(crate) badge_told: usize,
+    /// Which running jobs ended, for the system notification (`services.notify`).
+    pub(crate) job_watch: job_notice::JobWatch,
     /// The library failed to open at launch: the blocking window, then the temporary-session
     /// banner (issue #100). Cleared once a library opens.
     pub library_problem: Option<panels::library_problem::LibraryProblem>,

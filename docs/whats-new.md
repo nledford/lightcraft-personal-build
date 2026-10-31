@@ -350,6 +350,12 @@
   nothing. The answer has the counts `removed`, `trashed`, `erased`, `missing`, `shared`, `sidecarsLeft`, `skipped`
   and `stopped` (always 0 here), `noTrash` (the photos on a disk without a Trash) and `failed` (what could not move, and why).
 
+### On macOS, a notification tells you when a job has finished
+- When a job you started (an export, an import, a preview build…) ends while LightCraft is in the background, macOS
+  shows a notification. It says what the job reported ("Exported 24 photos"), or names it, or says how many ended
+  when several did. The first time, macOS asks whether LightCraft may notify you. Turn it off in Settings ▸ General ▸
+  Notifications.
+
 ## 2026-10-24
 
 ### ✕ ends an import or scan at once when a file stops answering

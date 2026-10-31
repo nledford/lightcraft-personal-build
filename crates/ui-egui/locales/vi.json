@@ -2838,5 +2838,7 @@
   "Keywords and presets apply to new files only, not to photos already in Local": "Từ khóa và cài đặt sẵn chỉ áp dụng cho tệp mới, không áp dụng cho ảnh đã có trong Cục bộ",
   "Rename a clashing photo, or choose another folder, to move it too.": "Đổi tên ảnh bị trùng tên hoặc chọn thư mục khác để chuyển được.",
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Kết nối lại ổ đĩa hoặc dùng Tệp → Tìm ảnh bị thiếu… rồi thử lại.",
-  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ảnh không có tệp thì không thể chuyển. Ảnh cục bộ thì được, sau khi dùng Thêm vào Ảnh của tôi."
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ảnh không có tệp thì không thể chuyển. Ảnh cục bộ thì được, sau khi dùng Thêm vào Ảnh của tôi.",
+  "Notifications": "Thông báo",
+  "Notify me when a job finishes while LightCraft is in the background": "Thông báo cho tôi khi một tác vụ hoàn tất trong lúc LightCraft chạy nền"
 }

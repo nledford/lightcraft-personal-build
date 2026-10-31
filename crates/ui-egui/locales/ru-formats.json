@@ -373,5 +373,7 @@
   "Move {n}, skip {m}": "Переместить {n}, пропустить {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "В «{1}» перемещено фото: {n}{0:.0}, пропущено: {skipped}. Правка → Отменить вернёт их.",
   "{} can't be moved": "{0} нельзя переместить",
-  "{} has the same name as another photo being moved": "{0} имеет то же имя, что и другое перемещаемое фото"
+  "{} has the same name as another photo being moved": "{0} имеет то же имя, что и другое перемещаемое фото",
+  "{label} finished": "Завершено: {label}",
+  "{n} jobs finished": "Завершено задач: {n}"
 }

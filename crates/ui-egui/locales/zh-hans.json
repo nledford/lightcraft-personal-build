@@ -2546,5 +2546,7 @@
   "Keywords and presets apply to new files only, not to photos already in Local": "关键词和预设仅应用于新文件，不适用于已在“本地”中的照片",
   "Rename a clashing photo, or choose another folder, to move it too.": "请重命名重名的照片，或选择其他文件夹，才能移动。",
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "请重新连接磁盘，或使用 文件 → 查找丢失的照片…，然后重试。",
-  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "没有文件的照片无法移动。本地照片在使用“添加到我的照片”后即可移动。"
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "没有文件的照片无法移动。本地照片在使用“添加到我的照片”后即可移动。",
+  "Notifications": "通知",
+  "Notify me when a job finishes while LightCraft is in the background": "LightCraft 在后台运行时，任务完成后通知我"
 }
