@@ -356,5 +356,9 @@
   "Exported contact sheet: {photos} photos, {pages} pages": "Lembar kontak diekspor (foto: {photos}, halaman: {pages})",
   "Printed to PDF: {photos} photos, {pages} pages": "Dicetak ke PDF (foto: {photos}, halaman: {pages})",
   "{} import warning{}": "Peringatan impor: {}{:.0}",
-  "“{name}” is now a place in Local: open it there": "“{name}” kini menjadi lokasi di Lokal: buka di sana"
+  "“{name}” is now a place in Local: open it there": "“{name}” kini menjadi lokasi di Lokal: buka di sana",
+  "Move “{name}” into “{into}”": "Pindahkan “{name}” ke “{into}”",
+  "Move “{name}” into “{into}”?": "Pindahkan “{name}” ke “{into}”?",
+  "Photos in it and in the folders inside it: {count}": "Foto di dalamnya dan di folder di dalamnya: {count}",
+  "“{name}” is no longer there: nothing was moved": "“{name}” tidak ditemukan lagi: tidak ada yang dipindahkan"
 }

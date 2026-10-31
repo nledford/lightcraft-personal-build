@@ -353,5 +353,9 @@
   "Showing {what}": "Mostrando {what}",
   "{title}, showing {what}": "{title}, mostrando {what}",
   "“{name}” is now a place in Local: open it there": "“{name}” agora é um lugar em Local: abra-a lá",
+  "Move “{name}” into “{into}”": "Mover “{name}” para “{into}”",
+  "Move “{name}” into “{into}”?": "Mover “{name}” para “{into}”?",
+  "Photos in it and in the folders inside it: {count}": "Fotos nela e nas pastas dentro dela: {count}",
+  "“{name}” is no longer there: nothing was moved": "“{name}” não está mais lá: nada foi movido",
   "+{n} more": "+{n} mais"
 }

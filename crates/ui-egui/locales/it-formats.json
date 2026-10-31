@@ -353,5 +353,9 @@
   "Lists “{name}”, the folder this one is in": "Elenca “{name}”, la cartella in cui si trova questa",
   "Showing {what}": "Mostra {what}",
   "{title}, showing {what}": "{title}, mostra {what}",
-  "“{name}” is now a place in Local: open it there": "“{name}” ora è un luogo in Locale: aprilo lì"
+  "“{name}” is now a place in Local: open it there": "“{name}” ora è un luogo in Locale: aprilo lì",
+  "Move “{name}” into “{into}”": "Sposta “{name}” in “{into}”",
+  "Move “{name}” into “{into}”?": "Spostare “{name}” in “{into}”?",
+  "Photos in it and in the folders inside it: {count}": "Foto al suo interno e nelle cartelle al suo interno: {count}",
+  "“{name}” is no longer there: nothing was moved": "“{name}” non c'è più: non è stato spostato nulla"
 }

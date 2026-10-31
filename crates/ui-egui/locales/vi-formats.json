@@ -353,5 +353,9 @@
   "Exported contact sheet: {photos} photos, {pages} pages": "Đã xuất tờ tiếp xúc (ảnh: {photos}, trang: {pages})",
   "Printed to PDF: {photos} photos, {pages} pages": "Đã in ra PDF (ảnh: {photos}, trang: {pages})",
   "{} import warning{}": "Cảnh báo khi nhập: {}{:.0}",
-  "“{name}” is now a place in Local: open it there": "“{name}” giờ là một vị trí trong Cục bộ: hãy mở ở đó"
+  "“{name}” is now a place in Local: open it there": "“{name}” giờ là một vị trí trong Cục bộ: hãy mở ở đó",
+  "Move “{name}” into “{into}”": "Di chuyển «{name}» vào «{into}»",
+  "Move “{name}” into “{into}”?": "Di chuyển «{name}» vào «{into}»?",
+  "Photos in it and in the folders inside it: {count}": "Ảnh trong đó và trong các thư mục bên trong: {count}",
+  "“{name}” is no longer there: nothing was moved": "«{name}» không còn nữa: không có gì được di chuyển"
 }

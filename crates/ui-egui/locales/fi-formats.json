@@ -353,5 +353,9 @@
   "Exported contact sheet: {photos} photos, {pages} pages": "Kontaktivedos viety (kuvia: {photos}, sivuja: {pages})",
   "Printed to PDF: {photos} photos, {pages} pages": "Tulostettu PDF-tiedostoon (kuvia: {photos}, sivuja: {pages})",
   "{} import warning{}": "Tuontivaroituksia: {}{:.0}",
-  "“{name}” is now a place in Local: open it there": "“{name}” on nyt paikka Paikallisessa: avaa se siellä"
+  "“{name}” is now a place in Local: open it there": "“{name}” on nyt paikka Paikallisessa: avaa se siellä",
+  "Move “{name}” into “{into}”": "Siirrä ”{name}” kohteeseen ”{into}”",
+  "Move “{name}” into “{into}”?": "Siirretäänkö ”{name}” kohteeseen ”{into}”?",
+  "Photos in it and in the folders inside it: {count}": "Kuvia siinä ja sen sisällä olevissa kansioissa: {count}",
+  "“{name}” is no longer there: nothing was moved": "”{name}” ei ole enää siellä: mitään ei siirretty"
 }

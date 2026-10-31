@@ -353,5 +353,9 @@
   "Showing {what}": "{what} を表示中",
   "{title}, showing {what}": "{title}、{what} を表示中",
   "“{name}” is now a place in Local: open it there": "「{name}」をローカルの場所に追加しました。そこで開いてください",
+  "Move “{name}” into “{into}”": "「{name}」を「{into}」に移動",
+  "Move “{name}” into “{into}”?": "「{name}」を「{into}」に移動しますか？",
+  "Photos in it and in the folders inside it: {count}": "その中およびその中のフォルダ内の写真：{count}",
+  "“{name}” is no longer there: nothing was moved": "「{name}」が見つかりません。何も移動していません",
   "+{n} more": "ほか{n}件"
 }

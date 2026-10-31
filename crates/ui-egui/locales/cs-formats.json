@@ -353,5 +353,9 @@
   "Lists “{name}”, the folder this one is in": "Zobrazuje „{name}“, složku, ve které je tato",
   "Showing {what}": "Zobrazeno: {what}",
   "{title}, showing {what}": "{title}, zobrazeno: {what}",
-  "“{name}” is now a place in Local: open it there": "„{name}“ je nyní místem v místních souborech: otevřete ji tam"
+  "“{name}” is now a place in Local: open it there": "„{name}“ je nyní místem v místních souborech: otevřete ji tam",
+  "Move “{name}” into “{into}”": "Přesunout „{name}“ do „{into}“",
+  "Move “{name}” into “{into}”?": "Přesunout „{name}“ do „{into}“?",
+  "Photos in it and in the folders inside it: {count}": "Fotografie v ní a ve složkách v ní: {count}",
+  "“{name}” is no longer there: nothing was moved": "„{name}“ už neexistuje: nic nebylo přesunuto"
 }
