@@ -51,6 +51,28 @@ fn load_edited(c: &Catalog, edit: impl FnOnce(&mut serde_json::Value)) -> (Catal
     (c, report)
 }
 
+/// Like [`load_edited`] for what the photos' segment files hold (format 11 keeps no photo in `catalog.snap`): `edit` is
+/// given each segment's JSON, and the snapshot's list follows with the new size and checksum.
+fn load_edited_segments(c: &Catalog, edit: impl Fn(&mut serde_json::Value)) -> (Catalog, LoadReport) {
+    let m = MemStore::new();
+    let (mut j, _, _) = Journal::open(Box::new(m.clone())).unwrap();
+    j.snapshot(c).unwrap();
+    let mut head: serde_json::Value = serde_json::from_slice(&m.get(SNAPSHOT).unwrap()).unwrap();
+    for s in head["segments"].as_array_mut().unwrap() {
+        let name = s["name"].as_str().unwrap().to_string();
+        let mut v: serde_json::Value = serde_json::from_slice(&m.get(&name).unwrap()).unwrap();
+        edit(&mut v);
+        let bytes = serde_json::to_vec(&v).unwrap();
+        s["bytes"] = (bytes.len() as u64).into();
+        s["crc"] = u64::from(crc32fast::hash(&bytes)).into();
+        m.set(&name, bytes);
+    }
+    m.set(SNAPSHOT, serde_json::to_vec(&head).unwrap());
+    drop(j);
+    let (_, c, report) = Journal::open(Box::new(m)).unwrap();
+    (c, report)
+}
+
 /// A stack whose `id` differs from the key it is filed under made `arrange_stacks` index the map
 /// with an id it doesn't hold, which panics: the grid of any library with such a stack.
 #[test]
@@ -204,8 +226,9 @@ fn history_beyond_the_limit_is_trimmed_on_load() {
     let step = HistoryStep { label: "s0".into(), settings: std::sync::Arc::new(lightcraft_develop::DevelopSettings::default()) };
     c.apply(Op::PushHistory { id: ids[0], step }).unwrap();
     c.apply(Op::SetHistoryCursor { id: ids[0], cursor: Some(extra - 3) }).unwrap();
-    let (loaded, report) = load_edited(&c, |v| {
-        let history = &mut v["photos"][ids[0].0.to_string()]["history"];
+    let key = ids[0].0.to_string();
+    let (loaded, report) = load_edited_segments(&c, |v| {
+        let Some(history) = v["photos"].get_mut(&key).map(|p| &mut p["history"]) else { return };
         let one = history[0].clone();
         *history = (0..extra)
             .map(|i| {
