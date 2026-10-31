@@ -2,12 +2,13 @@
 //! app can run the slow part on a worker thread: copying a large raw or video to a NAS takes as
 //! long as the network needs, and no frame should wait for it.
 //!
-//! * [`start`] (on the session): the checks that need only the library (Local photos, files the
-//!   library doesn't have, names clashing within the batch), the plan, and the activity row.
-//! * [`MoveWork::run`] (anywhere): the checks that read the disk (the folder, each file, names
-//!   already taken there), the record of the move ([`crate::move_intent`]), then the files, one at
-//!   a time, reporting progress to the activity row. The row's ✕ (or `activity.cancel`) stops it
-//!   after the file in hand.
+//! * [`start`] (on the session): the checks that need only the library (Local photos and files the
+//!   library doesn't have, unless they are to be skipped), the plan, and the activity row.
+//! * [`MoveWork::run`] (anywhere): the checks that read the disk, as [`crate::move_check`] sorts
+//!   them (the folder, each file, names already taken there or by another photo of the batch,
+//!   leaving out the photos told to be skipped), the record of the move ([`crate::move_intent`]),
+//!   then the files, one at a time, reporting progress to the activity row. The row's ✕ (or
+//!   `activity.cancel`) stops it after the file in hand.
 //! * [`MoveFinish::finish`] (on the session): the library follows the files that moved, as one
 //!   undo step.
 //!
@@ -15,15 +16,16 @@
 //! ([`Session::refuse_while_moving`]), and doesn't write the XMP sidecars of the photos on their way
 //! (they're written once the move ends, at the new place).
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock, Weak};
 
 use lightcraft_catalog::{Op, PhotoId, Source};
 use serde_json::{Value, json};
 
-use crate::activity::{Cancel, TaskGuard, TaskHandle};
+use crate::activity::{Cancel, Ending, Outcome, TaskGuard, TaskHandle};
 use crate::cmd::bad;
+use crate::move_check::{self, Item};
 use crate::move_intent::MoveRecord;
 use crate::rename::{BatchMoveError, MoveFs, RealFs, RenamePlan, folded_path};
 use crate::{EngineError, Result, Session};
@@ -47,8 +49,10 @@ impl MoveTicket {
 /// The half of a move that reads and writes the disk ([`MoveWork::run`]); `Send`, for a worker.
 pub struct MoveWork {
     folder: String,
-    /// (from, to), one per file (a master and its virtual copies move once).
-    moves: Vec<(String, String)>,
+    /// The photos of the move as the library knows them, and the ones to leave out.
+    items: Vec<Item>,
+    skip: HashSet<u64>,
+    skip_paths: HashSet<String>,
     /// Where the record of the move goes; `None` for a library without a folder of its own.
     library: Option<PathBuf>,
     task: TaskHandle,
@@ -60,10 +64,15 @@ pub struct MoveWork {
 pub struct MoveOutcome(Ran);
 
 enum Ran {
-    /// Nothing moved, and why (a name taken, a file offline…).
+    /// Nothing moved, and why (a name taken, a file offline…), as a sentence for the person.
     Refused(String),
+    /// Nothing to move: every photo that could go was in the folder already or was left out
+    /// (`skipped`, as [`move_check::Left::json`] gives them).
+    Nothing { skipped: Vec<Value> },
     /// The first `moved` files moved; fewer than all when the move was stopped.
-    Moved { moved: usize, record: Option<MoveRecord> },
+    /// `photos`: how many photos each file of the move is for (a master and its virtual copies move
+    /// once), in the order the files move, so the counts can be given as the person counts.
+    Moved { moved: usize, record: Option<MoveRecord>, skipped: Vec<Value>, photos: Vec<usize> },
     /// A file couldn't move: the earlier ones were moved back (what couldn't be is in `error`).
     Failed { error: BatchMoveError, record: Option<MoveRecord> },
 }
@@ -85,79 +94,63 @@ impl std::fmt::Debug for MoveFinish {
     }
 }
 
-/// Plan the move `p` asks for (`{folder, ids?}`; the selection by default). `None` when every
+/// Plan the move `p` asks for (`{folder, ids?, skip?}`; the selection by default). `None` when every
 /// photo is in that folder already. `cancellable`: the activity row gets ✕ (only where something
 /// can press it while the work runs: the app's background move).
 pub fn start(s: &mut Session, p: &Value, cancellable: bool) -> Result<Option<(MoveWork, MoveFinish)>> {
+    s.refuse_while_trashing(C)?;
     let folder = crate::cmd::browse::folder_param(p, "folder").ok_or_else(|| bad(C, "missing folder"))?;
     let dir = Path::new(folder);
     s.refuse_while_moving()?;
-    s.refuse_while_trashing(C)?;
     // refused before anything touches the disk, as it always was (one look at one folder; the
     // worker looks again before the first file moves)
     if !dir.is_dir() {
-        return Err(bad(C, format!("{folder} is not a folder (create it first with folder.create)")));
+        return Err(EngineError::Other(not_a_folder(folder)));
     }
-    let ids = s.targets(p).map_err(|e| match e {
-        EngineError::BadParams { cmd, msg } if cmd.is_empty() => bad(C, msg),
-        e => e,
-    })?;
+    let ids = s.targets(p).map_err(named)?;
     if ids.is_empty() {
-        return Err(bad(C, "no photos to move: select some or give ids"));
+        return Err(EngineError::Other("There are no photos to move. Select some first".into()));
     }
+    let skip = move_check::skip_param(p).map_err(named)?;
+    let items = move_check::items(s, &ids).map_err(named)?;
+    move_check::screen(&items, &skip).map_err(named)?;
+    let skip_paths = move_check::skip_paths(s, &skip);
+    // the files that could move: what the library alone says (the disk is the worker's to look at)
     let mut plans: Vec<RenamePlan> = Vec::new();
-    let mut taken: HashSet<String> = HashSet::new();
     // the source paths already in `plans`: one look per photo, not a scan of the plans (a selection has no size limit)
     let mut planned: HashSet<&str> = HashSet::new();
-    let mut clashes: Vec<String> = Vec::new();
-    for id in ids {
-        let ph = s.catalog.photo(id).ok_or_else(|| bad(C, format!("no photo {}", id.0)))?;
-        if ph.local {
-            return Err(bad(C, format!("{} is not in the library (Local): add it first", ph.file_name)));
-        }
-        let Source::File { path } = &ph.source else {
-            return Err(bad(C, format!("{} has no file on disk", ph.file_name)));
-        };
-        if planned.contains(path.as_str()) {
-            continue; // a virtual copy of a photo already moving
+    for it in &items {
+        let Some(path) = &it.path else { continue };
+        if skip.contains(&it.id.0) || skip_paths.contains(path) || planned.contains(path.as_str()) {
+            continue; // left out, or a virtual copy of a photo already moving
         }
         let src = Path::new(path);
-        let Some(file) = src.file_name() else { return Err(bad(C, format!("{path}: no file name"))) };
+        let Some(file) = src.file_name() else { continue };
         if src.parent() == Some(dir) {
             continue; // already there
         }
         let to = dir.join(file).to_string_lossy().to_string();
-        if !taken.insert(to.to_lowercase()) {
-            clashes.push(file.to_string_lossy().to_string());
-            continue;
-        }
         planned.insert(path.as_str());
-        let name = ph.file_name.clone();
-        plans.push(RenamePlan { id: id.0, from: name.clone(), to: name, from_path: Some(path.clone()), to_path: Some(to) });
+        plans.push(RenamePlan { id: it.id.0, from: it.file.clone(), to: it.file.clone(), from_path: Some(path.clone()), to_path: Some(to) });
     }
-    if !clashes.is_empty() {
-        return Err(bad(C, clash_message(&clashes, folder)));
-    }
-    if plans.is_empty() {
+    if plans.is_empty() && skip.is_empty() {
         return Ok(None);
     }
     // a sidecar repair left by an earlier step goes first, as before any file move
     s.repair_sidecars_with(&RealFs)?;
-    let moves: Vec<(String, String)> = plans.iter().filter_map(|pl| Some((pl.from_path.clone()?, pl.to_path.clone()?))).collect();
-    let ticket = Arc::new(MoveTicket { paths: moves.iter().map(|(from, _)| folded_path(from)).collect() });
+    let ticket = Arc::new(MoveTicket { paths: plans.iter().filter_map(|pl| pl.from_path.as_deref()).map(folded_path).collect() });
     s.moving = Arc::downgrade(&ticket);
     let guard = s.activity.start("move", "Moving photos", if cancellable { Cancel::Yes } else { Cancel::No });
-    guard.progress(0, moves.len() as u64);
+    guard.progress(0, plans.len() as u64);
     let library = s.library.as_ref().filter(|l| l.on_disk).map(|l| l.dir.clone());
     let record = Arc::new(OnceLock::new());
-    let work = MoveWork { folder: folder.to_string(), moves, library, task: guard.handle(), record: Arc::clone(&record) };
+    let work = MoveWork { folder: folder.to_string(), items, skip, skip_paths, library, task: guard.handle(), record: Arc::clone(&record) };
     let finish = MoveFinish { folder: folder.to_string(), plans, identity: Arc::clone(&s.library_identity), ticket, guard, record };
     Ok(Some((work, finish)))
 }
 
-fn clash_message(names: &[String], folder: &str) -> String {
-    let s = if names.len() == 1 { "" } else { "s" };
-    format!("{} already in {folder}: nothing was moved. Rename the photo{s} first or choose another folder", names.join(", "))
+fn not_a_folder(folder: &str) -> String {
+    format!("“{}” is not a folder (offline, moved or deleted?). Choose another folder", move_check::folder_name(folder))
 }
 
 impl MoveWork {
@@ -167,22 +160,23 @@ impl MoveWork {
     }
 
     pub(crate) fn run_with(self, fs: &dyn MoveFs) -> MoveOutcome {
-        let MoveWork { folder, moves, library, task, record: slot } = self;
-        if !Path::new(&folder).is_dir() {
-            return MoveOutcome(Ran::Refused(format!("{folder} is not a folder (create it first with folder.create)")));
+        let MoveWork { folder, items, skip, skip_paths, library, task, record: slot } = self;
+        let dir = Path::new(&folder);
+        if !dir.is_dir() {
+            return MoveOutcome(Ran::Refused(not_a_folder(&folder)));
         }
-        let mut clashes = Vec::new();
-        for (from, to) in &moves {
-            if !fs.is_file(Path::new(from)) {
-                return MoveOutcome(Ran::Refused(format!("{from} is missing or offline: find it first (Find Missing Photos)")));
-            }
-            if fs.exists(Path::new(to)) {
-                clashes.push(name_of(to));
-            }
+        let sorted = match move_check::sort_items(fs, dir, &items, &skip, &skip_paths, false) {
+            Ok(sorted) => sorted,
+            Err(e) => return MoveOutcome(Ran::Refused(e.to_string())),
+        };
+        if !sorted.problems.is_empty() {
+            return MoveOutcome(Ran::Refused(move_check::refusal(&folder, &sorted.problems)));
         }
-        if !clashes.is_empty() {
-            return MoveOutcome(Ran::Refused(clash_message(&clashes, &folder)));
+        let skipped: Vec<Value> = sorted.skipped.iter().map(move_check::Left::json).collect();
+        if sorted.plans.is_empty() {
+            return MoveOutcome(Ran::Nothing { skipped });
         }
+        let moves: Vec<(String, String)> = sorted.plans.iter().filter_map(|pl| Some((pl.from_path.clone()?, pl.to_path.clone()?))).collect();
         // the record goes first: whatever stops this from here on, the next open finds the files
         let record = match library.as_deref().map(|dir| crate::move_intent::write(dir, &moves)).transpose() {
             Ok(r) => r,
@@ -192,6 +186,14 @@ impl MoveWork {
             let _ = slot.set(r.path().to_path_buf());
         }
         let total = moves.len() as u64;
+        // photos as the person counts them, not the file plans: a virtual copy goes with its master's file
+        let mut per_file: HashMap<&str, usize> = HashMap::new();
+        for it in items.iter().filter(|i| !skip.contains(&i.id.0)) {
+            if let Some(path) = it.path.as_deref().filter(|p| !skip_paths.contains(*p)) {
+                *per_file.entry(path).or_default() += 1;
+            }
+        }
+        let photos: Vec<usize> = moves.iter().map(|(from, _)| per_file.get(from.as_str()).copied().unwrap_or(1)).collect();
         let ran = crate::rename::move_all_with(fs, &moves, &mut |k, (from, _)| {
             task.progress(k as u64, total);
             task.detail(&name_of(from));
@@ -200,7 +202,7 @@ impl MoveWork {
         match ran {
             Ok(moved) => {
                 task.progress(moved as u64, total);
-                MoveOutcome(Ran::Moved { moved, record })
+                MoveOutcome(Ran::Moved { moved, record, skipped, photos })
             }
             Err(error) => MoveOutcome(Ran::Failed { error, record }),
         }
@@ -227,8 +229,10 @@ impl MoveFinish {
     /// written because the library has no folder of its own, from the files themselves), and the
     /// sidecars held back meanwhile are written where their photos now are.
     pub fn abandon(self, s: &mut Session) -> crate::move_intent::Recovered {
-        let MoveFinish { plans, record, ticket, guard, .. } = self;
+        let MoveFinish { plans, record, ticket, mut guard, .. } = self;
         let own = record.get().cloned();
+        // (the guard is dropped by this healthy thread, so it would leave no row: say how it ended)
+        guard.report(Outcome::ended(Ending::Died));
         drop((ticket, guard));
         let recovered = match own {
             Some(own) => s.recover_own_move(Some(&own)),
@@ -246,23 +250,23 @@ impl MoveFinish {
 
     /// Point the photos whose files moved at their new place, as one undo step (labelled as
     /// before: "Move 3 Photos to “Porto”", counting virtual copies). `{moved, of, folder, stopped}`
-    /// (in files); an error when nothing moved (`Refused`, `Failed`: the files went back, or the library
+    /// (`moved` and `of` in photos, virtual copies counted); an error when nothing moved (`Refused`, `Failed`: the files went back, or the library
     /// follows those that couldn't). The sidecars held back meanwhile are written after.
     pub fn finish(self, s: &mut Session, out: MoveOutcome) -> Result<Value> {
-        let MoveFinish { folder, plans, identity, ticket, guard, record: _ } = self;
+        let MoveFinish { folder, plans, identity, ticket, mut guard, record: _ } = self;
         // the move is over for the session: other file work, and these photos' sidecars, may go on
         drop(ticket);
-        drop(guard);
         let held: Vec<PhotoId> = std::mem::take(&mut s.held_sidecars).into_iter().collect();
         if !Arc::ptr_eq(&identity, &s.library_identity) {
             // (opening a library is refused while a move runs; the record stays for that library)
-            return Err(EngineError::Other(
-                "another library was opened while photos were being moved: their library follows them when it opens".into(),
-            ));
+            let why = "another library was opened while photos were being moved: their library follows them when it opens";
+            guard.report(Outcome::failed(why));
+            return Err(EngineError::Other(why.into()));
         }
         let of = plans.len();
         let r = match out.0 {
-            Ran::Refused(why) => Err(bad(C, why)),
+            Ran::Refused(why) => Err(EngineError::Other(why)),
+            Ran::Nothing { skipped } => Ok(json!({"moved": 0, "of": 0, "folder": folder, "stopped": false, "skipped": skipped})),
             Ran::Failed { error, record } => {
                 let op = Op::Batch { ops: s.set_file_ops(&plans) };
                 let (message, _, followed) = s.follow_stuck(&op, error, true);
@@ -272,14 +276,42 @@ impl MoveFinish {
                 }
                 Err(EngineError::Other(message))
             }
-            Ran::Moved { moved, record } => s.follow_moved(&folder, plans.get(..moved).unwrap_or(&plans), of, record),
+            Ran::Moved { moved, record, skipped, photos } => {
+                s.follow_moved(&folder, plans.get(..moved).unwrap_or(&plans), of, record).map(|v| counted_as_photos(v, skipped, &photos, moved))
+            }
         };
         // (a sidecar write the person switched off meanwhile isn't made now)
         if s.xmp.auto_write {
             s.auto_write_sidecar_ids(held);
         }
         s.save_held_sidecars();
+        // how it ended, for the bell and `activity.finished`
+        guard.report(match &r {
+            Ok(v) if v["stopped"] == true => Outcome::ended(Ending::Stopped),
+            Ok(_) => Outcome::default(),
+            Err(e) => Outcome::failed(e.to_string()),
+        });
         r
+    }
+}
+
+/// The answer of a move that went (`moved`, `of` and `folder`, `stopped` as files), with `moved` and `of` counted as
+/// the person counts, in photos (`photos`: for each file in order, of which the first `files` moved), and the photos
+/// that were left out.
+fn counted_as_photos(mut moved: Value, skipped: Vec<Value>, photos: &[usize], files: usize) -> Value {
+    // (`files`: how many files moved, for a text that says files)
+    moved["files"] = moved["moved"].clone();
+    moved["moved"] = json!(photos.iter().take(files).sum::<usize>());
+    moved["of"] = json!(photos.iter().sum::<usize>());
+    moved["skipped"] = json!(skipped);
+    moved
+}
+
+/// An error of the checks `start` shares with other commands, named for this one (they leave the command empty).
+fn named(e: EngineError) -> EngineError {
+    match e {
+        EngineError::BadParams { cmd, msg } if cmd.is_empty() => bad(C, msg),
+        e => e,
     }
 }
 

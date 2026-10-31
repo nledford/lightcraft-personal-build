@@ -54,8 +54,8 @@ fn name_of(path: &str) -> String {
 }
 
 /// Start moving photos into a folder on disk: `params` as `photo.moveToFolder` takes them
-/// (`{folder, ids?}`; the selection by default). Returns at once: `{background: true, files}`
-/// while it runs, or `{moved: 0, of: 0, folder, stopped: false}` when every photo is there
+/// (`{folder, ids?, skip?}`; the selection by default). Returns at once: `{background: true, files}`
+/// while it runs, or `{moved: 0, of: 0, folder, stopped: false, skipped: []}` when every photo is there
 /// already (said in a toast). An error when the move can't begin (Local photos, another move
 /// running…), also logged, shown in the status line as `LightcraftApp::run` does, and told in an error toast
 /// (a menu, key or button caller drops the returned error, so the toast is what tells the person why nothing moved).
@@ -74,7 +74,7 @@ fn start_inner(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value) -> 
     let started = lightcraft_engine::move_job::start(&mut app.session, params, true).map_err(|e| e.to_string())?;
     let Some((work, finish)) = started else {
         app.toast(ctx, crate::panels::left::moved_text(0, &name));
-        return Ok(json!({"moved": 0, "of": 0, "folder": path, "stopped": false}));
+        return Ok(json!({"moved": 0, "of": 0, "folder": path, "stopped": false, "skipped": []}));
     };
     let files = finish.files();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -152,10 +152,14 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
         Ok(r) => {
             let moved = r["moved"].as_u64().unwrap_or(0);
             let of = r["of"].as_u64().unwrap_or(moved);
+            let skipped = r["skipped"].as_array().map_or(0, |s| s.len() as u64);
             let text = if r["stopped"].as_bool() == Some(true) {
                 stopped_text(moved, of, &run.name)
+            } else if moved > 0 && skipped > 0 {
+                crate::panels::left::moved_skipping_text(moved, skipped, &run.name)
             } else {
-                crate::panels::left::moved_text(moved, &run.name)
+                // (said in files, as the question and the hint are: `moved` counts photos, virtual copies included)
+                crate::panels::left::moved_text(r["files"].as_u64().unwrap_or(moved), &run.name)
             };
             app.toast(ctx, text);
         }

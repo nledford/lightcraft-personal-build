@@ -58,6 +58,7 @@ pub mod media;
 pub mod memory;
 pub mod merge;
 mod model_download;
+mod move_check;
 pub mod move_intent;
 pub mod move_job;
 pub mod open_path;

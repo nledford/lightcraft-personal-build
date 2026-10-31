@@ -2708,5 +2708,8 @@
   "Locate the folder there anyway?": "Localizzare comunque la cartella lì?",
   "Photos with no file there stay missing, and photos whose file there is another size are linked to that file. Synchronize Folder can find them again or remove them from the library. No file is touched.": "Le foto senza file lì restano mancanti, e le foto il cui file lì ha un'altra dimensione vengono collegate a quel file. Sincronizza cartella può ritrovarle o rimuoverle dalla libreria. Nessun file viene toccato.",
   "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "Le altre foto restano mancanti lì; Sincronizza cartella può ritrovarle o rimuoverle dalla libreria. Nessun file viene toccato.",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Parole chiave e preset si applicano solo ai file nuovi, non alle foto già in Locale"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Parole chiave e preset si applicano solo ai file nuovi, non alle foto già in Locale",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Rinomina la foto in conflitto o scegli un'altra cartella per spostarla.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Ricollega il disco o usa File → Trova foto mancanti…, poi riprova.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Una foto senza file non può essere spostata. Una foto locale sì, dopo aver usato Aggiungi a Le mie foto."
 }

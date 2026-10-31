@@ -2543,5 +2543,8 @@
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "エラーのため移動が停止しました（ログを参照）。ライブラリが移動済みのすべてのファイルに追従していない場合があります。見つからなくなったものは「見つからない写真を探す」で再リンクできます。",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "このライブラリはロックなしで開かれているため、中断された移動は、ロック付きで開かれるまでそのままにされます。移動済みのファイルは「見つからない写真を探す」で再リンクできます。",
   "Unfinished moves": "未完了の移動",
-  "Keywords and presets apply to new files only, not to photos already in Local": "キーワードとプリセットは新しいファイルにのみ適用され、すでにローカルにある写真には適用されません"
+  "Keywords and presets apply to new files only, not to photos already in Local": "キーワードとプリセットは新しいファイルにのみ適用され、すでにローカルにある写真には適用されません",
+  "Rename a clashing photo, or choose another folder, to move it too.": "名前が重複している写真の名前を変えるか、別のフォルダを選ぶと移動できます。",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "ディスクを接続し直すか、ファイル → 見つからない写真を検索… を使ってからもう一度お試しください。",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "ファイルのない写真は移動できません。ローカルの写真は、マイフォトに追加すると移動できます。"
 }

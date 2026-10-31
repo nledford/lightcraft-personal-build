@@ -2749,5 +2749,8 @@
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Перемещение остановлено из-за ошибки (см. журнал). Библиотека может не следовать за всеми уже перемещёнными файлами: «Найти отсутствующие фото» заново свяжет потерянные.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Эта библиотека открыта без блокировки, поэтому прерванные перемещения остаются как есть, пока библиотека не будет открыта с блокировкой; «Найти отсутствующие фото» заново свяжет перемещённые файлы.",
   "Unfinished moves": "Незавершённые перемещения",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Ключевые слова и пресеты применяются только к новым файлам, а не к фото, которые уже есть в «Локальных»"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Ключевые слова и пресеты применяются только к новым файлам, а не к фото, которые уже есть в «Локальных»",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Переименуйте фото с таким же именем или выберите другую папку, чтобы переместить его.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Подключите диск снова или выберите Файл → Найти отсутствующие фото…, затем повторите.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Фото без файла нельзя переместить. Локальное фото можно переместить после команды Добавить в «Мои фото»."
 }

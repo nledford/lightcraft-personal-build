@@ -26,10 +26,12 @@ use export::{
     LIMIT_KB, QUALITY, START_NUMBER, WM_IMAGE_WIDTH, WM_INSET_X, WM_INSET_Y, WM_OPACITY, WM_POSITIONS, WM_SIZE, export_dialog_params, export_size,
     group_checklist, tiff_lzw_note, watermark_preview,
 };
+#[cfg(test)]
+pub(crate) use frame::move_problem_line;
 pub use frame::{ConfirmStyle, confirm_style, list_height, prompt};
 use frame::{
-    DIALOG_CHROME_GUESS, DIALOG_MIN_BODY, DIALOG_SCREEN_MARGIN, choices, clicked_backdrop, dialog_body, dialog_field, field, just_opened, num,
-    only_shows, return_confirms, trailing_button_row,
+    DIALOG_CHROME_GUESS, DIALOG_MIN_BODY, DIALOG_SCREEN_MARGIN, choices, clicked_backdrop, dialog_body, dialog_field, field, just_opened,
+    move_problems_body, num, only_shows, return_confirms, trailing_button_row,
 };
 pub(crate) use rename::rename_preview;
 use rename::{RENAME_PREVIEW_ROWS, person_rename_plan};
@@ -242,8 +244,8 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
         close = true;
     }
     if !raw_blocked && confirm {
-    close |= confirmed(app, ctx, &mut dlg);
-}
+        close |= confirmed(app, ctx, &mut dlg);
+    }
     // a dialog opened from inside this one (a button in Settings that shows a licence) takes its place
     if app.ui.dialog.as_ref().is_some_and(|now| *now != at_start) {
         return;
@@ -403,6 +405,7 @@ fn cancel_label(dlg: &Dialog, sam: &SamState) -> &'static str {
 fn ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, sam: &SamState) -> String {
     match dlg {
         Dialog::Import { opts } => import_ok_label(opts),
+        Dialog::MovePhotos { problems, movable, .. } => move_photos_ok_label(problems.len(), *movable),
         Dialog::Export { .. } => photos_ok_label("Export", app.session.selection.ids.len().max(1)),
         Dialog::SamModel { .. } => sam_ok_label(dlg, sam).to_string(),
         _ => fixed_ok_label(app, dlg, informational).to_string(),
@@ -461,7 +464,8 @@ fn fixed_ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool) -> &'s
         Dialog::CopySettings { .. } => "Copy",
         Dialog::PasteSettings { .. } => "Paste",
         Dialog::TextPrompt { command, .. } => prompt_verb(command),
-        Dialog::MovePhotos { .. } => "Move",
+        // (worded with a count: `ok_label` builds it)
+        Dialog::MovePhotos { .. } => "",
         // (not "Merge": that is photo merging, HDR / panorama, in some languages)
         Dialog::MoveKeyword { .. } | Dialog::MergeKeywords { .. } => "Merge Keywords",
         Dialog::KeywordSet { .. } => "Save",
@@ -493,6 +497,15 @@ fn fixed_ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool) -> &'s
         | Dialog::LightroomResult { .. }
         | Dialog::DenoiseModel { .. }
         | Dialog::FaceModel { .. } => "Close",
+    }
+}
+
+/// The confirm button of the Move Photos dialog: nothing that can go: only Cancel (empty); some can: Move those, skip the others.
+fn move_photos_ok_label(problems: usize, movable: usize) -> String {
+    match (problems, movable) {
+        (0, _) => "Move".to_string(),
+        (_, 0) => String::new(),
+        _ => crate::i18n::tr_format!("Move {n}, skip {m}", n = movable, m = problems),
     }
 }
 
@@ -2051,6 +2064,7 @@ fn dialog_content(
             ui.label(crate::i18n::tr_format!("Move {what} to Recently Deleted?", what = what));
             ui.label(egui::RichText::new(crate::i18n::tr("They can be restored from Recently Deleted until it is emptied.")).color(t.text_dim));
         }
+        Dialog::MovePhotos { name, problems, .. } if !problems.is_empty() => move_problems_body(ui, name, problems, t),
         Dialog::MovePhotos { .. } => move_photos_body(ui, t, dlg),
         d @ Dialog::SynchronizeFolder { .. } => crate::sync::body(app, ui, d),
         d @ Dialog::LocateFolder { .. } => crate::relocate::body(ui, d),

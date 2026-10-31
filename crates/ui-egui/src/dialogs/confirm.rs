@@ -223,14 +223,19 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
         Dialog::Merge { opts } => crate::merge::start_final(app, opts),
         Dialog::Import { opts } => crate::import::start(app, opts),
         Dialog::ConfirmDelete { .. } => app.run("photo.delete", json!({})),
-        Dialog::MovePhotos { ids, folder, dont_ask, library, .. } => {
+        Dialog::MovePhotos { ids, folder, dont_ask, library, problems, .. } => {
             // another library opened meanwhile (from the menu bar, an agent): these numbers are
             // other photos there
             if *library != app.session.library_generation() {
                 return Err(crate::i18n::tr("Another library was opened since the photos were dropped: nothing was moved").to_string());
             }
             let ctx = app.tasks.repaint.clone().unwrap_or_default();
-            let started = crate::move_task::start(app, &ctx, &json!({"ids": ids, "folder": folder}))?;
+            // the photos found to have a problem stay where they are, the rest move
+            let mut params = json!({"ids": ids, "folder": folder});
+            if !problems.is_empty() {
+                params["skip"] = json!(problems.iter().map(|p| p.id).collect::<Vec<u64>>());
+            }
+            let started = crate::move_task::start(app, &ctx, &params)?;
             // only a move that began turns the question off: one refused, or that found the photos there already
             // (`moved: 0` at once), leaves it as it was
             if *dont_ask && started["background"] == json!(true) {

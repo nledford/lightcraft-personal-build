@@ -2612,5 +2612,8 @@
   "Locate the folder there anyway?": "Leta upp mappen där ändå?",
   "Photos with no file there stay missing, and photos whose file there is another size are linked to that file. Synchronize Folder can find them again or remove them from the library. No file is touched.": "Foton utan fil där förblir saknade, och foton vars fil där har en annan storlek länkas till den filen. Synkronisera mapp kan hitta dem igen eller ta bort dem från biblioteket. Ingen fil påverkas.",
   "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "De andra fotona förblir saknade där; Synkronisera mapp kan hitta dem igen eller ta bort dem från biblioteket. Ingen fil påverkas.",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Nyckelord och förinställningar gäller bara nya filer, inte foton som redan finns i Lokalt"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Nyckelord och förinställningar gäller bara nya filer, inte foton som redan finns i Lokalt",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Byt namn på fotot med samma namn eller välj en annan mapp så kan det flyttas.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Anslut disken igen eller använd Fil → Sök efter saknade foton… och försök igen.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ett foto utan fil kan inte flyttas. Ett lokalt foto kan det, när du har använt Lägg till i Mina foton."
 }

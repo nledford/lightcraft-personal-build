@@ -2470,5 +2470,8 @@
   "This cannot be undone: the files are not kept anywhere.": "Tego nie można cofnąć: pliki nie są nigdzie przechowywane.",
   "Only these files are erased; XMP sidecars beside them stay.": "Usuwane są tylko te pliki; pliki pomocnicze XMP obok nich zostają.",
   "Cancel leaves these photos in the library and their files where they are.": "Anuluj pozostawi te zdjęcia w bibliotece, a ich pliki tam, gdzie są.",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Słowa kluczowe i ustawienia predefiniowane dotyczą tylko nowych plików, nie zdjęć, które już są w Lokalnych"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Słowa kluczowe i ustawienia predefiniowane dotyczą tylko nowych plików, nie zdjęć, które już są w Lokalnych",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Zmień nazwę zdjęcia o tej samej nazwie albo wybierz inny folder, aby je przenieść.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Podłącz dysk ponownie albo użyj Plik → Znajdź brakujące zdjęcia…, a potem spróbuj jeszcze raz.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Zdjęcia bez pliku nie można przenieść. Zdjęcie lokalne można, po użyciu Dodaj do Moich zdjęć."
 }
