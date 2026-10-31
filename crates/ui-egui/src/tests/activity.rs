@@ -1368,7 +1368,14 @@ fn a_task_waiting_in_line_has_a_row_and_starts_when_the_lane_frees() {
     wait_visible(&mut h);
     open_list(&mut h);
     assert!(has(&h, &format!("activity:row:{}", running.id())));
-    assert!(has(&h, &format!("activity:row:{waiting}")) && rows(&h) == 2, "a waiting task draws a row, under the running one");
+    assert!(
+        has(&h, &format!("activity:row:{waiting}")) && has(&h, &format!("activity:cancel:{waiting}")) && rows(&h) == 2,
+        "a waiting task draws a row with ✕"
+    );
+    let info = h.app.session.activity.waiting().remove(0);
+    assert_eq!(crate::panels::activity::cross_name(&info), "Remove from Queue: Building previews");
+    let running_row = h.app.session.activity.list().into_iter().find(|t| !t.waiting).expect("the running build");
+    assert_eq!(crate::panels::activity::cross_name(&running_row), "Cancel");
     // the lane frees with no command asked: the frame loop starts it
     build.finished.store(true, Ordering::Release);
     drop(running);

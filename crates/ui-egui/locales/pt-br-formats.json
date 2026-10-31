@@ -380,6 +380,8 @@
   "+{n} more": "+{n} mais",
   "{n} waiting": "{n} aguardando",
   "Starts after {n} more": "Começa depois de mais {n}",
+  "Remove from Queue: {label}": "Remover da fila: {label}",
   "Queued: it starts after {n} more": "Na fila: começa depois de mais {n}",
-  "{n} tasks waiting in line won't run.": "{n} tarefas na fila não serão executadas."
+  "{n} tasks waiting in line won't run.": "{n} tarefas na fila não serão executadas.",
+  "Left alone: {n} (synchronize again to review them)": "Deixados como estavam: {n} (sincronize de novo para revisá-los)"
 }

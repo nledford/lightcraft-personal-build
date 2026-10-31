@@ -380,6 +380,8 @@
   "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Se johtaa takaisin itseensä albumin ”{}” kautta: muuta jonkin silmukan albumin sääntöjä (Muokkaa älyalbumia…)",
   "{n} waiting": "{n} odottaa",
   "Starts after {n} more": "Alkaa {n} muun jälkeen",
+  "Remove from Queue: {label}": "Poista jonosta: {label}",
   "Queued: it starts after {n} more": "Jonossa: alkaa {n} muun jälkeen",
-  "{n} tasks waiting in line won't run.": "{n} jonossa odottavaa tehtävää ei suoriteta."
+  "{n} tasks waiting in line won't run.": "{n} jonossa odottavaa tehtävää ei suoriteta.",
+  "Left alone: {n} (synchronize again to review them)": "Jätetty ennalleen: {n} (synkronoi uudelleen tarkistaaksesi)"
 }

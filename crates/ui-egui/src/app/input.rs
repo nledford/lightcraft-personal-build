@@ -97,7 +97,7 @@ impl LightcraftApp {
             self.toast_error(ctx, crate::i18n::tr("Finish Lightroom catalog import before adding photos"));
             return;
         }
-        if import::running(self) {
+        if import::drop_blocked(self) {
             self.toast_error(ctx, crate::i18n::tr("An import is running"));
             return;
         }

@@ -379,7 +379,9 @@
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Gruppo {n} di {m}: corrispondenza {mode}, {count} all’interno. Sposta con le frecce",
   "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Ritorna su se stesso attraverso l'album “{}”: modifica le regole di un album del ciclo (Modifica album smart…)",
   "{n} waiting": "{n} in attesa",
-  "Starts after {n} more": "Parte dopo altre {n}",
-  "Queued: it starts after {n} more": "In coda: parte dopo altre {n}",
-  "{n} tasks waiting in line won't run.": "{n} attività in coda non verranno eseguite."
+  "Starts after {n} more": "Parte dopo altre attività ({n})",
+  "Remove from Queue: {label}": "Rimuovi dalla coda: {label}",
+  "Queued: it starts after {n} more": "In coda: parte dopo altre attività ({n})",
+  "{n} tasks waiting in line won't run.": "{n} attività in coda non verranno eseguite.",
+  "Left alone: {n} (synchronize again to review them)": "Lasciati invariati: {n} (sincronizza di nuovo per rivederli)"
 }

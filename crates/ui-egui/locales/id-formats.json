@@ -383,6 +383,8 @@
   "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Album ini kembali ke dirinya sendiri melalui album “{}”: ubah aturan salah satu album dalam perulangan (Edit album pintar…)",
   "{n} waiting": "{n} menunggu",
   "Starts after {n} more": "Dimulai setelah {n} lagi",
+  "Remove from Queue: {label}": "Hapus dari antrean: {label}",
   "Queued: it starts after {n} more": "Dalam antrean: dimulai setelah {n} lagi",
-  "{n} tasks waiting in line won't run.": "{n} tugas yang menunggu dalam antrean tidak akan dijalankan."
+  "{n} tasks waiting in line won't run.": "{n} tugas yang menunggu dalam antrean tidak akan dijalankan.",
+  "Left alone: {n} (synchronize again to review them)": "Dibiarkan: {n} (sinkronkan lagi untuk meninjau)"
 }

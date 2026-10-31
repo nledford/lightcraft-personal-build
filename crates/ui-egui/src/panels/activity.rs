@@ -728,7 +728,12 @@ fn scan_notice(ui: &mut egui::Ui, t: &Tokens, ready: &crate::sync::SyncReady, wi
     reviewed.then_some(Notice::Review)
 }
 
-/// One task: name and ✕, the bar, the detail line. True when ✕ was clicked.
+/// What ✕ on `task`'s row is called, for screen readers.
+pub(crate) fn cross_name(task: &TaskInfo) -> String {
+    if task.waiting { tr_format!("Remove from Queue: {label}", label = tr(&task.label)) } else { tr("Cancel").to_string() }
+}
+
+/// One task: name and ✕, the bar, the detail line. True when ✕ was clicked (a task waiting in line has [`waiting_row`]).
 fn row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> bool {
     let mut clicked = false;
     let r = ui.vertical(|ui| {
@@ -785,7 +790,7 @@ fn waiting_row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> bo
                 ui.add(egui::Label::new(RichText::new(tr(&task.label)).font(t.font(12.5)).color(t.text_label)).truncate());
             });
             let (rect, resp) = ui.allocate_exact_size(vec2(CROSS, CROSS), Sense::click());
-            crate::widgets::announce(&resp, format!("{}: {}", tr("Remove from Queue"), tr(&task.label)));
+            crate::widgets::announce(&resp, cross_name(task));
             paint(ui.painter(), rect.shrink(2.0), Icon::Close, if resp.hovered() || resp.has_focus() { t.text } else { t.icon });
             if ui.is_rect_visible(rect) {
                 register(ui, format!("activity:cancel:{}", task.id), rect);
