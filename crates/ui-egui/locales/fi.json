@@ -2458,5 +2458,8 @@
   "No tasks are running": "Ei käynnissä olevia tehtäviä",
   "Tasks": "Tehtävät",
   "Copy all": "Kopioi kaikki",
-  "cancelled": "peruttu"
+  "cancelled": "peruttu",
+  "Go Deeper": "Siirry syvemmälle",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Näin syviä kansioita ei listata tässä. Napsauta lisätäksesi tämän kansion Paikalliseen omaksi paikakseen, jolloin voit avata sen pidemmälle",
+  "Opens as its own place": "Avautuu omana paikkanaan"
 }

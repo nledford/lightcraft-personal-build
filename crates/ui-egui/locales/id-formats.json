@@ -354,5 +354,6 @@
   "took {h} h {m} min": "butuh {h} jam {m} menit",
   "Exported contact sheet: {photos} photos, {pages} pages": "Lembar kontak diekspor (foto: {photos}, halaman: {pages})",
   "Printed to PDF: {photos} photos, {pages} pages": "Dicetak ke PDF (foto: {photos}, halaman: {pages})",
-  "{} import warning{}": "Peringatan impor: {}{:.0}"
+  "{} import warning{}": "Peringatan impor: {}{:.0}",
+  "“{name}” is now a place in Local: open it there": "“{name}” kini menjadi lokasi di Lokal: buka di sana"
 }

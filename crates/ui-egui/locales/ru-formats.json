@@ -351,5 +351,6 @@
   "Lists “{name}”, the folder this one is in": "Показывает «{name}» — папку, в которой лежит эта",
   "Showing {what}": "Показано: {what}",
   "{title}, showing {what}": "{title}, показано: {what}",
+  "“{name}” is now a place in Local: open it there": "«{name}» теперь отдельное место в «Локальном»: откройте её там",
   "+{n} more": "ещё {n}"
 }

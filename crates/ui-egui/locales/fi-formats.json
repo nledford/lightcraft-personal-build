@@ -351,5 +351,6 @@
   "took {h} h {m} min": "kesti {h} h {m} min",
   "Exported contact sheet: {photos} photos, {pages} pages": "Kontaktivedos viety (kuvia: {photos}, sivuja: {pages})",
   "Printed to PDF: {photos} photos, {pages} pages": "Tulostettu PDF-tiedostoon (kuvia: {photos}, sivuja: {pages})",
-  "{} import warning{}": "Tuontivaroituksia: {}{:.0}"
+  "{} import warning{}": "Tuontivaroituksia: {}{:.0}",
+  "“{name}” is now a place in Local: open it there": "“{name}” on nyt paikka Paikallisessa: avaa se siellä"
 }

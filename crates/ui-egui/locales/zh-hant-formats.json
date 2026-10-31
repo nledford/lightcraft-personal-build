@@ -351,5 +351,6 @@
   "Lists “{name}”, the folder this one is in": "列出此資料夾所在的「{name}」",
   "Showing {what}": "正在顯示 {what}",
   "{title}, showing {what}": "{title}，正在顯示 {what}",
+  "“{name}” is now a place in Local: open it there": "「{name}」現在是本機中的一個位置：請在那裡開啟",
   "+{n} more": "還有 {n} 項"
 }

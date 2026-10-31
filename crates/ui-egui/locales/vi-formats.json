@@ -351,5 +351,6 @@
   "took {h} h {m} min": "mất {h} giờ {m} phút",
   "Exported contact sheet: {photos} photos, {pages} pages": "Đã xuất tờ tiếp xúc (ảnh: {photos}, trang: {pages})",
   "Printed to PDF: {photos} photos, {pages} pages": "Đã in ra PDF (ảnh: {photos}, trang: {pages})",
-  "{} import warning{}": "Cảnh báo khi nhập: {}{:.0}"
+  "{} import warning{}": "Cảnh báo khi nhập: {}{:.0}",
+  "“{name}” is now a place in Local: open it there": "“{name}” giờ là một vị trí trong Cục bộ: hãy mở ở đó"
 }

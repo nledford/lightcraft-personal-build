@@ -354,5 +354,6 @@
   "took {h} h {m} min": "tog {h} h {m} min",
   "Exported contact sheet: {photos} photos, {pages} pages": "Kontaktark exporterat (foton: {photos}, sidor: {pages})",
   "Printed to PDF: {photos} photos, {pages} pages": "Utskrivet till PDF (foton: {photos}, sidor: {pages})",
-  "{} import warning{}": "Importvarningar: {}{:.0}"
+  "{} import warning{}": "Importvarningar: {}{:.0}",
+  "“{name}” is now a place in Local: open it there": "“{name}” är nu en plats i Lokalt: öppna den där"
 }

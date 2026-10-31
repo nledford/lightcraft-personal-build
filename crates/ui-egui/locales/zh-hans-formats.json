@@ -351,5 +351,6 @@
   "Lists “{name}”, the folder this one is in": "列出此文件夹所在的“{name}”",
   "Showing {what}": "正在显示 {what}",
   "{title}, showing {what}": "{title}，正在显示 {what}",
+  "“{name}” is now a place in Local: open it there": "“{name}”现在是本地中的一个位置：请在那里打开",
   "+{n} more": "还有 {n} 项"
 }

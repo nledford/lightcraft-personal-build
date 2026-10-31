@@ -2785,5 +2785,8 @@
   "No tasks are running": "Không có tác vụ nào đang chạy",
   "Tasks": "Tác vụ",
   "Copy all": "Sao chép tất cả",
-  "cancelled": "đã hủy"
+  "cancelled": "đã hủy",
+  "Go Deeper": "Đi sâu hơn",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Các thư mục sâu thế này không được liệt kê ở đây. Nhấp để thêm thư mục này vào Cục bộ như một vị trí riêng, để có thể mở sâu hơn",
+  "Opens as its own place": "Mở thành một vị trí riêng"
 }
