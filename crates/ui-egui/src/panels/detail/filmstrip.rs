@@ -100,7 +100,9 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                 continue;
             }
             let resp = ui.interact(cr, egui::Id::unique(("film", id.0)), Sense::click_and_drag());
-            let failed = app.renderer.thumb(*id).is_none() && app.renderer.failure(Slot::Thumb(*id)).is_some();
+            // asked for first: a failure left by an earlier request is not this tile's verdict once a new one is on its way
+            crate::panels::grid::request_thumb(app, *id, (256.0 * ppp.min(2.0) / 2.0) as usize * 2, 8);
+            let failed = app.renderer.thumb(*id).is_none() && app.renderer.thumb_failure(*id).is_some();
             let state = app.session.selection.state_of(*id);
             let selected = state != lightcraft_engine::SelectionState::NotSelected;
             // the same name as the grid's cell for this photo (file, rating, flag, label), and whether it is selected
@@ -131,7 +133,6 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                 p.text(pos2(cr.left() + 8.0, cr.top() + 10.0), Align2::LEFT_CENTER, shown, t.micro(), dim);
             }
             let img_area = Rect::from_min_max(cr.min + vec2(10.0, 22.0), cr.max - vec2(10.0, 8.0));
-            crate::panels::grid::request_thumb(app, *id, (256.0 * ppp.min(2.0) / 2.0) as usize * 2, 8);
             let mut badge = None;
             if let Some(photo) = app.session.catalog.photo(*id).cloned() {
                 let (photo_rect, failure) = if let Some(tex) = app.renderer.thumb(*id) {
@@ -145,7 +146,11 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                     let ph = crate::thumb::placeholder_rect(img_area, crate::panels::grid::photo_aspect(Some(&*photo)));
                     crate::thumb::paint_placeholder(p, ph, &t);
                     crate::panels::grid::selection_ring(p, &t, ph, state);
-                    (ph, app.renderer.failure(crate::render::Slot::Thumb(*id)).map(str::to_owned))
+                    let failure = app.renderer.thumb_failure(*id).map(str::to_owned);
+                    if failure.is_none() {
+                        crate::panels::grid::paint_loading_cue(p, &t, img_area, ph, "film:badge:loading:", id.0);
+                    }
+                    (ph, failure)
                 };
                 let stack = app.session.catalog.stack_of(*id).map(|st| (st.id, st.position(*id).unwrap_or(0)));
                 let overlay = crate::thumb::Thumb {

@@ -64,6 +64,11 @@
 
 ## 2026-10-29
 
+### Loading thumbnails look different from unreadable ones
+- A grid cell or filmstrip tile whose thumbnail hasn't arrived yet now shows three small dots on its gray placeholder.
+  One whose file can't be read still shows "!". The dots stand still (so a Reduce motion setting has nothing
+  to stop), and they are left off tiles too small to hold them.
+
 ### A slow render says so even with the loading message off
 - With View Options' Show message when loading or rendering photos turned off, the loupe now still says "Rendering…"
   once a render has been on its way for 3 seconds, so the old picture on screen doesn't look like a frozen app. A render
