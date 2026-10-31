@@ -157,8 +157,9 @@ fn ground(image: &egui::ColorImage, rect: Rect) -> Color32 {
 #[test]
 fn the_marks_on_a_thumbnail_stand_out_from_the_photo_in_every_theme() {
     for kind in ThemeKind::ALL {
-        // Given the grid in a theme, and a rated photo that is neither chosen nor under the pointer
+        // Given the grid in a theme with its badges always shown (the stars show only on a photo that is chosen or under the pointer in Auto), and a rated photo that is neither chosen nor under the pointer
         let mut h = demo(kind);
+        h.app.ui.settings.grid_badges = crate::state::GridBadges::Always;
         run(&mut h, "view.photoGrid", json!({}));
         run(&mut h, "library.select", json!({"ids": [2]}));
         let r = h.request("ui.set", json!({"leftPanel": true, "right": "info", "thumbSize": 200}), T);
@@ -194,7 +195,7 @@ fn a_toast_can_be_read_in_every_theme() {
         run(&mut h, "view.detail", json!({}));
         // When something is said in a toast
         let now = h.app.tick_now();
-        h.app.ui.toast = Some(crate::toast::Toast { text: "Rated 3 stars".into(), shown_at: now, until: now + 60.0, hovered: false, label: None });
+        h.app.ui.toast = Some(crate::toast::Toast { text: "Rated 3 stars".into(), shown_at: now - 10.0, until: now + 60.0, hovered: false, label: None });
         h.step();
         h.step();
         // Then it is written in the ink for pictures and stands 4.5:1 against its shade
