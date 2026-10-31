@@ -2356,5 +2356,10 @@
   "Set up name suggestions…": "Määritä nimiehdotukset…",
   "Top bar": "Yläpalkki",
   "Tool strip": "Työkalupalkki",
-  "Bottom bar": "Alapalkki"
+  "Bottom bar": "Alapalkki",
+  "Back Up Library": "Varmuuskopioi kirjasto",
+  "Backing up the library": "Kirjastoa varmuuskopioidaan",
+  "Backup Status": "Varmuuskopion tila",
+  "Check Backup": "Tarkista varmuuskopio",
+  "Backup Preferences": "Varmuuskopioinnin asetukset"
 }

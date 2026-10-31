@@ -2684,5 +2684,10 @@
   "Set up name suggestions…": "Thiết lập gợi ý tên…",
   "Top bar": "Thanh trên cùng",
   "Tool strip": "Thanh công cụ",
-  "Bottom bar": "Thanh dưới cùng"
+  "Bottom bar": "Thanh dưới cùng",
+  "Back Up Library": "Sao lưu thư viện",
+  "Backing up the library": "Đang sao lưu thư viện",
+  "Backup Status": "Trạng thái sao lưu",
+  "Check Backup": "Kiểm tra bản sao lưu",
+  "Backup Preferences": "Tùy chọn sao lưu"
 }

@@ -2556,5 +2556,10 @@
   "Unit": "Unità",
   "Top bar": "Barra superiore",
   "Tool strip": "Barra degli strumenti",
-  "Bottom bar": "Barra inferiore"
+  "Bottom bar": "Barra inferiore",
+  "Back Up Library": "Esegui backup della libreria",
+  "Backing up the library": "Backup della libreria in corso",
+  "Backup Status": "Stato del backup",
+  "Check Backup": "Verifica backup",
+  "Backup Preferences": "Preferenze di backup"
 }

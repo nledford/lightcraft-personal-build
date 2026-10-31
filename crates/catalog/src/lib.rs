@@ -13,6 +13,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+pub mod backup;
 pub mod dates;
 pub mod folders;
 mod index;
@@ -1542,6 +1543,8 @@ mod tests_album_loops;
 mod tests_album_order;
 #[cfg(test)]
 mod tests_background;
+#[cfg(test)]
+mod tests_backup;
 #[cfg(test)]
 mod tests_folder_records;
 #[cfg(test)]
