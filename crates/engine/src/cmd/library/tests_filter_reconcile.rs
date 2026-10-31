@@ -213,3 +213,13 @@ fn a_flag_carried_into_picks_does_not_block_the_other_filter_changes() {
     s.execute("library.filter", &json!({"rating": 2})).expect("a change that does not set the flag is not refused");
     assert_eq!((s.filter().rating, s.filter().flag), (2, None), "and the flag Picks owns is taken out");
 }
+
+#[test]
+fn picks_takes_out_the_flags_list_the_filter_bar_writes() {
+    let (mut s, ..) = session().unwrap();
+    s.execute("library.filter", &json!({"flag": null, "flags": ["none"]})).unwrap();
+    s.execute("library.source", &json!({"kind": "picks"})).unwrap();
+    assert!(s.filter().flags.is_empty() && s.filter().flag.is_none(), "no flag chip over the picks, whichever way it was set");
+    let e = s.execute("library.filter", &json!({"flags": ["reject"]})).unwrap_err().to_string();
+    assert!(e.contains("Picks is already shown"), "{e}");
+}

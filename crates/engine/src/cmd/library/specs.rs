@@ -176,7 +176,7 @@ pub fn specs() -> Vec<CommandSpec> {
                 let sets = |o: &&SourceOwned| match o {
                     SourceOwned::Album => named("album") || listed("albums"),
                     SourceOwned::LibraryFolder => named("libraryFolder") || listed("libraryFolders"),
-                    SourceOwned::Flag => named("flag"),
+                    SourceOwned::Flag => named("flag") || listed("flags"),
                 };
                 if let Some(field) = s.source.owned_fields_set_in(&f).iter().find(sets) {
                     return Err(bad("library.filter", field.refusal()));
@@ -296,7 +296,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Enable Filters",
             ["View"],
             Some("Cmd+L"),
-            "{} — with a filter set, puts it aside and shows everything; with one put aside, brings it back as it was (stars, flag, text… together), except its library folder while a library folder is shown now and its flag while Picks is shown now. Setting or clearing a filter while it is off forgets the one put aside → {enabled, count}",
+            "{} — with a filter set, puts it aside and shows everything; with one put aside, brings it back as it was (stars, flag, text… together), except its albums while albums are shown now, its library folders while folders are shown now and its flag while Picks is shown now. Setting or clearing a filter while it is off forgets the one put aside → {enabled, count}",
             always,
             |s, _| {
                 let enabled = s.filters.toggle(s.source);

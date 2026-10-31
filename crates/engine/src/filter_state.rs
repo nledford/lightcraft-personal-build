@@ -61,7 +61,7 @@ impl LibrarySource {
         if (f.library_folder.is_some() || !f.library_folders.is_empty()) && *self == LibrarySource::LibraryFolder {
             set.push(SourceOwned::LibraryFolder);
         }
-        if f.flag.is_some() && *self == LibrarySource::Picks {
+        if (f.flag.is_some() || !f.flags.is_empty()) && *self == LibrarySource::Picks {
             set.push(SourceOwned::Flag);
         }
         set
@@ -80,7 +80,10 @@ impl LibrarySource {
                     f.library_folder = None;
                     f.library_folders.clear();
                 }
-                SourceOwned::Flag => f.flag = None,
+                SourceOwned::Flag => {
+                    f.flag = None;
+                    f.flags.clear();
+                }
             }
         }
         owned

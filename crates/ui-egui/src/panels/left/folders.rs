@@ -772,6 +772,11 @@ fn move_folder_item(app: &mut LightcraftApp, ui: &mut egui::Ui, path: &str, also
         return;
     }
     let r = MenuItem::new(crate::i18n::tr("Move Folder To…")).enabled(can_move_folder(app).is_ok()).widget("folderMoveTo").show(ui);
+    let r = hint_while(
+        r,
+        can_move_folder(app).is_ok(),
+        crate::i18n::tr("Moves the folder on disk into the folder you choose; its photos follow. You can undo this."),
+    );
     crate::widgets::register(ui, also, r.rect);
     if !r.clicked() {
         return;

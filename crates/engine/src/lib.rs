@@ -1315,6 +1315,7 @@ impl Session {
             self.source = self.also_albums.pop().map_or(LibrarySource::All, LibrarySource::Album);
         }
         self.filters.follow(|f| f.album = f.album.filter(held));
+        self.filters.drop_aside_if_empty();
     }
 
     /// Photos shown in the grid/filmstrip for the current source, filter and sort.
