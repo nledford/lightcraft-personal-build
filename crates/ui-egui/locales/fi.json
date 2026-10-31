@@ -85,6 +85,7 @@
   "After 7 days": "7 päivän kuluttua",
   "After 90 days": "90 päivän kuluttua",
   "After a year": "Vuoden kuluttua",
+  "After four skipped files the import or scan stops with an error that the drive is not answering. Agents use `activity.skip {id}`; `activity.list` shows `stalled` for the task.": "Neljän ohitetun tiedoston jälkeen tuonti tai skannaus päättyy virheeseen, jonka mukaan asema ei vastaa. Agentit käyttävät komentoa `activity.skip {id}`; `activity.list` näyttää tehtävälle tilan `stalled`.",
   "After installation, AI Denoise will turn on for the requesting photo.": "Asennuksen jälkeen tekoälykohinanpoisto otetaan käyttöön sitä pyytävälle kuvalle.",
   "Album": "Albumi",
   "Albums": "Albumit",
@@ -1879,6 +1880,7 @@
   "Size (% of short edge)": "Koko (% lyhyestä sivusta)",
   "Size limit": "Kokorajoitus",
   "Skip": "Ohita",
+  "Skip Stalled File": "Ohita jumittanut tiedosto",
   "Skipped: files already in the library elsewhere": "Ohitettu: tiedostot, jotka ovat jo kirjastossa muualla",
   "Skipped: files that can't be read": "Ohitettu: tiedostot, joita ei voi lukea",
   "Sky": "Taivas",
@@ -2460,5 +2462,8 @@
   "cancelled": "peruttu",
   "Stopped: no photo was moved": "Pysäytetty: yhtään kuvaa ei siirretty",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Tämä kirjasto on avattu ilman lukitusta, joten keskeytyneet siirrot jätetään ennalleen, kunnes kirjasto avataan lukituksen kanssa; Etsi puuttuvat kuvat yhdistää siirretyt tiedostot uudelleen.",
-  "Unfinished moves": "Keskeneräiset siirrot"
+  "Unfinished moves": "Keskeneräiset siirrot",
+  "While 32 or more given-up reads are still blocked on a drive that stopped answering, a new import or scan ends at once with an error saying so, even from another drive: try again later, or restart LightCraft.": "Niin kauan kuin 32 tai useampi hylätty luku odottaa yhä asemaa, joka lakkasi vastaamasta, uusi tuonti tai skannaus päättyy heti siitä kertovaan virheeseen, myös toiselta asemalta: yritä myöhemmin uudelleen tai käynnistä LightCraft uudelleen.",
+  "✕ ends an import or scan at once when a file stops answering": "× päättää tuonnin tai skannauksen heti, vaikka tiedosto lakkaisi vastaamasta",
+  "✕ now ends an import within about a second while files are being read or copied, however long a read has been waiting; a copy that was under way is taken back. While folders are being listed, ✕ still waits for the listing.": "× päättää nyt tuonnin noin sekunnissa, kun tiedostoja luetaan tai kopioidaan, riippumatta siitä, kuinka kauan lukeminen on odottanut; käynnissä ollut kopio perutaan. Kun kansioita luetteloidaan, × odottaa edelleen luettelointia."
 }

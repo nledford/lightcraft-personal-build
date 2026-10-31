@@ -907,7 +907,6 @@ fn folder_menu_for_library(app: &mut LightcraftApp, resp: &egui::Response, n: &F
                 .on_hover_text(crate::i18n::tr("Moves the files and their XMP sidecars into this folder; never overwrites"))
                 .clicked()
         {
-            let name = crate::destination::folder(&app.caches.folder_tree(&app.session.catalog, app.session.library_generation()), path);
             move_photos_here(app, ui.ctx(), None, path);
             ui.close();
         }

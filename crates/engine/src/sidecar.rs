@@ -101,12 +101,16 @@ impl SidecarLookup {
     }
 }
 
-/// Find the sidecar for a file an import is adding, by the ownership [`ImportStems`] worked out
-/// (issue #1905): [`find_sidecar`] with the library's naming, except that a file which does not
-/// own its stem sidecar reads its own `<file>.xmp` (the name it writes) and never the packet of
-/// the sibling that owns the stem one.
-pub(crate) fn find_sidecar_for_import(stems: &ImportStems, naming: SidecarNaming, original: &str) -> Option<PathBuf> {
-    SidecarLookup { naming, owns_stem: stems.owns(original) }.find(original)
+/// The sidecar a file of an import that does not own its stem sidecar reads (its own `<file>.xmp`, the name it writes,
+/// never the packet of the sibling that does, issue #1905), given what [`find_sidecar`] found for it (`owner`).
+pub(crate) fn own_sidecar_for_import(original: &str, naming: SidecarNaming, owner: Option<&PathBuf>) -> Option<PathBuf> {
+    match owner {
+        // (its own names are among the ones looked for for the owner: none found there, none here)
+        None => None,
+        // (found under a name that is not the shared one: it is the file's own, the first of them in either order)
+        Some(p) if !xmp_cases(sidecar_path(original, SidecarNaming::Stem)).contains(p) => Some(p.clone()),
+        Some(_) => SidecarLookup { naming, owns_stem: false }.find(original),
+    }
 }
 
 /// The names `original`'s sidecar can have, in the order they are looked for: under `naming`,
