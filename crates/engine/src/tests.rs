@@ -57,6 +57,7 @@ mod slide;
 mod slideshow_export;
 mod spots;
 mod sync;
+mod task_queue;
 mod view_follow;
 mod view_reconcile;
 pub(super) mod xmp;
