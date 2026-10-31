@@ -377,5 +377,9 @@
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Regel {n} von {m}: {what}. Mit den Pfeiltasten verschieben",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Gruppe {n} von {m}: erfülle {mode}, {count} darin. Mit den Pfeiltasten verschieben",
   "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Es führt über das Album „{}“ zu sich selbst zurück: Ändere die Regeln eines Albums im Kreis (Smart-Album bearbeiten…)",
-  "+{n} more": "+{n} weitere"
+  "+{n} more": "+{n} weitere",
+  "{n} waiting": "{n} wartend",
+  "Starts after {n} more": "Startet nach {n} weiteren",
+  "Queued: it starts after {n} more": "In der Warteschlange: startet nach {n} weiteren",
+  "{n} tasks waiting in line won't run.": "{n} Aufgaben in der Warteschlange werden nicht ausgeführt."
 }

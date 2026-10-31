@@ -2529,5 +2529,11 @@
   "A group can't go inside itself": "Групу не можна помістити саму в себе",
   "Groups can't nest any deeper": "Групи не можна вкладати глибше",
   "This album is in a loop, so it shows nothing": "Цей альбом потрапив у цикл, тому нічого не показує",
-  "It tests itself: change its rules (Edit Smart Album…)": "Він перевіряє сам себе: змініть його правила (Редагувати смарт-альбом…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "Він перевіряє сам себе: змініть його правила (Редагувати смарт-альбом…)",
+  "Waiting": "Очікує",
+  "Starts next": "Почнеться наступною",
+  "Remove from Queue": "Прибрати з черги",
+  "Retry": "Повторити",
+  "Queued: it starts when the task ahead of it ends": "У черзі: почнеться, коли завершиться попереднє завдання",
+  "1 task waiting in line won't run.": "1 завдання в черзі не буде запущено."
 }

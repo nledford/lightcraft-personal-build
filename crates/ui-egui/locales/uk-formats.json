@@ -377,5 +377,9 @@
   "Rule {n} of {m}: {what}. Move with the arrow keys": "Правило {n} з {m}: {what}. Переміщення стрілками",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Група {n} з {m}: збіг {mode}, усередині {count}. Переміщення стрілками",
   "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "Він повертається до себе через альбом «{}»: змініть правила одного з альбомів у циклі (Редагувати смарт-альбом…)",
-  "+{n} more": "+{n} ще"
+  "+{n} more": "+{n} ще",
+  "{n} waiting": "Очікують: {n}",
+  "Starts after {n} more": "Почнеться після ще {n}",
+  "Queued: it starts after {n} more": "У черзі: почнеться після ще {n}",
+  "{n} tasks waiting in line won't run.": "Завдання в черзі ({n}) не буде запущено."
 }

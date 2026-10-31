@@ -2533,5 +2533,11 @@
   "A group can't go inside itself": "Un grupo no puede ir dentro de sí mismo",
   "Groups can't nest any deeper": "Los grupos no se pueden anidar más",
   "This album is in a loop, so it shows nothing": "Este álbum está en un bucle, así que no muestra nada",
-  "It tests itself: change its rules (Edit Smart Album…)": "Se comprueba a sí mismo: cambia sus reglas (Editar álbum inteligente…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "Se comprueba a sí mismo: cambia sus reglas (Editar álbum inteligente…)",
+  "Waiting": "En espera",
+  "Starts next": "Empieza a continuación",
+  "Remove from Queue": "Quitar de la cola",
+  "Retry": "Reintentar",
+  "Queued: it starts when the task ahead of it ends": "En cola: empieza cuando termine la tarea anterior",
+  "1 task waiting in line won't run.": "1 tarea en cola no se ejecutará."
 }

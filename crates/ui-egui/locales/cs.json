@@ -2578,5 +2578,11 @@
   "A group can't go inside itself": "Skupinu nelze vložit do sebe samé",
   "Groups can't nest any deeper": "Skupiny nelze vnořovat hlouběji",
   "This album is in a loop, so it shows nothing": "Toto album je ve smyčce, a proto nic nezobrazuje",
-  "It tests itself: change its rules (Edit Smart Album…)": "Testuje samo sebe: změňte jeho pravidla (Upravit inteligentní album…)"
+  "It tests itself: change its rules (Edit Smart Album…)": "Testuje samo sebe: změňte jeho pravidla (Upravit inteligentní album…)",
+  "Waiting": "Čeká",
+  "Starts next": "Začne jako další",
+  "Remove from Queue": "Odebrat z fronty",
+  "Retry": "Zkusit znovu",
+  "Queued: it starts when the task ahead of it ends": "Ve frontě: začne, až skončí úloha před ní",
+  "1 task waiting in line won't run.": "1 úloha čekající ve frontě se nespustí."
 }
