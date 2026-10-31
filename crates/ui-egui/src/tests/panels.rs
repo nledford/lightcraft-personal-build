@@ -2352,6 +2352,70 @@ fn a_folder_menu_locates_its_missing_tree_only() {
     assert!(sources.contains(&format!("{old}/other/c.jpg")), "another missing folder stays untouched: {sources:?}");
 }
 
+/// A library of file-backed photos that exist only in the catalog; each file's check answers
+/// after `delay` (`present` says which files are there) and is not waited for by settling.
+fn folders_app_with_slow_files(paths: &[&str], delay: Duration, present: fn(&str) -> bool) -> Headless {
+    use lightcraft_catalog::{Op, Photo, Source};
+    let mut session = lightcraft_engine::Session::new();
+    session.media.availability.set_probe(std::sync::Arc::new(move |p: &str| {
+        std::thread::sleep(delay);
+        present(p)
+    }));
+    for path in paths {
+        let id = session.catalog.alloc_photo_id();
+        let p = Photo::new(id, Source::File { path: (*path).into() }, "x.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
+        session.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    }
+    let app = LightcraftApp::new(session, Services { png: None, ..Default::default() });
+    let mut h = Headless::new(app, [1400.0, 900.0], 1.0);
+    let r = h.request("ui.set", json!({"view": "photoGrid", "leftPanel": true}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    h.settle(SETTLE);
+    h
+}
+
+/// The Missing Photos row appears when the background checks find the files gone, and moves every
+/// row below it down. [`Headless::file_checks_done`] is what waits for it (the checks are not part
+/// of `busy`: on a large library on a share they take minutes), so a click aimed at a folder row
+/// after it doesn't land on the row above (on a busy machine, Locate Missing Files… ran for
+/// `other` instead of `trip`). Nothing moves the rows afterwards, and no thread is spawned for the
+/// count, so none can fail to start.
+#[test]
+fn the_missing_photos_row_is_there_once_the_file_checks_are_done_and_nothing_moves_after() {
+    let delay = Duration::from_millis(400);
+    let mut h = folders_app_with_slow_files(&["/lc-missing-count/other/a.jpg", "/lc-missing-count/trip/b.jpg"], delay, |_| false);
+    assert!(h.step_until(T, |h| h.file_checks_done()), "the checks end");
+    h.settle(SETTLE);
+    assert!(has(&h, "source:missing"), "the Missing Photos row is on screen once the checks are done");
+    click(&mut h, "libraryFolderToggle:/lc-missing-count");
+    let settled = widget(&h, "source:libfolder:/lc-missing-count/trip");
+    let t0 = std::time::Instant::now();
+    while t0.elapsed() < delay {
+        h.step();
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    assert_eq!(widget(&h, "source:libfolder:/lc-missing-count/trip"), settled, "nothing moves the folder rows after the checks");
+}
+
+/// A photo whose file is gone comes in while the app is settled: the row it adds is on screen once
+/// the file checks are done.
+#[test]
+fn a_missing_photo_that_comes_in_adds_the_row_once_the_file_checks_are_done() {
+    use lightcraft_catalog::{Op, Photo, Source};
+    let mut h = folders_app_with_slow_files(&["/lc-missing-owed/here.jpg"], Duration::from_millis(200), |p| p.contains("here"));
+    assert!(h.step_until(T, |h| h.file_checks_done()), "the first checks end");
+    h.settle(SETTLE);
+    assert!(!has(&h, "source:missing"), "no photo is missing yet");
+    let id = h.app.session.catalog.alloc_photo_id();
+    let gone = Photo::new(id, Source::File { path: "/lc-missing-owed/gone.jpg".into() }, "gone.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
+    h.app.session.catalog.apply(Op::AddPhoto { photo: Box::new(gone) }).unwrap();
+    // (a check asked for may still be in flight when the queue is empty: the row itself is waited for)
+    assert!(h.step_until(T, |h| has(h, "source:missing")), "the Missing Photos row appears");
+    assert!(h.step_until(T, |h| h.file_checks_done()), "the checks end");
+    h.settle(SETTLE);
+    assert!(has(&h, "source:missing"), "the Missing Photos row is on screen once the checks are done");
+}
+
 /// Right-click a folder ▸ Set Color Label ▸ a colour: the folder's row shows the label's dot (a
 /// row without a label shows none), and None takes it off again.
 #[test]

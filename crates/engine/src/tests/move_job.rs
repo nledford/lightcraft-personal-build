@@ -324,6 +324,16 @@ fn delete_permanently_waits_for_the_move_of_the_photos_it_would_remove() {
 }
 
 #[test]
+fn move_files_to_trash_waits_for_a_running_move_and_takes_no_lease() {
+    let (dir, mut s, a, work, finish) = moving_one("busy-trash");
+    let err = s.execute("photo.trashFiles", &json!({"ids": [a.0]})).unwrap_err();
+    assert_eq!(err.kind(), crate::ErrorKind::MoveInProgress, "{err}");
+    assert!(s.catalog.photo(a).is_some(), "nothing was removed");
+    assert!(!s.trash_busy.load(std::sync::atomic::Ordering::Acquire), "the refused run holds no Trash lease");
+    finish_and_check(&mut s, &dir, a, work, finish);
+}
+
+#[test]
 fn empty_recently_deleted_waits_for_the_move_of_a_trashed_photo() {
     let (dir, mut s, a, work, finish) = moving_one("busy-empty");
     // the photo is put in Recently Deleted while its file moves: that detaches nothing
