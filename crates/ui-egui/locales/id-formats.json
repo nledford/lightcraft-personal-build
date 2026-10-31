@@ -363,5 +363,10 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Tidak dapat dipindahkan dan tetap di pustaka ({n}): {why}",
   "Photos whose file was already gone: {n}": "Foto yang file-nya sudah tidak ada: {n}",
   "Sidecars left in place: {n}": "Sidecar yang dibiarkan di tempatnya: {n}",
-  "Files other photos still use, kept: {n}": "File yang masih dipakai foto lain, dipertahankan: {n}"
+  "Files other photos still use, kept: {n}": "File yang masih dipakai foto lain, dipertahankan: {n}",
+  "None of this folder's photos are in “{name}”: choose the folder it is now": "Tidak ada foto folder ini di “{name}”: pilih folder tempatnya sekarang",
+  "Only {found} of this folder's {total} photos are in:": "Hanya {found} dari {total} foto folder ini ada di:",
+  "Only {found} of this folder's {total} photos are in “{name}”: the folder was not located": "Hanya {found} dari {total} foto folder ini ada di “{name}”: folder tidak ditemukan",
+  "Files there that are not the size the library recorded: {n}": "File di sana yang ukurannya tidak sama dengan yang dicatat pustaka: {n}",
+  "Folder located. Photos relinked: {n}": "Folder ditemukan. Foto yang ditautkan ulang: {n}"
 }

@@ -91,6 +91,7 @@ mod rating;
 mod recheck;
 mod reduce_motion;
 mod refusals;
+mod relocate;
 mod rename_person;
 mod restore_list;
 mod rules_editor;

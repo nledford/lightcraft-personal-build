@@ -360,5 +360,10 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Không thể chuyển và vẫn ở trong thư viện ({n}): {why}",
   "Photos whose file was already gone: {n}": "Ảnh có tệp đã mất từ trước: {n}",
   "Sidecars left in place: {n}": "Sidecar để lại tại chỗ: {n}",
-  "Files other photos still use, kept: {n}": "Tệp ảnh khác vẫn đang dùng, được giữ lại: {n}"
+  "Files other photos still use, kept: {n}": "Tệp ảnh khác vẫn đang dùng, được giữ lại: {n}",
+  "None of this folder's photos are in “{name}”: choose the folder it is now": "Không có ảnh nào của thư mục này nằm trong “{name}”: hãy chọn thư mục hiện tại của nó",
+  "Only {found} of this folder's {total} photos are in:": "Chỉ {found} trong {total} ảnh của thư mục này nằm trong:",
+  "Only {found} of this folder's {total} photos are in “{name}”: the folder was not located": "Chỉ {found} trong {total} ảnh của thư mục này nằm trong “{name}”: thư mục chưa được định vị",
+  "Files there that are not the size the library recorded: {n}": "Tệp ở đó có kích thước khác với thư viện đã ghi: {n}",
+  "Folder located. Photos relinked: {n}": "Đã định vị thư mục. Ảnh đã liên kết lại: {n}"
 }

@@ -737,6 +737,7 @@ fn row_menu(app: &mut LightcraftApp, resp: &egui::Response, n: &FolderNode, pare
             folder_label_menu(app, ui, n);
             locate_missing_item(app, ui, n);
             synchronize_item(app, ui, n, &n.name);
+            locate_item(app, ui, n);
             ui.separator();
             if MenuItem::new(crate::i18n::tr("Remove Disk from Library…"))
                 .show(ui)
@@ -856,6 +857,27 @@ fn synchronize_item(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode, 
     }
 }
 
+/// Update Folder Location… of a Folders row (widget `folderLocate`; `folder.locate`): say where
+/// the folder is now when it was moved or renamed outside LightCraft, or its disk is mounted
+/// somewhere else. Offered always: whether the folder is there is not asked of the disk for a
+/// menu (the sidebar never waits on a network).
+fn locate_item(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode) {
+    if app.services.pick_folder.is_none() && app.services.picker.is_none() {
+        return;
+    }
+    let r = ui
+        .button(crate::i18n::tr("Update Folder Location…"))
+        .on_hover_text(crate::i18n::tr("Choose where this folder is now, after it was moved or renamed outside LightCraft or its disk changed; its photos follow, no file is touched"));
+    crate::widgets::register(ui, "folderLocate", r.rect);
+    if r.clicked() {
+        // a disk, or a folder holding disks, was chosen as such
+        if let Err(e) = app.run("folder.locate", json!({"folder": n.path, "disk": n.volume || !n.selectable})) {
+            app.toast(ui.ctx(), e);
+        }
+        ui.close();
+    }
+}
+
 /// Set Color Label ▸ of a Folders row (`folder.label`; the submenu is widget `folderLabelMenu`,
 /// its colours `folderLabel:<colour>`).
 fn folder_label_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode) {
@@ -920,6 +942,7 @@ fn folder_menu_for_library(app: &mut LightcraftApp, resp: &egui::Response, n: &F
         folder_label_menu(app, ui, n);
         locate_missing_item(app, ui, n);
         synchronize_item(app, ui, n, &label);
+        locate_item(app, ui, n);
         ui.separator();
         if folder_parent_items(app, ui, n, parents) {
             ui.separator();

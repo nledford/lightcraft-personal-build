@@ -363,5 +363,10 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Kunde inte flyttas och finns kvar i biblioteket ({n}): {why}",
   "Photos whose file was already gone: {n}": "Foton vars fil redan saknades: {n}",
   "Sidecars left in place: {n}": "Sidofiler som lämnats kvar: {n}",
-  "Files other photos still use, kept: {n}": "Filer som andra foton fortfarande använder, behållna: {n}"
+  "Files other photos still use, kept: {n}": "Filer som andra foton fortfarande använder, behållna: {n}",
+  "None of this folder's photos are in “{name}”: choose the folder it is now": "Inga av mappens foton finns i ”{name}”: välj mappen där den finns nu",
+  "Only {found} of this folder's {total} photos are in:": "Bara {found} av mappens {total} foton finns i:",
+  "Only {found} of this folder's {total} photos are in “{name}”: the folder was not located": "Bara {found} av mappens {total} foton finns i ”{name}”: mappen hittades inte",
+  "Files there that are not the size the library recorded: {n}": "Filer där som inte har den storlek biblioteket registrerade: {n}",
+  "Folder located. Photos relinked: {n}": "Mappen har hittats. Omlänkade foton: {n}"
 }
