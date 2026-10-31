@@ -505,7 +505,7 @@ impl Catalog {
             },
             // one on a loop (it would include itself) holds nothing, whoever asks; the others
             // are guarded all the same, against chains too deep to follow
-            Some(Album { smart: Some(_), .. }) if self.album_is_on_a_loop(id) => false,
+            Some(Album { smart: Some(_), .. }) if self.album_on_a_loop(id) => false,
             Some(Album { smart: Some(rules), .. }) => match self.plans().get(&id) {
                 Some(plan) => self.smart_album_has(id, rules, plan, p),
                 None => self.smart_album_has(id, rules, &rules.prepare_one(self), p),
@@ -567,9 +567,35 @@ impl Catalog {
         !p.deleted && rules::smart_album_holds(id, p.id, || rules.matches_in(p, self, prepared))
     }
 
-    /// Whether smart album `id` would include itself ([`Self::albums_on_a_loop`]).
-    fn album_is_on_a_loop(&self, id: AlbumId) -> bool {
+    /// Whether album `id` is on a loop: a smart album that includes itself, directly or through
+    /// the smart albums it tests (or the folders those are in). Such an album holds no photos
+    /// ([`Self::album_photos`], [`Self::album_count`], [`Self::album_contains`] and the grid all
+    /// agree), until its rules or those of an album on the loop change. An album that only tests
+    /// a looping album is not on the loop: it is worked out as usual, seeing the looping album as
+    /// empty.
+    pub fn album_on_a_loop(&self, id: AlbumId) -> bool {
         self.looping().contains(&id)
+    }
+
+    /// For an album on a loop, an album it tests that leads back to it: the one to name when
+    /// saying why it is empty (itself when it tests itself and nothing else on the loop). `None`
+    /// for an album that is not on a loop.
+    pub fn album_loops_through(&self, id: AlbumId) -> Option<AlbumId> {
+        if !self.album_on_a_loop(id) {
+            return None;
+        }
+        let tested = self.albums.get(&id)?.smart.as_deref()?.albums_tested();
+        tested
+            .iter()
+            .copied()
+            .find(|b| *b != id && self.album_on_a_loop(*b) && self.album_reaches(*b, id))
+            .or_else(|| tested.contains(&id).then_some(id))
+    }
+
+    /// Whether the albums on a loop are worked out and kept now (what the tests look at).
+    #[cfg(test)]
+    pub(crate) fn loops_known(&self) -> bool {
+        self.loops.0.get().is_some()
     }
 
     /// [`Self::albums_on_a_loop`], worked out once for the albums as they are: every photo of
@@ -763,7 +789,7 @@ impl Catalog {
         match self.albums.get(&id) {
             Some(a) if a.folder => gathering(|| self.photos.values().filter(|p| !p.deleted && self.album_contains(id, p)).map(|p| p.id).collect()),
             // one on a loop holds nothing
-            Some(Album { smart: Some(_), .. }) if self.album_is_on_a_loop(id) => Vec::new(),
+            Some(Album { smart: Some(_), .. }) if self.album_on_a_loop(id) => Vec::new(),
             Some(Album { smart: Some(rules), .. }) => {
                 let prepared = rules.prepare(self);
                 gathering(|| self.photos.values().filter(|p| self.smart_album_has(id, rules, &prepared, p)).map(|p| p.id).collect())
@@ -777,7 +803,7 @@ impl Catalog {
     pub fn album_count(&self, id: AlbumId) -> usize {
         match self.albums.get(&id) {
             Some(a) if a.folder => gathering(|| self.photos.values().filter(|p| !p.deleted && self.album_contains(id, p)).count()),
-            Some(Album { smart: Some(_), .. }) if self.album_is_on_a_loop(id) => 0,
+            Some(Album { smart: Some(_), .. }) if self.album_on_a_loop(id) => 0,
             // counted in place: no id list is built just for its length
             Some(Album { smart: Some(rules), .. }) => {
                 let prepared = rules.prepare(self);
@@ -1897,6 +1923,8 @@ mod tests_library_tally;
 mod tests_local;
 #[cfg(test)]
 mod tests_lock;
+#[cfg(test)]
+mod tests_looping_albums;
 #[cfg(test)]
 mod tests_policy;
 #[cfg(test)]
