@@ -229,6 +229,7 @@
   "{n} similar photo{} · View ▸ Clear Filters to see all": "Podobné fotografie: {n}{:.0} · Zobrazení → Zrušit filtry zobrazí všechny",
   "{n} tasks are still running: {names}. Quitting stops them.": "Stále běží úlohy: {n}: {names}. Ukončení aplikace je zastaví.",
   "{n} tasks": "Úlohy: {n}",
+  "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.": "Stále běží a nelze je zastavit: {names}. Ukončení aplikace na ně nepočká.",
   "{n} {noun}": "{noun}: {n}",
   "{pct} %": "{pct} %",
   "{pid} (missing)": "{pid} (chybí)",

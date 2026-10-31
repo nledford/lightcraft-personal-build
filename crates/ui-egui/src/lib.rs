@@ -219,7 +219,7 @@ pub struct Perf {
 pub enum QuitPrompt {
     /// Changes couldn't be written to disk (issue #103).
     Unsaved(String),
-    /// Tasks that quitting would cut short are running: an import, an export… (issue #345).
+    /// Tasks are running (quitting stops the ones with a ✕ and doesn't wait for the others): an import, an export… (issue #345).
     Tasks(String),
     /// The library asks for a backup when LightCraft quits (`library.backupPreferences`,
     /// `onClose: ask`): back it up first, skip it, or don't quit.
@@ -303,6 +303,9 @@ pub struct LightcraftApp {
     /// How far the backup the library has when LightCraft quits has got in this quit (see
     /// `panels::notices`).
     pub quit_backup: QuitBackup,
+    /// Quit Anyway was chosen in the running-tasks prompt: it is not asked again for this quit (the tasks that can't be
+    /// stopped are still running when the window's close request or Try Saving Again comes back through `may_close`).
+    pub(crate) quit_tasks_answered: bool,
     control_rx: Option<Receiver<ControlRequest>>,
     pending_screenshots: Vec<PendingShot>,
     /// Synthetic-input control requests waiting for a fresh layout and delivery (plan §4.5).
