@@ -2449,5 +2449,9 @@
   "Keyboard in Sidebar": "Klawiatura na pasku bocznym",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Klawisze działają na pasku bocznym: strzałki przesuwają, Enter otwiera, pisz, aby szukać, Esc wraca do zdjęć",
   "This row has no name to change": "Ten wiersz nie ma nazwy do zmiany",
-  "Sorting the library": "Sortowanie biblioteki"
+  "Sorting the library": "Sortowanie biblioteki",
+  "No photo in this folder is in the library yet": "Żadne zdjęcie z tego folderu nie jest jeszcze w bibliotece",
+  "Select the photos to move in the grid first": "Najpierw zaznacz w siatce zdjęcia do przeniesienia",
+  "This place is kept in Local already": "To miejsce jest już zachowane w lokalnych",
+  "Only a place at the top of Local can be removed from it": "Z lokalnych można usunąć tylko miejsce z ich najwyższego poziomu"
 }

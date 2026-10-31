@@ -2525,5 +2525,9 @@
   "Keyboard in Sidebar": "在边栏中使用键盘",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "按键现在作用于边栏：方向键移动，回车打开，输入文字查找，Esc 返回照片",
   "This row has no name to change": "此行没有可更改的名称",
-  "Sorting the library": "正在排序图库"
+  "Sorting the library": "正在排序图库",
+  "No photo in this folder is in the library yet": "此文件夹中还没有照片在图库中",
+  "Select the photos to move in the grid first": "请先在网格视图中选择要移动的照片",
+  "This place is kept in Local already": "此位置已保留在本地",
+  "Only a place at the top of Local can be removed from it": "只有本地最上层的位置才能从本地移除"
 }

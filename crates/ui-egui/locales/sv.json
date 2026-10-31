@@ -2575,5 +2575,9 @@
   "Model installation failed": "Modellinstallationen misslyckades",
   "starting…": "startar…",
   "Edit In": "Redigera i",
-  "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Foto > Redigera i > Redigera i PhotoCraft (⇧⌘E, eller högerklicka på ett foto) renderar en kopia med dina ändringar, staplar den med originalet och öppnar den i PhotoCraft. Spara där så uppdateras kopian här. Som PSD sparar PhotoCraft direkt tillbaka till den. Lämna platsen tom om du inte använder en portabel kopia."
+  "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Foto > Redigera i > Redigera i PhotoCraft (⇧⌘E, eller högerklicka på ett foto) renderar en kopia med dina ändringar, staplar den med originalet och öppnar den i PhotoCraft. Spara där så uppdateras kopian här. Som PSD sparar PhotoCraft direkt tillbaka till den. Lämna platsen tom om du inte använder en portabel kopia.",
+  "No photo in this folder is in the library yet": "Inget foto i den här mappen finns i biblioteket än",
+  "Select the photos to move in the grid first": "Markera först de foton som ska flyttas i rutnätet",
+  "This place is kept in Local already": "Den här platsen är redan behållen i Lokalt",
+  "Only a place at the top of Local can be removed from it": "Bara en plats högst upp i Lokalt kan tas bort därifrån"
 }

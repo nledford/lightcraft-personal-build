@@ -2526,5 +2526,9 @@
   "Keyboard in Sidebar": "Teclado en la barra lateral",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Las teclas están en la barra lateral: las flechas mueven, Intro abre, escribe para buscar, Esc vuelve a las fotos",
   "This row has no name to change": "Esta fila no tiene un nombre que cambiar",
-  "Sorting the library": "Ordenando la biblioteca"
+  "Sorting the library": "Ordenando la biblioteca",
+  "No photo in this folder is in the library yet": "Ninguna foto de esta carpeta está todavía en la biblioteca",
+  "Select the photos to move in the grid first": "Primero selecciona en la cuadrícula las fotos que quieres mover",
+  "This place is kept in Local already": "Este lugar ya se conserva en Local",
+  "Only a place at the top of Local can be removed from it": "Solo un lugar del nivel superior de Local se puede quitar de Local"
 }

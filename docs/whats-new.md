@@ -126,7 +126,6 @@
   `folder.rename` and `folder.move` commands now refuse the home folder and its Pictures, Desktop and Downloads too,
   so a script or an agent can't do it either.
 
-
 ## 2026-10-27
 
 ### The Edit menu groups Select Only Active Photo and Paste Settings from Previous with their kin
@@ -224,6 +223,16 @@
   declared totals agree, and every APP2 segment is complete. Reordered valid chunks still work. An invalid
   sequence uses the existing unsupported-profile sRGB fallback, including when the JPEG is a raw preview.
 
+### A folder's menu has one order, in Folders and in Local
+- Right-clicking a folder in Folders or in Local opens a menu in the same order, in groups: what it does with the
+  library's photos (Synchronize Folder…, Locate Missing Files…), then reorganizing the disk (New Folder on Disk…,
+  Rename Folder…, Move Folder To…, Move Selected Photos Here), Set Color Label, Show in Finder, and removal last. A
+  disk's row and a Local place keep that order with the groups that apply to them.
+- An item that can't apply right now is grayed out, and its tooltip says why, instead of disappearing: Move Selected
+  Photos Here until photos are selected, Synchronize Folder… in Local for a folder with no library photo, Keep in
+  Local on a place already kept, Remove from Local for a folder inside a place.
+- Show in Finder on a folder, and Keep in Local, now say why when they fail.
+- Rename Folder… in Local starts from the folder's own name on disk, as in Folders.
 
 ## 2026-10-25
 
@@ -664,7 +673,6 @@
   import adds some, others are removed, moved to Recently Deleted or relinked), the answer leaves out the photos that
   no longer apply, a photo added meanwhile is not part of that check, and the answer is not kept for a later request.
 
-
 ### Choose where a Lightroom catalog goes
 - File ▸ Import Lightroom Catalog… now asks first: merge the catalog's photos, collections and edits into the
   library open now, or create a new library for them, named after the catalog and placed next to the open library
@@ -749,7 +757,6 @@
   the brush stroke you are painting is no longer drawn in the overlay colour while you hold the button, so the photo
   stays visible as you dodge and burn (issue #2549). The stroke's effect still appears when you let go. With the
   overlay shown, the stroke is tinted as before; a colour overlay at opacity 0 leaves it untinted too.
-
 
 ### Reliability
 - Opening a library no longer writes through a link left at the lock's owner note (`catalog.lock.owner`): the link

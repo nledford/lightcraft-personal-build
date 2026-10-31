@@ -3774,5 +3774,9 @@
   "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.": "მინიატურები და წინასწარი ხედები ხელახლა იქმნება დათვალიერებისას, რაც დიდ ბიბლიოთეკაში გარკვეულ დროს მოითხოვს. თქვენი ფოტოები და ცვლილებები ხელუხლებელი რჩება.",
   "Model installation failed": "მოდელის ინსტალაცია ვერ მოხერხდა",
   "starting…": "იწყება…",
-  "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "ფოტო > რედაქტირება სხვა პროგრამაში > რედაქტირება PhotoCraft-ში (⇧⌘E, ან მარჯვენა დაწკაპუნება ფოტოზე) არენდერებს ასლს თქვენი ცვლილებებით, ორიგინალთან ერთ დასტაში აერთიანებს და PhotoCraft-ში ხსნის. იქ შენახვისას ასლი აქაც განახლდება. PSD-ის შემთხვევაში PhotoCraft პირდაპირ მასში ინახავს. მდებარეობა ცარიელი დატოვეთ, თუ პორტატულ ასლს არ იყენებთ."
+  "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "ფოტო > რედაქტირება სხვა პროგრამაში > რედაქტირება PhotoCraft-ში (⇧⌘E, ან მარჯვენა დაწკაპუნება ფოტოზე) არენდერებს ასლს თქვენი ცვლილებებით, ორიგინალთან ერთ დასტაში აერთიანებს და PhotoCraft-ში ხსნის. იქ შენახვისას ასლი აქაც განახლდება. PSD-ის შემთხვევაში PhotoCraft პირდაპირ მასში ინახავს. მდებარეობა ცარიელი დატოვეთ, თუ პორტატულ ასლს არ იყენებთ.",
+  "No photo in this folder is in the library yet": "ამ საქაღალდის არცერთი ფოტო ჯერ ბიბლიოთეკაში არ არის",
+  "Select the photos to move in the grid first": "ჯერ ბადეში მონიშნეთ გადასატანი ფოტოები",
+  "This place is kept in Local already": "ეს ადგილი უკვე დატოვებულია ლოკალურში",
+  "Only a place at the top of Local can be removed from it": "ლოკალურიდან ამოშლა მხოლოდ მის ზედა დონეზე მყოფ ადგილს შეუძლია"
 }

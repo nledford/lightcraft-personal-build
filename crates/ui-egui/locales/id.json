@@ -2488,5 +2488,9 @@
   "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.": "Thumbnail dan pratinjau dibuat ulang saat Anda menelusuri, yang memerlukan waktu di pustaka besar. Foto dan hasil edit Anda tidak diubah.",
   "Model installation failed": "Instalasi model gagal",
   "starting…": "memulai…",
-  "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Foto > Edit di > Edit di PhotoCraft (⇧⌘E, atau klik kanan foto) merender salinan beserta hasil edit Anda, menumpuknya dengan foto asli, lalu membukanya di PhotoCraft. Simpan di sana, dan salinan di sini ikut diperbarui. Jika berformat PSD, PhotoCraft menyimpan langsung ke file tersebut. Kosongkan lokasi kecuali Anda menggunakan salinan portabel."
+  "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Foto > Edit di > Edit di PhotoCraft (⇧⌘E, atau klik kanan foto) merender salinan beserta hasil edit Anda, menumpuknya dengan foto asli, lalu membukanya di PhotoCraft. Simpan di sana, dan salinan di sini ikut diperbarui. Jika berformat PSD, PhotoCraft menyimpan langsung ke file tersebut. Kosongkan lokasi kecuali Anda menggunakan salinan portabel.",
+  "No photo in this folder is in the library yet": "Belum ada foto dari folder ini di pustaka",
+  "Select the photos to move in the grid first": "Pilih dulu foto yang akan dipindahkan di grid",
+  "This place is kept in Local already": "Tempat ini sudah disimpan di Lokal",
+  "Only a place at the top of Local can be removed from it": "Hanya tempat di tingkat teratas Lokal yang bisa dikeluarkan dari Lokal"
 }

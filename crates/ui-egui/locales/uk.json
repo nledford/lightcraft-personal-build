@@ -2522,5 +2522,9 @@
   "Keyboard in Sidebar": "Клавіатура в бічній панелі",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Клавіші працюють у бічній панелі: стрілки переміщують, Enter відкриває, набір тексту шукає, Esc повертає до фотографій",
   "This row has no name to change": "Цей рядок не має назви, яку можна змінити",
-  "Sorting the library": "Сортування бібліотеки"
+  "Sorting the library": "Сортування бібліотеки",
+  "No photo in this folder is in the library yet": "Жодного фото з цієї теки ще немає в бібліотеці",
+  "Select the photos to move in the grid first": "Спершу виберіть у сітці фото, які треба перемістити",
+  "This place is kept in Local already": "Це місце вже залишено в локальних",
+  "Only a place at the top of Local can be removed from it": "Вилучити з локальних можна лише місце верхнього рівня"
 }
