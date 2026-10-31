@@ -2235,6 +2235,7 @@
   "✕ now ends an import within about a second while files are being read or copied, however long a read has been waiting; a copy that was under way is taken back. While folders are being listed, ✕ still waits for the listing.": "× giờ kết thúc việc nhập trong khoảng một giây khi các tệp đang được đọc hoặc sao chép, dù lần đọc đã chờ bao lâu; bản sao đang thực hiện sẽ được hoàn tác. Khi các thư mục đang được liệt kê, × vẫn chờ việc liệt kê xong.",
   "日本語": "日本語",
   "繁體中文（台灣）": "繁體中文（台灣）",
+  "Move Files to Trash": "Chuyển tệp vào Thùng rác",
   "All Mask Overlays": "Mọi lớp phủ mặt nạ",
   "Before/After Side by Side": "Trước/Sau cạnh nhau",
   "Clipping": "Vùng cắt tông",
