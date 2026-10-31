@@ -80,6 +80,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     ("view.focusPoint", "Focus Point", Some("Alt+F"), "View>Loupe Overlay"),
     ("view.zoomToFocus", "Zoom to Focus Point", None, "View>Loupe Overlay"),
     ("view.reduceMotion", "Reduce Motion", None, ""),
+    ("view.increaseContrast", "Increase Contrast", None, ""),
     ("view.reference", "Reference View", Some("Shift+R"), "View"),
     ("photo.setReference", "Set as Reference Photo", None, ""),
     ("compare.swap", "Swap Compare Photos", None, "View"),

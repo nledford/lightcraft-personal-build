@@ -50,6 +50,7 @@ mod guided_guides;
 mod histogram_drag;
 mod import_read;
 mod import_thumbnails;
+mod increase_contrast;
 mod info_dialogs;
 mod keymap;
 mod keyword_files;
