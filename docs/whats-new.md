@@ -64,6 +64,18 @@
 
 ## 2026-10-29
 
+### Starting an export no longer freezes the window
+- Clicking Export (the Export dialog, File ▸ Export with Preset, Export with Previous) used to hold the window still for
+  about 3 ms per photo while the batch was set up: roughly a quarter of a second for 60 photos and a second for 300.
+  The export now starts at once, its activity row saying “Preparing photos…” (the stack shows a row once it is half a
+  second old, as for every task), and the photos are set up a few milliseconds per frame, so the window keeps
+  responding however big the batch is; ✕ stops the export during that time too. Each photo is read as it is when its
+  turn comes, so an edit made in those moments counts. A photo that can't be exported at all (for example a demo
+  photo with no original file when exporting the original, or one purged meanwhile) ends the export with its error in
+  a toast, and nothing is written; opening another library meanwhile stops the export as ✕ does.
+- Agents: `app.export {background: true}` still answers at once with `{background: true, total}`; `ui.inspect` →
+  `export.running.preparing` is true until the photos are set up. See [Control protocol](control-protocol.md).
+
 ### A person's page opens in seconds in a large library
 - Finding the unnamed faces that look like a person (a person's page, and again after each face confirmed there) now
   runs on every processor core, and each comparison of two faces uses the processor's vector instructions. In a
@@ -192,6 +204,9 @@
   "G"), which VoiceOver reads after a pause or on request. Before, it read "Edit (E)" every time it landed on the
   button. This holds in every language, including Japanese and Traditional Chinese, which write the shortcut in
   full-width brackets. The tooltip you see on hover is unchanged.
+
+### Emoji are in color on macOS
+- Emoji anywhere LightCraft shows text, whether typed into a field (for example with Edit ▸ Emoji & Symbols) or shown in a name, look like they do in other Mac apps: 👀 has its eyes, 🔥 is a flame, and ❤️ and ⚠️ (with the emoji selector that Emoji & Symbols adds) and 👍 are in color. Before, LightCraft drew them with its own flat black-and-white emoji, and ❤️ and ⚠️ as plain outlines. A symbol that is text unless the selector asks for emoji, such as ★, ✓, ▶ or ❤ on its own, stays text, like in other apps. A character in a script LightCraft doesn't bundle a font for now draws with a macOS font instead of a box. Other systems and the web version still use the bundled flat emoji.
 
 ## 2026-10-27
 
@@ -382,11 +397,6 @@
   about 18 ms to about 10 ms between a frame being handed to macOS and macOS compositing it, with the same 120 frames
   a second. On a Mac the window also holds one drawable less: its width × height × 4 bytes, 15–22 MB for a
   1200–1500-point-wide window on a Retina display.
-
-## 2026-10-28
-
-### Emoji are in color on macOS
-- Emoji anywhere LightCraft shows text, whether typed into a field (for example with Edit ▸ Emoji & Symbols) or shown in a name, look like they do in other Mac apps: 👀 has its eyes, 🔥 is a flame, and ❤️ and ⚠️ (with the emoji selector that Emoji & Symbols adds) and 👍 are in color. Before, LightCraft drew them with its own flat black-and-white emoji, and ❤️ and ⚠️ as plain outlines. A symbol that is text unless the selector asks for emoji, such as ★, ✓, ▶ or ❤ on its own, stays text, like in other apps. A character in a script LightCraft doesn't bundle a font for now draws with a macOS font instead of a box. Other systems and the web version still use the bundled flat emoji.
 
 ## 2026-10-24
 
