@@ -51,6 +51,13 @@ impl AppliedPreset {
     }
 }
 
+/// After `preset.apply` of `preset` at `amount` succeeded (here or from a photo's menu): the
+/// panel marks the preset on the photos it changed and offers its Amount slider.
+pub(crate) fn note_applied(ctx: &egui::Context, session: &lightcraft_engine::Session, preset: &str, amount: f64) {
+    AppliedByPhoto::remember(ctx, session, preset);
+    ctx.data_mut(|d| d.insert_temp(egui::Id::unique("preset-amount"), AppliedPreset::new(session, preset.to_string(), amount)));
+}
+
 /// The preset each photo was given, with its settings right after: the panel marks it while the
 /// photo still has exactly those settings, so it is still marked on coming back to the photo
 /// (issue #2392) and drops once the photo is edited further.
@@ -147,8 +154,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             {
                 // Only replace the most recent preset; never undo intervening edits.
                 if app.act("preset.apply", json!({"id": &last.id, "amount": v})).is_some() {
-                    AppliedByPhoto::remember(ui.ctx(), &app.session, &last.id);
-                    ui.data_mut(|d| d.insert_temp(amt_id, AppliedPreset::new(&app.session, last.id, v)));
+                    note_applied(ui.ctx(), &app.session, &last.id, v);
                 } else {
                     // (quiet: it puts back the step just undone; `act` already said why the preset was refused)
                     app.quiet("edit.redo", json!({}));
@@ -258,8 +264,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                     }
                     // only when it went through: refused (nothing selected…), `act` said why
                     if resp.clicked() && app.act("preset.apply", json!({"id": pid, "amount": 100})).is_some() {
-                        AppliedByPhoto::remember(ui.ctx(), &app.session, &pid);
-                        ui.data_mut(|d| d.insert_temp(amt_id, AppliedPreset::new(&app.session, pid.clone(), 100.0)));
+                        note_applied(ui.ctx(), &app.session, &pid, 100.0);
                         ui.data_mut(|d| d.remove::<(lightcraft_catalog::PhotoId, Preset, String)>(egui::Id::unique("last-preset-hover")));
                         app.toast(ui.ctx(), crate::i18n::tr_format!("Preset: {name}", name = name));
                     }
