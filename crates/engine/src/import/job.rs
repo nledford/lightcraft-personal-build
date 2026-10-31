@@ -2,7 +2,7 @@ use super::commit::{How, Plan, Slot, Transfer, commit_prepared, name_family, run
 use super::files::{Seen, expand_knowing, probe_all, reusable_probes, sidecars_of};
 use super::scan::note_content;
 use super::types::{FileFacts, ImportCandidate, ImportMode, ImportOptions, ImportReport, Kept, OnDeleted};
-use super::{HashMap, ListedFolders, MediaKind, Path, PathBuf, Photo, PhotoId, ProbeInfo, Session, Source};
+use super::{HashMap, ListedFolders, MediaKind, Path, PathBuf, Photo, PhotoId, ProbeInfo, ReadChoice, ReadFromPhotos, Session, Source};
 
 /// Import files/folders. See the module docs.
 pub fn import(s: &mut Session, paths: &[String], mode: ImportMode) -> crate::Result<ImportReport> {
@@ -165,7 +165,10 @@ fn normalize_import_path(path: &str) -> String {
 impl ImportJob {
     /// Snapshot what an import with `opts` needs from the session (no file-system calls). Takes
     /// the probes a preceding scan left ([`Session::import_probes`]).
-    pub fn new(s: &mut Session, opts: ImportOptions) -> crate::Result<Self> {
+    pub fn new(s: &mut Session, mut opts: ImportOptions) -> crate::Result<Self> {
+        // what is read from the photos is settled once, for all of the import: this import's
+        // choice, else the library's as it is now
+        opts.read = ReadChoice::of(opts.read.over(s.import_defaults.read));
         let mode = opts.mode;
         // Only a library on disk has an `Originals/` folder. The browser build keeps the bytes of
         // every added file in its own storage already, so "copy" there means "add".
@@ -376,11 +379,12 @@ impl ImportJob {
             // the XMP sidecar (or a raw's embedded XMP), read before copying: its capture time files
             // and names the copy when the file itself has none (a duplicate needs only that time)
             let raw = info.kind == MediaKind::Raw;
-            let packet = if duplicate_of.is_some() && info.captured.is_some() {
-                None
-            } else {
-                found_sidecar.and_then(|f| std::fs::read_to_string(f).ok()).or_else(|| info.xmp.clone().filter(|_| raw))
-            };
+            // (looked up for the whole batch above)
+            let sidecar_file = found_sidecar;
+            let file_packet = sidecar_file.as_ref().and_then(|f| std::fs::read_to_string(f).ok());
+            let from_file = file_packet.is_some();
+            let packet =
+                if duplicate_of.is_some() && info.captured.is_some() { None } else { file_packet.or_else(|| info.xmp.clone().filter(|_| raw)) };
             let target = crate::crs::Target::for_file(info.kind, &info.format, info.preview_only.is_some(), &info.meta.camera);
             let sidecar = packet.and_then(|x| match crate::sidecar::parse_sidecar(&x, target) {
                 Ok(sc) => Some(sc),
@@ -417,6 +421,8 @@ impl ImportJob {
                     let mut q = Photo::new(PhotoId(0), Source::File { path: path.clone() }, &own, &info.format, 0, 0, &self.now);
                     q.captured = info.captured.clone();
                     q.meta = info.meta.clone();
+                    // (what is not read names no file or folder either)
+                    opts.read.over(ReadFromPhotos::ALL).of_the_file(&mut q.meta);
                     let name = if let Some(template) = opts.rename.as_deref().filter(|t| !t.trim().is_empty()) {
                         let Some(seq) = self.seq else {
                             self.done.fetch_add(1, Relaxed);
@@ -454,8 +460,18 @@ impl ImportJob {
                     };
                     // Copy as DNG: the copied raw becomes a DNG (the copy is ours to replace)
                     let dng = opts.convert_dng && mode == ImportMode::Copy && raw && !info.format.eq_ignore_ascii_case("DNG");
+                    // Copy: a sidecar that holds a kind this import leaves unread goes with the copy
+                    let bring_sidecar = sidecar_file
+                        .as_ref()
+                        .filter(|_| {
+                            mode == ImportMode::Copy
+                                && from_file
+                                && sidecar.as_ref().is_some_and(|sc| opts.read.over(ReadFromPhotos::ALL).skipped_in(sc))
+                        })
+                        // (named after the stem when its own stem is the photo's: the name it was found under, in any case)
+                        .map(|f| (f.clone(), f.file_stem() == Path::new(&path).file_stem()));
                     plan.slots.push(Slot::Transfer);
-                    plan.transfers.push(Transfer { path, info, sidecar, dir, how, dng, family });
+                    plan.transfers.push(Transfer { path, info, sidecar, dir, how, dng, bring_sidecar, family });
                     continue;
                 }
                 (ImportMode::Move, _) => {

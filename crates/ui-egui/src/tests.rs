@@ -48,6 +48,7 @@ mod grid_badges;
 mod grid_drag;
 mod guided_guides;
 mod histogram_drag;
+mod import_read;
 mod import_thumbnails;
 mod info_dialogs;
 mod keymap;
