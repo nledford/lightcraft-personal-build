@@ -1086,7 +1086,8 @@ fn demo_on_disk() -> Headless {
     h
 }
 
-/// A folder with a valid PNG and, in a subfolder, a JPEG cut short before its end-of-image marker (the real reason).
+/// A folder with a valid PNG and, in a subfolder, a JPEG cut short before any image data (the real reason). One cut short with data to show
+/// imports from what is present and counts as damaged, not as unreadable (#2705).
 fn folder_with_a_truncated_jpeg(tag: &str) -> std::path::PathBuf {
     use lightcraft_codecs::{ChromaSubsampling, EncodeImage, EncodeMeta};
     let dir = std::env::temp_dir().join(format!("lc-activity-unreadable-{tag}-{}", std::process::id()));
@@ -1096,7 +1097,8 @@ fn folder_with_a_truncated_jpeg(tag: &str) -> std::path::PathBuf {
     let png = lightcraft_codecs::encode_png(&EncodeImage::rgba8(&img), &EncodeMeta::default()).unwrap();
     std::fs::write(dir.join("good.png"), png).unwrap();
     let mut jpeg = lightcraft_codecs::encode_jpeg(&EncodeImage::rgba8(&img), 90, ChromaSubsampling::S444, &EncodeMeta::default()).unwrap();
-    jpeg.truncate(jpeg.len() - 2);
+    let scan = jpeg.windows(2).position(|w| w == [0xFF, 0xDA]).expect("a scan");
+    jpeg.truncate(scan);
     std::fs::write(dir.join("trip").join("bad.jpg"), jpeg).unwrap();
     dir
 }
@@ -1246,5 +1248,24 @@ fn a_row_that_only_waits_does_not_keep_the_stack_polling() {
     wait.age_ms = 0;
     assert!(needs_poll(&[wait]), "a young one is about to be shown");
     assert!(!needs_poll(&[]), "nothing to look at");
+    drop((waiting, running));
+}
+
+/// A row that only waits has no "0 %": the line beside the bell names it alone, and its ring sweeps (its total is a count
+/// of photos, not work to finish); beside a running task the mean is that task's alone.
+#[test]
+fn a_row_that_only_waits_shows_no_percent() {
+    use crate::panels::activity::{overall, readout_text};
+    let s = lightcraft_engine::Session::new();
+    let waiting = s.activity.start("xmpWaiting", "Waiting to write XMP sidecars", Cancel::No);
+    waiting.progress(0, 2);
+    let running = s.activity.start("export", "Exporting", Cancel::Yes);
+    running.progress(1, 2);
+    let rows = s.activity.list();
+    let of = |kind: &str| rows.iter().find(|t| t.kind == kind).cloned().unwrap();
+    let (wait, run) = (of("xmpWaiting"), of("export"));
+    assert_eq!(readout_text(std::slice::from_ref(&wait)), "Waiting to write XMP sidecars");
+    assert_eq!(overall(std::slice::from_ref(&wait)), None);
+    assert_eq!(overall(&[wait, run]), Some(0.5));
     drop((waiting, running));
 }

@@ -210,6 +210,13 @@ fn nodes_with(app: &LightcraftApp, photo: PhotoId, infos: &[CommandInfo], preset
         v.push(sub("Photo", s).map(|s| recheck(app, photo, s)));
     }
     v.push(row("panel.addKeywords"));
+    // the keyword shortcut (Set Keyword Shortcut…), given to the selected photos
+    let shortcut = app.session.catalog.keyword_shortcut();
+    if !shortcut.is_empty() {
+        let names = shortcut.iter().map(|k| k.replace('|', " › ")).collect::<Vec<_>>().join(", ");
+        let label = crate::i18n::tr_format!("Add Keyword “{keywords}”", keywords = names);
+        v.push(Some(menubar::item("photo.setMeta", json!({"addKeywords": shortcut}), label, None, true, None)));
+    }
     let copied_meta = app.session.meta_clipboard.is_some();
     v.push(Some(submenu(
         "Metadata",
@@ -371,6 +378,7 @@ fn alias(n: &MenuNode) -> Option<String> {
                 None => "button:contextAddToAlbum".into(),
             }),
             "dialog.newAlbum" => Some("button:contextNewAlbum".into()),
+            "photo.setMeta" if params.get("addKeywords").is_some() => Some("button:contextAddKeywordShortcut".into()),
             "photo.delete" => Some("button:contextDeletePhoto".into()),
             _ => None,
         },
@@ -449,6 +457,12 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, photo: PhotoId, lead: Le
         let extra = |n: &MenuNode| {
             let why = match n {
                 MenuNode::Item { id, params, enabled: false, .. } => reason(app, &infos, id, params),
+                // an Export preset's TIFF LZW warning, on the row that is on
+                MenuNode::Item { id, params, enabled: true, .. } if id == "app.export" => params["preset"].as_str().and_then(|name| {
+                    let presets = app.session.all_export_presets();
+                    let p = presets.iter().find(|(p, _)| p.name == name)?;
+                    crate::dialogs::preset_lzw_note(&p.0.params).map(|note| crate::i18n::tr(note).to_string())
+                }),
                 _ => None,
             };
             (alias(n), why)
