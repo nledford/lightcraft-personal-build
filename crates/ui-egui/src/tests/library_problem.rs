@@ -842,7 +842,7 @@ fn waiting_files_wait_for_a_running_import_instead_of_being_dropped() {
     h.step();
     assert!(h.app.library_problem.is_none(), "the problem is over");
     assert_eq!(h.app.waiting_import.files, vec![waiting.to_string_lossy().to_string()], "the waiting file is kept");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("An import is running") && toast.contains("once it ends"), "{toast}");
     // the files belong to this library: no switch while they wait, also when what they wait for
     // is a Synchronize Folder, which doesn't hold switching back by itself (the import set aside)

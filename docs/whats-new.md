@@ -501,6 +501,11 @@
 
 ## 2026-10-23
 
+### Messages no longer hide each other
+- The short messages at the bottom of the photo view used to replace one another: a label set right after an export
+  ended hid the export's message. Now a new message appears where they always did and the ones still showing move up
+  above it, up to three, each going at its own time (at the top during a slideshow, the newest on top).
+
 ### Videos in the grid are no longer sent to the image decoders
 - A video in the library (an MP4 or MOV brought in from a Lightroom catalog) no longer asks the image decoders for a
   grid thumbnail (issue #2682). They can't read one, so each video failed with "unrecognised image format", showed a

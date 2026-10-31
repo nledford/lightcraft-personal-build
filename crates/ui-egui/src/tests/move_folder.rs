@@ -126,7 +126,7 @@ fn move_folder_to_asks_off_the_ui_thread_and_moves_with_the_answer() {
         lightcraft_catalog::Source::Demo { .. } => false,
     });
     assert!(moved, "the photo is relinked");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("1 photo(s) relinked"), "{toast:?}");
 
     // the same from Local (paths written the way the OS does): back to where it was
