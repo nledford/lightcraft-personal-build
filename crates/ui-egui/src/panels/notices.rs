@@ -66,7 +66,16 @@ pub fn may_close(app: &mut LightcraftApp) -> bool {
         return true;
     }
     // before the library is touched: a Cancel here keeps working with it
-    let running = tasks_quitting_would_stop(app);
+    let mut running = tasks_quitting_would_stop(app);
+    // a move that was stopped is still finishing the file in hand, and the library follows the files that
+    // moved only when it ends: quitting before then leaves them where the library doesn't look
+    if app.move_run.is_some()
+        && !app.quit_cuts_move
+        && let Some(task) = app.session.activity.list().into_iter().find(|t| t.kind == "move")
+        && !running.iter().any(|t| t.id == task.id)
+    {
+        running.push(task);
+    }
     let mut names = running.iter().map(|t| crate::i18n::tr(&t.label)).collect::<Vec<_>>();
     // an import handed its files this tick (files that waited for a library, #2779) is listed only
     // from its first tick on, and files still waiting will be imported too
@@ -180,6 +189,7 @@ fn backup_failed(app: &mut LightcraftApp, why: &str) {
 /// The quit was called off: the next one starts over, with its own question about the backup.
 fn quit_called_off(app: &mut LightcraftApp) {
     app.quit_prompt = None;
+    app.quit_cuts_move = false;
     app.quit_backup = QuitBackup::Undecided;
 }
 
@@ -719,6 +729,8 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
             if app.import.as_ref().is_some_and(|t| !t.listed()) {
                 app.import = None;
             }
+            // a move that was stopped and is still finishing its file isn't waited for: choosing to quit is what cuts it short
+            app.quit_cuts_move = true;
             // the backup and unsaved changes still get their own questions
             if may_close(app) {
                 app.ui.quit = true;

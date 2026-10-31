@@ -21,6 +21,9 @@ pub(crate) fn can_switch_library(app: &LightcraftApp) -> Result<(), String> {
     if !app.waiting_import.files.is_empty() {
         return Err("wait for the photos waiting to be imported before switching libraries".into());
     }
+    if app.move_run.is_some() {
+        return Err("wait for the photos being moved to arrive before switching libraries".into());
+    }
     Ok(())
 }
 

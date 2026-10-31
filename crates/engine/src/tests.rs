@@ -39,6 +39,7 @@ mod library;
 mod lightroom_folder;
 mod mask_effects;
 mod merge;
+mod move_job;
 mod move_to_share;
 mod multi_source;
 mod organize;
