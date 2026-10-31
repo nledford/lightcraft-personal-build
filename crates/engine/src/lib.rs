@@ -1153,20 +1153,23 @@ impl Session {
     /// and `targets` leave out photos that are gone).
     pub fn reconcile_view(&mut self) {
         let cat = &self.catalog;
-        let gone = |a: &lightcraft_catalog::AlbumId| cat.album(*a).is_none();
-        if matches!(&self.source, LibrarySource::Album(a) if gone(a)) {
-            self.source = LibrarySource::All;
+        let held = |a: &lightcraft_catalog::AlbumId| cat.album(*a).is_some();
+        // of several albums shown, the others stay
+        self.also_albums.retain(held);
+        // when the source's own is gone the last of the others takes its place; with none left,
+        // All Photos does (not an empty grid)
+        if matches!(&self.source, LibrarySource::Album(a) if !held(a)) {
+            self.source = self.also_albums.pop().map_or(LibrarySource::All, LibrarySource::Album);
         }
-        if self.filter.album.as_ref().is_some_and(gone) {
+        if self.filter.album.as_ref().is_some_and(|a| !held(a)) {
             self.filter.album = None;
         }
     }
 
     /// Photos shown in the grid/filmstrip for the current source, filter and sort.
     pub fn visible(&mut self) -> &[PhotoId] {
-        // (several albums shown: when the source's own is gone, another of them takes its place first)
-        self.reconcile_sources();
         self.reconcile_view();
+        self.reconcile_sources();
         let mut key = (
             self.catalog.revision,
             format!(

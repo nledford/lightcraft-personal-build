@@ -369,6 +369,7 @@ fn disclosure_chevron(ui: &mut egui::Ui, row: &egui::Response, indent: f32, open
 pub(crate) fn disclosure_name(open: bool, name: &str) -> String {
     if open { crate::i18n::tr_format!("Collapse {name}", name = name) } else { crate::i18n::tr_format!("Expand {name}", name = name) }
 }
+
 /// What a click on a triangle with Option (Alt) held does to the rows inside its row.
 #[derive(Clone, Copy, PartialEq)]
 pub(super) enum Inside {
