@@ -91,7 +91,7 @@ pub(super) fn folder_tree(
                         key: "name".into(),
                     });
                 }
-                move_folder_item(app, ui, path);
+                move_folder_item(app, ui, path, format!("localFolderMove:{path}"));
             }
             if app.services.reveal.is_some()
                 && MenuItem::new(crate::i18n::tr(crate::menus::reveal_label())).show(ui).clicked()
@@ -825,12 +825,15 @@ fn can_move_folder(app: &LightcraftApp) -> Result<(), String> {
 /// Move Folder To… of a folder row (widget `folderMoveTo`): asks for the destination through the
 /// shared folder dialog, off the UI thread where the host has one (issue #3140: a dialog on the UI
 /// thread froze the window); `folder.move` then runs when it closes ([`crate::pick::poll`]).
-/// Disabled while a library dialog is up ([`can_move_folder`]).
-fn move_folder_item(app: &mut LightcraftApp, ui: &mut egui::Ui, path: &str) {
+/// Disabled while a library dialog is up ([`can_move_folder`]). The row is also registered as
+/// widget `also` (`folderMove:<path>` in Folders, `localFolderMove:<path>` in Local), one per folder,
+/// so the control channel and tests can click the row of one folder.
+fn move_folder_item(app: &mut LightcraftApp, ui: &mut egui::Ui, path: &str, also: String) {
     if app.services.pick_folder.is_none() && app.services.picker.is_none() {
         return;
     }
     let r = MenuItem::new(crate::i18n::tr("Move Folder To…")).enabled(can_move_folder(app).is_ok()).widget("folderMoveTo").show(ui);
+    crate::widgets::register(ui, also, r.rect);
     if !r.clicked() {
         return;
     }
@@ -903,7 +906,7 @@ fn folder_menu_for_library(app: &mut LightcraftApp, resp: &egui::Response, n: &F
             });
             ui.close();
         }
-        move_folder_item(app, ui, path);
+        move_folder_item(app, ui, path, format!("folderMove:{path}"));
         if MenuItem::new(crate::i18n::tr("New Folder on Disk…")).show(ui).clicked() {
             app.ui.dialog = Some(crate::state::Dialog::TextPrompt {
                 title: crate::i18n::tr_format!("New Folder in “{name}”", name = label),
