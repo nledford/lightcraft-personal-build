@@ -146,7 +146,7 @@ fn typing_in_the_filter_starts_no_slide_preview_render() {
     assert!(h.app.session.active().is_some(), "a photo is active, so the preview would have one to render");
     assert_eq!(h.app.renderer.wanted(crate::render::Slot::SlidePreview), None, "none before");
     filter(&mut h, "sidecar names");
-    assert_eq!(found(&h), ["import:XMP sidecars"]);
+    assert_eq!(found(&h), ["files:XMP sidecars"]);
     h.settle(T);
     assert_eq!(h.app.renderer.wanted(crate::render::Slot::SlidePreview), None, "the filter asked for no render of the slide preview");
 }
