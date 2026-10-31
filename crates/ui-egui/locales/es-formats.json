@@ -374,5 +374,7 @@
   "Remove {n} folders from the library? Photos imported from them: {count}.": "¿Quitar {n} carpetas de la biblioteca? Fotos importadas de ellas: {count}.",
   "…and {n} more": "…y {n} más",
   "{n} keywords": "{n} palabras clave",
+  "Rule {n} of {m}: {what}. Move with the arrow keys": "Regla {n} de {m}: {what}. Mover con las teclas de flecha",
+  "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "Grupo {n} de {m}: coincidir con {mode}, {count} dentro. Mover con las teclas de flecha",
   "+{n} more": "+{n} más"
 }

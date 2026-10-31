@@ -97,6 +97,7 @@ mod refusals;
 mod rename_person;
 mod restore_list;
 mod rules_editor;
+mod rules_reorder;
 mod sam_setup;
 mod scroll;
 mod side_keys;
