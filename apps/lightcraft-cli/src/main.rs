@@ -773,7 +773,7 @@ fn open_headless(library: Option<&str>, demo: bool, imports: &[String]) -> Resul
         None => Headless::default(),
     };
     if !imports.is_empty() {
-        import_and_select(&mut h.session, &imports)?;
+        import_and_select(&mut h.session, imports)?;
     }
     Ok(h)
 }

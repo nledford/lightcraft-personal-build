@@ -1,6 +1,6 @@
 use super::{
     Align2, ControlSpec, DevelopSettings, Icon, LightcraftApp, PhotoId, Section, Sense, SliderOut, Tokens, Track, Value, controls, divider, json,
-    pos2, register, section_header, slider, vec2,
+    pos2, section_header, slider, vec2,
 };
 use crate::button::Button;
 use crate::check::Check;

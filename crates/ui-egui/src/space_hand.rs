@@ -64,7 +64,7 @@ pub(crate) fn tick(app: &mut LightcraftApp, ctx: &egui::Context) {
     }
     app.space_hand = None;
     if tool && !hand.used && now - hand.since <= TAP {
-        let _ = app.run("view.zoomToggle", json!({}));
+        app.act("view.zoomToggle", json!({}));
     }
 }
 

@@ -419,7 +419,7 @@ fn menu(app: &mut LightcraftApp, ui: &mut egui::Ui, path: &str, selection: &[Pho
     }
     // the keyword shortcut becomes this keyword alone
     if item(ui, "useAsShortcut", crate::i18n::tr("Use This as Keyword Shortcut"), true) {
-        let _ = app.run("keyword.setShortcut", json!({"keywords": [path]}));
+        app.act("keyword.setShortcut", json!({"keywords": [path]}));
     }
     ui.separator();
     let some = !selection.is_empty();

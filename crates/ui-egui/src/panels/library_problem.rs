@@ -1326,10 +1326,8 @@ pub fn banner(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     }
     let t = Tokens::get(ui.ctx());
     let mut reopen = false;
-    // what is written on the caution colour is black or white, whichever stands out more; the button's veil goes the
-    // other way, so that it never takes the ink's contrast down
+    // what is written on the caution colour is black or white, whichever stands out more
     let ink = t.ink_on(t.caution);
-    let veil = if ink == egui::Color32::WHITE { egui::Color32::from_black_alpha(40) } else { egui::Color32::from_white_alpha(40) };
     egui::Panel::top("library-problem-banner")
         .exact_size(30.0)
         .frame(egui::Frame::NONE.fill(t.caution).inner_margin(egui::Margin::symmetric(12, 0)))
