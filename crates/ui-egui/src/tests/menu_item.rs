@@ -175,7 +175,7 @@ fn every_kind_of_row_is_one_height() {
 
 #[test]
 fn a_shortcut_reads_as_the_platform_writes_it() {
-    assert_eq!(Kbd::new("Cmd+Shift+Z", true).text(), "⌘⇧Z");
+    assert_eq!(Kbd::new("Cmd+Shift+Z", true).text(), "⇧⌘Z");
     assert_eq!(Kbd::new("Cmd+Shift+Z", false).text(), "Ctrl+Shift+Z");
     assert_eq!(Kbd::new("Cmd+Shift+Z", true).keys(), ["⌘", "⇧", "Z"]);
     assert_eq!(Kbd::new("Cmd+Shift+Z", false).keys(), ["Ctrl", "Shift", "Z"]);
@@ -189,7 +189,7 @@ fn a_shortcut_reads_as_the_platform_writes_it() {
 fn the_tooltip_shows_the_key_as_it_is_now_mapped() {
     let mut keymap = crate::shortcuts::Keymap::new();
     let default = tip_with_shortcut("Reset all edits", "develop.reset", &keymap, true);
-    assert_eq!(default, "Reset all edits (⌘⇧R)");
+    assert_eq!(default, "Reset all edits (⇧⌘R)");
     assert_eq!(tip_with_shortcut("Reset all edits", "develop.reset", &keymap, false), "Reset all edits (Ctrl+Shift+R)");
     keymap.insert("develop.reset".to_string(), "Shift+K".to_string());
     assert_eq!(tip_with_shortcut("Reset all edits", "develop.reset", &keymap, true), "Reset all edits (⇧K)");
