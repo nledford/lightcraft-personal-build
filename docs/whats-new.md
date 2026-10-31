@@ -559,6 +559,11 @@
 - Each section of Settings can be found by scripts as `heading:<its English name>` in `ui.widgets`, whatever the
   interface language.
 
+### The filmstrip rings the selected photos before their thumbnails load
+- A selected photo's cell in the filmstrip shows its ring (white for the active photo, gray for the others) on the
+  placeholder while its thumbnail is still loading, as the grid already did. Before, the active photo's cell looked
+  like the other selected cells until the thumbnails arrived.
+
 ### Tab leaves the name field in New Album, New Smart Album and the name prompts
 - In New Album, New Smart Album, Save Metadata Preset and the other dialogs with one name field, the field has the
   keyboard focus when the dialog opens, and Tab now moves on to the check box, Cancel and OK (Shift+Tab goes back).
