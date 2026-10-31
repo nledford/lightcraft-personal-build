@@ -158,6 +158,11 @@
 
 ## 2026-10-27
 
+### The app and Help menus follow the Mac's order
+- On macOS, Check for Updates… is in the LightCraft menu right under About LightCraft, as in other Mac apps. It stays in Help on Windows, Linux and the web.
+- Help opens with LightCraft Help, then What's New and Keyboard Shortcuts, then Send Feedback… and the ArtCraft Discord, the websites, and System Info, Open Log Folder and Debug. Join the ArtCraft Discord… no longer leads the menu, and LightCraft Help is no longer the last row.
+- LightCraft Help is ⇧⌘? on macOS, where F1 needs the fn key. Windows, Linux and the web keep F1.
+
 ### The Edit menu loses its Language submenu
 - Choose the interface language in Settings ▸ General ▸ Language, which already lists every language. Edit no longer carries 18 more rows for it, on any platform.
 
