@@ -242,6 +242,10 @@ pub enum Op {
         /// when it is `None`.
         #[serde(default, skip_serializing_if = "String::is_empty")]
         preview_checked: String,
+        /// The file is a JPEG cut short (see [`Photo::truncated`]). Absent in records written before
+        /// the field existed, which read as `false`; builds that don't know it ignore it.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        truncated: bool,
     },
     /// The lens data a photo's file carries (what Reload finds when it was read after import).
     SetEmbeddedLens {
@@ -325,6 +329,13 @@ pub struct Catalog {
     /// the albums ([`Self::albums_on_a_loop`]).
     #[serde(skip)]
     loops: LoopsMemo,
+    /// How many photos are procedural samples (`Source::Demo`), and how many of those are in the
+    /// library (not in Recently Deleted): kept as ops change photos, and counted again by
+    /// [`Catalog::repair`] on load, so asking needs no scan of a large library.
+    #[serde(skip)]
+    demo_photos: usize,
+    #[serde(skip)]
+    demo_in_library: usize,
 }
 
 /// What of a photo an op changed: enough to tell which tallies of the library an edit leaves as they were (a
@@ -477,6 +488,21 @@ impl Catalog {
     }
     pub fn is_empty(&self) -> bool {
         self.photos.is_empty()
+    }
+    /// No photo was ever added (photo ids are never reused): a library as it was created. The
+    /// welcome shown by a new library (`empty_library::welcomes` in the UI) asks it.
+    pub fn never_held_photos(&self) -> bool {
+        self.next_photo <= 1
+    }
+    /// How many photos are procedural samples (`Source::Demo`), wherever they are (Recently
+    /// Deleted too).
+    pub fn sample_photos(&self) -> usize {
+        self.demo_photos
+    }
+    /// How many sample photos are in the library: not in Recently Deleted. The samples banner
+    /// (`panels::samples` in the UI) asks it each frame.
+    pub fn sample_photos_in_library(&self) -> usize {
+        self.demo_in_library
     }
     pub fn album(&self, id: AlbumId) -> Option<&Album> {
         self.albums.get(&id)
@@ -974,7 +1000,7 @@ impl Catalog {
         }
         let broad = self.changes.broad;
         let keyword_list = self.changes.keyword_list;
-        let inv = match self.apply_inner(op, true) {
+        let inv = match self.apply_counted(op, true) {
             Ok(inv) => inv,
             Err(cause) => {
                 let made = self.revision.saturating_add(1);
@@ -1036,6 +1062,30 @@ impl Catalog {
         let mut new = then.difference(now);
         let looping = edited.iter().find(|e| then.contains(e) && !now.contains(e)).or_else(|| new.next())?;
         Some(after.get(looping).map(|a| a.name.clone()).unwrap_or_default())
+    }
+
+    /// [`Catalog::apply_inner`] (`checked` as there), keeping the counts of sample photos: an op that changes one
+    /// photo (adds, removes, deletes, restores, re-sources it) changes them by what it did to it.
+    fn apply_counted(&mut self, op: Op, checked: bool) -> Result<Op> {
+        let id = match &op {
+            Op::AddPhoto { photo } => Some(photo.id),
+            Op::RemovePhoto { id } | Op::SetDeleted { id, .. } | Op::SetLocal { id, .. } | Op::Relink { id, .. } | Op::SetFile { id, .. } => {
+                Some(*id)
+            }
+            _ => None,
+        };
+        // (a sample, a sample in the library) for that photo
+        let state = |c: &Catalog| {
+            let p = id.and_then(|id| c.photos.get(&id));
+            let demo = p.is_some_and(|p| matches!(p.source, Source::Demo { .. }));
+            (usize::from(demo), usize::from(demo && p.is_some_and(|p| p.in_library())))
+        };
+        let before = state(self);
+        let inv = self.apply_inner(op, checked)?;
+        let after = state(self);
+        self.demo_photos = (self.demo_photos + after.0).saturating_sub(before.0);
+        self.demo_in_library = (self.demo_in_library + after.1).saturating_sub(before.1);
+        Ok(inv)
     }
 
     fn apply_inner(&mut self, op: Op, checked: bool) -> Result<Op> {
@@ -1357,7 +1407,7 @@ impl Catalog {
                 self.index.text_changed(id, self.photos.get(&id).map(|p| &**p));
                 old
             }
-            Op::SetContent { id, width, height, file_size, content_hash, preview_only, preview_checked } => {
+            Op::SetContent { id, width, height, file_size, content_hash, preview_only, preview_checked, truncated } => {
                 let p = self.photo_mut(id)?;
                 Op::SetContent {
                     id,
@@ -1367,6 +1417,7 @@ impl Catalog {
                     content_hash: std::mem::replace(&mut p.content_hash, content_hash),
                     preview_only: std::mem::replace(&mut p.preview_only, preview_only),
                     preview_checked: std::mem::replace(&mut p.preview_checked, preview_checked),
+                    truncated: std::mem::replace(&mut p.truncated, truncated),
                 }
             }
             Op::SetEmbeddedLens { id, lens } => {
@@ -1435,7 +1486,7 @@ impl Catalog {
             Op::Batch { ops } => {
                 let mut inverses = Vec::with_capacity(ops.len());
                 for op in ops {
-                    match self.apply_inner(op, checked) {
+                    match self.apply_counted(op, checked) {
                         Ok(inv) => inverses.push(inv),
                         Err(e) => {
                             // roll back what was applied (unchecked: what was there goes back): first what a batch inside this one could not take back
@@ -1448,8 +1499,8 @@ impl Catalog {
                             leftover.into_iter().chain(inverses.into_iter().rev()).for_each(|inv| unbatch(inv, &mut todo));
                             let mut left = Vec::new();
                             for inv in todo {
-                                if self.apply_inner(inv.clone(), false).is_err() {
-                                    left.push(inv);
+                                if self.apply_counted(inv.clone(), false).is_err() {
+left.push(inv);
                                 }
                             }
                             self.changes.leftover = left;
@@ -1520,6 +1571,8 @@ impl Catalog {
             index: _,
             plans: _,
             loops: _,
+            demo_photos: _,
+            demo_in_library: _,
         } = self;
         Catalog {
             photos: BTreeMap::new(),
@@ -1540,6 +1593,9 @@ impl Catalog {
             // (derived from the albums: not saved)
             plans: PlansMemo::default(),
             loops: LoopsMemo::default(),
+            // (no photos here: counted again once the segments give them back)
+            demo_photos: 0,
+            demo_in_library: 0,
         }
     }
 
@@ -1573,6 +1629,8 @@ impl Catalog {
     /// [`HISTORY_LIMIT`] History steps. Returns what was changed (nothing, for a catalog this build
     /// wrote).
     pub fn repair(&mut self) -> Vec<String> {
+        let demo = || self.photos.values().filter(|p| matches!(p.source, Source::Demo { .. }));
+        (self.demo_photos, self.demo_in_library) = (demo().count(), demo().filter(|p| p.in_library()).count());
         let mut changed = Vec::new();
         self.index.orders.forget();
         for (id, p) in self.photos.iter_mut() {

@@ -15,7 +15,7 @@ pub(super) fn navigator(app: &mut LightcraftApp, ui: &mut egui::Ui, canvas: Rect
     let (w, h) = if aspect >= 1.0 { (NAV_W, NAV_W / aspect) } else { (NAV_W * aspect, NAV_W) };
     let frame = Rect::from_min_size(pos2(canvas.right() - w - 16.0, canvas.bottom() - h - 16.0), vec2(w, h));
     let p = ui.painter_at(canvas);
-    p.rect_filled(frame.expand(5.0), 4.0, Color32::from_black_alpha(190));
+    p.rect_filled(frame.expand(5.0), 4.0, crate::transparency::hud(ui.ctx(), 190));
     match tex {
         Some(t) => p.image(t.tex.id(), frame, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE),
         None => p.rect_filled(frame, 0.0, Tokens::get(ui.ctx()).skeleton),
@@ -76,8 +76,10 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
     crate::widgets::announce_region(&child, egui::accesskit::Role::Region, crate::i18n::tr("Filmstrip"));
     // a vertical mouse wheel scrolls the strip sideways (horizontal trackpad scrolls still work)
     child.style_mut().always_scroll_the_only_direction = true;
-    // only a new active photo (or the strip appearing) scrolls it; see `grid::follow_active`
-    let follow = crate::panels::grid::follow_active(child.ctx(), egui::Id::unique("film-follow-active"), active, app.session.source);
+    // a new active photo, the strip appearing or another order (sort, reshuffle) scrolls it; see
+    // `grid::follow_active`
+    let follow = crate::panels::grid::follow_active(child.ctx(), egui::Id::unique("film-follow-active"), crate::panels::grid::Seen::strip(app))
+        != crate::panels::grid::Follow::Stay;
     // a wheel notch scrolls a third of its width; see `grid::wheel_step`
     register(ui, "filmstrip", child.max_rect());
     let wheel = crate::panels::grid::wheel_step(&child, egui::Id::unique("film-wheel"), child.max_rect(), child.max_rect().width(), true);
@@ -98,13 +100,17 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                 continue;
             }
             let resp = ui.interact(cr, egui::Id::unique(("film", id.0)), Sense::click_and_drag());
-            let failed = app.renderer.thumb(*id).is_none() && app.renderer.failure(Slot::Thumb(*id)).is_some();
-            crate::widgets::announce(&resp, film_spoken(app.session.catalog.photo(*id).map_or("", |p| p.file_name.as_str()), failed));
-            register(ui, format!("film:{}", id.0), cr);
+            // asked for first: a failure left by an earlier request is not this tile's verdict once a new one is on its way
+            crate::panels::grid::request_thumb(app, *id, (256.0 * ppp.min(2.0) / 2.0) as usize * 2, 8);
+            let failed = app.renderer.thumb(*id).is_none() && app.renderer.thumb_failure(*id).is_some();
             let state = app.session.selection_view().state_of(*id);
+            let selected = state != lightcraft_engine::SelectionState::NotSelected;
+            // the same name as the grid's cell for this photo (file, rating, flag, label), and whether it is selected
+            let name = app.session.catalog.photo(*id).map(|p| crate::panels::grid::photo_spoken(&app.session.catalog, p)).unwrap_or_default();
+            crate::widgets::announce_cell(&resp, film_spoken(&name, failed), selected);
+            register(ui, format!("film:{}", id.0), cr);
             let p = ui.painter();
             let label = app.session.catalog.photo(*id).and_then(|ph| ph.label);
-            let selected = state != lightcraft_engine::SelectionState::NotSelected;
             let base = if selected {
                 t.cell_selected
             } else if resp.hovered() {
@@ -127,7 +133,6 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                 p.text(pos2(cr.left() + 8.0, cr.top() + 10.0), Align2::LEFT_CENTER, shown, t.micro(), dim);
             }
             let img_area = Rect::from_min_max(cr.min + vec2(10.0, 22.0), cr.max - vec2(10.0, 8.0));
-            crate::panels::grid::request_thumb(app, *id, (256.0 * ppp.min(2.0) / 2.0) as usize * 2, 8);
             let mut badge = None;
             if let Some(photo) = app.session.catalog.photo(*id).cloned() {
                 let (photo_rect, failure) = if let Some(tex) = app.renderer.thumb(*id) {
@@ -141,7 +146,11 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                     let ph = crate::thumb::placeholder_rect(img_area, crate::panels::grid::photo_aspect(Some(&*photo)));
                     crate::thumb::paint_placeholder(p, ph, &t);
                     crate::panels::grid::selection_ring(p, &t, ph, state);
-                    (ph, app.renderer.failure(crate::render::Slot::Thumb(*id)).map(str::to_owned))
+                    let failure = app.renderer.thumb_failure(*id).map(str::to_owned);
+                    if failure.is_none() {
+                        crate::panels::grid::paint_loading_cue(p, &t, img_area, ph, "film:badge:loading:", id.0);
+                    }
+                    (ph, failure)
                 };
                 let stack = app.session.catalog.stack_of(*id).map(|st| (st.id, st.position(*id).unwrap_or(0)));
                 let overlay = crate::thumb::Thumb {
@@ -191,21 +200,22 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                 }
             }
             // the same photo actions as the grid and loupe (Restore / Delete Permanently in Recently Deleted)
-            crate::widgets::context_menu(&resp, |ui| crate::panels::grid::context_menu(app, ui, *id));
+            crate::widgets::context_menu(&resp, |ui| crate::photo_menu::show(app, ui, *id, crate::photo_menu::Lead::None));
             if let Some(badge) = badge {
-                crate::widgets::context_menu(&badge, |ui| crate::panels::grid::context_menu(app, ui, *id));
+                crate::widgets::context_menu(&badge, |ui| crate::photo_menu::show(app, ui, *id, crate::photo_menu::Lead::None));
             }
         }
     });
 }
 
-/// What a screen reader says for a filmstrip thumbnail: the file, and why there is no picture
+/// What a screen reader says for a filmstrip thumbnail: the photo's name as the grid says it
+/// ([`crate::panels::grid::photo_spoken`]: file, rating, flag, label), and why there is no picture
 /// when the thumbnail failed (the painted `!` has no name of its own). The name is empty when the
-/// catalog no longer has the photo (or its file name is blank); the reason then stands alone.
-pub(crate) fn film_spoken(file_name: &str, failed: bool) -> String {
-    match (file_name.is_empty(), failed) {
-        (_, false) => file_name.to_string(),
+/// catalog no longer has the photo; the reason then stands alone.
+pub(crate) fn film_spoken(name: &str, failed: bool) -> String {
+    match (name.is_empty(), failed) {
+        (_, false) => name.to_string(),
         (true, true) => crate::i18n::tr("This photo can't be opened").to_string(),
-        (false, true) => format!("{file_name}, {}", crate::i18n::tr("This photo can't be opened")),
+        (false, true) => format!("{name}, {}", crate::i18n::tr("This photo can't be opened")),
     }
 }

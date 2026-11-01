@@ -157,6 +157,8 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
             choices(ui, "settingsSmartExisting", &[(0u8, "Move them"), (1, "Leave them"), (2, "Delete them")], &mut mode);
         });
     }
+    // the same choice, where the folder picker's deferred apply reads it when its dialog closes
+    ui.data_mut(|d| d.insert_temp(smart_existing_id(), mode));
     let mut existing = ["move", "leave", "discard"][mode.min(2) as usize];
     // Deleting the previews already built is asked about once more, when the folder they would
     // be deleted for is known: until then the change (the command's parameters) waits here.
@@ -167,10 +169,9 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
         ui.add_space(LABEL_W);
         if app.services.pick_folder.is_some() {
             let r = Button::new("Choose Folder…").widget("button:settingsSmartChoose").show(ui);
-            if r.clicked()
-                && let Some(dir) = app.services.pick_folder.as_mut().and_then(|f| f())
-            {
-                change = Some(json!({"path": dir, "existing": existing}));
+            if r.clicked() {
+                // the dialog runs off the UI thread; the folder changes when it closes
+                crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::SmartPreviewsFolder);
             }
         }
         let r = Button::new("Use Library Folder").enabled(custom).widget("button:settingsSmartReset").show(ui);
@@ -221,7 +222,7 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     let result = change.map(|params| app.run("library.smartPreviewsLocation", params));
     if let Some(r) = result {
         ui.data_mut(|d| d.remove::<(f64, Value)>(cache));
-        smart_change_toast(app, ui, r, existing);
+        smart_previews_changed(app, ui.ctx(), existing, r);
     }
     hint(ui, t, crate::i18n::tr("Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library."));
 }
@@ -286,9 +287,10 @@ fn smart_folder_rows(ui: &mut egui::Ui, t: &Tokens, loc: &Value) {
     }
 }
 
-/// Says what a folder change did: how many previews were moved or deleted, and how many failed.
+/// The smart previews folder was changed (or reset): show how it went, and list the folder afresh.
 #[cfg(not(target_arch = "wasm32"))]
-fn smart_change_toast(app: &mut LightcraftApp, ui: &egui::Ui, result: Result<Value, String>, existing: &str) {
+pub(crate) fn smart_previews_changed(app: &mut LightcraftApp, ctx: &egui::Context, existing: &str, result: Result<Value, String>) {
+    ctx.data_mut(|d| d.remove::<(f64, Value)>(egui::Id::unique("smart-location")));
     match result {
         Ok(v) => {
             let failed = v["failed"].as_array().map_or(0, Vec::len);
@@ -299,11 +301,25 @@ fn smart_change_toast(app: &mut LightcraftApp, ui: &egui::Ui, result: Result<Val
                 _ => "Smart previews folder changed".to_string(),
             };
             if failed > 0 {
-                app.toast_error(ui.ctx(), crate::i18n::tr_format!("{msg} ({failed} failed)", failed = failed, msg = msg));
+                app.toast_error(ctx, crate::i18n::tr_format!("{msg} ({failed} failed)", failed = failed, msg = msg));
             } else {
-                app.toast(ui.ctx(), msg);
+                app.toast(ctx, msg);
             }
         }
-        Err(e) => app.toast_error(ui.ctx(), e),
+        Err(e) => app.toast_error(ctx, e),
     }
+}
+
+/// Where the "Existing previews" choice is kept between frames.
+#[cfg(not(target_arch = "wasm32"))]
+fn smart_existing_id() -> egui::Id {
+    egui::Id::unique("smart-existing")
+}
+
+/// What a change of the smart previews folder does to the previews already built: the choice in
+/// Settings now, so a folder chosen in a dialog that was up for a while gets the latest one.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn existing_previews(ctx: &egui::Context) -> &'static str {
+    let mode: u8 = ctx.data(|d| d.get_temp(smart_existing_id())).unwrap_or(0);
+    ["move", "leave", "discard"][mode.min(2) as usize]
 }

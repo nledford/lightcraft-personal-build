@@ -162,6 +162,8 @@ impl LightcraftApp {
         // gate cannot express that (a slow discarded first pass would re-run it).
         if import_tick_allowed(ctx) {
             import::tick(self, ctx);
+            // an export's photos are set up a few at a time, once per host frame like the import's batches
+            export_task::prepare(self, ctx);
         }
         panels::library_problem::import_waiting(self, ctx);
         lightroom_import::tick(self, ctx);
@@ -263,6 +265,17 @@ impl LightcraftApp {
                 self.toast(ctx, crate::i18n::tr("Wrote the XMP sidecars that were waiting"));
             }
             self.ui.sidecars_waiting = waiting;
+            // and a row in the activity stack while they wait (one row all along: the re-checks every 10 s neither
+            // drop nor remake it), so a sidecar missing next to a file has somewhere to look
+            if waiting == 0 {
+                self.sidecars_row = None;
+            } else {
+                let session = &self.session;
+                let row = self.sidecars_row.get_or_insert_with(|| {
+                    session.activity.start("xmpWaiting", "Waiting to write XMP sidecars", lightcraft_engine::activity::Cancel::No)
+                });
+                row.progress(0, waiting as u64);
+            }
         }
         // Settings → Import: open the import review when a camera or card is connected
         #[cfg(not(target_arch = "wasm32"))]
@@ -412,6 +425,8 @@ impl LightcraftApp {
         // an edit still recorded names photos of the library that was left (their ids are local to
         // it): it is dropped, never run against this one
         drop(crate::text_field::take_all(ctx));
+        // a new library's welcome puts the keyboard on Import Photos… once for each library
+        self.welcome_focused = false;
         if let Some(l) = self.session.library.as_ref().filter(|l| l.on_disk) {
             let path = l.dir.to_string_lossy().into_owned();
             panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);
@@ -598,6 +613,7 @@ impl LightcraftApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         self.library_changed(&ctx);
+        panels::empty_library::follow(self);
         // panels set it again this frame while the pointer rests on a preset or profile
         self.hover_preview = None;
         self.end_drags(&ctx);
@@ -618,6 +634,7 @@ impl LightcraftApp {
                 panels::notices::hide_background_pointer(&ctx);
             }
             panels::dialogs::show(self, &ctx, notice_blocks);
+            pick::poll(self, &ctx);
             updates_ui::show(self, &ctx);
             panels::library_problem::show(self, &ctx, notice_blocks);
             panels::toast(self, &ctx);
@@ -628,6 +645,7 @@ impl LightcraftApp {
                 panels::notices::restore_prompt_pointer(self, &ctx);
             }
             (self.next_widgets, self.next_widget_hits) = widgets::take_registries(&ctx);
+            self.note_keyboard_owner(&ctx);
             self.end_frame(&ctx, t0);
             return;
         }
@@ -635,6 +653,7 @@ impl LightcraftApp {
         // right panels and left panel run to the bottom; the bottom bar sits between them).
         panels::topbar::show(self, ui);
         panels::library_problem::banner(self, ui);
+        panels::samples::banner(self, ui);
         panels::strip::show(self, ui);
         // filled: the gaps the dock leaves between its panes show chrome, not the dark clear colour
         let chrome = theme::Tokens::get(&ctx).chrome;
@@ -675,7 +694,7 @@ impl LightcraftApp {
             panels::notices::restore_prompt_pointer(self, &ctx);
         }
         (self.next_widgets, self.next_widget_hits) = widgets::take_registries(&ctx);
-        self.text_focus = ctx.egui_wants_keyboard_input();
+        self.note_keyboard_owner(&ctx);
         self.end_frame(&ctx, t0);
     }
 }

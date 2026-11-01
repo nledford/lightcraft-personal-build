@@ -291,9 +291,9 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, dialog: &mut Dialog) {
                 .show(ui);
             if choose
                 && crate::button::Button::new("Choose…").small().widget("button:lightroomLibraryChoose").show(ui).clicked()
-                && let Some(pick) = app.services.pick_folder.as_mut()
-                && let Some(d) = pick()
+                && let Some(d) = crate::pick::choose(app, crate::pick::Field::LightroomLocation)
             {
+                // (a synchronous answer; with a background dialog `location` is set when it closes)
                 *location = d;
             }
         });

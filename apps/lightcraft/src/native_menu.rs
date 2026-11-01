@@ -22,7 +22,7 @@ use std::sync::mpsc::{Receiver, channel};
 
 use lightcraft_ui_egui::LightcraftApp;
 use lightcraft_ui_egui::menubar::{
-    MenuNode, menu_bar, native_item_presentation, native_menu_delivers as menu_delivers, native_menu_structure as structure_of,
+    MenuNode, menu_bar, native_item_presentation, native_menu_delivers as menu_delivers, native_menu_split, native_menu_structure as structure_of,
 };
 use muda::accelerator::{Accelerator, Code, Modifiers};
 use muda::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
@@ -463,6 +463,7 @@ impl NativeMenu {
     fn rebuild(&mut self, app: &mut LightcraftApp) {
         let bar = menu_bar(app);
         self.structure = structure_of(&bar, &app.ui.settings.keymap);
+        let (app_rows, menus) = native_menu_split(bar);
         self.menu = Menu::new();
         self.items.clear();
         self.app_items.clear();
@@ -472,8 +473,12 @@ impl NativeMenu {
         let about = MenuItem::with_id("app.about", lightcraft_ui_egui::i18n::tr("About LightCraft"), true, None);
         let settings = MenuItem::with_id(SETTINGS, lightcraft_ui_egui::i18n::tr("Settings…"), true, accelerator(SETTINGS_KEY));
         let quit = MenuItem::with_id(QUIT, lightcraft_ui_egui::i18n::tr("Quit LightCraft"), true, accelerator("Cmd+Q"));
+        let _ = app_menu.append(&about);
+        // Check for Updates… follows About LightCraft (Help keeps it on other platforms)
+        let update_rows: Vec<MenuNode> = app_rows.into_iter().filter(|n| !matches!(n, MenuNode::Item { id, .. } if id == "app.about")).collect();
+        let mut ids = RowIds::default();
+        self.append_nodes(&app_menu, &update_rows, &app.ui.settings.keymap, true, &mut ids);
         let _ = app_menu.append_items(&[
-            &about,
             &PredefinedMenuItem::separator(),
             &settings,
             &PredefinedMenuItem::separator(),
@@ -503,9 +508,10 @@ impl NativeMenu {
         }
         let _ = self.menu.append(&app_menu);
 
-        let mut ids = RowIds::default();
         let mut help_menu = None;
-        for (title, nodes) in &bar {
+        let mut windows_menu = None;
+
+        for (title, nodes) in &menus {
             let sub = Submenu::new(label_text(title), true);
             if title == "Window" {
                 let _ = sub.append_items(&[
@@ -530,7 +536,7 @@ impl NativeMenu {
                     &PredefinedMenuItem::separator(),
                     &PredefinedMenuItem::bring_all_to_front(Some(lightcraft_ui_egui::i18n::tr("Bring All to Front"))),
                 ]);
-                sub.set_as_windows_menu_for_nsapp();
+                windows_menu = Some(sub.clone());
             }
             if title == "Help" {
                 help_menu = Some(sub.clone());
@@ -542,6 +548,11 @@ impl NativeMenu {
         // nothing, and AppKit never learns which menu is the Help menu
         if let Some(help) = help_menu {
             help.set_as_help_menu_for_nsapp();
+        }
+        // muda finds the submenu through the main menu installed just above; asked earlier it does
+        // nothing, and AppKit then never lists the open windows in the Window menu
+        if let Some(windows) = windows_menu {
+            windows.set_as_windows_menu_for_nsapp();
         }
         self.text_focus = false;
         self.sidebar_keys = false;
@@ -612,7 +623,7 @@ impl NativeMenu {
     /// accelerators with the app state. Returns whether Quit was chosen: the caller saves
     /// everything and exits the process itself (closing the viewport while AppKit terminates the
     /// app can crash in winit's teardown, PR #444).
-    pub fn update(&mut self, app: &mut LightcraftApp, ctx: &egui::Context) -> bool {
+    pub fn update(&mut self, app: &mut LightcraftApp) -> bool {
         lightcraft_ui_egui::i18n::set_language(app.ui.language);
         app.session.begin_frame();
         let mut quit = false;
@@ -643,7 +654,8 @@ impl NativeMenu {
         let all: Vec<MenuNode> = bar.into_iter().flat_map(|(_, v)| v).collect();
         sync_rows(&all, &mut self.items, &app.ui.settings.keymap);
 
-        let focus = ctx.egui_wants_keyboard_input();
+        // a text field has the keyboard (not a focused plain button, such as the welcome's Import)
+        let focus = app.text_focus;
         let capturing = app.recording_shortcut.is_some();
         let sidebar = app.ui.sidebar_keys;
         if sync_needed(focus, capturing, sidebar, self.text_focus, self.capturing, self.sidebar_keys, self.accelerators_pending) {

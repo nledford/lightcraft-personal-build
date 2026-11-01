@@ -1019,7 +1019,7 @@ fn quit_asks_while_a_stopped_move_finishes_its_file() {
     assert!(format!("{:?}", h.app.quit_prompt).contains("1 task is still running: Moving photos."), "listed once: {:?}", h.app.quit_prompt);
     h.app.quit_prompt = None;
     h.app.session.activity.cancel(guard.id()).unwrap();
-    assert!(h.app.session.activity.running_cancellable().is_empty(), "the row is stopping");
+    assert!(h.app.session.activity.running().is_empty(), "the row is stopping");
     assert!(!crate::panels::notices::may_close(&mut h.app), "Quit asks while the stopped move finishes its file");
     assert!(format!("{:?}", h.app.quit_prompt).contains("1 task is still running: Moving photos."), "listed once: {:?}", h.app.quit_prompt);
     let click = |h: &mut crate::headless::Headless, id: &str| {

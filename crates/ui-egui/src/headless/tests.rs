@@ -349,7 +349,7 @@ fn right_clicking_elsewhere_moves_the_context_menu() {
     let t = Duration::from_secs(10);
     h.settle(SETTLE);
     let thumbs: Vec<String> = h.app.widgets.iter().filter(|(w, _)| w.starts_with("thumb:")).map(|(w, _)| w.clone()).collect();
-    let (Some(a), Some(b)) = (thumbs.first().cloned(), thumbs.get(1).cloned()) else { panic!("two grid photos: {thumbs:?}") };
+    let Some(a) = thumbs.first().cloned() else { panic!("a grid photo: {thumbs:?}") };
     let popup = |w: &str| {
         let id: u64 = w.trim_start_matches("thumb:").parse().expect("a photo id");
         egui::Id::unique(("cell", id)).with("popup")
@@ -361,8 +361,27 @@ fn right_clicking_elsewhere_moves_the_context_menu() {
     assert!(egui::Popup::is_id_open(&h.view.ctx, popup(&a)), "the first photo's menu is open");
     // A real click: the press and the release reach the UI on different frames, with the
     // pointer resting on the photo in between (`ui.clickWidget` sends both on one frame).
-    let rect = h.app.widgets.iter().find(|(w, _)| *w == b).map(|(_, r)| *r).expect("the second photo on screen");
-    let at = egui::pos2(rect.left() + rect.width() * 0.9, rect.center().y);
+    // The clicks land on the photo where no open menu covers it: a click on a menu is a click
+    // on the menu, not on the photo under it, and a menu's size follows its rows, so no fixed
+    // spot on a photo is safe.
+    let window = egui::Rect::from_min_size(egui::Pos2::ZERO, h.size);
+    // (the menu's left edge follows the pointer: a spot at least 8 pt from where it is now,
+    // so "it moved" can't pass with the menu standing still, and with room for the menu to
+    // its right, so egui doesn't push it back left at the window's edge)
+    let uncovered = |r: egui::Rect, menu: egui::Rect| {
+        (1..10)
+            .flat_map(|y| (1..10).rev().map(move |x| (x, y)))
+            .map(|(x, y)| r.lerp_inside(egui::vec2(x as f32 / 10.0, y as f32 / 10.0)))
+            .find(|p| window.contains(*p) && !menu.contains(*p) && (p.x - menu.left()).abs() >= 8.0 && p.x + menu.width() <= window.right())
+    };
+    let menu = h.view.ctx.read_response(popup(&a)).map(|r| r.rect).expect("the first menu's area");
+    let (b, rect, at) = h
+        .app
+        .widgets
+        .iter()
+        .filter(|(w, _)| w.starts_with("thumb:") && *w != a)
+        .find_map(|(w, r)| uncovered(*r, menu).map(|p| (w.clone(), *r, p)))
+        .expect("a second photo on screen that the first menu doesn't cover");
     let button = egui::PointerButton::Secondary;
     let modifiers = egui::Modifiers::NONE;
     h.app.synthetic.push(egui::Event::PointerMoved(at));
@@ -385,7 +404,7 @@ fn right_clicking_elsewhere_moves_the_context_menu() {
     // The same photo again, elsewhere on it (the menu that is open belongs to this very
     // widget): the menu moves to the pointer and stays.
     let before = h.view.ctx.read_response(popup(&b)).map(|r| r.rect).expect("the menu's area");
-    let at = egui::pos2(rect.left() + rect.width() * 0.2, rect.center().y);
+    let at = uncovered(rect, before).expect("a spot on the photo that its menu doesn't cover");
     h.app.synthetic.push(egui::Event::PointerMoved(at));
     h.step();
     h.step();
@@ -721,7 +740,7 @@ fn adding_a_face_model_shows_its_terms_and_installs_only_once_accepted() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Photo > Detect Faces without the detector offers the download: the terms first, nothing fetched before they are
+/// Photo > Metadata > Detect Faces without the detector offers the download: the terms first, nothing fetched before they are
 /// accepted, and the model's row in Settings has its Download button.
 #[test]
 fn detect_faces_without_the_detector_offers_the_download_and_fetches_nothing_before_acceptance() {
@@ -2104,6 +2123,8 @@ fn the_photos_progress_line_is_in_the_users_language() {
     let params = json!({"ids": ids, "dir": out, "longEdge": 48, "addToPhotos": true, "background": true});
     let r = h.request("engine.execute", json!({"command": "app.export", "params": params}), t);
     assert_eq!(r["ok"], true, "{r}");
+    // (the photos are set up over the frames after the request: the worker asks Photos once they are)
+    h.finish_preparing();
     // Photos has been asked, and the window hasn't drawn a frame since (Codex review of #643):
     // the export's row already has no ✕, and a cancel is refused rather than half-honoured
     photos_asked.recv_timeout(Duration::from_secs(60)).expect("the export asks Photos");
@@ -2240,6 +2261,36 @@ fn a_headless_run_waits_for_its_exports_photos_import() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A run that ends in a panic while its export is still setting its photos up draws no more frames, and the
+/// export holds Photos' slot with no worker to free it: the drop lets the export go instead of waiting on
+/// the slot for the full hour of the writing limit.
+#[test]
+fn a_headless_run_that_panics_while_an_export_prepares_does_not_wait_on_photos() {
+    if !cfg!(target_os = "macos") {
+        return; // addToPhotos is refused before exporting elsewhere
+    }
+    crate::export_task::set_prep_budget(Duration::ZERO);
+    let mut h = demo([800.0, 600.0]);
+    let dir = std::env::temp_dir().join(format!("lc-photos-headless-panic-drop-{}", std::process::id()));
+    h.app.services.write_shared = Some(Arc::new(|p: &str, bytes: &[u8]| lightcraft_engine::export::write_file(p, bytes)));
+    h.app.session.apple_photos = Some(Arc::new(|_: &[String], _| {
+        Ok(lightcraft_engine::apple_photos::Output { status: Some(0), stdout: "ID\n".into(), stderr: String::new() })
+    }));
+    let ids: Vec<u64> = h.app.session.visible_cloned().iter().take(5).map(|p| p.0).collect();
+    let p = json!({"ids": ids, "dir": dir.join("out").to_string_lossy(), "longEdge": 32, "addToPhotos": true, "background": true});
+    let r = h.request("engine.execute", json!({"command": "app.export", "params": p}), Duration::from_secs(10));
+    assert_eq!(r["ok"], true, "{r}");
+    assert!(h.app.export.as_ref().is_some_and(|e| e.is_preparing()), "still setting the photos up");
+    let began = Instant::now();
+    let run = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+        let _run = h;
+        panic!("the script failed");
+    }));
+    assert!(run.is_err());
+    assert!(began.elapsed() < Duration::from_secs(60), "the drop waited on Photos: {:?}", began.elapsed());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// Review of #236: a background export adding to Photos holds the import from before it
 /// writes. While its files are being written, `export.addToPhotos` is refused with the
 /// export's job number; the export then adds its files under that job.
@@ -2338,6 +2389,7 @@ fn preview_only_raw_shows_badge_and_notices() {
             content_hash: ph.content_hash.clone(),
             preview_only: Some("Nikon Huffman-compressed NEF (no clean-room description available)".into()),
             preview_checked: lightcraft_catalog::APP_VERSION.into(),
+            truncated: false,
         })
         .unwrap();
     h.settle(SETTLE);
@@ -2371,6 +2423,41 @@ fn preview_only_raw_shows_badge_and_notices() {
     h.app.ui.right = crate::state::RightPanel::Edit;
     h.settle(SETTLE);
     assert!(ids(&mut h, "notice:previewOnly:").is_empty());
+}
+
+/// A JPEG that was cut short says so in Info (and no other photo does).
+#[test]
+fn truncated_jpeg_shows_a_notice_in_info() {
+    let mut h = demo([1300.0, 900.0]);
+    let t = Duration::from_secs(10);
+    let vis = h.app.session.visible_cloned();
+    let (cut, other) = (vis[0], vis[1]);
+    let ph = h.app.session.catalog.photo(cut).unwrap().clone();
+    h.app
+        .session
+        .catalog
+        .apply(lightcraft_catalog::Op::SetContent {
+            id: cut,
+            width: ph.width,
+            height: ph.height,
+            file_size: ph.file_size,
+            content_hash: ph.content_hash.clone(),
+            preview_only: None,
+            preview_checked: String::new(),
+            truncated: true,
+        })
+        .unwrap();
+    let ids = |h: &mut Headless| -> Vec<String> {
+        let w = h.request("ui.widgets", json!({"filter": "notice:truncated:"}), t);
+        w["result"].as_array().unwrap_or_else(|| panic!("{w}")).iter().filter_map(|x| x["id"].as_str().map(str::to_string)).collect()
+    };
+    h.app.ui.right = crate::state::RightPanel::Info;
+    h.request("engine.execute", json!({"command": "library.select", "params": {"ids": [cut.0]}}), t);
+    h.settle(SETTLE);
+    assert_eq!(ids(&mut h), vec!["notice:truncated:info".to_string()]);
+    h.request("engine.execute", json!({"command": "library.select", "params": {"ids": [other.0]}}), t);
+    h.settle(SETTLE);
+    assert!(ids(&mut h).is_empty());
 }
 
 #[test]
@@ -4614,7 +4701,7 @@ fn settings_dialog_by_keyboard_and_clicks() {
 }
 
 /// F: full-screen preview (arrows step, I cycles the info overlay, Esc exits); ⌘I cycles the
-/// overlay in Detail; ⇧⌘F asks the host for window full screen.
+/// overlay in Detail; ⇧⌘F (⌃⌘F on macOS) asks the host for window full screen.
 #[test]
 fn full_screen_preview_and_info_overlay_by_keyboard() {
     use crate::state::InfoOverlay;
@@ -4645,9 +4732,11 @@ fn full_screen_preview_and_info_overlay_by_keyboard() {
     assert_eq!(h.app.ui.info_overlay, InfoOverlay::Exposure);
     h.request("ui.key", json!({"key": "i", "cmd": true}), t);
     assert_eq!(h.app.ui.info_overlay, InfoOverlay::Off);
-    h.request("ui.key", json!({"key": "f", "cmd": true, "shift": true}), t);
+    // ⌃⌘F on macOS (the system's key), ⇧⌘F elsewhere
+    let window_full_screen = json!({"key": "f", "cmd": true, "ctrl": cfg!(target_os = "macos"), "shift": !cfg!(target_os = "macos")});
+    h.request("ui.key", window_full_screen.clone(), t);
     assert!(h.app.window_is_fullscreen);
-    h.request("ui.key", json!({"key": "f", "cmd": true, "shift": true}), t);
+    h.request("ui.key", window_full_screen, t);
     assert!(!h.app.window_is_fullscreen);
     h.settle(SETTLE);
 }
@@ -4683,7 +4772,7 @@ fn info_overlay_toasts_are_painted_in_the_users_language() {
     }
 }
 
-/// ⌘J opens View ▸ View Options; its menus choose Info 1's and Info 2's lines, Use Defaults puts
+/// ⌘J opens View ▸ Loupe Overlay ▸ View Options…; its menus choose Info 1's and Info 2's lines, Use Defaults puts
 /// them back, and `view.viewOptions` sets them for an agent (refusing a line it doesn't know).
 #[test]
 fn view_options_choose_the_info_overlay_lines() {
@@ -5102,7 +5191,7 @@ fn the_loupe_says_rendering_while_an_edit_renders() {
 }
 
 /// View Options' Show message when loading or rendering photos (on by default): turned off in
-/// the window, the loupe does not say "Rendering…" while an edit renders; `view.viewOptions
+/// the window, the loupe does not say "Rendering…" for the first moments of an edit's render (only one that stays slow says so: see the next test); `view.viewOptions
 /// {loupeMessages}` turns it back on for an agent (refusing a value that is not true or false).
 #[test]
 fn view_options_turn_the_rendering_message_off() {
@@ -5136,6 +5225,32 @@ fn view_options_turn_the_rendering_message_off() {
     assert_eq!(r["result"]["loupeMessages"], true, "{r}");
     assert_eq!(h.app.ui.dialog, None, "a value sets it without opening the window");
     assert!(h.step_until(SETTLE, pill), "the message shows again while the render is held");
+    open.set(true);
+    assert!(h.step_until(SETTLE, |h| !pill(h)), "gone once the render lands");
+}
+
+/// With the message off, a render that is still on its way after a long wait (several seconds, not the
+/// half second the message waits) says "Rendering…" anyway: the old photo on screen with no sign of work
+/// looks like a frozen app. A short wait stays quiet, as the setting asks.
+#[test]
+fn a_render_that_stays_slow_says_so_even_with_the_message_off() {
+    use crate::render::Slot;
+    use std::{cell::Cell, rc::Rc};
+    let pill = |h: &Headless| h.app.widgets.iter().any(|(w, _)| w == "loupe:rendering");
+    let mut h = demo([1000.0, 700.0]);
+    let t = Duration::from_secs(10);
+    h.request("ui.set", json!({"view": "detail", "right": "none"}), t);
+    h.settle(SETTLE);
+    h.app.ui.settings.loupe_messages = false;
+    let open = Rc::new(Cell::new(false));
+    h.app.renderer.set_offload(Box::new(super::RenderGate::new(open.clone())));
+    h.request("engine.execute", json!({"command": "develop.set", "params": {"control": "light.exposure", "value": 0.5}}), t);
+    for _ in 0..45 {
+        h.step();
+    }
+    assert!(h.app.renderer.is_pending(Slot::Main), "the edit's render is held");
+    assert!(!pill(&h), "a short wait stays quiet with the message off");
+    assert!(h.step_until(SETTLE, pill), "a long wait says so");
     open.set(true);
     assert!(h.step_until(SETTLE, |h| !pill(h)), "gone once the render lands");
 }

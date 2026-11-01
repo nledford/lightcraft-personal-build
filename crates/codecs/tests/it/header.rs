@@ -108,7 +108,12 @@ fn fixtures(w: usize, h: usize) -> Vec<(String, Vec<u8>)> {
 /// What the import probe learnt before it read headers: a small decode.
 fn decoded(bytes: &[u8]) -> Result<Header> {
     let d = decode(bytes, DecodeOptions::fit(64, 64))?;
-    Ok(Header { format: d.format, width: d.source_width, height: d.source_height, orientation: d.orientation })
+    Ok(Header { format: d.format, width: d.source_width, height: d.source_height, orientation: d.orientation, truncated: false })
+}
+
+/// A header as a decode would report it: without the note that a JPEG was cut short.
+fn untruncated(h: Header) -> Header {
+    Header { truncated: false, ..h }
 }
 
 #[test]
@@ -126,7 +131,8 @@ fn header_matches_decode() {
 
 /// Whenever the decode the probe used to run accepts a file (here: every cut of every fixture),
 /// the header agrees with it: reading headers never refuses a file that decodes. The reverse
-/// is checked for truncation, which the header readers detect.
+/// is checked for truncation, which the header readers detect (a JPEG cut short that has data to
+/// show is read, and says so).
 #[test]
 fn truncated_files_agree_with_decode() {
     // 160 px wide: large JPEGs take the DCT-scaled (strict) decode path the probe took for photos
@@ -137,11 +143,17 @@ fn truncated_files_agree_with_decode() {
         for cut in cuts {
             let part = &bytes[..cut];
             if let Ok(d) = decoded(part) {
-                assert_eq!(read_header(part).ok(), Some(d), "{name} cut at {cut}/{n}");
+                assert_eq!(read_header(part).ok().map(untruncated), Some(d), "{name} cut at {cut}/{n}");
             }
         }
         for cut in [n / 4, n / 2, n * 9 / 10] {
-            assert!(read_header(&bytes[..cut]).is_err(), "{name}: cut at {cut}/{n} accepted");
+            let h = read_header(&bytes[..cut]);
+            if name.starts_with("jpeg") {
+                // only a cut with an image to show: the first quarter is mostly headers and tables
+                assert!(h.as_ref().map_or(cut == n / 4, |h| h.truncated), "{name}: cut at {cut}/{n}: {h:?}");
+            } else {
+                assert!(h.is_err(), "{name}: cut at {cut}/{n} accepted");
+            }
         }
     }
 }
@@ -151,7 +163,9 @@ fn truncation_details() {
     let f = fixtures(160, 96);
     let get = |name: &str| f.iter().find(|x| x.0 == name).map(|x| x.1.clone()).unwrap();
     let jpeg = get("jpeg 420 o6");
-    assert!(read_header(&jpeg[..jpeg.len() - 2]).is_err(), "a JPEG without its EOI is truncated");
+    let cut = read_header(&jpeg[..jpeg.len() - 2]).expect("a JPEG without its EOI is read from the data there");
+    assert!(cut.truncated, "and says it was cut short");
+    assert!(!read_header(&jpeg).unwrap().truncated);
     let mut trailing = jpeg.clone();
     trailing.extend_from_slice(&[0; 100]);
     assert_eq!(read_header(&trailing).unwrap().orientation, 6, "bytes after the EOI are fine");
@@ -213,14 +227,17 @@ fn samsung_sef_trailer_without_eoi() {
     assert_eq!(read_header(&eoi_in_data).unwrap().width, 160);
     let small = decode(&eoi_in_data, DecodeOptions::fit(32, 32)).unwrap();
     assert_eq!((small.source_width, small.source_height), (160, 96));
-    // still truncated: no trailer, offsets outside the file or past `SEFH`, no `SEFH`, an empty
-    // entry, an entry whose type isn't its block's, a cut before the first scan
-    assert!(read_header(scan).is_err());
+    // still cut short: no trailer, or a broken one, leaves the file without its end-of-image
+    // marker. With data to show it is read and says so (`truncated`, shown from the data present,
+    // #2705); it is refused only when the bytes the trailer left read as malformed (an offset
+    // outside the file) or the cut is before the first scan
+    let read = |b: &[u8]| read_header(b).map(|h| (h.width, h.truncated)).map_err(|e| e.to_string());
+    assert_eq!(read(scan), Ok((160, true)));
+    assert_eq!(read(&with_sef_trailer(scan, block - 1, b"SEFH")), Ok((160, true)));
+    assert_eq!(read(&with_sef_trailer(scan, block, b"SEFX")), Ok((160, true)));
+    assert_eq!(read(&sef_file(scan, 0, b"SEFH", 0x08E0, &[], Some(0))), Ok((160, true)));
+    assert_eq!(read(&sef_file(scan, block, b"SEFH", 0x0A01, &[0; 18], None)), Ok((160, true)));
     assert!(read_header(&with_sef_trailer(scan, u32::MAX, b"SEFH")).is_err());
-    assert!(read_header(&with_sef_trailer(scan, block - 1, b"SEFH")).is_err());
-    assert!(read_header(&with_sef_trailer(scan, block, b"SEFX")).is_err());
-    assert!(read_header(&sef_file(scan, 0, b"SEFH", 0x08E0, &[], Some(0))).is_err());
-    assert!(read_header(&sef_file(scan, block, b"SEFH", 0x0A01, &[0; 18], None)).is_err());
     let cut_in_headers = with_sef_trailer(&jpeg[..40], block, b"SEFH");
     assert!(read_header(&cut_in_headers).is_err());
     assert!(decode(&cut_in_headers, DecodeOptions::fit(32, 32)).is_err());
@@ -275,7 +292,10 @@ fn png_chunk(b: &mut Vec<u8>, kind: &[u8; 4], len: u32, data: &[u8]) {
 #[test]
 fn hostile_headers_are_errors() {
     // a well-formed synthetic JPEG header is read
-    assert_eq!(read_header(&jpeg_segments(0xC0, 33, 21, 3)).unwrap(), Header { format: Format::Jpeg, width: 33, height: 21, orientation: 1 });
+    assert_eq!(
+        read_header(&jpeg_segments(0xC0, 33, 21, 3)).unwrap(),
+        Header { format: Format::Jpeg, width: 33, height: 21, orientation: 1, truncated: false }
+    );
     let jpeg_bad = [
         jpeg_segments(0xC0, 0, 21, 3),        // zero width
         jpeg_segments(0xC0, 33, 0, 3),        // zero height (DNL)
@@ -299,7 +319,7 @@ fn hostile_headers_are_errors() {
     let mut ok = png_ihdr(5, 3, 8, 2);
     png_chunk(&mut ok, b"IDAT", 1, &[0]);
     png_chunk(&mut ok, b"IEND", 0, &[]);
-    assert_eq!(read_header(&ok).unwrap(), Header { format: Format::Png, width: 5, height: 3, orientation: 1 });
+    assert_eq!(read_header(&ok).unwrap(), Header { format: Format::Png, width: 5, height: 3, orientation: 1, truncated: false });
     let png_case = |ihdr: Vec<u8>, chunks: &[(&[u8; 4], u32, &[u8])]| {
         let mut b = ihdr;
         for (k, l, d) in chunks {
@@ -421,7 +441,7 @@ fn mutated_files_agree_with_decode() {
             if let Ok(d) = decoded(&b) {
                 decodable += 1;
                 let h = read_header(&b);
-                if h.as_ref().ok() != Some(&d) {
+                if h.as_ref().ok().copied().map(untruncated).as_ref() != Some(&d) {
                     disagreements.push(format!("{name}: decode {d:?}, header {h:?}"));
                 }
             }

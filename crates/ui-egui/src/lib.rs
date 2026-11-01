@@ -31,6 +31,7 @@ pub mod i18n;
 pub mod icons;
 mod import_queue;
 mod job_notice;
+pub mod increase_contrast;
 pub mod library_work;
 pub mod lightroom_import;
 pub mod links;
@@ -59,6 +60,7 @@ pub mod theme;
 mod thumb;
 pub mod toast;
 pub mod trash_run;
+pub mod transparency;
 pub mod tree_state;
 pub mod widgets;
 pub mod window_place;
@@ -102,6 +104,7 @@ pub use widgets::text_field;
 mod app;
 mod caches;
 mod clock;
+pub mod photo_menu;
 mod readout;
 mod services;
 
@@ -117,6 +120,10 @@ pub use services::OpenModelFolderFn;
 pub use services::{
     CheckEditorFn, DockBadgeFn, HostAction, KeepAwakeFn, Notice, NotifyFn, OpenAllWithFn, OpenUrlFn, OpenWithFn, PickFiles, PickFolder, PngEncode,
     RevealFn, SaveFile, ScreenProfileFn, Services, SharedWrite, SystemReduceMotionFn, SystemThemeFn, WriteFn,
+};
+pub use services::{
+    CheckEditorFn, HostAction, OpenAllWithFn, OpenUrlFn, OpenWithFn, PickFiles, PickFolder, PngEncode, RevealFn, SaveFile, ScreenProfileFn, Services,
+    SharedWrite, SystemIncreaseContrastFn, SystemReduceMotionFn, SystemReduceTransparencyFn, SystemThemeFn, WriteFn,
 };
 use state::{GestureFrame, InjectedPress};
 
@@ -198,6 +205,8 @@ impl From<lightcraft_engine::EngineError> for Refusal {
 
 /// How long a toast that offers Undo stays: time to read it and reach the button.
 const UNDO_TOAST_SECONDS: f64 = 6.0;
+/// A toast with more to read (where something went).
+const TOAST_READ_SECONDS: f64 = 4.0;
 /// The `path` of a display profile read from the screen rather than chosen as a file.
 pub const SCREEN_PROFILE: &str = "screen";
 
@@ -223,7 +232,7 @@ pub struct Perf {
 pub enum QuitPrompt {
     /// Changes couldn't be written to disk (issue #103).
     Unsaved(String),
-    /// Tasks that quitting would cut short are running: an import, an export… (issue #345).
+    /// Tasks are running (quitting stops the ones with a ✕ and doesn't wait for the others): an import, an export… (issue #345).
     Tasks(String),
     /// The library asks for a backup when LightCraft quits (`library.backupPreferences`,
     /// `onClose: ask`): back it up first, skip it, or don't quit.
@@ -298,6 +307,9 @@ pub struct LightcraftApp {
     /// A text field had the keyboard at the end of the last frame. egui drops the focus as Esc
     /// arrives, before the shortcuts are read, so this is how Esc there stays the field's own.
     pub text_focus: bool,
+    /// A plain button (the welcome's, a sample thumbnail, the banner's) had the keyboard at the end of the last frame: not a
+    /// text field, so shortcuts act, but Esc there only lets go of the button, as with a text field.
+    pub(crate) plain_button_focus: bool,
     /// The host is [`headless::Headless`] (it answers viewport screenshot commands itself).
     pub headless_host: bool,
     /// The library is backed up by itself when its schedule says a backup is due
@@ -332,6 +344,9 @@ pub struct LightcraftApp {
     edit_saves_refused: (u64, Vec<crate::text_field::Pending>),
     /// Quit Anyway was chosen while a move was still finishing the file in hand: quitting doesn't wait for it.
     pub quit_cuts_move: bool,
+    /// Quit Anyway was chosen in the running-tasks prompt: it is not asked again for this quit (the tasks that can't be
+    /// stopped are still running when the window's close request or Try Saving Again comes back through `may_close`).
+    pub(crate) quit_tasks_answered: bool,
     control_rx: Option<Receiver<ControlRequest>>,
     pending_screenshots: Vec<PendingShot>,
     /// Synthetic-input control requests waiting for a fresh layout and delivery (plan §4.5).
@@ -559,8 +574,17 @@ pub struct LightcraftApp {
     pub(crate) badge_told: usize,
     /// Which running jobs ended, for the system notification (`services.notify`).
     pub(crate) job_watch: job_notice::JobWatch,
+    /// The last answer of `services.system_increase_contrast` and when it was read.
+    pub(crate) system_increase_contrast: Option<bool>,
+    pub(crate) system_increase_contrast_read: Option<f64>,
+    /// The last answer of `services.system_reduce_transparency` and when it was read.
+    pub(crate) system_reduce_transparency: Option<bool>,
+    pub(crate) system_reduce_transparency_read: Option<f64>,
+    /// The activity row that says automatic XMP writes are waiting for their folder, held for as long as they wait.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) sidecars_row: Option<lightcraft_engine::activity::TaskGuard>,
     /// The library failed to open at launch: the blocking window, then the temporary-session
-    /// banner (issue #100). Cleared once a library opens.
+/// banner (issue #100). Cleared once a library opens.
     pub library_problem: Option<panels::library_problem::LibraryProblem>,
     /// First-frame focus/input state for a newly shown blocking library window.
     pub(crate) library_window_input: panels::library_problem::WindowBarrier,
@@ -570,6 +594,27 @@ pub struct LightcraftApp {
     /// Whether each recent library can be opened, answered by a worker (issue #1290): the launch
     /// list and File ▸ Open Recent Library never look at a folder on the UI thread.
     pub recent_checks: panels::library_problem::RecentChecks,
+    /// Whether the library held sample photos last frame (`None` before the first): samples that
+    /// newly appear, however they came (the welcome, Help ▸ Add Sample Photos, an agent), bring
+    /// back a samples banner closed over earlier ones.
+    pub samples_present: Option<bool>,
+    /// Whether the empty library's welcome had the window last frame (`None` before the first):
+    /// becoming empty puts the Tools panel aside ([`panels::empty_library::follow`]).
+    pub welcome_seen: Option<bool>,
+    /// The welcome's sample thumbnails while they are shown (drawn by a worker as it starts).
+    pub(crate) welcome_samples: Option<panels::empty_library::SampleStrip>,
+    /// The welcome was drawn this frame (its thumbnails go the frame after it isn't).
+    pub(crate) welcome_drawn: bool,
+    /// The new library's welcome has put the keyboard on Import Photos… (once per library opened).
+    pub(crate) welcome_focused: bool,
+    /// The library generation (`Session::library_generation`) in which samples came into an empty library and a
+    /// sample was opened ([`panels::empty_library::land_on_samples`]): in that library the samples banner walks the
+    /// first edit through; another library, or none, has no tour.
+    pub(crate) samples_landed: Option<u64>,
+    /// How far the person has come since then: edited, compared ([`panels::samples::Tour`]).
+    pub(crate) samples_tour: panels::samples::Tour,
+    /// The settings the open photo came with, to tell the person's edit from them ([`panels::samples::TourBase`]).
+    pub(crate) samples_tour_base: Option<panels::samples::TourBase>,
     /// The list of running tasks under the top bar's bell is open (as of the last frame).
     pub activity_open: bool,
     /// `view.tasks` asked for the list to be opened or closed; the top bar does it on its next frame.

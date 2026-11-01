@@ -97,20 +97,11 @@ pub(super) fn local_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, now: &Local
         folder_tree(app, ui, path, name, path, 0.0, &view, reveal, transient, None);
     }
     if app.services.pick_folder.is_some() && {
-        let resp = Row::new("local:browse", Icon::Plus, crate::i18n::tr("Browse Folder…")).show(app, ui);
+        let resp = Row::new("local:browse", Icon::Plus, crate::i18n::tr("Browse Folder…")).command().show(app, ui);
         super::side_keys::chosen(ui, &resp)
     } {
-        let picked = app.services.pick_folder.as_mut().and_then(|f| f());
-        if let Some(path) = picked {
-            match app.run("library.browse", json!({"path": path})) {
-                // the picked folder stays in Local (and comes back if it was hidden)
-                Ok(r) => {
-                    let dir = r["path"].as_str().unwrap_or(&path).to_string();
-                    app.act("local.addRoot", json!({"path": dir}));
-                }
-                Err(e) => app.toast_error(ui.ctx(), e),
-            }
-        }
+        // the dialog runs off the UI thread; the folder is added to Local when it closes
+        crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::BrowseFolder);
     }
     // the way back for hidden places: one comes back from the row itself; several are listed, so
     // each comes back on its own, or all at once (issue #2114: the row used to bring every one back)
@@ -118,6 +109,7 @@ pub(super) fn local_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, now: &Local
     if hidden > 0 {
         let label = crate::i18n::tr_format!("Show {hidden} hidden location{}", if hidden == 1 { "" } else { "s" }, hidden = hidden);
         let resp = Row::new("local:restoreHidden", Icon::Folder, &label)
+            .command()
             .show(app, ui)
             .on_hover_text(crate::i18n::tr("Put the locations you removed from Local back (no files change)"));
         if let [(_, only)] = now.hidden.as_slice() {

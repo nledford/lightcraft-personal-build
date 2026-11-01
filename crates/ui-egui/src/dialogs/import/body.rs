@@ -183,7 +183,7 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
     }
     field(ui, "Transfer", |ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
-        if crate::widgets::text_button(ui, "importAdd", crate::i18n::tr("Add in place"), !d.copy)
+        if crate::widgets::choice_button(ui, "importAdd", crate::i18n::tr("Add in place"), !d.copy)
             .on_hover_text(crate::i18n::tr("Reference the files where they are"))
             .clicked()
         {
@@ -191,12 +191,12 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
         }
         let can_copy = app.session.library.as_ref().is_some_and(|l| l.on_disk) || app.services.pick_folder.is_some();
         let r =
-            ui.add_enabled_ui(can_copy, |ui| crate::widgets::text_button(ui, "importCopy", crate::i18n::tr("Copy"), d.copy && !d.move_files)).inner;
+            ui.add_enabled_ui(can_copy, |ui| crate::widgets::choice_button(ui, "importCopy", crate::i18n::tr("Copy"), d.copy && !d.move_files)).inner;
         if r.on_hover_text(crate::i18n::tr("Copy the files (into the library's Originals/, or a folder you choose)")).clicked() {
             d.set_transfer(true, false);
         }
         let r =
-            ui.add_enabled_ui(can_copy, |ui| crate::widgets::text_button(ui, "importMove", crate::i18n::tr("Move"), d.copy && d.move_files)).inner;
+            ui.add_enabled_ui(can_copy, |ui| crate::widgets::choice_button(ui, "importMove", crate::i18n::tr("Move"), d.copy && d.move_files)).inner;
         if r.on_hover_text(crate::i18n::tr("Move the files (into the library's Originals/, or a folder you choose), removing them from the source"))
             .clicked()
         {
@@ -224,8 +224,9 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
             ui.label(egui::RichText::new(shown).color(Tokens::get(ui.ctx()).text_label));
             if app.services.pick_folder.is_some()
                 && crate::button::Button::new("Choose…").small().widget("button:importDest").show(ui).clicked()
-                && let Some(f) = app.services.pick_folder.as_mut().and_then(|f| f())
+                && let Some(f) = crate::pick::choose(app, crate::pick::Field::ImportDestination)
             {
+                // (a synchronous answer; with a background dialog the folder is set when it closes)
                 d.destination = f;
             }
             if !d.destination.is_empty() && crate::button::Button::new("Library").small().widget("button:importDestReset").show(ui).clicked() {
@@ -523,6 +524,7 @@ fn candidate_cell(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDial
         (Some(_), _) => Some("Duplicate"),
         (None, None) if d.copy && d.is_browsed(i) => Some("In library"),
         (None, Some(_)) => Some("Unreadable"),
+        (None, None) if c.truncated => Some("Damaged"),
         _ => None,
     };
     if let Some(b) = badge {

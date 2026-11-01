@@ -264,16 +264,15 @@ pub(super) fn soft_proofing(app: &mut LightcraftApp, ui: &mut egui::Ui, id: Phot
                 if let Some(n) = &device {
                     let _ = MenuItem::new(n).selected(true).inert().show(ui);
                 }
-                if app.services.pick_display_profile.is_some() && MenuItem::picker(crate::i18n::tr("Other…")).show(ui).clicked() {
-                    pick = true;
+                if app.services.pick_display_profile.is_some() {
+                    let other = MenuItem::picker(crate::i18n::tr("Other…")).widget("item:proofProfileOther").show(ui);
+                    pick |= other.clicked();
                 }
             });
             crate::widgets::name_combo(&combo.response, crate::i18n::tr("Profile"));
-            if pick
-                && let Some(path) = app.services.pick_display_profile.as_mut().and_then(|pick| pick().into_iter().next())
-                && let Err(e) = app.run("view.softProof", json!({"profile": path}))
-            {
-                app.toast_error(ui.ctx(), e);
+            register(ui, "combo:proofProfile", combo.response.rect);
+            if pick {
+                crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::ProofProfile);
             }
         });
         if app.ui.proof_profile.is_some() {
@@ -281,7 +280,7 @@ pub(super) fn soft_proofing(app: &mut LightcraftApp, ui: &mut egui::Ui, id: Phot
                 ui.label(RichText::new(crate::i18n::tr("Intent:")).color(t.text_label));
                 use lightcraft_engine::proof::ProofIntent;
                 for (i, label) in [(ProofIntent::Perceptual, "Perceptual"), (ProofIntent::Relative, "Relative")] {
-                    let r = crate::widgets::text_button(ui, &format!("proofIntent-{}", i.name()), label, app.ui.proof_intent == i);
+                    let r = crate::widgets::choice_button(ui, &format!("proofIntent-{}", i.name()), label, app.ui.proof_intent == i);
                     if r.clicked() && app.ui.proof_intent != i {
                         app.act("view.softProof", json!({"intent": i.name()}));
                     }

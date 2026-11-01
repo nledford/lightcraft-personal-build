@@ -29,6 +29,18 @@ pub const SHOW_AFTER_MS: u64 = 500;
 /// The list's width (points), where the window has that much.
 pub const WIDTH: f32 = 340.0;
 
+/// Whether the stack must look again within a tenth of a second: a young task becomes due, bars move. Not when every
+/// row is one that only waits on something outside the app (`xmpWaiting`) and is old enough to show: nothing on it
+/// changes until the cause is gone, and the app looks again by itself then (a redraw every 10 s re-checks it).
+pub fn needs_poll(tasks: &[TaskInfo]) -> bool {
+    tasks.iter().any(|t| !only_waits(t) || t.age_ms < SHOW_AFTER_MS)
+}
+
+/// A row that only waits on something outside the app: it has a count but no progress to draw, so no bar (its `total`
+/// is how many wait and `done` stays 0, so a bar would sit at 0 %).
+fn only_waits(t: &TaskInfo) -> bool {
+    t.kind == "xmpWaiting"
+}
 const CROSS: f32 = 16.0;
 /// The ring round the bell: its radius and line width.
 const RING: f32 = 12.0;
@@ -75,6 +87,10 @@ pub(crate) fn detail_line(t: &TaskInfo) -> String {
     if let Some(stalled) = &t.stalled {
         return tr_format!("Waiting for {name} · {secs} s", name = stalled.what, secs = stalled.secs);
     }
+    if only_waits(t) {
+        // the count is the row's `total` (for `activity.list`), said as a line: "0 of 2" would read as a stalled job
+        return tr_format!("Photos waiting: {n}", n = t.total);
+    }
     let count = count_text(t);
     match (count.is_empty(), t.detail.is_empty()) {
         (false, false) => format!("{count} · {}", t.detail),
@@ -92,7 +108,7 @@ fn readout_parts(tasks: &[TaskInfo], waiting: usize) -> (String, String) {
         [one] => {
             let value = if one.cancelling {
                 tr("Stopping…").to_string()
-            } else if one.total > 0 {
+            } else if one.total > 0 && !only_waits(one) {
                 tr_format!("{pct} %", pct = percent(one))
             } else {
                 String::new()
@@ -117,10 +133,13 @@ pub fn readout_text(tasks: &[TaskInfo], waiting: usize) -> String {
     }
 }
 
-/// How far along the tasks are together, 0 to 1: the mean of those whose amount of work is known. `None` while none
-/// is, and the ring sweeps.
+/// How far along the tasks are together, 0 to 1: the mean of those whose amount of work is known (not a row that
+/// only waits: its total is a count of photos, not work to finish, so such a stack falls back to the
+/// unknown-work arc, which stands still — the stack asks for no repaints). `None` while none is,
+/// and the ring sweeps.
 pub fn overall(tasks: &[TaskInfo]) -> Option<f32> {
-    let known: Vec<f32> = tasks.iter().filter(|t| t.total > 0).map(|t| (t.done.min(t.total) as f64 / t.total as f64) as f32).collect();
+    let known: Vec<f32> =
+        tasks.iter().filter(|t| t.total > 0 && !only_waits(t)).map(|t| (t.done.min(t.total) as f64 / t.total as f64) as f32).collect();
     if known.is_empty() {
         return None;
     }
@@ -148,8 +167,9 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
     // newest first: the one just started is the one looked for
     let mut all = app.session.activity.list();
     all.reverse();
-    if !all.is_empty() {
-        // look again soon: a young task becomes due, the ring and the bars move
+    // look again soon: a young task becomes due, the ring and the bars move (not for rows that only wait on
+    // something outside the app, see [`needs_poll`])
+    if needs_poll(&all) {
         ctx.request_repaint_after(std::time::Duration::from_millis(100));
     }
     // those waiting in line, in the order they start
@@ -922,7 +942,9 @@ fn row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> (bool, boo
                 cancel = resp.on_hover_text(tr("Cancel")).clicked();
             }
         });
-        bar(ui, task, width);
+        if !only_waits(task) {
+            bar(ui, task, width);
+        }
         let line = detail_line(task);
         if !line.is_empty() {
             let colour = if offers_skip(task) { t.caution } else { t.text_dim };

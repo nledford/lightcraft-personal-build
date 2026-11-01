@@ -9,7 +9,6 @@ use lightcraft_pipeline::geometry::Frame;
 use serde_json::json;
 
 use crate::LightcraftApp;
-use crate::menu_item::MenuItem;
 use crate::render::Slot;
 use crate::state::{BeforeAfter, RightPanel, ToolOverlay, Zoom};
 use crate::theme::Tokens;
@@ -40,13 +39,11 @@ pub use geometry::CanvasMap;
 pub(crate) use geometry::focus_box;
 use geometry::{animated_rect, middle_pan};
 pub(crate) use geometry::{fit_rect, fit_texture_rect, focus_pan, navigate_gesture, output_px, pan_image, snap_fit_rect, texture_side};
-#[cfg(test)]
-use info::RENDERING_AFTER_SECS;
 use info::{
     FILTER_PILL_HEIGHT, FILTER_PILL_INSET, brief_info, filter_pill, filter_pill_shown, info_overlay, info_overlay_extent, label_badge_rect,
     preview_only_pill, quick_name,
 };
-pub(crate) use info::{draw_focus_point, failed_pill, loupe_pill, rendering_overdue};
+pub(crate) use info::{RENDERING_AFTER_SECS, SLOW_RENDERING_AFTER_SECS, draw_focus_point, failed_pill, loupe_pill, rendering_overdue_for};
 use masks::{RegionContext, RegionEdit, color_range_pick, mask_overlay, region_overlay};
 use retouch::{eye_overlay, remove_overlay};
 pub(crate) use window::overlay_supports_window;
@@ -131,7 +128,8 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let full = ui.max_rect();
     let fullscreen = app.ui.fullscreen;
-    let show_film = app.ui.filmstrip && !fullscreen;
+    // (nothing in it under the welcome, and its button is in the bottom bar, which steps aside)
+    let show_film = app.ui.filmstrip && !fullscreen && !super::empty_library::in_view(app);
     let film_h = if show_film { t.film_h } else { 0.0 };
     let canvas = Rect::from_min_max(full.min, pos2(full.right(), full.bottom() - film_h));
     app.canvas_rect = Some(canvas);
@@ -344,7 +342,9 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     let coming = render_coming(app, shown, &windows, ViewMode { split, show_before, split_view });
     let keys =
         [Slot::Main, Slot::Before, Slot::Region, Slot::RegionBefore].map(|s| app.renderer.textures.get(&s).filter(|t| t.photo == id).map(|t| t.key));
-    let rendering = ui.ctx().data_mut(|d| rendering_overdue(d.get_temp_mut_or(egui::Id::unique("loupe-rendering"), None), keys, coming, now));
+    let rendering = ui.ctx().data_mut(|d| {
+        rendering_overdue_for(d.get_temp_mut_or(egui::Id::unique("loupe-rendering"), (id, None)), id, keys, coming, now, rendering_wait(app))
+    });
     // the render failed while a stand-in is up: what is on screen is all there will be (also while
     // a library change retries it)
     let failed = failed_render(app, id, !rendering && (!show_before || split), shown);
@@ -362,21 +362,15 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
 /// Names the loupe for screen readers as the grid names the same photo (file, rating, flag, label), not
 /// just "Photo".
 fn announce_photo(app: &LightcraftApp, resp: &egui::Response, photo: &lightcraft_catalog::Photo) {
-    crate::widgets::announce(resp, crate::i18n::tr_format!("Photo: {name}", name = super::grid::cell_description(app, photo)));
+    crate::widgets::announce(resp, crate::i18n::tr_format!("Photo: {name}", name = super::grid::photo_spoken(&app.session.catalog, photo)));
 }
 
-/// The loupe's right-click menu: zoom commands and the grid's photo menu.
+/// The loupe's right-click menu: zoom commands and the photo menu.
 fn loupe_context_menu(app: &mut LightcraftApp, resp: &egui::Response, id: PhotoId) {
+    // the loupe's own rows first, in the same bounded menu as the photo's
+    use crate::photo_menu::Lead;
     crate::widgets::context_menu(resp, |ui| {
-        MenuItem::new(crate::i18n::tr("Zoom")).submenu(ui, |ui| {
-            for (label, cmd) in [("Fit", "view.zoomFit"), ("100%", "view.zoom100"), ("Zoom In", "view.zoomIn"), ("Zoom Out", "view.zoomOut")] {
-                if MenuItem::new(crate::i18n::tr(label)).show(ui).clicked() {
-                    app.act(cmd, json!({}));
-                }
-            }
-        });
-        ui.separator();
-        super::grid::context_menu(app, ui, id);
+        crate::photo_menu::show(app, ui, id, Lead::Submenu("Zoom", &["view.zoomFit", "view.zoom100", "view.zoomIn", "view.zoomOut"]));
     });
 }
 
@@ -568,8 +562,14 @@ fn failed_render<'a>(app: &'a LightcraftApp, id: PhotoId, settled: bool, shown: 
         .flatten()
 }
 
+/// How long a render may be on its way before the loupe says "Rendering…": View Options' Show message when loading or
+/// rendering photos on, half a second; off, only a render that stays slow says so.
+fn rendering_wait(app: &LightcraftApp) -> f64 {
+    if app.ui.settings.loupe_messages { RENDERING_AFTER_SECS } else { SLOW_RENDERING_AFTER_SECS }
+}
+
 /// The pill over the photo (the After in two views; in the crop tool's wide margin, under it): the
-/// failure, or View Options' "Show message when loading or rendering photos".
+/// failure, or "Rendering…" (the caller shows it once [`rendering_overdue_for`] says it is due).
 fn status_pill(
     ui: &egui::Ui,
     app: &LightcraftApp,
@@ -580,10 +580,9 @@ fn status_pill(
 ) {
     match failed {
         Some(e) => failed_pill(ui, app, photo, canvas, over, nav, "loupe:renderFailed", e),
-        None if app.ui.settings.loupe_messages => {
+        None => {
             loupe_pill(ui, canvas, over, nav, "loupe:rendering", crate::i18n::tr("Rendering…"), false);
         }
-        None => {}
     }
 }
 
@@ -811,7 +810,7 @@ fn draw_hover(p: &egui::Painter, t: &Tokens, tex: &crate::render::Tex, label: &s
 
 /// A label on a dark pill.
 fn paint_badge(p: &egui::Painter, bg: Rect, g: std::sync::Arc<egui::Galley>) {
-    p.rect_filled(bg, 4.0, Tokens::photo_shade());
+    p.rect_filled(bg, 4.0, crate::transparency::hud(p.ctx(), 200));
     p.galley(bg.min + vec2(8.0, 4.0), g, Tokens::on_photo());
 }
 
@@ -1204,20 +1203,42 @@ mod tests {
     /// a moment with nothing new on screen, and doesn't blink while slow drafts arrive.
     #[test]
     fn the_loupe_says_rendering_when_the_screen_falls_behind() {
-        use super::{RENDERING_AFTER_SECS as WAIT, rendering_overdue};
+        use super::{RENDERING_AFTER_SECS as WAIT, SLOW_RENDERING_AFTER_SECS as SLOW, info::rendering_overdue};
         let key = |k| [Some(k), None, None, None];
         let mut wait = None;
-        assert!(!rendering_overdue(&mut wait, key(1), false, 0.0), "nothing coming");
+        assert!(!rendering_overdue(&mut wait, key(1), false, 0.0, WAIT), "nothing coming");
         // an edit after an idle spell: the wait starts now, not at the last frame drawn
-        assert!(!rendering_overdue(&mut wait, key(1), true, 30.0), "a render just asked for");
-        assert!(!rendering_overdue(&mut wait, key(1), true, 30.0 + WAIT * 0.8), "a quick render never shows it");
-        assert!(rendering_overdue(&mut wait, key(1), true, 30.0 + WAIT * 1.2), "nothing new for the wait");
-        assert!(rendering_overdue(&mut wait, key(2), true, 31.0 + WAIT), "once up, a slow draft doesn't blink it");
-        assert!(!rendering_overdue(&mut wait, key(3), false, 32.0), "done");
+        assert!(!rendering_overdue(&mut wait, key(1), true, 30.0, WAIT), "a render just asked for");
+        assert!(!rendering_overdue(&mut wait, key(1), true, 30.0 + WAIT * 0.8, WAIT), "a quick render never shows it");
+        assert!(rendering_overdue(&mut wait, key(1), true, 30.0 + WAIT * 1.2, WAIT), "nothing new for the wait");
+        assert!(rendering_overdue(&mut wait, key(2), true, 31.0 + WAIT, WAIT), "once up, a slow draft doesn't blink it");
+        assert!(!rendering_overdue(&mut wait, key(3), false, 32.0, WAIT), "done");
         // a drag whose drafts keep up: always something coming, a new draft every 0.1 s
         for i in 1..30u32 {
-            assert!(!rendering_overdue(&mut wait, key(u64::from(i)), true, 40.0 + f64::from(i) * 0.1), "draft {i}");
+            assert!(!rendering_overdue(&mut wait, key(u64::from(i)), true, 40.0 + f64::from(i) * 0.1, WAIT), "draft {i}");
         }
+        // with the message off the same logic waits for the longer time
+        let mut wait = None;
+        assert!(!rendering_overdue(&mut wait, key(1), true, 50.0, SLOW));
+        assert!(!rendering_overdue(&mut wait, key(1), true, 50.0 + SLOW * 0.8, SLOW), "a render that is only a little slow stays quiet");
+        assert!(rendering_overdue(&mut wait, key(1), true, 50.0 + SLOW * 1.2, SLOW), "one that stays slow says so");
+    }
+
+    /// The wait belongs to the photo on screen: a slow render's pill doesn't stay up for the next
+    /// photo, whose render may well come in under the wait.
+    #[test]
+    fn the_rendering_wait_starts_afresh_for_the_next_photo() {
+        use super::{PhotoId, RENDERING_AFTER_SECS as WAIT, info::rendering_overdue_for};
+        let key = |k| [Some(k), None, None, None];
+        let mut state = (PhotoId(1), None);
+        assert!(!rendering_overdue_for(&mut state, PhotoId(1), key(1), true, 10.0, WAIT));
+        assert!(rendering_overdue_for(&mut state, PhotoId(1), key(1), true, 10.0 + WAIT * 1.2, WAIT), "a slow render of the first photo");
+        // the next photo's render is pending at once: its own wait just began
+        assert!(
+            !rendering_overdue_for(&mut state, PhotoId(2), key(1), true, 10.0 + WAIT * 1.3, WAIT),
+            "the pill of the last photo does not carry over"
+        );
+        assert!(rendering_overdue_for(&mut state, PhotoId(2), key(1), true, 10.0 + WAIT * 2.6, WAIT), "its own wait can still run out");
     }
 
     /// Issue #652: a native host reports the GPU's texture limit in the first frame's input only.

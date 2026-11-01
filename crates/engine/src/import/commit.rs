@@ -238,6 +238,9 @@ fn held_contents(s: &Session, opts: &ImportOptions, prepared: &Prepared) -> std:
     held
 }
 
+/// The catalog half of an import: add the photos [`ImportJob::prepare`] readied (one undoable op;
+/// a Move's sources are removed once it is saved). On a failed commit a Move's placed files are
+/// taken back.
 /// Fresh: trashed photos a new import replaces, by content and by file (each removed once).
 fn trashed_lookups(s: &Session, opts: &ImportOptions) -> (HashMap<String, (bool, PhotoId)>, HashMap<String, PhotoId>) {
     let (mut trash_content, mut trash_path) = (HashMap::new(), HashMap::new());
@@ -254,9 +257,6 @@ fn trashed_lookups(s: &Session, opts: &ImportOptions) -> (HashMap<String, (bool,
     (trash_content, trash_path)
 }
 
-/// The catalog half of an import: add the photos [`ImportJob::prepare`] readied (one undoable op;
-/// a Move's sources are removed once it is saved). On a failed commit a Move's placed files are
-/// taken back.
 pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepared: Prepared) -> crate::Result<ImportReport> {
     let now = now.to_string();
     // what is read from the photos themselves: this import's choice, else the library's
@@ -286,10 +286,17 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 if s.catalog.photo(id).is_some_and(|p| p.local) {
                     ops.push(Op::SetLocal { id, local: false });
                 }
+                // cut short, by the file as it is now when it was read again, else as it was browsed
+                let promoted = s.catalog.photo(id);
+                if fresh.as_ref().map_or(promoted.is_some_and(|p| p.truncated), |i| i.truncated)
+                    && let Some(Source::File { path }) = promoted.map(|p| &p.source)
+                {
+                    report.truncated.push(path.clone());
+                }
                 // "Import as new": a trashed photo with the same content is replaced, as for a new file
                 let content =
                     fresh.as_ref().and_then(|i| i.content_hash.clone()).or_else(|| s.catalog.photo(id).and_then(|p| p.content_hash.clone()));
-                if let Some(old) = content.as_ref().and_then(|h| trash_content.get(crate::sync::base_hash(h))).map(|(_, id)| id)
+                if let Some((_, old)) = content.as_ref().and_then(|h| trash_content.get(crate::sync::base_hash(h)))
                     && purged.insert(*old)
                 {
                     purge.push(*old);
@@ -383,6 +390,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 p.content_hash = hash;
                 p.embedded_lens = info.embedded_lens;
                 p.set_preview_only(info.preview_only.clone());
+                p.truncated = info.truncated;
                 apply_import_defaults_beside(s, &mut p, own);
                 if let Some(sc) = &sidecar {
                     crate::sidecar::merge_into(&mut p, sc, &now);
@@ -409,6 +417,9 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                     p.history.push(lightcraft_catalog::HistoryStep { label, settings: d });
                 }
                 report.imported.push(id.0);
+                if p.truncated {
+                    report.truncated.push(path.clone());
+                }
                 p.local = opts.local;
                 if opts.local {
                     // the state as browsed: a later change keeps the record from being forgotten

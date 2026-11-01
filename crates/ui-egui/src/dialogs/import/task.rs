@@ -76,6 +76,8 @@ pub struct ImportTask {
     failures: Vec<(String, String)>,
     /// Why a batch was left alone while photos were being moved to another folder (not counted as failed).
     refused: Option<String>,
+    /// Photos imported from a JPEG that was cut short (damaged, shown from the data present).
+    pub truncated: usize,
     /// Move: originals moved, and sources left in place (reported by the engine with a reason).
     pub moved: usize,
     pub kept: usize,
@@ -515,6 +517,7 @@ fn commit_batch(app: &mut LightcraftApp, task: &mut ImportTask, prepared: lightc
                     .take(room)
                     .filter_map(|f| Some((f.get(0)?.as_str()?.to_string(), f.get(1)?.as_str()?.to_string()))),
             );
+            task.truncated += len("truncated");
             task.moved += len("moved");
             task.kept += len("kept");
             task.warnings.extend(v["warnings"].as_array().into_iter().flatten().filter_map(|warning| serde_json::from_value(warning.clone()).ok()));
@@ -686,20 +689,56 @@ fn quiet_finish(app: &mut LightcraftApp, ctx: &egui::Context, task: &mut ImportT
     } else {
         String::new()
     };
-    let detail = with_warnings(not_readable_text(task.failed), task);
+    let mut detail = not_readable_text(task.failed);
+    // (a browse only shows the photos cut short: it doesn't count them, as its toast doesn't)
+    if task.auto && task.truncated > 0 {
+        let damaged = crate::i18n::tr_format!(" · {} damaged", task.truncated).trim_start_matches(" · ").to_string();
+        detail = if detail.is_empty() { damaged } else { format!("{detail} · {damaged}") };
+    }
+    let detail = with_warnings(detail, task);
     report(task, summary, detail);
     if let Some(msg) = stopped_text(task) {
         // the drive stopped answering (the other kinds of import have a summary to add it to)
         app.toast_error(ctx, msg);
     } else if !task.warnings.is_empty() {
-        app.toast_error_for(ctx, xmp_warnings_text(&task.warnings), 8.0);
+        app.toast_error_for(ctx, quiet_warnings_text(task), 8.0);
     } else if task.auto && task.refused.is_some() {
         app.toast_for(ctx, task.refused.clone().unwrap_or_default(), 8.0);
-    } else if task.auto && task.imported > 0 {
-        app.toast(ctx, crate::i18n::tr_format!("Auto Import: added {} photo{}", task.imported, crate::i18n::plural_s(task.imported)));
-    } else if !task.auto && task.failed > 0 {
-        app.toast_error(ctx, crate::i18n::tr_format!("{} photo{} not readable", task.failed, crate::i18n::plural_s(task.failed)));
+    } else if let Some(text) = quiet_summary(task) {
+        // (files a browse could not read are an error, as before)
+        if task.auto {
+            app.toast(ctx, text);
+        } else {
+            app.toast_error(ctx, text);
+        }
     }
+}
+
+/// The toast of a quiet import that gave XMP warnings: what [`quiet_summary`] says (the damaged count among it), then
+/// the warnings.
+fn quiet_warnings_text(task: &ImportTask) -> String {
+    let warnings = xmp_warnings_text(&task.warnings);
+    match quiet_summary(task) {
+        Some(summary) => format!("{summary}\n\n{warnings}"),
+        None => warnings,
+    }
+}
+
+/// What the toast of an automatic import or of one that only browses says: what was added (automatic), or what could
+/// not be read (browsing), and how many of the photos are damaged (cut short); `None` when there is nothing to say (a
+/// browse announces nothing for photos it only shows, damaged or not).
+fn quiet_summary(task: &ImportTask) -> Option<String> {
+    let mut text = if task.auto && task.imported > 0 {
+        crate::i18n::tr_format!("Auto Import: added {} photo{}", task.imported, crate::i18n::plural_s(task.imported))
+    } else if !task.auto && task.failed > 0 {
+        crate::i18n::tr_format!("{} photo{} not readable", task.failed, crate::i18n::plural_s(task.failed))
+    } else {
+        return None;
+    };
+    if task.truncated > 0 {
+        text.push_str(&crate::i18n::tr_format!(" · {} damaged", task.truncated));
+    }
+    Some(text)
 }
 
 /// What the toast of an import that stopped on an error says: the error, then the XMP warnings its photos gave before
@@ -747,6 +786,9 @@ fn import_summary(app: &LightcraftApp, task: &ImportTask) -> (String, String, St
         // (the batches it left alone were not imported: the reason, not "not readable")
         msg.push_str("\n\n");
         msg.push_str(why);
+    }
+    if task.truncated > 0 {
+        msg.push_str(&crate::i18n::tr_format!(" · {} damaged", task.truncated));
     }
     // what was done is the first line of the row the import leaves; the rest is what needs reading under it
     let detail = msg.get(summary.len()..).unwrap_or_default().trim_start_matches(" · ").trim_start().to_string();
@@ -1019,5 +1061,60 @@ mod tests {
         let rows = h.app.session.activity.finished();
         assert_eq!(rows.len(), 3, "{rows:?}");
         assert!(rows.iter().all(|r| r.detail.contains("1 import warning")), "{rows:?}");
+    }
+
+    fn quiet_task(auto: bool) -> ImportTask {
+        let t = ImportTask::new(Vec::new(), json!({"mode": "add"}), 0, !auto);
+        if auto { t.auto() } else { t }
+    }
+
+    /// Given an Auto Import that added photos of which some are cut short,
+    /// When its toast is made,
+    /// Then it counts them besides the photos it added.
+    #[test]
+    fn the_auto_import_toast_counts_the_damaged_photos() {
+        let mut t = quiet_task(true);
+        t.imported = 3;
+        t.truncated = 2;
+        let expected = format!("{}{}", crate::i18n::tr_format!("Auto Import: added {} photo{}", 3, "s"), crate::i18n::tr_format!(" · {} damaged", 2));
+        assert_eq!(quiet_summary(&t), Some(expected));
+        t.truncated = 0;
+        assert_eq!(quiet_summary(&t), Some(crate::i18n::tr_format!("Auto Import: added {} photo{}", 3, "s")));
+    }
+
+    /// Given an import that only browses, with files it could not read and photos cut short,
+    /// When its toast is made,
+    /// Then it counts both; with only cut-short photos (shown, not imported) it says nothing.
+    #[test]
+    fn the_browse_toast_counts_the_damaged_photos_beside_the_unreadable_ones() {
+        let mut t = quiet_task(false);
+        t.failed = 1;
+        t.truncated = 2;
+        let expected = format!("{}{}", crate::i18n::tr_format!("{} photo{} not readable", 1, ""), crate::i18n::tr_format!(" · {} damaged", 2));
+        assert_eq!(quiet_summary(&t), Some(expected));
+        t.failed = 0;
+        assert_eq!(quiet_summary(&t), None);
+    }
+
+    /// Given an Auto Import that added photos, some cut short, and gave an XMP warning,
+    /// When its toast is made,
+    /// Then it says what was added and how many are damaged, then the warning.
+    #[test]
+    fn the_warning_toast_of_a_quiet_import_keeps_its_summary() {
+        let mut t = quiet_task(true);
+        t.warnings.push(ImportWarning {
+            path: "a.jpg".into(),
+            code: ImportWarningCode::UnmappedXmp,
+            profile: None,
+            mode: None,
+            fields: vec!["crs:Foo".into()],
+        });
+        let warnings = xmp_warnings_text(&t.warnings);
+        assert_eq!(quiet_warnings_text(&t), warnings, "nothing to add: only the warning");
+        t.imported = 3;
+        t.truncated = 2;
+        let summary = quiet_summary(&t).unwrap();
+        assert!(summary.contains("added 3") && summary.contains("2 damaged"), "{summary}");
+        assert_eq!(quiet_warnings_text(&t), format!("{summary}\n\n{warnings}"));
     }
 }

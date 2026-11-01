@@ -73,6 +73,51 @@
 
 ## 2026-10-29
 
+### AI Denoise and Finding faces can be stopped, and Quit names every running job
+- The AI Denoise and Finding faces rows in the activity stack now have a ✕ (and accept `activity.cancel`). Stopping a
+  denoise ends the photo being made at its next tile and leaves no picture, so the cache keeps only whole ones; the photos
+  that were waiting are dropped. Stopping the face scan lets the photos being searched finish and lines up no more. In both
+  cases LightCraft leaves them alone afterward: a stopped photo says so in the Detail panel ("AI Denoise was stopped for this photo.") and is made again when you
+  ask for it (**Make it now**, or the Denoise switch), and the face scan starts again when you switch face recognition off and on in Settings, or at the next
+  launch.
+- Quitting while something runs now lists every running job, not only the ones with a ✕. The jobs that stop when you
+  quit are named as before; the ones that can't be stopped (Adding to Apple Photos, for one) are named
+  apart, with a note that quitting doesn't wait for them. Short read-only checks (Find Missing Photos, a library check)
+  don't make Quit ask.
+
+### Waiting XMP writes show in the activity stack
+- When automatic XMP sidecar writes can't reach their folder (a network share that dropped out, a read-only or full
+  folder), the activity stack now has a row, "Waiting to write XMP sidecars", with "Photos waiting: N" under it (no
+  progress bar, as nothing counts up). The row
+  stays until they are written, and then goes. The one-time message and the retry every 10 seconds are unchanged.
+
+### Loading thumbnails look different from unreadable ones
+- A grid cell or filmstrip tile whose thumbnail hasn't arrived yet now shows three small dots on its gray placeholder.
+  One whose file can't be read still shows "!". The dots stand still (so a Reduce motion setting has nothing
+  to stop), and they are left off tiles too small to hold them.
+
+### A slow render says so even with the loading message off
+- With View Options' Show message when loading or rendering photos turned off, the loupe now still says "Rendering…"
+  once a render has been on its way for 3 seconds, so the old picture on screen doesn't look like a frozen app. A render
+  that finishes sooner stays quiet, as the setting asks. With the message on, nothing changes: it still appears after half
+  a second.
+
+### Choosing a folder or file no longer freezes the window
+- Browse Folder…, the import review's Copy to / Move to Choose…, the export folder and watermark graphic Choose…, Settings ▸ Import ▸ Watched folder, Settings ▸ Performance ▸ Choose Folder… (smart previews), Install from file… (AI Denoise), Settings ▸ Slideshow ▸ Overlays ▸ identity plate image, the Lightroom import's library location and Add a model file… now open their file dialog without stopping the window: progress bars keep moving, and on Linux the desktop no longer reports LightCraft as not responding (issues #191, #3140). The folder or file you pick appears when the dialog closes; if you closed the dialog it belongs to meanwhile, the answer is dropped.
+- The same goes for Print ▸ Templates ▸ Import… and Export…, the Print Job's Profile ▸ Other…, Settings ▸ Display ▸ Choose Profile…, Settings ▸ Slideshow ▸ Templates ▸ Import… and a template's Export…, and the Soft Proofing profile's Other…. As before, several template files chosen at once are all imported, and the profile dialogs open in the folder where the system keeps monitor profiles.
+
+### Starting an export no longer freezes the window
+- Clicking Export (the Export dialog, File ▸ Export with Preset, Export with Previous) used to hold the window still for
+  about 3 ms per photo while the batch was set up: roughly a quarter of a second for 60 photos and a second for 300.
+  The export now starts at once, its activity row saying “Preparing photos…” (the stack shows a row once it is half a
+  second old, as for every task), and the photos are set up a few milliseconds per frame, so the window keeps
+  responding however big the batch is; ✕ stops the export during that time too. Each photo is read as it is when its
+  turn comes, so an edit made in those moments counts. A photo that can't be exported at all (for example a demo
+  photo with no original file when exporting the original, or one purged meanwhile) ends the export with its error in
+  a toast, and nothing is written; opening another library meanwhile stops the export as ✕ does.
+- Agents: `app.export {background: true}` still answers at once with `{background: true, total}`; `ui.inspect` →
+  `export.running.preparing` is true until the photos are set up. See [Control protocol](control-protocol.md).
+
 ### A person's page opens in seconds in a large library
 - Finding the unnamed faces that look like a person (a person's page, and again after each face confirmed there) now
   runs on every processor core, and each comparison of two faces uses the processor's vector instructions. In a
@@ -113,7 +158,53 @@
   selected Object mask, and a click on the selected mask's own pin adds nothing. Subject, Sky, Background and the
   range masks still have no pin.
 
+### A dialog no longer dims the macOS title bar
+- On macOS the top bar is the window's title bar, and the window buttons drawn over it stayed bright while a dialog dimmed
+  the bar under them. As under a macOS sheet, the dialog's backdrop now leaves the bar alone: its buttons are inactive, a
+  click on it does not close the dialog, and dragging its empty space still moves the window. Windows, Linux and full
+  screen are unchanged.
+
 ## 2026-10-28
+
+### Previous Shuffle brings back the order a Reshuffle replaced
+- Both Sort menus (the bottom bar's popup and View ▸ Sort) have a new Previous Shuffle row under Reshuffle. It goes back to
+  the exact random order the last Reshuffle replaced, and again for the one before, up to 32 steps in this session. It is
+  on only while you sort at random and a Reshuffle has replaced something; the steps are forgotten when you leave Random
+  or open another library, and are never saved with it. Reshuffle is now ⌘⌥⇧R (Ctrl+Alt+Shift+R) and Previous Shuffle ⌘⌥⇧P
+  (Ctrl+Alt+Shift+P); both rows show their keys.
+
+### A shuffled grid says so, and Reshuffle is one click away
+- When the photos are sorted at random, the grid's header now shows "Shuffled" beside the photo count with a Reshuffle
+  button (bordered, so it reads as an action beside the state): one click gives a new order, with the Sort menu's
+  Reshuffle unchanged. Recently Added keeps its own order
+  (newest import first), so it shows no chip. In a narrow window the button stands alone, and when even it would
+  leave the title no room (a very narrow window or a very long count) the chip is left out, so the count always stays in view.
+- The sort button's tooltip and its name for screen readers now say which sort is chosen ("Sort: Capture
+  Date, Descending", "Sort: Random") instead of just "Sort".
+
+### A new sort order or a reshuffle keeps your place
+- Choosing another sort, flipping its direction, pressing Reshuffle or changing the date grouping no longer leaves the
+  grid scrolled to where the photos used to be. If the active photo was on screen, the grid scrolls to wherever it
+  landed (the filmstrip follows it too); if you had scrolled away from it, the grid starts at the top of the new
+  arrangement. Rating or editing a photo under a sort it affects still never moves the scroll position.
+
+### The Sort menus offer only what the view uses
+- In Recently Added, which always shows the newest imports first, the sort keys, Ascending / Descending and Reshuffle in
+  the bottom bar's Sort popup and in View ▸ Sort are now off and nothing is checked as the order shown; a dim line says
+  "Recently Added always shows the newest imports first." Before, they checked the saved sort (and, under Random, offered
+  a Reshuffle that changed nothing). Outside Recently Added, the Group by Date choices are off too where the grid draws no date headers —
+  under Random, File Name, Rating and File Size, and in Recently Deleted — and your choice is kept for when you pick a
+  date sort again or leave Recently Deleted, as the direction already was for Random. Reshuffle is always listed, in both menus, under its own
+  separator below the sort keys, and is on only while you sort at random.
+
+### Screen readers tell buttons, switches and choices apart
+- With VoiceOver, a button that does something (Reset, Auto, Choose…, Create Album, Back) is now a button, not a check box that is "unchecked". A button that is on or off (B&W, HDR) says whether it is on, and one of several choices (Format, Color space, Sharpen, a language, the view buttons: Photo Grid, Square Grid, Detail, Compare, Survey and People) is a radio button that says which one is chosen.
+
+### A stack badge's tooltip names the stack key as it is bound
+- Hovering a stack's badge in the grid said "(S)" even after you had remapped the key that expands and collapses stacks. It now shows the key you set for Expand/Collapse Stack, written as the menu bar writes it. With that unbound, it shows Soft Proofing's key (which a grid reads as the stack toggle) unless the native menu takes that key, and then no key. In the filmstrip, where S is Soft Proofing, the tooltip names a key only when Expand/Collapse Stack has one of its own.
+
+### The grid's title, count and empty messages are read by screen readers
+- VoiceOver and other screen readers now read the photo grid's heading (for example "All Photos") and its photo count ("0 of 24 photos"), and the messages an empty view shows: "No photos match the active filters" with its reason, "No photos in this folder", and the same for the compare, survey, detail, reference and people views and the right panel's "No photo selected".
 
 ### The empty photo grid names Import Photos' shortcut as it is bound
 - When a view is empty and the way in is File ▸ Import Photos…, the message under "No photos" used a fixed "Cmd+Shift+I" (or a translation's fixed copy of it) whatever the platform or the binding. It now shows the key as the menu bar writes it (on a Mac its glyphs, elsewhere Ctrl+Shift+I) on its own line under the sentence, follows a remapped key, and names no key when Import Photos has none. The sentence now wraps in a narrow window instead of running off its edge.
@@ -152,6 +243,30 @@
   text first, to the overlay you typed it for (a template's text then shows under Previous settings), even though the
   overlays move up or are replaced.
 
+### The window's parts are named for screen readers
+- The top bar, the tool strip and the bottom bar are now announced as toolbars (Top bar, Tool strip, Bottom bar), and the
+  sidebar (Library), the photos, the Tools panel (or Presets) and the filmstrip as landmarks, so a screen reader can list
+  them and jump to one instead of walking every control. Nothing on screen changes. Not yet tried with a real VoiceOver session.
+
+### Dialogs are exposed to screen readers as dialogs
+- Export, Settings and the other dialogs, the library chooser and the prompts that stop the window (the quit question, a
+  library that could not be opened, a settings file problem) are now exposed to screen readers as dialogs: modal ones, so the
+  rest of the window is marked as blocked while one is open, and an alert dialog for the prompts. The answer to Check for
+  Updates is a dialog too, but not a modal one. Before, each was a plain group that only carried the dialog's title.
+- An alert dialog also carries what it says as its description: a screen reader can read the library problem's path, error and
+  explanation, or a prompt's text, together with the dialog.
+
+### Screen readers no longer read the shortcut with every button name
+- Icon-only buttons (the tool strip, the view buttons and Before/After and Filmstrip in the bottom bar, the top bar's
+  Import Photos…, the mask overlay and White Balance Selector buttons, the slideshow controls) are now announced by
+  their label alone ("Edit", "Presets", "Photo Grid"), and the shortcut is the button's description ("E", "Shift+P",
+  "G"), which VoiceOver reads after a pause or on request. Before, it read "Edit (E)" every time it landed on the
+  button. This holds in every language, including Japanese and Traditional Chinese, which write the shortcut in
+  full-width brackets. The tooltip you see on hover is unchanged.
+
+### Emoji are in color on macOS
+- Emoji anywhere LightCraft shows text, whether typed into a field (for example with Edit ▸ Emoji & Symbols) or shown in a name, look like they do in other Mac apps: 👀 has its eyes, 🔥 is a flame, and ❤️ and ⚠️ (with the emoji selector that Emoji & Symbols adds) and 👍 are in color. Before, LightCraft drew them with its own flat black-and-white emoji, and ❤️ and ⚠️ as plain outlines. A symbol that is text unless the selector asks for emoji, such as ★, ✓, ▶ or ❤ on its own, stays text, like in other apps. A character in a script LightCraft doesn't bundle a font for now draws with a macOS font instead of a box. Other systems and the web version still use the bundled flat emoji.
+
 ## 2026-10-27
 
 ### On macOS, the Dock icon shows how many jobs are running
@@ -168,6 +283,67 @@
 - While an export, import, preview build, merge or other job you started is running, the Mac no longer goes to sleep
   on its own and macOS no longer slows the app down when its window is hidden or minimized. Both end as soon as the
   last job finishes or is canceled.
+
+### One Enter Full Screen row in the macOS View menu
+- On macOS the View menu showed two "Enter Full Screen" rows: LightCraft's and the one macOS adds itself (not with
+  LightCraft in German). Now there is one, LightCraft's. It reads "Exit Full Screen" while the window is full screen
+  and uses the system's key, ⌃⌘F, instead of ⇧⌘F. Windows and Linux are unchanged (⇧Ctrl+F). (A `--memory` session
+  doesn't change the setting that switches macOS's row off, so on a Mac where LightCraft only ever ran that way,
+  macOS's row stays.)
+
+### One feedback row in the macOS Help menu
+- On macOS the Help menu showed macOS's own "Send LightCraft Feedback" row above LightCraft's Send Feedback…. Only
+  LightCraft's row is left; it opens a new issue on the project's GitHub. (A `--memory` session doesn't change that
+  setting, so on a Mac where LightCraft only ever ran that way macOS's row stays.)
+
+### Screen readers name filmstrip thumbnails like the grid's and read thumbnails as selectable items
+- A thumbnail in the filmstrip is now named as the grid's cell for the same photo is: the file name, then its rating,
+  flag and color label ("LC01207.JPG, 3 stars, picked"), and it says whether it is selected. It was named with the
+  file name only, so VoiceOver told you less in Detail than in the grid.
+- A thumbnail, in the grid and in the filmstrip, is also a selectable item now, not a check box: on macOS VoiceOver
+  used to say "checked" or "unchecked" for it; it now reports the photos you have selected as selected and gives no
+  state for the others.
+
+### Increase contrast
+- **Settings ▸ Interface ▸ Increase contrast** (`view.increaseContrast` for scripts and agents) makes borders,
+  separators and text stand out more in every theme: text reads at least 7:1 on the surfaces it is written on (panels,
+  fields, buttons, and rows and buttons that are hovered or pressed, and selected grid cells), icons 4.5:1, and the borders of fields
+  and buttons, the separators between panels and the Develop sliders' plain tracks and thumbs 3:1 against what they part. The
+  outlines of the interface's standard controls and windows are drawn a half point thicker, also while hovered or
+  pressed. The open drop-down's outline and the standard disabled controls are strengthened too. Text on a photo, on a
+  cell tinted by a color label and on a filled primary button keeps its own colors, and so does text written in the
+  accent, caution or error color ("In Use" on a theme card, warnings). A selected row in a list or a drop-down keeps its fill and its text. The panel frames and LightCraft's own buttons keep their line weight and disabled look (their colors follow
+  the stronger tokens), and the color-gradient slider tracks (Temp, Tint, Hue) keep theirs. The surfaces keep their colors. On macOS it
+  follows System Settings ▸ Accessibility ▸ Display ▸ Increase contrast until you change it in Settings; **Use the
+  system setting** beside the tick box hands the choice back. On Windows, Linux and the web version it is manual for
+  now (off by default).
+
+### Reduce transparency
+- **Settings ▸ Interface ▸ Reduce transparency** (`view.reduceTransparency` for scripts and agents) draws the
+  see-through badges, labels and backdrops solid: the rating, flag and label bars on grid and filmstrip thumbnails, the
+  badges on them (virtual copy, stack, preview only), the labels and pills over the photo in Detail, the Navigator's
+  frame, the survey's and the people views' small buttons and pills, the toasts, the slideshow's control bar, and the
+  dimmed backdrop behind a dialog, a notice or a file dragged over the window (a plain backdrop in the theme's own
+  color instead). What the photo itself shows stays as it is: crop shading, mask overlays, the histogram's zones,
+  Lights Out's dimming, the dimming of rejected photos, and fades that tell you something changed. A few small
+  overlays are not covered yet: the print layout's caption pills, the slide layout preview's band, the import review's
+  thumbnail badges and the frame-rate overlay. On macOS it follows System Settings ▸
+  Accessibility ▸ Display ▸ Reduce transparency until you change it in Settings; **Use the system setting** beside the
+  tick box hands the choice back. On Windows, Linux and the web version it is manual for now (off by default).
+
+### macOS: the traffic lights are centred on the top bar
+- The red, yellow and green window buttons now sit in the middle of the top bar's height, in line with its buttons and search field. Before, they kept macOS's own title-bar position and sat about 4 points higher. They stay centred when the window is resized, leaves full screen or changes appearance.
+
+### macOS: the Window menu lists the open windows
+- The Window menu now shows a row for each open window (the main window, and the second one from Window ▸ Second Window while it is open), below Bring All to Front. Before, the menu ended at Bring All to Front and listed no window. macOS also adds its own window items there: Fill, Center, Move & Resize and Full Screen Tile on macOS 15 and later, and Minimize All, Zoom All and Arrange in Front while Option is held.
+
+### The app and Help menus follow the Mac's order
+- On macOS, Check for Updates… is in the LightCraft menu right under About LightCraft, as in other Mac apps. It stays in Help on Windows, Linux and the web.
+- Help opens with LightCraft Help, then What's New and Keyboard Shortcuts, then Send Feedback… and the ArtCraft Discord, the websites, and System Info, Open Log Folder and Debug. Join the ArtCraft Discord… no longer leads the menu, and LightCraft Help is no longer the last row.
+- LightCraft Help is ⇧⌘? on macOS, where F1 needs the fn key. Windows, Linux and the web keep F1.
+
+### The Edit menu loses its Language submenu
+- Choose the interface language in Settings ▸ General ▸ Language, which already lists every language. Edit no longer carries 18 more rows for it, on any platform.
 
 ### The Edit menu groups Select Only Active Photo and Paste Settings from Previous with their kin
 - Select Only Active Photo now sits under Deselect All, and Paste Settings from Previous under Paste Selected Settings…, instead of both after Settings…, near the end of the Edit menu. On macOS, where Settings… lives in the application menu, the Edit menu no longer shows two separator lines in a row.
@@ -245,134 +421,6 @@
   browser's languages. Before, it opened in English unless `LIGHTCRAFT_LANGUAGE` was set. A language chosen in
   Settings ▸ General ▸ Language is kept as before.
 
-## 2026-10-29
-
-### A dialog no longer dims the macOS title bar
-- On macOS the top bar is the window's title bar, and the window buttons drawn over it stayed bright while a dialog dimmed
-  the bar under them. As under a macOS sheet, the dialog's backdrop now leaves the bar alone: its buttons are inactive, a
-  click on it does not close the dialog, and dragging its empty space still moves the window. Windows, Linux and full
-  screen are unchanged.
-
-## 2026-10-28
-
-### The window's parts are named for screen readers
-- The top bar, the tool strip and the bottom bar are now announced as toolbars (Top bar, Tool strip, Bottom bar), and the
-  sidebar (Library), the photos, the Tools panel (or Presets) and the filmstrip as landmarks, so a screen reader can list
-  them and jump to one instead of walking every control. Nothing on screen changes. Not yet tried with a real VoiceOver session.
-
-### Dialogs are exposed to screen readers as dialogs
-- Export, Settings and the other dialogs, the library chooser and the prompts that stop the window (the quit question, a
-  library that could not be opened, a settings file problem) are now exposed to screen readers as dialogs: modal ones, so the
-  rest of the window is marked as blocked while one is open, and an alert dialog for the prompts. The answer to Check for
-  Updates is a dialog too, but not a modal one. Before, each was a plain group that only carried the dialog's title.
-- An alert dialog also carries what it says as its description: a screen reader can read the library problem's path, error and
-  explanation, or a prompt's text, together with the dialog.
-
-### Screen readers no longer read the shortcut with every button name
-- Icon-only buttons (the tool strip, the view buttons and Before/After and Filmstrip in the bottom bar, the top bar's
-  Import Photos…, the mask overlay and White Balance Selector buttons, the slideshow controls) are now announced by
-  their label alone ("Edit", "Presets", "Photo Grid"), and the shortcut is the button's description ("E", "Shift+P",
-  "G"), which VoiceOver reads after a pause or on request. Before, it read "Edit (E)" every time it landed on the
-  button. This holds in every language, including Japanese and Traditional Chinese, which write the shortcut in
-  full-width brackets. The tooltip you see on hover is unchanged.
-
-## 2026-10-25
-
-### A one-field white balance edit no longer shifts the other one
-- Settings that name only a white balance temperature, or only a tint — `develop.merge`,
-  `lightcraft-cli render --settings <partial JSON>`, an MCP `set_develop {settings: …}` call, or a hand-written
-  preset naming one of the two — used to change the colour balance of photos they never mentioned. On a raw edited in
-  Kelvin the field the partial left out was re-read on the other scale: `wb {temp: 5800}` on a photo at 5000 K /
-  +12 tint came back at 5800 K with the +12 read as a relative shift, moving the green–magenta balance by a visible
-  amount. The kept field now carries the look the photo had, and the result is stored on the scale that photo is
-  edited on.
-- The same partial on a photo still on As Shot — or on a named white balance preset, on a raw with a Kelvin scale —
-  stored the number without any render ever reading it: those modes answer their own white, so the panel showed
-  5800 K over a picture still at the file's white. That white is now written out as Custom values before the partial
-  lands; a partial that names a mode itself still gets that mode.
-- Presets made from a photo and the crs / XMP and Luminar importers name mode, temperature, tint and scale together,
-  and partials naming both fields (or neither) behave exactly as before; a partial that says `"scale": "kelvin"` is
-  still read in Kelvin.
-
-### JPEG ICC chunks are validated before colour conversion
-- JPEG ICC profiles are assembled only when every chunk is present exactly once, the sequence numbers and
-  declared totals agree, and every APP2 segment is complete. Reordered valid chunks still work. An invalid
-  sequence uses the existing unsupported-profile sRGB fallback, including when the JPEG is a raw preview.
-
-### A folder's menu has one order, in Folders and in Local
-- Right-clicking a folder in Folders or in Local opens a menu in the same order, in groups: what it does with the
-  library's photos (Import to This Folder… or Add to My Photos…, Synchronize Folder…, Locate Missing Files…), then
-  reorganizing the disk (New Folder on Disk…, Rename Folder…, Move Folder To…, Move Selected Photos Here), Set Color
-  Label, Show in Finder, and removal last. A disk's row and a Local place keep that order with the groups that apply to
-  them.
-- An item that can't apply right now is grayed out, and its tooltip says why, instead of disappearing: Move Selected
-  Photos Here until photos are selected, Synchronize Folder… in Local for a folder with no library photo, Keep in
-  Local on a place already kept, Remove from Local for a folder inside a place.
-- Show in Finder on a folder, and Keep in Local, now say why when they fail.
-- Rename Folder… in Local starts from the folder's own name on disk, as in Folders.
-
-### Import from Folder… offers the photos you browsed in Local
-- A folder you browsed in Local no longer shows its photos as "In library" and out of reach in the Import review:
-  they are offered, checked, and importing them brings the browsed photos (with their edits) into the library where
-  they are. Copy and Move still leave them out, since they can't be copied from where they already are, and the
-  review says keywords and presets apply to new files only when they are set for such photos.
-- A copy you only browsed in Local (another path with the same content) no longer makes the import report "already in
-  the library", even after the library photo was permanently deleted and the library reopened, and a library photo
-  with the same content is matched before a browsed copy is promoted. Several browsed copies of one file import once.
-- Files with the same content as a browsed photo are listed as identical copies in the folder, not as already in the
-  library, which doesn't have them. With Copy or Move, which leave the browsed photo out, the first of those files
-  that isn't browsed itself is offered and checked instead, so that content can still be copied in from the folder.
-- A browsed file that another application replaced since (its size on disk is no longer the one that was browsed) is
-  read again: it is compared with the library by what it is now, and importing it brings its record up to date (size,
-  dimensions, content) as it joins the library.
-
-## 2026-10-25
-
-### `>=` and `<=` work in the search box
-- Fielded search tokens now take inclusive comparisons: `rating:>=3`, `iso:<=400`, `f:>=2.8`, `focal:<=50`. Before,
-  the `=` was read as part of the number, so such a search quietly showed no photos at all.
-
-### Import rename numbering stops safely at its limit
-- Copy and Move imports can use the last representable rename number once. If more renamed files remain, each is
-  reported as failed with guidance to lower `renameStart` or leave `rename` blank; completed transfers stay
-  accounted for and catalogued. A `renameStart` value outside this platform's range is rejected before setup.
-
-### Incomplete timestamps no longer become plausible photo times
-- An ISO date ending in `T`, a clock with extra components, or a malformed fractional second is no longer read as a
-  different valid time. XMP keeps the original property available and can use the next valid capture-time field;
-  GPX treats an invalid point time as untimed, so it cannot tag a photo at a fabricated time.
-
-### Invalid EXIF capture clocks no longer become plausible dates
-- An EXIF capture time with extra clock components is ignored as a whole. LightCraft can use a valid DateTimeDigitized,
-  IFD0 DateTime or embedded XMP value instead, while All Metadata continues to show the original tag. This also keeps
-  malformed timestamps from creating false matches when geotagging from a track log.
-
-### Drags reach the screen a frame sooner
-- The window queues one frame ahead of the display again instead of two, as eframe does by default (since #136 it
-  used egui-wgpu's high-throughput setting). Sliders, crop handles, brushes and every other drag show up one display
-  frame sooner: 8.3 ms at 120 Hz, 16.7 ms at 60 Hz. On a MacBook Pro at 120 Hz, a heavy develop drag went from
-  about 18 ms to about 10 ms between a frame being handed to macOS and macOS compositing it, with the same 120 frames
-  a second. On a Mac the window also holds one drawable less: its width × height × 4 bytes, 15–22 MB for a
-  1200–1500-point-wide window on a Retina display.
-
-### Save or read the metadata of a whole folder from a script
-- `folder.saveMetadata {path}` and `folder.readMetadata {path}` (CLI and MCP) do what Save Metadata to File and Read
-  Metadata from File do for the selection, for every library photo imported from a folder and the folders inside it.
-  Each run shows a row in the activity stack. With `background: true` the work only advances while the caller runs
-  `folder.metadataPump` again and again (the app doesn't yet), and then the row's ✕ stops it between photos: a stopped
-  save keeps the sidecars it wrote, a stopped read commits what it read as one undo step. A photo whose file can't be
-  written or read is listed in `failed` and the rest go on. The Folders menu items that use them come later.
-
-### Synchronize several folders at once
-- Choose several folders in the Folders list (Cmd/Ctrl+click, Shift+click) and right-click: Synchronize N Folders…
-  opens one dialog. It looks at the folders one after another and says, for each, what changed (new, moved, missing,
-  with changed sidecars) or that it is up to date; the choices below count them all.
-- Synchronize then brings the library up to date with each folder in turn, in the order the sidebar lists them, under
-  the bell. Each one removes, relinks or reads sidecars of only the photos its scan found, and a folder that is up to date, isn't there (moved,
-  renamed, or on a disk that isn't connected) or is a whole disk is passed over, and the dialog says why.
-- A folder inside another chosen one is taken in with it, not done twice. Cancel leaves nothing behind under the bell;
-  the rows waiting in line name their folder.
-
 ## 2026-10-26
 
 ### A move cut short is followed at the next open
@@ -386,7 +434,7 @@
   Photos… to relink files that moved.
 
 ### The sidebar from the keyboard
-- **View ▸ Keyboard in Sidebar** (Cmd+Alt+B) gives the keys to the left sidebar: a ring shows the row they are
+- **Window ▸ Keyboard in Sidebar** (Cmd+Alt+B) gives the keys to the left sidebar: a ring shows the row they are
   on, starting at what the grid shows. ↑ ↓ move (Home, End, Page Up, Page Down too), → unfolds a folder or
   section or steps into it, ← folds it or steps out, Enter or Space chooses the row as a click does, typing goes
   to the next row that starts so (the same letter again: the one after), and F2 renames an album, a keyword or
@@ -484,7 +532,6 @@
   with no window (`lightcraft-cli run`, the headless MCP server) gets the counts counted once and kept, followed
   through edits to a few photos instead of counted again with every call.
 
-
 ### Move Files to Trash
 - **Photo ▸ Move Files to Trash…** (also in a photo's menu in the grid) takes the selected photos out of the library
   and moves their files to the system Trash, with their XMP sidecars. It always asks first and lists the files.
@@ -532,6 +579,125 @@
 - macOS, Linux and the other Unix systems for now. On Windows and in the browser the command says it is not available and changes
   nothing. The answer has the counts `removed`, `trashed`, `erased`, `missing`, `shared`, `sidecarsLeft`, `skipped`
   and `stopped` (always 0 here), `noTrash` (the photos on a disk without a Trash) and `failed` (what could not move, and why).
+
+
+## 2026-10-25
+
+### A photo's right-click menu offers what the Photo menu does, grouped by task
+- Right-clicking a photo in the grid, the filmstrip, the loupe, Compare or Survey opens one menu, built like the menu
+  bar's Photo menu: the same names ("Delete 3 Photos"), keyboard shortcuts, check marks on the photo's rating, flag and
+  color label (with the label's color), and the same rows grayed out. Its rows are grouped by what they do: open the
+  photo; rate, flag, label and describe it (Add Keywords, and a Metadata submenu with Copy / Paste Metadata, metadata
+  presets, Edit Capture Time…, Fill Location from GPS, Save / Read Metadata and more); organize it (Add to Target Album,
+  Add to Album, Stack, Find Similar Photos); edit it (an Edit Settings submenu with copy, paste, Sync Settings, Auto
+  Settings and Apply Preset by group, then virtual copy, version, Photo Merge and a Rotate & Flip submenu); its file
+  (Rename Photos…, Move to Folder…, Duplicate, Convert to DNG, Reload from Disk); where it is (Locate Missing File… for
+  an original that is gone, Show in Finder / Folders and a new Copy File Path); export; and Delete on its own at the
+  end.
+- Rows that don't apply where the menu opened are left out: there is no Open in Detail in Detail, Open in Compare and
+  Open in Survey appear only once several photos are chosen, and Remove from Album and Set as Album Cover only inside an
+  album. Right-clicking one of several selected photos makes it the active photo and keeps the selection, so the rows
+  that act on one photo (Open in Detail, Copy Edit Settings, Create Version…) act on the photo right-clicked; in Compare
+  and Survey a filmstrip photo that the panes or tiles don't show stays as it is, so the active photo stays on screen.
+  The loupe's Zoom rows and Compare's Swap Compare Photos and Make Candidate the Select sit at the top of the same menu.
+  A grayed-out row says why when the pointer rests on it ("Select 2 or more photos"), and a row whose action can't run
+  says why instead of doing nothing. Rating, flagging or labeling from it moves on to the next photo when Auto Advance
+  is on, as the keys do. A preset applied from it gets the Presets panel's mark and Amount slider, as after a click
+  there.
+
+### A one-field white balance edit no longer shifts the other one
+- Settings that name only a white balance temperature, or only a tint — `develop.merge`,
+  `lightcraft-cli render --settings <partial JSON>`, an MCP `set_develop {settings: …}` call, or a hand-written
+  preset naming one of the two — used to change the colour balance of photos they never mentioned. On a raw edited in
+  Kelvin the field the partial left out was re-read on the other scale: `wb {temp: 5800}` on a photo at 5000 K /
+  +12 tint came back at 5800 K with the +12 read as a relative shift, moving the green–magenta balance by a visible
+  amount. The kept field now carries the look the photo had, and the result is stored on the scale that photo is
+  edited on.
+- The same partial on a photo still on As Shot — or on a named white balance preset, on a raw with a Kelvin scale —
+  stored the number without any render ever reading it: those modes answer their own white, so the panel showed
+  5800 K over a picture still at the file's white. That white is now written out as Custom values before the partial
+  lands; a partial that names a mode itself still gets that mode.
+- Presets made from a photo and the crs / XMP and Luminar importers name mode, temperature, tint and scale together,
+  and partials naming both fields (or neither) behave exactly as before; a partial that says `"scale": "kelvin"` is
+  still read in Kelvin.
+
+### JPEG ICC chunks are validated before colour conversion
+- JPEG ICC profiles are assembled only when every chunk is present exactly once, the sequence numbers and
+  declared totals agree, and every APP2 segment is complete. Reordered valid chunks still work. An invalid
+  sequence uses the existing unsupported-profile sRGB fallback, including when the JPEG is a raw preview.
+
+### A folder's menu has one order, in Folders and in Local
+- Right-clicking a folder in Folders or in Local opens a menu in the same order, in groups: what it does with the
+  library's photos (Import to This Folder… or Add to My Photos…, Synchronize Folder…, Locate Missing Files…), then
+  reorganizing the disk (New Folder on Disk…, Rename Folder…, Move Folder To…, Move Selected Photos Here), Set Color
+  Label, Show in Finder, and removal last. A disk's row and a Local place keep that order with the groups that apply to
+  them.
+- An item that can't apply right now is grayed out, and its tooltip says why, instead of disappearing: Move Selected
+  Photos Here until photos are selected, Synchronize Folder… in Local for a folder with no library photo, Keep in
+  Local on a place already kept, Remove from Local for a folder inside a place.
+- Show in Finder on a folder, and Keep in Local, now say why when they fail.
+- Rename Folder… in Local starts from the folder's own name on disk, as in Folders.
+
+### Import from Folder… offers the photos you browsed in Local
+- A folder you browsed in Local no longer shows its photos as "In library" and out of reach in the Import review:
+  they are offered, checked, and importing them brings the browsed photos (with their edits) into the library where
+  they are. Copy and Move still leave them out, since they can't be copied from where they already are, and the
+  review says keywords and presets apply to new files only when they are set for such photos.
+- A copy you only browsed in Local (another path with the same content) no longer makes the import report "already in
+  the library", even after the library photo was permanently deleted and the library reopened, and a library photo
+  with the same content is matched before a browsed copy is promoted. Several browsed copies of one file import once.
+- Files with the same content as a browsed photo are listed as identical copies in the folder, not as already in the
+  library, which doesn't have them. With Copy or Move, which leave the browsed photo out, the first of those files
+  that isn't browsed itself is offered and checked instead, so that content can still be copied in from the folder.
+- A browsed file that another application replaced since (its size on disk is no longer the one that was browsed) is
+  read again: it is compared with the library by what it is now, and importing it brings its record up to date (size,
+  dimensions, content) as it joins the library.
+
+
+### `>=` and `<=` work in the search box
+- Fielded search tokens now take inclusive comparisons: `rating:>=3`, `iso:<=400`, `f:>=2.8`, `focal:<=50`. Before,
+  the `=` was read as part of the number, so such a search quietly showed no photos at all.
+
+### Import rename numbering stops safely at its limit
+- Copy and Move imports can use the last representable rename number once. If more renamed files remain, each is
+  reported as failed with guidance to lower `renameStart` or leave `rename` blank; completed transfers stay
+  accounted for and catalogued. A `renameStart` value outside this platform's range is rejected before setup.
+
+### Incomplete timestamps no longer become plausible photo times
+- An ISO date ending in `T`, a clock with extra components, or a malformed fractional second is no longer read as a
+  different valid time. XMP keeps the original property available and can use the next valid capture-time field;
+  GPX treats an invalid point time as untimed, so it cannot tag a photo at a fabricated time.
+
+### Invalid EXIF capture clocks no longer become plausible dates
+- An EXIF capture time with extra clock components is ignored as a whole. LightCraft can use a valid DateTimeDigitized,
+  IFD0 DateTime or embedded XMP value instead, while All Metadata continues to show the original tag. This also keeps
+  malformed timestamps from creating false matches when geotagging from a track log.
+
+### Drags reach the screen a frame sooner
+- The window queues one frame ahead of the display again instead of two, as eframe does by default (since #136 it
+  used egui-wgpu's high-throughput setting). Sliders, crop handles, brushes and every other drag show up one display
+  frame sooner: 8.3 ms at 120 Hz, 16.7 ms at 60 Hz. On a MacBook Pro at 120 Hz, a heavy develop drag went from
+  about 18 ms to about 10 ms between a frame being handed to macOS and macOS compositing it, with the same 120 frames
+  a second. On a Mac the window also holds one drawable less: its width × height × 4 bytes, 15–22 MB for a
+  1200–1500-point-wide window on a Retina display.
+
+### Save or read the metadata of a whole folder from a script
+- `folder.saveMetadata {path}` and `folder.readMetadata {path}` (CLI and MCP) do what Save Metadata to File and Read
+  Metadata from File do for the selection, for every library photo imported from a folder and the folders inside it.
+  Each run shows a row in the activity stack. With `background: true` the work only advances while the caller runs
+  `folder.metadataPump` again and again (the app doesn't yet), and then the row's ✕ stops it between photos: a stopped
+  save keeps the sidecars it wrote, a stopped read commits what it read as one undo step. A photo whose file can't be
+  written or read is listed in `failed` and the rest go on. The Folders menu items that use them come later.
+
+### Synchronize several folders at once
+- Choose several folders in the Folders list (Cmd/Ctrl+click, Shift+click) and right-click: Synchronize N Folders…
+  opens one dialog. It looks at the folders one after another and says, for each, what changed (new, moved, missing,
+  with changed sidecars) or that it is up to date; the choices below count them all.
+- Synchronize then brings the library up to date with each folder in turn, in the order the sidebar lists them, under
+  the bell. Each one removes, relinks or reads sidecars of only the photos its scan found, and a folder that is up to date, isn't there (moved,
+  renamed, or on a disk that isn't connected) or is a whole disk is passed over, and the dialog says why.
+- A folder inside another chosen one is taken in with it, not done twice. Cancel leaves nothing behind under the bell;
+  the rows waiting in line name their folder.
 
 ## 2026-10-24
 
@@ -882,6 +1048,11 @@
   their photos again.
 - A library that already holds such a loop opens as before; only what the albums on it show changes.
 
+### Damaged JPEGs are marked, and can be found
+- A JPEG that was cut short now says so. Info shows "Damaged file: cut short, shown from the data present"; the
+  import review puts a "Damaged" badge on it; the message after an import counts them ("· 2 damaged"); and a
+  smart album can collect them with the rule File → Damaged File.
+
 ## 2026-10-23
 
 ### Messages no longer hide each other
@@ -990,6 +1161,11 @@
   Monitor tab, the model installation messages) are in every language now. "(library default)" and "starting…" are
   translated too.
 
+### The filmstrip rings the selected photos before their thumbnails load
+- A selected photo's cell in the filmstrip shows its ring (white for the active photo, gray for the others) on the
+  placeholder while its thumbnail is still loading, as the grid already did. Before, the active photo's cell looked
+  like the other selected cells until the thumbnails arrived.
+
 ### Tab leaves the name field in New Album, New Smart Album and the name prompts
 - In New Album, New Smart Album, Save Metadata Preset and the other dialogs with one name field, the field has the
   keyboard focus when the dialog opens, and Tab now moves on to the check box, Cancel and OK (Shift+Tab goes back).
@@ -1058,6 +1234,15 @@
   not changed since; otherwise the files are checked again. If photos change while the files are being checked (an
   import adds some, others are removed, moved to Recently Deleted or relinked), the answer leaves out the photos that
   no longer apply, a photo added meanwhile is not part of that check, and the answer is not kept for a later request.
+
+
+### JPEGs that were cut short now import
+- A JPEG that stops before its end (an interrupted download or copy) used to be refused as "not readable". It now
+  imports and shows what is there: a progressive JPEG from the scans that arrived (blurry, then sharper the more
+  of it came), a baseline JPEG from the rows that arrived, the rest flat grey. The original file is never changed.
+  Still refused: a file with no picture data yet, a cut JPEG of a kind only the slower decoder reads (CMYK, 12-bit,
+  lossless, separate scans per colour), arithmetic-coded JPEGs, and cut files of other formats. The catalog
+  remembers that such a photo was cut short; Reload clears that once the file is whole.
 
 ### Choose where a Lightroom catalog goes
 - File ▸ Import Lightroom Catalog… now asks first: merge the catalog's photos, collections and edits into the
@@ -1637,6 +1822,79 @@
   click it to add that folder to Local as a place of its own (a message says so), where it opens further. A folder
   that is already a place of its own says "Opens as its own place" there instead, where the listing stops.
 
+
+### Sample photos, when you want them
+- Help ▸ Add Sample Photos adds 24 procedural sample photos with their keywords and their albums, to try LightCraft on.
+  The albums come in one folder, "Sample Photos" (named in the interface's language), apart from the ones you make, and
+  a message says how many photos came and where to look. It is one undo step, and it is refused while samples are
+  already in the library, Recently Deleted included.
+- Help ▸ Remove Sample Photos takes out every sample photo (virtual copies and those in Recently Deleted too), the albums
+  only they filled and the folders left empty, in one undo step. An album that also holds a photo of yours stays, with
+  that photo. `library.addSamples` (with an optional `folder` name) and `library.removeSamples` do the same for agents.
+
+### A new library asks how to begin
+- A new library made by the desktop app now starts empty instead of quietly filling with the 24 procedural demo
+  photos. Its first screen, "Welcome to LightCraft", offers Import Photos…, Import Lightroom Catalog… and Try Sample
+  Photos (which does what Help ▸ Add Sample Photos does). `--memory` still starts with the demo photos (`--no-demo` for
+  none), as do `lightcraft-cli --demo` and the web build.
+- While sample photos are in a library, a tinted banner under the top bar says so and offers Import Photos… and Remove
+  Sample Photos; once photos of your own are in, it offers Remove Sample Photos or Keep Them. Hide and Keep Them close it
+  until samples are added again. After a removal from the banner a message says how many photos went and that Edit →
+  Undo brings them back. Screen readers read out the banner's words, and every message (toast) as it appears.
+- A ghost button (the banner's Hide and Keep Them) shows an edge while it is pointed at or pressed.
+
+### The welcome has the window
+- While the library is empty, the welcome is the one thing asking for attention: the Tools panel steps aside (it comes
+  back as it was once photos of your own arrive, an editing tool such as Crop as the Edit panel, and the sample
+  photos open the Edit panel; opening it meanwhile keeps it open), and the bottom bar's rating, flags and Copy Edit Settings wait until there is a photo to use them on. The grid's
+  photo count, the bottom bar and Detail's empty filmstrip are not drawn, and the sidebar's empty Albums, By Date,
+  Folders and Keywords sections fold into one line ("Albums, dates, folders and keywords appear here as photos
+  arrive"). The welcome is centred below the grid's header and its Filter Bar.
+- The welcome's message reads as a short paragraph: its title in the brightest text, its words at most 540 points wide
+  and wrapped evenly, not one long line over a short one. The other empty states keep their one line, with the brighter title.
+- Under the welcome's buttons, a row of up to five sample photos (all of them unedited; three or four in a narrow
+  window), with "Or explore LightCraft with 24 sample photos" over them: click one to add the samples and open it in
+  Detail, ready to edit (with the Edit panel). Where the row doesn't fit, and in the web build, Try Sample
+  Photos is a button as before. A session whose library couldn't be opened offers no Try Sample Photos there (Help ▸ Add
+  Sample Photos still adds them).
+- The welcome's buttons are drawn by the button component: Import Photos… is primary, the others secondary.
+
+### The welcome reads for everyone
+- Screen readers now hear the empty library's welcome, not only its buttons: the title (as a heading), what it says,
+  the hint and the sample row's caption, and the right panel's note beside it.
+- A new library's welcome puts the keyboard on Import Photos…, so Enter or Space starts; the welcome's buttons show an
+  accent ring where the keyboard is. On the welcome's buttons, the sample photos and the samples banner, a focused
+  button no longer takes the keyboard from shortcuts such as Import Photos…'s own: it keeps only Enter, Space, Tab, Esc
+  and the arrows. Holding Alt as the window opens, to choose a library, takes the keyboard from the welcome's button.
+- Whether the row of sample photos fits the window is measured from the message instead of guessed, so a shorter window
+  than before still shows it.
+- The welcome also says that a folder can be looked through without importing it, under Local in the sidebar (the
+  desktop app).
+
+### Every way to the samples leads to the editor
+- However the sample photos come in while an empty library's welcome is showing (a thumbnail, the welcome's Try Sample
+  Photos button, Help ▸ Add Sample Photos, an agent), they open on a sample in Detail with the Edit panel, ready to
+  edit; a thumbnail opens the one clicked. A library that already has photos, or a Local folder or Recently Deleted on
+  screen, stays where it was.
+- The banner then walks the first edit through: "Drag any slider: the original never changes. Press Y to compare before
+  and after."; once a slider is dragged, "That's your first edit. Press Y to see it beside the original."; while a
+  Before / After layout shows it, "The original beside your edit: the file itself never changes."; then the usual
+  message. Y is the default key of Before/After Side by Side: the banner names whatever key it is bound to, and with
+  none bound it leaves the key out ("That's your first edit. View → Before/After Side by Side shows it beside the
+  original."). A rating or a keyword is not an edit; another unedited sample, or an undo back to the start, is invited
+  again.
+
+### Menus that fit the screen
+- The View menu is down from 63 rows to 36, so it opens without scrolling on a laptop's menu bar. Its overlays,
+  before/after and slideshow items sit in submenus: Loupe Overlay, Before/After, Mask Overlay (every overlay mode and
+  colour, with the current one checked), Crop Overlay and Slideshow.
+- The panel toggles (My Photos Panel, Right Panel, Sidebar Sections, Photo Counts, Filmstrip, Histogram, Navigator) moved to
+  the Window menu. Photo ▸ Metadata gathers the metadata commands, including Metadata Preset, Save Metadata to File
+  and Detect Faces.
+- File no longer lists Discard Preview Cache twice (it is one command), View no longer lists
+  Choose and Layout Image twice, and every command has a fixed place instead of sitting in a pile at the end of
+  its menu.
+- Keyboard shortcuts are unchanged.
 
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a

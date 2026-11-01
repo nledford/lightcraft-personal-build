@@ -108,7 +108,7 @@ fn anchor_grid(ui: &mut egui::Ui, id: &str, value: &mut Anchor) -> bool {
                 for c in 0..3 {
                     let i = r * 3 + c;
                     let (Some(a), Some(g)) = (ANCHORS.get(i), GLYPHS.get(i)) else { continue };
-                    if crate::widgets::text_button(ui, &format!("{id}-{i}"), g, *value == *a).clicked() && *value != *a {
+                    if crate::widgets::choice_button(ui, &format!("{id}-{i}"), g, *value == *a).clicked() && *value != *a {
                         *value = *a;
                         changed = true;
                     }
@@ -177,9 +177,9 @@ pub fn sections(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             row(ui, t, "Image", |ui| {
                 if app.services.pick_files.is_some()
                     && crate::button::Button::new("Choose…").small().widget("button:slideshowPlateChoose").show(ui).clicked()
-                    && let Some(f) = app.services.pick_files.as_mut().and_then(|pick| pick().into_iter().next())
                 {
-                    set(app, plate(json!({"image": f})));
+                    // the dialog runs off the UI thread; the image is set when it closes
+                    crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::SlidePlateImage);
                 }
                 text(app, ui, "slideshowPlateImage", 0, &p.image, "logo.png", &|v| plate(json!({"image": v})));
             });

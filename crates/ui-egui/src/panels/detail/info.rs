@@ -1,7 +1,7 @@
 use super::geometry::focus_box;
 use super::{Color32, LightcraftApp, PhotoId, Pos2, Rect, Sense, Stroke, Tokens, json, pos2, register, register_geometry, vec2};
 
-/// Draw the camera's focus box over a photo drawn in `img` (View ▸ Focus Point): green corner
+/// Draw the camera's focus box over a photo drawn in `img` (View ▸ Loupe Overlay ▸ Focus Point): green corner
 /// brackets with a dark keyline, the way cameras show their AF frame, never smaller than 14 pt.
 /// `key` names it for tests and the control channel (`canvas:focusPoint`, `compare:focusPoint:<id>`).
 pub(crate) fn draw_focus_point(p: &egui::Painter, img: Rect, photo: &lightcraft_catalog::Photo, key: &str) {
@@ -189,7 +189,7 @@ pub(super) fn filter_pill(app: &mut LightcraftApp, ui: &mut egui::Ui, canvas: Re
     let resp = ui.interact(r, egui::Id::unique("loupe-filter-pill"), Sense::click());
     crate::widgets::announce(&resp, crate::i18n::tr("Filters"));
     register(ui, "loupe:filters", r);
-    p.rect_filled(r, 10.0, Color32::from_black_alpha(if resp.hovered() { 225 } else { 185 }));
+    p.rect_filled(r, 10.0, crate::transparency::hud(p.ctx(), if resp.hovered() { 225 } else { 185 }));
     let text_clip = Rect::from_min_max(r.min, pos2(r.right() - 24.0, r.max.y));
     p.with_clip_rect(text_clip).galley(pos2(r.left() + 10.0, r.center().y - g.size().y / 2.0), g, Color32::from_gray(225));
     let (c, m) = (pos2(r.right() - 13.0, r.center().y), 3.0);
@@ -210,7 +210,7 @@ pub(super) fn preview_only_pill(ui: &mut egui::Ui, canvas: Rect, reason: &str) {
     let g = p.layout_no_wrap(text, t.font(12.0), Color32::WHITE);
     let size = vec2(g.size().x + 40.0, 26.0);
     let r = Rect::from_min_size(pos2(canvas.center().x - size.x / 2.0, canvas.top() + 12.0), size);
-    p.rect_filled(r, 13.0, Color32::from_black_alpha(185));
+    p.rect_filled(r, 13.0, crate::transparency::hud(p.ctx(), 185));
     crate::icons::paint(&p, Rect::from_center_size(pos2(r.left() + 16.0, r.center().y), vec2(15.0, 15.0)), crate::icons::Icon::Info, t.caution);
     p.galley(pos2(r.left() + 29.0, r.center().y - g.size().y / 2.0), g, Color32::WHITE);
     register(ui, "notice:previewOnly:loupe", r);
@@ -246,17 +246,22 @@ fn pretty_date(iso: &str) -> String {
 
 /// How long a render may be on its way, with nothing new on screen, before the loupe says
 /// "Rendering…" (s): as long as the activity stack waits before it shows a task.
-pub(super) const RENDERING_AFTER_SECS: f64 = 0.5;
+pub(crate) const RENDERING_AFTER_SECS: f64 = 0.5;
+
+/// The same wait while View Options' Show message when loading or rendering photos is off: the
+/// person asked not to be told about ordinary renders, but a photo that is still the old picture
+/// after this long looks like a frozen app, so the loupe says so anyway (s).
+pub(crate) const SLOW_RENDERING_AFTER_SECS: f64 = 3.0;
 
 /// What [`rendering_overdue`] keeps between frames while a render is coming: the texture keys on
 /// screen, since when, and whether the pill is up.
 pub(crate) type RenderingWait = Option<([Option<u64>; 4], f64, bool)>;
 
-/// Whether the loupe says "Rendering…": a render has been `coming` for [`RENDERING_AFTER_SECS`] with
-/// no new texture `keys` on screen. The wait starts when the render starts coming (an idle app draws
-/// no frames, so the last one may be long ago), and once up the pill stays until nothing is coming:
-/// drafts slower than the wait don't make it blink.
-pub(crate) fn rendering_overdue(wait: &mut RenderingWait, keys: [Option<u64>; 4], coming: bool, now: f64) -> bool {
+/// Whether the loupe says "Rendering…": a render has been `coming` for `after` seconds (the
+/// constants above) with no new texture `keys` on screen. The wait starts when the render starts
+/// coming (an idle app draws no frames, so the last one may be long ago), and once up the pill stays
+/// until nothing is coming: drafts slower than the wait don't make it blink.
+pub(crate) fn rendering_overdue(wait: &mut RenderingWait, keys: [Option<u64>; 4], coming: bool, now: f64, after: f64) -> bool {
     if !coming {
         *wait = None;
         return false;
@@ -265,8 +270,24 @@ pub(crate) fn rendering_overdue(wait: &mut RenderingWait, keys: [Option<u64>; 4]
     if !*up && *seen != keys {
         (*seen, *since) = (keys, now);
     }
-    *up |= now - *since > RENDERING_AFTER_SECS;
+    *up |= now - *since > after;
     *up
+}
+
+/// [`rendering_overdue`] for a pane that shows one photo at a time: the wait belongs to the photo
+/// in `state`, so one moved in starts its own (the pill of the last photo doesn't carry over).
+pub(crate) fn rendering_overdue_for(
+    state: &mut (PhotoId, RenderingWait),
+    id: PhotoId,
+    keys: [Option<u64>; 4],
+    coming: bool,
+    now: f64,
+    after: f64,
+) -> bool {
+    if state.0 != id {
+        *state = (id, None);
+    }
+    rendering_overdue(&mut state.1, keys, coming, now, after)
 }
 
 /// A pill over the photo, 12 pt above the bottom of `over` or just above the Navigator when that
@@ -284,7 +305,7 @@ pub(crate) fn loupe_pill(ui: &egui::Ui, canvas: Rect, over: Rect, navigator: Opt
     if let Some(nav) = navigator.filter(|n| n.expand(8.0).intersects(r)) {
         r = Rect::from_min_size(pos2(nav.right() - size.x, nav.top() - 8.0 - size.y), size);
     }
-    p.rect_filled(r, 10.0, Color32::from_black_alpha(185));
+    p.rect_filled(r, 10.0, crate::transparency::hud(p.ctx(), 185));
     if caution {
         crate::icons::paint(&p, Rect::from_center_size(pos2(r.left() + 16.0, r.center().y), vec2(13.0, 13.0)), crate::icons::Icon::Info, t.caution);
     }
@@ -434,7 +455,7 @@ mod info_overlay_tests {
         lines
     }
 
-    /// View ▸ View Options: Info 1 and Info 2 each show the three lines chosen for them, in that
+    /// View ▸ Loupe Overlay ▸ View Options…: Info 1 and Info 2 each show the three lines chosen for them, in that
     /// order, without the lines set to None.
     #[test]
     fn the_info_overlay_shows_the_lines_chosen_in_view_options() {

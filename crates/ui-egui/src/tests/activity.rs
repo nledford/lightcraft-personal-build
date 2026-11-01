@@ -156,7 +156,7 @@ fn many_tasks_scroll_inside_the_window_newest_first() {
 #[test]
 fn not_cancellable_rows_have_no_cross() {
     let mut h = demo();
-    let g = h.app.session.activity.start("faces", "Finding faces", Cancel::No);
+    let g = h.app.session.activity.start("applePhotos", "Adding to Apple Photos", Cancel::No);
     wait_visible(&mut h);
     open_list(&mut h);
     assert!(has(&h, &format!("activity:row:{}", g.id())));
@@ -522,8 +522,63 @@ fn cancelling_task_does_not_block_quit() {
     let mut h = demo();
     let g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
     h.app.session.activity.cancel(g.id()).unwrap();
-    let _f = h.app.session.activity.start("faces", "Finding faces", Cancel::No);
     assert!(crate::panels::notices::may_close(&mut h.app));
+}
+
+#[test]
+fn quit_names_a_running_job_that_cannot_be_stopped() {
+    let mut h = demo();
+    let _f = h.app.session.activity.start("applePhotos", "Adding to Apple Photos", Cancel::No);
+    assert!(!crate::panels::notices::may_close(&mut h.app), "quitting would leave the job running unannounced");
+    let Some(crate::QuitPrompt::Tasks(text)) = h.app.quit_prompt.clone() else { panic!("{:?}", h.app.quit_prompt) };
+    let unstoppable = crate::i18n::tr_format!(
+        "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.",
+        names = crate::i18n::tr("Adding to Apple Photos")
+    );
+    assert_eq!(text, unstoppable);
+}
+
+#[test]
+fn a_quick_read_only_check_does_not_make_quit_ask() {
+    let mut h = demo();
+    let _check = h.app.session.activity.start("findMissing", "Find Missing Photos", Cancel::Quick);
+    assert!(crate::panels::notices::may_close(&mut h.app), "nothing the user made is lost by quitting during a check");
+    assert!(h.app.quit_prompt.is_none());
+}
+
+#[test]
+fn quit_with_both_kinds_says_which_stop_and_which_are_not_waited_for_and_quit_anyway_does_not_ask_twice() {
+    let png = |img: &lightcraft_raster::Rgba8| {
+        lightcraft_codecs::encode_png(&lightcraft_codecs::EncodeImage::rgba8(img), &lightcraft_codecs::EncodeMeta::default()).unwrap_or_default()
+    };
+    let write = |p: &str, b: &[u8]| std::fs::write(p, b).map_err(|e| e.to_string());
+    let app = LightcraftApp::new(
+        lightcraft_engine::Session::with_demo(),
+        Services { png: Some(Box::new(png)), write_new: Some(Box::new(write)), ..Default::default() },
+    );
+    let mut h = Headless::new(app, [1200.0, 800.0], 1.0);
+    h.settle(T);
+    let stoppable = h.app.session.activity.start("faces", "Finding faces", Cancel::Yes);
+    let _unstoppable = h.app.session.activity.start("applePhotos", "Adding to Apple Photos", Cancel::No);
+    wait_visible(&mut h);
+    assert!(!crate::panels::notices::may_close(&mut h.app));
+    let Some(crate::QuitPrompt::Tasks(text)) = h.app.quit_prompt.clone() else { panic!("{:?}", h.app.quit_prompt) };
+    let stops = crate::i18n::tr_format!("1 task is still running: {names}. Quitting stops it.", names = crate::i18n::tr("Finding faces"));
+    let unstoppable = crate::i18n::tr_format!(
+        "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.",
+        names = crate::i18n::tr("Adding to Apple Photos")
+    );
+    assert_eq!(text, format!("{stops}\n{unstoppable}"));
+    h.step();
+    if let Some(p) = std::env::var_os("LIGHTCRAFT_TEST_SHOTS") {
+        let r = h.request("ui.screenshot", json!({"path": std::path::Path::new(&p).join("quit-prompt.png").to_string_lossy(), "headless": true}), T);
+        assert_eq!(r["ok"], true, "{r}");
+    }
+    click(&mut h, "button:quitAnyway");
+    assert!(stoppable.is_cancelled(), "the one that can stop is asked to");
+    assert!(h.quit_requested(), "Quit Anyway ends the app");
+    // the window's close request is checked again (frame.rs); the job that can't be stopped must not bring the prompt back
+    assert!(crate::panels::notices::may_close(&mut h.app), "the job that can't be stopped brings the prompt back, so the app never quits");
 }
 
 /// A slow disk: every file takes `ms` to write (the UI must not wait for it).
@@ -574,6 +629,136 @@ fn dead_export_worker_leaves_no_running_row() {
     start_export(&mut h, 2);
     assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
     assert!(h.app.session.activity.list().is_empty());
+}
+
+/// A writer that records every path it is given (and takes `ms` per file).
+fn recording_writer(ms: u64) -> (crate::SharedWrite, std::sync::Arc<std::sync::Mutex<Vec<String>>>) {
+    let written = std::sync::Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+    let w = written.clone();
+    let write: crate::SharedWrite = std::sync::Arc::new(move |p: &str, _: &[u8]| {
+        std::thread::sleep(Duration::from_millis(ms));
+        w.lock().unwrap().push(p.to_string());
+        Ok(())
+    });
+    (write, written)
+}
+
+/// Starting an export answers at once, with its row in the stack and ✕: the photos are prepared over the
+/// frames that follow (a few milliseconds each, on the UI thread), not before the answer. Then the batch
+/// runs as ever.
+#[test]
+fn export_row_is_there_before_its_photos_are_prepared() {
+    let mut h = demo();
+    crate::export_task::set_prep_budget(Duration::ZERO);
+    let (write, written) = recording_writer(1);
+    h.app.services.write_shared = Some(write);
+    start_export(&mut h, 5);
+    let seen = h.request("ui.inspect", json!({}), T)["result"].clone();
+    assert_eq!(seen["export"]["running"]["preparing"], true, "{}", seen["export"]);
+    assert_eq!(seen["export"]["running"]["total"], 5, "{}", seen["export"]);
+    assert_eq!(seen["activity"][0]["kind"], "export", "{}", seen["activity"]);
+    assert_eq!(seen["activity"][0]["cancellable"], true, "{}", seen["activity"]);
+    assert!(written.lock().unwrap().is_empty(), "nothing is written before the photos are prepared");
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
+    assert_eq!(written.lock().unwrap().len(), 5, "{:?}", written.lock().unwrap());
+    let last = h.app.last_export_result.clone().expect("the export reports");
+    assert_eq!(last["files"].as_array().map(Vec::len), Some(5), "{last}");
+    assert!(h.app.session.activity.list().is_empty(), "the row is gone");
+}
+
+/// The ✕ works while the photos are being prepared: nothing is prepared further or written, and the export
+/// ends as a cancelled one does.
+#[test]
+fn export_can_be_stopped_while_its_photos_are_prepared() {
+    let mut h = demo();
+    crate::export_task::set_prep_budget(Duration::ZERO);
+    let (write, written) = recording_writer(1);
+    h.app.services.write_shared = Some(write);
+    start_export(&mut h, 5);
+    let seen = h.request("ui.inspect", json!({}), T)["result"].clone();
+    assert_eq!(seen["export"]["running"]["preparing"], true, "{}", seen["export"]);
+    let id = seen["activity"][0]["id"].as_u64().unwrap();
+    assert_eq!(h.request("engine.execute", json!({"command": "activity.cancel", "params": {"id": id}}), T)["ok"], true);
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
+    assert!(written.lock().unwrap().is_empty(), "{:?}", written.lock().unwrap());
+    assert!(h.app.last_export_result.as_ref().is_some_and(|r| r["cancelled"] == true), "{:?}", h.app.last_export_result);
+    assert!(h.app.session.activity.list().is_empty());
+}
+
+/// A photo that can't be exported (here: a demo photo has no original file to copy) used to be refused by
+/// `app.export` before anything started; now the export starts and ends with that error in a toast, with
+/// nothing written and no row left.
+#[test]
+fn a_photo_that_cannot_be_prepared_ends_the_export_with_its_error() {
+    let mut h = demo();
+    crate::export_task::set_prep_budget(Duration::ZERO);
+    let (write, written) = recording_writer(1);
+    h.app.services.write_shared = Some(write);
+    let ids: Vec<u64> = h.app.session.visible_cloned().iter().take(3).map(|p| p.0).collect();
+    let params = json!({"ids": ids, "dir": "/lc-test-out", "format": "original", "background": true});
+    let r = h.request("engine.execute", json!({"command": "app.export", "params": params}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
+    let toast = h.app.ui.toast.clone().map(|t| t.text).unwrap_or_default();
+    assert!(toast.contains("generated demo photo"), "{toast}");
+    assert!(written.lock().unwrap().is_empty(), "nothing is written");
+    assert!(h.app.session.activity.list().is_empty(), "no row is left");
+}
+
+fn preparing(h: &Headless) -> bool {
+    h.app.export.as_ref().is_some_and(|e| e.status()["preparing"] == true)
+}
+
+/// The photos are set up whatever the window shows: a full-screen preview (which skips the panels' pass)
+/// doesn't hold the export at "Preparing photos…".
+#[test]
+fn an_exports_photos_are_prepared_in_a_full_screen_preview() {
+    let mut h = demo();
+    crate::export_task::set_prep_budget(Duration::ZERO);
+    let (write, written) = recording_writer(1);
+    h.app.services.write_shared = Some(write);
+    start_export(&mut h, 5);
+    assert!(preparing(&h));
+    h.app.ui.fullscreen = true;
+    assert!(h.step_until(Duration::from_secs(60), |h| !preparing(h)), "still preparing in full screen");
+    h.app.ui.fullscreen = false;
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
+    assert_eq!(written.lock().unwrap().len(), 5, "{:?}", written.lock().unwrap());
+}
+
+/// Photo ids belong to one library: when another is opened while the photos are being prepared, the export
+/// ends as a cancelled one does, and nothing is exported from the new library.
+#[test]
+fn switching_library_while_an_export_prepares_stops_it() {
+    let mut h = demo();
+    crate::export_task::set_prep_budget(Duration::ZERO);
+    let (write, written) = recording_writer(1);
+    h.app.services.write_shared = Some(write);
+    start_export(&mut h, 5);
+    assert!(preparing(&h));
+    let dir = std::env::temp_dir().join(format!("lc-export-switch-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    h.app.session.open_library(&dir, true).unwrap();
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
+    assert!(written.lock().unwrap().is_empty(), "{:?}", written.lock().unwrap());
+    assert!(h.app.last_export_result.as_ref().is_some_and(|r| r["cancelled"] == true), "{:?}", h.app.last_export_result);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A one-shot headless run (`lightcraft-cli snapshot`) that ends, or waits for Apple Photos, while an export
+/// is still setting its photos up would leave Photos' slot held by an export nothing is working on: it
+/// first lets the photos get prepared and the worker start.
+#[test]
+fn a_headless_run_lets_an_exports_photos_get_prepared_before_it_ends() {
+    let mut h = demo();
+    crate::export_task::set_prep_budget(Duration::ZERO);
+    let (write, _written) = recording_writer(1);
+    h.app.services.write_shared = Some(write);
+    start_export(&mut h, 5);
+    assert!(preparing(&h));
+    h.finish_preparing();
+    assert!(!preparing(&h), "the worker has not started");
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
 }
 
 /// A folder of `n` stand-in JPEGs and an app whose file probe takes 100 ms each (a slow drive).
@@ -1124,7 +1309,8 @@ fn demo_on_disk() -> Headless {
     h
 }
 
-/// A folder with a valid PNG and, in a subfolder, a JPEG cut short before its end-of-image marker (the real reason).
+/// A folder with a valid PNG and, in a subfolder, a JPEG cut short before any image data (the real reason). One cut short with data to show
+/// imports from what is present and counts as damaged, not as unreadable (#2705).
 fn folder_with_a_truncated_jpeg(tag: &str) -> std::path::PathBuf {
     use lightcraft_codecs::{ChromaSubsampling, EncodeImage, EncodeMeta};
     let dir = std::env::temp_dir().join(format!("lc-activity-unreadable-{tag}-{}", std::process::id()));
@@ -1134,7 +1320,8 @@ fn folder_with_a_truncated_jpeg(tag: &str) -> std::path::PathBuf {
     let png = lightcraft_codecs::encode_png(&EncodeImage::rgba8(&img), &EncodeMeta::default()).unwrap();
     std::fs::write(dir.join("good.png"), png).unwrap();
     let mut jpeg = lightcraft_codecs::encode_jpeg(&EncodeImage::rgba8(&img), 90, ChromaSubsampling::S444, &EncodeMeta::default()).unwrap();
-    jpeg.truncate(jpeg.len() - 2);
+    let scan = jpeg.windows(2).position(|w| w == [0xFF, 0xDA]).expect("a scan");
+    jpeg.truncate(scan);
     std::fs::write(dir.join("trip").join("bad.jpg"), jpeg).unwrap();
     dir
 }
@@ -1933,4 +2120,67 @@ fn notifications_are_on_for_settings_saved_before_they_existed() {
     let old: crate::state::AppSettings = serde_json::from_value(json!({"libraryPath": "/somewhere"})).unwrap();
     assert!(old.notify_when_done);
     assert_eq!(serde_json::to_value(&old).unwrap()["notifyWhenDone"], true);
+}
+
+/// An import that brought in JPEGs cut short says how many in its message, and the photos carry
+/// the mark.
+#[test]
+fn import_message_counts_the_jpegs_cut_short() {
+    let (mut h, dir) = slow_import("damaged", 3);
+    h.app.session.media.file_probe = Some(std::sync::Arc::new(|p: &str| {
+        Ok(lightcraft_engine::media::ProbeInfo {
+            width: 60,
+            height: 40,
+            format: "JPEG".into(),
+            content_hash: Some(p.to_string()),
+            truncated: p.ends_with("IMG_001.jpg"),
+            ..Default::default()
+        })
+    }));
+    crate::import::start_paths(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.import.is_none()));
+    assert_eq!(h.app.session.catalog.len(), 3);
+    assert_eq!(h.app.session.catalog.photos().filter(|p| p.truncated).count(), 1);
+    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Imported 3 photos · 1 damaged"));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A row that only waits on something outside the app (XMP writes waiting for their folder) doesn't keep the stack looking
+/// again every tenth of a second once it shows: it can stay for hours. Any other row, or a young one, does.
+#[test]
+fn a_row_that_only_waits_does_not_keep_the_stack_polling() {
+    use crate::panels::activity::{SHOW_AFTER_MS, needs_poll};
+    let s = lightcraft_engine::Session::new();
+    let waiting = s.activity.start("xmpWaiting", "Waiting to write XMP sidecars", Cancel::No);
+    let running = s.activity.start("export", "Exporting", Cancel::Yes);
+    let rows = s.activity.list();
+    let of = |kind: &str| rows.iter().find(|t| t.kind == kind).cloned().unwrap();
+    let (mut wait, mut run) = (of("xmpWaiting"), of("export"));
+    wait.age_ms = SHOW_AFTER_MS + 1;
+    run.age_ms = SHOW_AFTER_MS + 1;
+    assert!(!needs_poll(&[wait.clone()]), "an old waiting row is still");
+    assert!(needs_poll(&[wait.clone(), run]), "a running task moves");
+    wait.age_ms = 0;
+    assert!(needs_poll(&[wait]), "a young one is about to be shown");
+    assert!(!needs_poll(&[]), "nothing to look at");
+    drop((waiting, running));
+}
+
+/// A row that only waits has no "0 %": the line beside the bell names it alone, and its ring sweeps (its total is a count
+/// of photos, not work to finish); beside a running task the mean is that task's alone.
+#[test]
+fn a_row_that_only_waits_shows_no_percent() {
+    use crate::panels::activity::{overall, readout_text};
+    let s = lightcraft_engine::Session::new();
+    let waiting = s.activity.start("xmpWaiting", "Waiting to write XMP sidecars", Cancel::No);
+    waiting.progress(0, 2);
+    let running = s.activity.start("export", "Exporting", Cancel::Yes);
+    running.progress(1, 2);
+    let rows = s.activity.list();
+    let of = |kind: &str| rows.iter().find(|t| t.kind == kind).cloned().unwrap();
+    let (wait, run) = (of("xmpWaiting"), of("export"));
+    assert_eq!(readout_text(std::slice::from_ref(&wait)), "Waiting to write XMP sidecars");
+    assert_eq!(overall(std::slice::from_ref(&wait)), None);
+    assert_eq!(overall(&[wait, run]), Some(0.5));
+    drop((waiting, running));
 }
