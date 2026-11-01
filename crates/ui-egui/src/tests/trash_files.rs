@@ -203,6 +203,42 @@ fn wait_for_erase(h: &mut Headless) {
 fn toast(h: &Headless) -> String {
     h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default()
 }
+/// TEMPORARY instrumentation: to stderr (the test harness prints it on a failure) and, when the
+/// path exists, to a scratch file.
+fn instr(line: String) {
+    eprintln!("{line}");
+    use std::io::Write;
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/Users/nledford/.local/state/lightcraft-scratch/coord-scratch/A/IntegGateFix/instr.log")
+    {
+        let _ = writeln!(f, "{line}");
+    }
+}
+/// TEMPORARY: which busy() terms hold.
+fn why_busy(h: &Headless) -> String {
+    let mut v = Vec::new();
+    if h.app.renderer.in_flight() > 0 { v.push("renders"); }
+    if crate::panels::left::fs_cached_running(&h.view.ctx) > 0 { v.push("fs"); }
+    if h.app.caches.album_recount_running() { v.push("recount"); }
+    if h.app.caches.library.busy() { v.push("lib"); }
+    if h.app.merge.busy() { v.push("merge"); }
+    if h.app.scan.is_some() { v.push("scan"); }
+    if h.app.sync.is_some() || h.app.sync_run.is_some() || h.app.sync_queued.is_some() || h.app.sync_scans.is_some() { v.push("sync"); }
+    if h.app.move_run.is_some() { v.push("move"); }
+    if h.app.trash_run.is_some() { v.push("trash"); }
+    if h.app.relocate.is_some() { v.push("relocate"); }
+    if h.app.import.is_some() { v.push("import"); }
+    if h.app.export.is_some() { v.push("export"); }
+    if h.app.session.denoise_busy() { v.push("denoise"); }
+    if !h.app.tasks.is_empty() { v.push("tasks"); }
+    if !h.app.session.activity.waiting().is_empty() { v.push("waiting"); }
+    if !h.app.synthetic.is_empty() { v.push("synthetic"); }
+    if !h.app.pending_gestures.is_empty() { v.push("gestures"); }
+    if !h.events.is_empty() { v.push("events"); }
+    if v.is_empty() { "quiet".into() } else { v.join(",") }
+}
 
 #[test]
 fn move_files_to_trash_asks_first_and_undo_brings_photo_and_file_back() {
@@ -340,12 +376,43 @@ fn photos_on_a_disk_without_a_trash_get_a_second_question_before_anything_is_era
     click(&mut h, "button:dialogOk");
     assert!(matches!(h.app.ui.dialog, Some(Dialog::TrashFiles(TrashAsk::Erase { .. }))), "its button waits a moment");
     assert!(in_library(&h, ids[1]) && exists(&paths[1]) && exists(&paths[2]), "nothing of them is touched yet");
+    instr(format!("INSTR wait start frames={} time={:.3} busy={}", h.frames(), h.time(), why_busy(&h)));
     wait_for_erase(&mut h);
+    instr(format!("INSTR after wait frames={} time={:.3} busy={}", h.frames(), h.time(), why_busy(&h)));
     click(&mut h, "button:dialogOk");
+    instr(format!(
+        "INSTR after click frames={} time={:.3} trash_run={} dialog={} toasts={:?} busy={}",
+        h.frames(),
+        h.time(),
+        h.app.trash_run.is_some(),
+        h.app.ui.dialog.is_some(),
+        h.app.ui.toasts.iter().map(|t| (t.shown_at, t.until, t.text.clone())).collect::<Vec<_>>(),
+        why_busy(&h)
+    ));
     assert!(ids.iter().all(|id| !in_library(&h, *id)) && paths.iter().all(|p| !exists(p)));
     assert_eq!(h.app.ui.dialog, None);
+    instr(format!(
+        "INSTR before toast wait frames={} time={:.3} toasts={:?} busy={}",
+        h.frames(),
+        h.time(),
+        h.app.ui.toasts.iter().map(|t| (t.shown_at, t.until, t.text.clone())).collect::<Vec<_>>(),
+        why_busy(&h)
+    ));
     // (the erase's toast comes in a frame of its own, later on a busy host)
-    assert!(h.step_until(T, |h| toast(h).to_lowercase().contains("erased")), "no erased toast: {:?}", toast(&h));
+    let ok = h.step_until(T, |h| {
+        if h.frames() % 120 == 0 {
+            instr(format!(
+                "INSTR stepping frames={} time={:.3} toasts={:?} busy={}",
+                h.frames(),
+                h.time(),
+                h.app.ui.toasts.iter().map(|t| (t.shown_at, t.until, t.text.clone())).collect::<Vec<_>>(),
+                why_busy(h)
+            ));
+        }
+        toast(h).to_lowercase().contains("erased")
+    });
+    instr(format!("INSTR step_until result={ok} frames={} time={:.3}", h.frames(), h.time()));
+    assert!(ok, "no erased toast: {:?}", toast(&h));
     // one step: the file in the Trash comes back, the erased ones are shown as missing
     run(&mut h, "edit.undo", json!({}));
     assert!(ids.iter().all(|id| in_library(&h, *id)) && exists(&paths[0]) && !exists(&paths[1]));
