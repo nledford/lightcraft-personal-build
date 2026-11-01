@@ -1,6 +1,7 @@
 //! A grid cell whose thumbnail is still on its way says so, quietly, and differs from one whose file
-//! can't be read (which says "!"): until the failure is known the two were the same plain skeleton.
-//! The cue is still (nothing to stop for a Reduce motion setting) and drawn from the theme's own colors.
+//! can't be read (which carries the `badge:failed:` mark): until the failure is known the two were
+//! the same plain skeleton. The cue is still (nothing to stop for a Reduce motion setting) and drawn
+//! from the theme's own colors.
 
 use std::cell::Cell;
 use std::rc::Rc;
