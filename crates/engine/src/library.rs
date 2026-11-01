@@ -678,7 +678,8 @@ impl Session {
         {
             log::error!("library: {e}");
         }
-        // Photo ids belong to one library; denoise work must not carry into the next.
+        // Photo ids belong to one library; a folder's metadata job and denoise work must not carry into the next.
+        self.folder_metadata = None;
         self.denoise.library_changed();
         self.media.denoise.clear();
         // what was learned about the old library's faces is saved, and none of it carries over (photo ids are per library)
@@ -712,8 +713,7 @@ impl Session {
         self.library_folder = None;
         // what names albums and photos by number means others in another library: no filter
         // (as after a restart; the view file keeps none), no target album, no photo come from
-        self.filter = Default::default();
-        self.shelved_filter = None;
+        self.filters.clear();
         self.target_album = None;
         self.previous_active = None;
         self.active_mask = None;

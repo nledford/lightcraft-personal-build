@@ -259,7 +259,8 @@ pub fn specs() -> Vec<CommandSpec> {
             "{path, name} — rename a folder on disk (its files and sidecars go along) and relink the photos in it; one undo step (undo renames it back, refused if the old name is taken); refused for the home folder and its Pictures, Desktop and Downloads → {path, relinked}",
             always,
             |s, p| {
-                let from = str_param(p, "path").ok_or_else(|| bad("folder.rename", "missing path"))?.trim_end_matches(['/', '\\']).to_string();
+                let from =
+                    lexical_path(str_param(p, "path").ok_or_else(|| bad("folder.rename", "missing path"))?.trim_end_matches(std::path::is_separator));
                 refuse_protected_place("folder.rename", &from)?;
                 let name = str_param(p, "name")
                     .map(str::trim)
@@ -275,10 +276,14 @@ pub fn specs() -> Vec<CommandSpec> {
             "Move Folder",
             [],
             None,
-            "{path, into: destination folder} — move a folder on disk into another and relink the photos in it; one undo step (undo moves it back, refused if the old place is taken); refused for the home folder and its Pictures, Desktop and Downloads → {path, relinked}",
+            "{path, into: destination folder} or {paths: [folders], into} — move a folder on disk into another and relink the photos in it; one undo step (undo moves it back, refused if the old place is taken); refused for the home folder and its Pictures, Desktop and Downloads. With `paths` every folder moves into `into` as ONE undo step, or none does: refused as a whole when one can't move (into itself, the name is taken there, one lies inside another of them, two share a name; at most 200 folders) → {path, relinked}, or {paths: [new places], relinked: total}",
             always,
             |s, p| {
-                let from = str_param(p, "path").ok_or_else(|| bad("folder.move", "missing path"))?.trim_end_matches(['/', '\\']).to_string();
+                if p.get("paths").is_some() {
+                    return move_folders(s, p);
+                }
+                let from =
+                    lexical_path(str_param(p, "path").ok_or_else(|| bad("folder.move", "missing path"))?.trim_end_matches(std::path::is_separator));
                 refuse_protected_place("folder.move", &from)?;
                 let into = str_param(p, "into").ok_or_else(|| bad("folder.move", "missing into"))?;
                 let name = Path::new(&from).file_name().ok_or_else(|| bad("folder.move", "bad path"))?;
@@ -393,10 +398,28 @@ fn folder_param<'a>(p: &'a Value, key: &str) -> Option<&'a str> {
     str_param(p, key).map(|x| x.trim_end_matches(['/', '\\'])).filter(|x| !x.is_empty())
 }
 
+/// `path` without the separators at its end, except that a root (`/`) stays one: a folder can be
+/// made in the root of a disk.
+pub(crate) fn without_trailing_separators(path: &str) -> &str {
+    let trimmed = path.trim_end_matches(['/', '\\']);
+    if trimmed.is_empty() { path.get(..1).unwrap_or("") } else { trimmed }
+}
+
+/// `parent` and `name` as one path. A bare drive (`D:`, a disk's row in Folders) gets `sep`:
+/// joining it as a path would make `D:name`, which lies in the drive's working directory. Any
+/// other parent is joined as the host joins paths.
+pub(crate) fn child_path(parent: &str, name: &str, sep: char) -> String {
+    if matches!(parent.as_bytes(), [d, b':'] if d.is_ascii_alphabetic()) {
+        format!("{parent}{sep}{name}")
+    } else {
+        Path::new(parent).join(name).to_string_lossy().to_string()
+    }
+}
+
 /// `folder.create`: a new folder on disk inside `parent`; undo removes it while it is empty.
 fn create_folder(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "folder.create";
-    let parent = folder_param(p, "parent").ok_or_else(|| bad(C, "missing parent"))?;
+    let parent = str_param(p, "parent").map(without_trailing_separators).filter(|x| !x.is_empty()).ok_or_else(|| bad(C, "missing parent"))?;
     let name = str_param(p, "name")
         .map(str::trim)
         .filter(|n| !n.is_empty() && !n.contains(['/', '\\']) && *n != "." && *n != "..")
@@ -404,7 +427,7 @@ fn create_folder(s: &mut Session, p: &Value) -> Result<Value> {
     if !Path::new(parent).is_dir() {
         return Err(bad(C, format!("{parent} is not a folder (offline, moved or deleted?)")));
     }
-    let path = Path::new(parent).join(name).to_string_lossy().to_string();
+    let path = child_path(parent, name, std::path::MAIN_SEPARATOR);
     if Path::new(&path).exists() {
         return Err(bad(C, format!("{path} already exists: choose another name")));
     }
@@ -485,6 +508,129 @@ fn move_to_folder(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(json!({"moved": n, "folder": folder}))
 }
 
+/// A folder's own name in curly quotes, for a sentence (the whole path when it has none).
+fn quoted_name(path: &str) -> String {
+    format!("“{}”", Path::new(path).file_name().map_or_else(|| path.to_string(), |n| n.to_string_lossy().to_string()))
+}
+
+/// What keeps `folders` from all moving into `into`, if anything: each is checked against the
+/// disk and against the others, so a batch is refused whole before the first one moves.
+fn batch_refusal(folders: &[String], into: &str) -> Option<String> {
+    use lightcraft_catalog::query::folder_within;
+    if !Path::new(into).is_dir() {
+        return Some(format!("{into} is not a folder (offline, moved or deleted?)"));
+    }
+    let mut names = std::collections::HashSet::new();
+    for from in folders {
+        let Some(name) = Path::new(from).file_name() else { return Some(format!("{from} is not a folder I can move")) };
+        let quoted = quoted_name(from);
+        if !Path::new(from).is_dir() {
+            return Some(format!("{quoted} is not a folder (offline, moved or deleted?)"));
+        }
+        if folder_within(into, from) {
+            return Some(format!("{quoted} can't move into itself or a folder inside it"));
+        }
+        if let Some(outer) = folders.iter().find(|o| *o != from && folder_within(from, o)) {
+            return Some(format!("{quoted} is inside {}, which is moving too: choose one of them", quoted_name(outer)));
+        }
+        if !names.insert(name.to_string_lossy().to_lowercase()) {
+            return Some(format!("two of the folders are called {quoted}: they can't both go into one folder"));
+        }
+        if Path::new(into).join(name).exists() {
+            return Some(format!("{} already has a folder called {quoted}", quoted_name(into)));
+        }
+    }
+    None
+}
+
+/// `path` with `.` and `..` resolved by its text alone, as [`lightcraft_catalog::query::folder_key`]
+/// does for comparing (so `/r/a/../b` is `/r/b`), but in the platform's own spelling and case.
+fn lexical_path(path: &str) -> String {
+    use std::path::Component;
+    let mut out = std::path::PathBuf::new();
+    for c in Path::new(path).components() {
+        match c {
+            Component::ParentDir if matches!(out.components().next_back(), Some(Component::Normal(_))) => {
+                out.pop();
+            }
+            // above the root there is nothing: `/..` is `/`
+            Component::ParentDir if out.has_root() => {}
+            c => out.push(c),
+        }
+    }
+    out.to_string_lossy().to_string()
+}
+
+/// The most folders one `folder.move {paths}` takes.
+const MOST_FOLDERS_AT_ONCE: usize = 200;
+
+/// `folder.move {paths, into}`: several folders into one, as one undo step. Refused as a whole
+/// ([`batch_refusal`]); a folder that still fails when its turn comes (the library's own, a
+/// disk error) puts the ones already moved back and nothing is left half done.
+fn move_folders(s: &mut Session, p: &Value) -> Result<Value> {
+    let into = str_param(p, "into").filter(|i| !i.is_empty()).ok_or_else(|| bad("folder.move", "missing into"))?;
+    // (without trailing separators, but a root stays one: `/` and `C:\\` are folders, `` and `C:` are not)
+    let trimmed = into.trim_end_matches(std::path::is_separator);
+    // (spelled plainly, as the photos inside will be stored under it)
+    let into_owned = if trimmed.is_empty() || trimmed.ends_with(':') { into.to_string() } else { lexical_path(trimmed) };
+    let into = into_owned.as_str();
+    let listed = p.get("paths").and_then(Value::as_array).ok_or_else(|| bad("folder.move", "`paths` is a list of folders"))?;
+    // (each is an undo step until merged: keep well inside the history's size)
+    if listed.len() > MOST_FOLDERS_AT_ONCE {
+        return Err(bad("folder.move", format!("move at most {MOST_FOLDERS_AT_ONCE} folders at once")));
+    }
+    let mut folders: Vec<String> = Vec::new();
+    for path in listed {
+        let path = path
+            .as_str()
+            .map(|f| lexical_path(f.trim_end_matches(std::path::is_separator)))
+            .filter(|f| !f.is_empty())
+            .ok_or_else(|| bad("folder.move", "`paths` is a list of folders"))?;
+        // (spelled as the library stores it, so the photos inside follow the folder)
+        if !folders.iter().any(|f| lightcraft_catalog::query::folder_key(f) == lightcraft_catalog::query::folder_key(&path)) {
+            folders.push(path);
+        }
+    }
+    if folders.is_empty() {
+        return Err(bad("folder.move", "give at least one folder in `paths`"));
+    }
+    for folder in &folders {
+        refuse_protected_place("folder.move", folder)?;
+    }
+    if let Some(why) = batch_refusal(&folders, into) {
+        return Err(crate::EngineError::Other(why));
+    }
+    // The first move drops the redo history, and a batch that ends up undone gets it back. With the
+    // sidecar repairs done first every queue is empty, so taking it loses nothing either way.
+    s.repair_sidecars_with(&crate::rename::RealFs).map_err(|e| crate::EngineError::Other(e.to_string()))?;
+    let saved_redo = std::mem::take(&mut s.redo);
+    let mut places = Vec::new();
+    let mut relinked = 0;
+    for from in &folders {
+        let to = Path::new(into).join(Path::new(from).file_name().unwrap_or_default()).to_string_lossy().to_string();
+        match move_folder(s, from, &to) {
+            Ok(n) => relinked += n,
+            Err(e) => {
+                let mut back = String::new();
+                for _ in &places {
+                    if let Err(b) = s.undo_step() {
+                        back = format!("; putting the others back failed: {b}");
+                        break;
+                    }
+                }
+                // nothing changed after all when every folder went back: what could be redone still can
+                s.redo = if places.is_empty() || back.is_empty() { saved_redo } else { Vec::new() };
+                return Err(crate::EngineError::Other(format!("{e}{back}")));
+            }
+        }
+        places.push(to);
+    }
+    if places.len() > 1 {
+        s.merge_folder_moves(places.len(), &format!("Move {} Folders", places.len()));
+    }
+    Ok(json!({"paths": places, "relinked": relinked}))
+}
+
 /// After a folder moved from `from` to `to`: a browsed folder at or below it follows.
 pub(crate) fn follow_folder(s: &mut Session, from: &str, to: &str) {
     // a library folder chosen at or below it follows too, as a source or as a filter
@@ -494,33 +640,22 @@ pub(crate) fn follow_folder(s: &mut Session, from: &str, to: &str) {
         follow_library_folder(&mut chosen, from, to);
         *other = chosen.unwrap_or_default();
     }
-    follow_library_folder(&mut s.filter.library_folder, from, to);
-    follow_library_folder(&mut s.filter.folder, from, to);
-    if let Some(f) = s.shelved_filter.as_mut() {
+    // so does a `folder` a script set through `library.filter`: it is rewritten in place, never created from
+    // the browsed folder (that one is filled in by `Session::view_filter`, and no chip names it)
+    s.filters.follow(|f| {
         follow_library_folder(&mut f.library_folder, from, to);
         follow_library_folder(&mut f.folder, from, to);
-    }
-    for other in &mut s.filter.library_folders {
-        let mut chosen = Some(std::mem::take(other));
-        follow_library_folder(&mut chosen, from, to);
-        *other = chosen.unwrap_or_default();
-    }
-    if let Some(f) = s.shelved_filter.as_mut() {
         for other in &mut f.library_folders {
             let mut chosen = Some(std::mem::take(other));
             follow_library_folder(&mut chosen, from, to);
             *other = chosen.unwrap_or_default();
         }
-    }
+    });
     if let Some(b) = &mut s.browse
         && let Ok(rel) = Path::new(&b.path).strip_prefix(from)
     {
+        // the filter is not written: the Local folder shown is filled in from here (`Session::view_filter`)
         b.path = Path::new(to).join(rel).to_string_lossy().to_string();
-        // with filters off the filter stays empty: Cmd+L brings back the one put aside
-        if s.shelved_filter.is_none() {
-            let f = b.path.clone();
-            s.filter.folder = Some(f);
-        }
     }
 }
 
@@ -554,7 +689,16 @@ pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result:
         .catalog
         .photos()
         .filter_map(|p| match &p.source {
-            lightcraft_catalog::Source::File { path } => Path::new(path).strip_prefix(src).ok().map(|rel| (p.id, p.file_name.clone(), dst.join(rel))),
+            // (a path still holding `.` or `..` from an older spelling is matched, and stored, by its plain form)
+            lightcraft_catalog::Source::File { path } => {
+                let mut plain = Path::new(path);
+                let lexical;
+                if plain.components().any(|c| matches!(c, std::path::Component::CurDir | std::path::Component::ParentDir)) {
+                    lexical = lexical_path(path);
+                    plain = Path::new(&lexical);
+                }
+                plain.strip_prefix(src).ok().map(|rel| (p.id, p.file_name.clone(), dst.join(rel)))
+            }
             _ => None,
         })
         .map(|(id, file_name, np)| Op::Relink {

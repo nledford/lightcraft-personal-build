@@ -21,6 +21,7 @@ mod face_models;
 mod face_recognize;
 pub mod filters;
 mod focus;
+pub mod folder_metadata;
 pub mod geocode;
 pub mod keywords;
 pub mod library;
@@ -119,7 +120,7 @@ pub fn has_selection(s: &Session) -> std::result::Result<(), String> {
 /// can take (issue #684; Add to My Photos first).
 pub fn has_library_selection(s: &Session) -> std::result::Result<(), String> {
     has_selection(s)?;
-    if s.selected().iter().any(|id| s.catalog.photo(*id).is_none_or(|p| !p.local)) { Ok(()) } else { Err(LOCAL_ONLY.into()) }
+    if s.selection_facts().any_in_library(s) { Ok(()) } else { Err(LOCAL_ONLY.into()) }
 }
 /// Why an album command refused a Local-only selection.
 pub const LOCAL_ONLY: &str = "only Local photos: albums hold library photos (Add to My Photos first)";
@@ -185,6 +186,7 @@ pub fn command_specs() -> &'static [CommandSpec] {
         v.extend(face_detect::specs());
         v.extend(face_recognize::specs());
         v.extend(focus::specs());
+        v.extend(folder_metadata::specs());
         v.extend(activity::specs());
         v
     })

@@ -48,6 +48,8 @@ impl LightcraftApp {
             notice_input: Default::default(),
             quit_confirmed: false,
             quit_backup: QuitBackup::default(),
+            egui_ctx: None,
+            edit_saves_refused: (0, Vec::new()),
             control_rx: None,
             pending_screenshots: vec![],
             pending_gestures: vec![],
@@ -273,7 +275,7 @@ impl LightcraftApp {
         }
         if r.is_ok() && id == "library.toggleFilters" {
             // the search field shows the text filter: empty while the filters are off, back with them
-            self.ui.search = self.session.filter.text.clone();
+            self.ui.search = self.session.filter().text.clone();
         }
         if r.is_ok() && id == "library.clearFilter" {
             // the search field shows the text filter: cleared from anywhere (the loupe's pill, the
@@ -751,6 +753,9 @@ impl LightcraftApp {
     /// `i.time`, events, keys or dropped files.
     pub fn logic(&mut self, ctx: &egui::Context) {
         i18n::set_language(self.ui.language);
+        if self.egui_ctx.is_none() {
+            self.egui_ctx = Some(ctx.clone());
+        }
         // The fork's AccessKit root language and bidi runs follow the locale; presentation only.
         // Compare against the cached string: `Context::language()` allocates on every call, and
         // this runs on every UI pass and every hidden logic tick.
@@ -822,6 +827,7 @@ impl LightcraftApp {
     /// frame bookkeeping. A hidden `run_logic` never reaches this.
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         i18n::set_language(self.ui.language);
+        self.session.begin_frame();
         let ctx = ui.ctx().clone();
         if !self.fonts_ready {
             ctx.request_repaint();

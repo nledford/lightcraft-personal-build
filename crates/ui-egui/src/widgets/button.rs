@@ -470,13 +470,17 @@ impl<'a> Button<'a> {
             p.rect_filled(rect, radius, fill);
         }
         if let Some(border) = lk.border {
+            // (a page that makes its controls' borders stand 3:1, as Settings does, says so in the visuals it
+            // gives them: a neutral button's edge follows it)
+            let set = ui.visuals().widgets.inactive.bg_stroke;
+            let border = if self.kind == Kind::Secondary && state != State::Disabled && set.width > 0.0 { set.color } else { border };
             p.rect_stroke(rect, radius, Stroke::new(1.0, border), StrokeKind::Inside);
         }
         // where the keyboard is: an accent ring around it, in the stroke every focus ring shares. It is
         // drawn outside the button (the painter above leaves room for it) because a button has its own
         // fill and border to keep whole; the plainer widget buttons draw theirs inside their rect.
         if resp.has_focus() {
-            p.rect_stroke(rect.expand(2.0), radius + 2.0, crate::widgets::focus_stroke(&t), StrokeKind::Outside);
+            p.rect_stroke(rect.expand(2.0), radius + 2.0, crate::widgets::focus_stroke_in(ui.ctx(), &t), StrokeKind::Outside);
         }
         let galley = self.galley(ui);
         let icon_s = self.size.icon();

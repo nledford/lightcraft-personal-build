@@ -40,6 +40,7 @@ mod faces_index;
 #[cfg(not(target_arch = "wasm32"))]
 mod faces_worker;
 pub mod files;
+pub mod filter_state;
 #[cfg(not(target_arch = "wasm32"))]
 mod focus_scan;
 pub mod fonts;
@@ -71,6 +72,7 @@ pub mod profile_refs;
 pub mod proof;
 pub mod rename;
 pub mod segment;
+mod selection_facts;
 pub mod sidecar;
 pub mod slide;
 pub mod slide_overlay;
@@ -82,6 +84,7 @@ pub mod smart;
 pub mod sync;
 pub mod text;
 pub mod trash;
+mod undo_filters;
 mod view;
 pub mod walk;
 
@@ -93,6 +96,7 @@ pub use fonts::{CRAFT_FONTS, CraftFont};
 use lightcraft_catalog::{AlbumId, Catalog, Filter, Op, PhotoId, Sort};
 use lightcraft_develop::DevelopSettings;
 pub use media::{RenderJob, SourceLevel};
+pub use selection_facts::{SelectionFacts, SelectionIndex, SelectionView};
 use serde_json::Value;
 pub use view::{Browse, FilterChip, LibrarySource, Selection, SelectionState, filter_chips};
 pub use {lightcraft_catalog as catalog, lightcraft_develop as develop, lightcraft_gpu as gpu, lightcraft_pipeline as pipeline};
@@ -137,14 +141,21 @@ pub type Result<T> = std::result::Result<T, EngineError>;
 pub struct UndoEntry {
     pub label: String,
     pub op: Op,
-    /// A folder to rename on disk (`from` → `to`) before `op` is applied: Rename / Move Folder
-    /// (whose `op` relinks the photos inside). Never overwrites; refused when `to` exists. An
-    /// empty `to` removes the (empty) folder `from`, an empty `from` creates `to` (Create Folder).
-    pub folder: Option<FolderMove>,
+    /// Folders to rename on disk (`from` → `to`, in this order) before `op` is applied: Rename /
+    /// Move Folder (whose `op` relinks the photos inside; Move Folders has several, all or none
+    /// done). Never overwrites; refused when `to` exists. An empty `to` removes the (empty)
+    /// folder `from`, an empty `from` creates `to` (Create Folder).
+    pub folders: Vec<FolderMove>,
+    /// What the step did to the person's filter (a keyword deleted or renamed, a folder removed…): undo carries it
+    /// back and redo forward (see [`undo_filters`]).
+    pub(crate) filters: Option<undo_filters::FilterChange>,
     /// Inverses of logged path corrections from a partially failed history step.
     pub(crate) retry_inverse: Vec<Op>,
     /// Sidecars still separated from their photo after a failed move or rollback.
     pub(crate) retry_sidecars: Vec<rename::SidecarMove>,
+    /// Folders of `folders` a failed history step left at their `to` (moving them back also failed): a
+    /// retry doesn't move them again, and the photos below them were relinked to follow.
+    pub(crate) folders_done: Vec<FolderMove>,
 }
 
 /// The one photo an undo step changes, when it changes exactly one through its edit, rating, flag,
@@ -239,11 +250,13 @@ pub struct Session {
     pub auto_sync: bool,
     pub catalog: Catalog,
     pub source: LibrarySource,
-    pub filter: Filter,
-    /// The filter `library.toggleFilters` put aside (Library > Enable Filters off); not persisted.
-    pub(crate) shelved_filter: Option<Filter>,
+    /// The filter bar's filter and the one `library.toggleFilters` put aside (Library > Enable Filters off); not
+    /// persisted. Written only through its methods, which keep it clear of what the source shown owns.
+    pub(crate) filters: filter_state::FilterState,
     pub sort: Sort,
     pub selection: Selection,
+    /// See [`Session::selection_facts`].
+    selection_cache: std::sync::Mutex<selection_facts::SelectionCache>,
     /// The grid order for the current source/filter/sort (cached by catalog revision).
     /// Shared, so frontends can hold it across frames without copying ([`Session::visible_shared`]).
     visible: Arc<[PhotoId]>,
@@ -281,6 +294,8 @@ pub struct Session {
     /// Set by a command whose change must not rewrite the photo's XMP sidecar even with auto-write on
     /// (a catalog-only edit of data the sidecar writer does not emit); consumed when the command ends.
     pub(crate) skip_auto_write: bool,
+    /// The folder metadata save or read waiting for `folder.metadataPump` ([`cmd::folder_metadata`]); dropped when another library opens.
+    pub(crate) folder_metadata: Option<cmd::folder_metadata::FolderMetadataJob>,
     /// The order of Reload from Disk runs, so an older one finishing late is dropped ([`cmd::reload`]).
     pub(crate) reload_tickets: cmd::reload::Tickets,
     /// Photos whose automatic XMP sidecar write failed (their folder offline, read-only or full), written again by
@@ -491,10 +506,10 @@ impl Session {
             auto_sync: false,
             catalog: Catalog::new(),
             source: LibrarySource::All,
-            filter: Filter::default(),
-            shelved_filter: None,
+            filters: Default::default(),
             sort: Sort::default(),
             selection: Selection::default(),
+            selection_cache: Default::default(),
             visible: Vec::new().into(),
             visible_key: None,
             visible_clock_minute: None,
@@ -512,6 +527,7 @@ impl Session {
             pending_sidecar_repairs: Vec::new(),
             interaction: None,
             skip_auto_write: false,
+            folder_metadata: None,
             reload_tickets: Default::default(),
             unsaved_sidecars: Default::default(),
             denoise: Default::default(),
@@ -610,6 +626,7 @@ impl Session {
 
     /// Run a command by id. THE entry point for every frontend.
     pub fn execute(&mut self, id: &str, params: &Value) -> Result<Value> {
+        self.begin_frame();
         let spec = find_command(id).ok_or_else(|| EngineError::UnknownCommand(id.to_string()))?;
         // a command that validates the photos a call names isn't held back by the selection
         if !(spec.explicit_targets && cmd::names_photos(params)) {
@@ -631,16 +648,30 @@ impl Session {
     /// panic guard, auto versions, XMP sidecar auto-write and the durable save (a failed save is
     /// `NotSaved`). Not journaled. The app's import task commits its batches this way.
     pub fn execute_fn(&mut self, id: &str, f: impl FnOnce(&mut Session) -> Result<Value>) -> Result<Value> {
+        self.begin_frame();
         self.run_command(id, None, f)
     }
 
     fn run_command(&mut self, id: &str, journal: Option<&Value>, f: impl FnOnce(&mut Session) -> Result<Value>) -> Result<Value> {
         let log_start = self.pending_log.len();
         let was_active = self.active();
+        // what the step does to the person's filter is kept with it for undo (see `undo_filters`)
+        let commits = self.commits;
+        if self.depth == 0 {
+            self.filters.begin_recording();
+        }
         self.depth += 1;
         // last-resort guard: a panic in a command is that command's error, not a crash
         let r = guard::catch(&format!("`{id}`"), || f(self)).unwrap_or_else(|e| Err(EngineError::Other(e)));
         self.depth -= 1;
+        // the command may have read the selection's index and then changed its ids to others of the same
+        // length and ends: the caller must not be answered from what was cached before
+        self.begin_frame();
+        if self.depth == 0
+            && let Some(before) = self.filters.end_recording()
+        {
+            self.note_filter_change(before, commits);
+        }
         if self.depth == 0 && was_active.is_some() && self.active() != was_active {
             self.previous_active = was_active;
             if let Some(left) = was_active {
@@ -697,7 +728,15 @@ impl Session {
         let fwd = op.clone();
         let inv = self.apply_through(op, Catalog::apply_new)?;
         self.pending_log.push(fwd);
-        self.undo.push(UndoEntry { label: label.to_string(), op: inv, folder: None, retry_inverse: Vec::new(), retry_sidecars: Vec::new() });
+        self.undo.push(UndoEntry {
+            label: label.to_string(),
+            op: inv,
+            folders: Vec::new(),
+            filters: None,
+            retry_inverse: Vec::new(),
+            retry_sidecars: Vec::new(),
+            folders_done: Vec::new(),
+        });
         self.commits = self.commits.wrapping_add(1);
         if self.undo.len() > 1000 {
             let mut dropped = self.undo.remove(0);
@@ -753,9 +792,34 @@ impl Session {
     pub(crate) fn commit_with_folder(&mut self, label: &str, op: Op, folder: FolderMove) -> Result<()> {
         self.commit(label, op)?;
         if let Some(e) = self.undo.last_mut() {
-            e.folder = Some(folder);
+            e.folders = vec![folder];
         }
         Ok(())
+    }
+
+    /// Fold the last `n` undo steps, each a folder move, into one: undo moves every folder back
+    /// and redo moves them all again, as one step. Anything else among them leaves the steps as
+    /// they are (returns false).
+    pub(crate) fn merge_folder_moves(&mut self, n: usize, label: &str) -> bool {
+        let Some(from) = self.undo.len().checked_sub(n).filter(|_| n > 0) else { return false };
+        if self.undo.get(from..).is_none_or(|t| {
+            t.iter().any(|e| e.folders.len() != 1 || e.filters.is_some() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty())
+        }) {
+            return false;
+        }
+        let tail = self.undo.split_off(from);
+        let folders = tail.iter().flat_map(|e| e.folders.iter().cloned()).collect();
+        let ops = tail.into_iter().rev().map(|e| e.op).collect();
+        self.undo.push(UndoEntry {
+            label: label.to_string(),
+            op: Op::Batch { ops },
+            folders,
+            filters: None,
+            retry_inverse: Vec::new(),
+            retry_sidecars: Vec::new(),
+            folders_done: Vec::new(),
+        });
+        true
     }
 
     /// The box to cut a face's picture from: the detector's, when the scan has looked at the face (every face is then shown
@@ -817,8 +881,8 @@ impl Session {
             return;
         }
         let Some(entries) = self.undo.get(self.undo.len() - n..) else { return };
-        // Folder moves and partially applied file steps stay on their own.
-        if entries.iter().any(|e| e.folder.is_some() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty()) {
+        // Folder moves, steps that carry a filter change and partially applied file steps stay on their own.
+        if entries.iter().any(|e| !e.folders.is_empty() || e.filters.is_some() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty()) {
             return;
         }
         let tail = self.undo.split_off(self.undo.len() - n);
@@ -826,9 +890,11 @@ impl Session {
         self.undo.push(UndoEntry {
             label: label.to_string(),
             op: Op::Batch { ops },
-            folder: None,
+            folders: Vec::new(),
+            filters: None,
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
+            folders_done: Vec::new(),
         });
     }
 
@@ -852,15 +918,19 @@ impl Session {
                 return Err(err);
             }
         };
+        // (the filter first: the photo is shown if it is in view under the filter the step's undo leaves)
+        let carried = self.carry_filters(e.filters.as_ref());
         self.show_undone(&e.op);
         self.reconcile_view();
         self.pending_log.push(e.op);
         self.redo.push(UndoEntry {
             label: e.label.clone(),
             op: redo,
-            folder: e.folder.as_ref().map(FolderMove::reversed),
+            folders: e.folders.iter().map(FolderMove::reversed).collect(),
+            filters: carried,
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
+            folders_done: Vec::new(),
         });
         Ok(e.label)
     }
@@ -879,15 +949,19 @@ impl Session {
                 return Err(err);
             }
         };
+        // (the filter first: the photo is shown if it is in view under the filter the step leaves)
+        let carried = self.carry_filters(e.filters.as_ref());
         self.show_undone(&e.op);
         self.reconcile_view();
         self.pending_log.push(e.op);
         self.undo.push(UndoEntry {
             label: e.label.clone(),
             op: undo,
-            folder: e.folder.as_ref().map(FolderMove::reversed),
+            folders: e.folders.iter().map(FolderMove::reversed).collect(),
+            filters: carried,
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
+            folders_done: Vec::new(),
         });
         Ok(e.label)
     }
@@ -920,18 +994,36 @@ impl Session {
         rename::validate_sidecars(fs, &entry.retry_sidecars).map_err(|e| EngineError::Other(format!("can't move the files back: {e}")))?;
         // Repair discarded file steps before another path change can stale their exact paths.
         // Unrelated metadata history must remain usable while a sidecar is still unwritable.
-        if entry.folder.is_some() || !entry.retry_sidecars.is_empty() || !self.file_moves(&entry.op).is_empty() {
+        if !entry.folders.is_empty() || !entry.retry_sidecars.is_empty() || !self.file_moves(&entry.op).is_empty() {
             self.repair_sidecars_with(fs).map_err(|e| EngineError::Other(format!("can't move the files back: {e}")))?;
         }
         rename::retry_sidecars(fs, &mut entry.retry_sidecars).map_err(|e| EngineError::Other(format!("can't move the files back: {e}")))?;
         let op = &entry.op;
-        let folder = entry.folder.as_ref();
-        if let Some(f) = folder {
-            cmd::browse::folder_on_disk(&f.from, &f.to).map_err(|e| EngineError::Other(format!("can't move the folder back: {e}")))?;
+        let folders = entry.folders.clone();
+        for (i, f) in folders.iter().enumerate() {
+            if entry.folders_done.contains(f) {
+                continue;
+            }
+            if let Err(e) = fs.move_folder(&f.from, &f.to) {
+                // all or none: the ones already moved go back
+                let mut stuck = Vec::new();
+                for done in folders.iter().take(i).rev().filter(|d| !entry.folders_done.contains(d)) {
+                    if let Err(back) = fs.move_folder(&done.to, &done.from) {
+                        stuck.push((done.clone(), back));
+                    }
+                }
+                let mut message = format!("can't move the folder back: {e}");
+                if !stuck.is_empty() {
+                    // like files that can't be moved back: the library follows them (a logged change outside
+                    // the history), and a retry leaves them where they are
+                    message.push_str(&self.follow_stuck_folders(entry, &stuck));
+                }
+                return Err(EngineError::Other(message));
+            }
         }
         let undo_folder = || {
-            if let Some(f) = folder {
-                let _ = cmd::browse::folder_on_disk(&f.to, &f.from);
+            for f in folders.iter().rev().filter(|f| !entry.folders_done.contains(f)) {
+                let _ = fs.move_folder(&f.to, &f.from);
             }
         };
         let moves = self.file_moves(op);
@@ -949,7 +1041,7 @@ impl Session {
         }
         match self.apply_catalog(op.clone()) {
             Ok(inv) => {
-                if let Some(f) = folder {
+                for f in folders {
                     cmd::browse::follow_folder(self, &f.from, &f.to);
                 }
                 if entry.retry_inverse.is_empty() {
@@ -972,6 +1064,55 @@ impl Session {
                 undo_folder();
                 Err(e)
             }
+        }
+    }
+
+    /// Folders a history step moved but could not put back after a later folder failed: they stay at their new place,
+    /// the photos below them follow (a logged change outside the history; its inverse is kept for the other history
+    /// direction) and `entry` remembers them so a retry skips them. The sentence for the error message.
+    fn follow_stuck_folders(&mut self, entry: &mut UndoEntry, stuck: &[(FolderMove, String)]) -> String {
+        let moves: Vec<FolderMove> = stuck.iter().map(|(f, _)| f.clone()).collect();
+        let under = |path: &str| moves.iter().any(|f| !f.to.is_empty() && std::path::Path::new(path).starts_with(&f.to));
+        let mut keep = Vec::new();
+        rename::set_file_ops_where(&entry.op, &under, &mut keep);
+        // what the library keeps about a folder (its color label…) follows it too
+        for f in &moves {
+            if !f.from.is_empty() && !f.to.is_empty() {
+                keep.extend(self.catalog.folder_records_follow(&f.from, &f.to));
+            }
+        }
+        let n = stuck.len();
+        let s = if n == 1 { "" } else { "s" };
+        let list: Vec<String> = stuck.iter().map(|(f, why)| format!("{} ({why})", f.to)).collect();
+        let fix = Op::Batch { ops: keep };
+        let followed = match self.apply_catalog(fix.clone()) {
+            Ok(inv) => {
+                self.pending_log.push(fix);
+                let mut inverses = match inv {
+                    Op::Batch { ops } => ops,
+                    op => vec![op],
+                };
+                inverses.append(&mut entry.retry_inverse);
+                entry.retry_inverse = inverses;
+                Ok(())
+            }
+            Err(e) => Err(e),
+        };
+        // the folders stay put either way: a retry must not try to move them again
+        for f in &moves {
+            cmd::browse::follow_folder(self, &f.from, &f.to);
+        }
+        entry.folders_done.extend(moves);
+        match followed {
+            Ok(()) => format!(
+                ". {n} folder{s} could not be moved back and stay{} at the new place; the library now points there: {}",
+                if n == 1 { "s" } else { "" },
+                list.join(", ")
+            ),
+            Err(e) => format!(
+                ". {n} folder{s} could not be moved back and the library could not follow ({e}); relink with Find Missing Photos: {}",
+                list.join(", ")
+            ),
         }
     }
 
@@ -1134,9 +1275,21 @@ impl Session {
 
     // ---------------------------------------------------------------- library view
 
+    /// The filter bar's filter. It changes through the commands (`library.filter`, `filter.applyPreset`,
+    /// `library.clearFilter`, `library.toggleFilters`, `library.source`…), never beside them.
+    pub fn filter(&self) -> &Filter {
+        self.filters.current()
+    }
+
+    /// Show `f` as the filter bar's filter, over the source shown: what that source owns is left out
+    /// ([`LibrarySource::reconcile`]) and returned. Setting a filter forgets the one Enable Filters put aside.
+    pub fn set_filter(&mut self, f: Filter) -> Vec<filter_state::SourceOwned> {
+        self.filters.replace(self.source, f)
+    }
+
     /// Library > Enable Filters is off: a filter is put aside (`library.toggleFilters`).
     pub fn filters_off(&self) -> bool {
-        self.shelved_filter.is_some()
+        self.filters.is_off()
     }
 
     /// Makes the view show only albums the library holds: one that is gone is no longer the
@@ -1161,8 +1314,12 @@ impl Session {
         if matches!(&self.source, LibrarySource::Album(a) if !held(a)) {
             self.source = self.also_albums.pop().map_or(LibrarySource::All, LibrarySource::Album);
         }
-        if self.filter.album.as_ref().is_some_and(|a| !held(a)) {
-            self.filter.album = None;
+        // (a put-aside filter that held only a gone album has nothing left to bring back; one that was empty
+        // before, put aside on purpose by an undo, is left alone)
+        let aside_held_album = self.filters.aside().is_some_and(|f| f.album.is_some());
+        self.filters.follow(|f| f.album = f.album.filter(held));
+        if aside_held_album {
+            self.filters.drop_aside_if_empty();
         }
     }
 
@@ -1174,7 +1331,13 @@ impl Session {
             self.catalog.revision,
             format!(
                 "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
-                self.source, self.filter, self.sort, self.browse, self.library_folder, self.also_albums, self.also_library_folders
+                self.source,
+                self.filters.current(),
+                self.sort,
+                self.browse,
+                self.library_folder,
+                self.also_albums,
+                self.also_library_folders
             ),
         );
         // What a held view is told apart by: what is shown and how, and for a smart album its rules (rules that were
@@ -1206,14 +1369,14 @@ impl Session {
                 // one of several folders shown lost its last photo: the others stay
                 return self.visible();
             }
-            let f = self.view_filter(self.source, &self.filter);
+            let f = self.view_filter(self.source, self.filters.current());
             // A held view keeps the photos it shows that stopped matching what is asked of them (a smart album's
             // rules, a flag, the filter bar), as long as they are still where the view looks: in the library for
             // a view that is only a question, else in the album or folder shown. Taking a photo out of an album
             // or the library takes it out of the view at once, held or not.
             // (only a view that asks something can lose a photo to an edit: the others are queried as ever, at no
             // cost for the hold)
-            let holds = self.hold_view && (asks || self.filter != Filter::default());
+            let holds = self.hold_view && (asks || *self.filters.current() != Filter::default());
             let within = holds.then(|| {
                 if asks && self.also_albums.is_empty() {
                     self.view_filter(LibrarySource::All, &Filter::default())
@@ -1227,7 +1390,7 @@ impl Session {
             // Views whose order or photos are not the query's alone are worked out whole each time: an album in
             // its own order, Recently Added (how far back it reaches moves with every import), Missing Photos.
             let own_order = matches!(self.source, LibrarySource::Album(a) if self.sort.key == lightcraft_catalog::SortKey::CaptureDate
-                && self.filter == Filter::default()
+                && *self.filters.current() == Filter::default()
                 && self.also_albums.is_empty()
                 && self.catalog.album(a).is_some_and(|al| !al.is_smart() && !al.folder));
             let whole = own_order || matches!(self.source, LibrarySource::RecentlyAdded | LibrarySource::Missing);
@@ -1255,6 +1418,9 @@ impl Session {
                 }
                 _ => self.catalog.query(&f, &self.sort),
             };
+            // after the query: a big view has just made the order it needed itself (and this does nothing); a small one
+            // has not, and the first big view in this sort later is then not sorted in a frame the user waits for
+            self.catalog.prebuild_order_holding(&self.sort, || self.activity.start("sort", "Sorting the library", activity::Cancel::No));
             // what the view shows now is what the next edit is followed from, and what it holds until it is
             // refreshed (taken before stacks are arranged, so a photo folded into a stack is held with it)
             self.base = (!whole || holds).then(|| (view, self.catalog.revision, visible.clone()));
@@ -1264,9 +1430,7 @@ impl Session {
                 self.source = LibrarySource::All;
                 self.library_folder = None;
                 self.also_library_folders.clear();
-                // folders of the filter were ignored while the folder was shown: they would narrow All Photos now
-                self.filter.library_folder = None;
-                self.filter.library_folders.clear();
+                // (the filter holds no folder while one is shown: `source_shown` took them out)
                 return self.visible();
             }
             if matches!(self.source, LibrarySource::Album(_))
@@ -1278,7 +1442,7 @@ impl Session {
                 // an album's own order; a smart album and a folder of albums have none
                 && !al.is_smart()
                 && !al.folder
-                && self.filter == Filter::default()
+                && *self.filters.current() == Filter::default()
             {
                 // each photo's place looked up, not searched for (a big album sorted in O(n log n))
                 let mut place: std::collections::HashMap<PhotoId, usize> = std::collections::HashMap::with_capacity(al.photos.len());
@@ -1459,7 +1623,7 @@ impl Session {
             return None;
         }
         self.reconcile_sources();
-        if self.filter == Filter::default() && !self.hold_view {
+        if *self.filters.current() == Filter::default() && !self.hold_view {
             // nothing narrows the source: what the view lists is all of it, and is counted already (not a view
             // that holds photos that stopped matching: those are not of the source any more)
             let _ = self.visible();

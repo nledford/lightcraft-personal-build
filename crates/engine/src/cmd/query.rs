@@ -115,7 +115,7 @@ pub fn specs() -> Vec<CommandSpec> {
                 "libraryFolder": s.library_folder.as_ref().filter(|_| s.source == LibrarySource::LibraryFolder),
                 "libraryFolders": s.source_library_folders(),
                 "sourceLabel": label,
-                "filter": s.filter,
+                "filter": s.filter(),
                 "sort": s.sort,
                 "selection": s.selection,
                 "visibleCount": n,

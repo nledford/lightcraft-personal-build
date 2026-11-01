@@ -48,7 +48,7 @@ fn a_folder_in_the_filter_put_aside_follows_a_move() {
     s.execute("folder.move", &json!({"path": trip, "into": archive})).unwrap();
     let r = s.execute("library.toggleFilters", &json!({})).unwrap();
     assert_eq!(r["enabled"], json!(true));
-    assert_eq!(s.filter.folder.as_deref(), Some(dir.path("archive/trip").as_str()), "the folder where it went");
+    assert_eq!(s.filter().folder.as_deref(), Some(dir.path("archive/trip").as_str()), "the folder where it went");
     assert_eq!(s.visible().len(), 1, "the moved photo, as before the move");
 }
 
@@ -62,7 +62,7 @@ fn a_folder_in_the_filter_follows_a_move_with_filters_on() {
     s.execute("library.filter", &json!({"folder": trip})).unwrap();
     assert_eq!(s.visible().len(), 1, "the filter hides a photo, or a stale folder would look alike");
     s.execute("folder.move", &json!({"path": trip, "into": archive})).unwrap();
-    assert_eq!(s.filter.folder.as_deref(), Some(dir.path("archive/trip").as_str()), "the folder where it went");
+    assert_eq!(s.filter().folder.as_deref(), Some(dir.path("archive/trip").as_str()), "the folder where it went");
     assert_eq!(s.visible().len(), 1, "the moved photo, as before the move");
 }
 
@@ -73,11 +73,11 @@ fn moving_the_browsed_folder_while_off_brings_back_the_filter_put_aside() {
     let mut s = Session::new();
     s.execute("library.browse", &json!({"path": trip})).unwrap();
     s.execute("library.filter", &json!({"rating": 4})).unwrap();
-    let set = s.filter.clone();
+    let set = s.filter().clone();
     s.execute("library.toggleFilters", &json!({})).unwrap();
     s.execute("folder.move", &json!({"path": trip, "into": archive})).unwrap();
     assert!(s.filters_off(), "still off after the move");
     let r = s.execute("library.toggleFilters", &json!({})).unwrap();
     assert_eq!(r["enabled"], json!(true), "Cmd+L turns filtering back on");
-    assert_eq!(s.filter, set, "the stars put aside, nothing added");
+    assert_eq!(*s.filter(), set, "the stars put aside, nothing added");
 }

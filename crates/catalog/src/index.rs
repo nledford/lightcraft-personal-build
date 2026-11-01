@@ -34,6 +34,8 @@ pub(crate) struct Indexes {
     search: OnceLock<ByPhoto<PhotoText>>,
     /// Photo → the lower-cased text a smart album's Text rule looks through ([`crate::rules::rule_text`]).
     rule_text: OnceLock<ByPhoto<RuleText>>,
+    /// Every photo in each sort order, see [`crate::order`].
+    pub(crate) orders: crate::order::Orders,
 }
 
 /// A copy builds its own when asked (copies are made to be saved, not queried).

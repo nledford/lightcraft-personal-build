@@ -13,7 +13,7 @@ pub(super) fn keyword_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[
         let branch = (!n.children.is_empty()).then(|| Branch::keyword(&n.path));
         let mut open = branch.as_ref().is_some_and(|b| app.ui.sidebar_trees.is_open_under(b, above));
         let id = format!("keyword:{}", n.path);
-        let sel_of = |app: &LightcraftApp| app.session.filter.keyword.as_deref().is_some_and(|k| k.eq_ignore_ascii_case(&n.path));
+        let sel_of = |app: &LightcraftApp| app.session.filter().keyword.as_deref().is_some_and(|k| k.eq_ignore_ascii_case(&n.path));
         if !out_of_sight(app, ui, &id, &n.name, Some(n.count), indent, false, || sel_of(app)) {
             let sel = sel_of(app);
             keyword_row(app, ui, n, &id, indent, branch.as_ref(), &mut open, sel);
