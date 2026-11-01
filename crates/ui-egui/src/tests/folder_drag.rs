@@ -26,8 +26,7 @@ fn tree(tag: &str) -> (Headless, PathBuf) {
         app(&[(trip.join("beach.png"), false), (sub.join("deep.png"), false), (home.join("garden.png"), false), (archive.join("vault.png"), false)]);
     click(&mut h, &format!("libraryFolderToggle:{}", folder_key(&root)));
     // (opened as a reveal does: the drag tests are about what comes after, not the triangle)
-    let key = lightcraft_catalog::query::folder_key(&folder_key(&trip));
-    h.view.ctx.data_mut(|d| d.insert_temp(egui::Id::unique(("libfolder-open", key)), true));
+    h.app.ui.sidebar_trees.show(&crate::tree_state::Branch::folder(&folder_key(&trip), false), None);
     for _ in 0..3 {
         h.step();
     }
@@ -104,7 +103,7 @@ fn a_folder_dropped_on_another_asks_then_moves_and_undo_brings_it_back() {
     let beach = id_of(&h, "beach.png");
     let photo = h.app.session.catalog.photo(lightcraft_catalog::PhotoId(beach)).unwrap();
     assert!(matches!(&photo.source, lightcraft_catalog::Source::File { path } if Path::new(path) == archive.join("trip").join("beach.png")));
-    assert_eq!(toast(&h), "Moved; 2 photo(s) relinked");
+    assert_eq!(toast(&h), "Moved “trip” into “archive”. Photos: 2. Edit → Undo moves it back.");
     // one Undo moves it back
     h.app.run("edit.undo", json!({})).unwrap();
     assert!(trip.join("beach.png").is_file() && !archive.join("trip").exists(), "back where it was");
@@ -224,7 +223,7 @@ fn with_the_question_turned_off_the_drop_moves_at_once() {
     release(&mut h, at);
     assert!(h.app.ui.dialog.is_none(), "not asked");
     assert!(archive.join("trip").join("beach.png").is_file() && !trip.exists(), "moved at once");
-    assert_eq!(toast(&h), "Moved; 2 photo(s) relinked");
+    assert_eq!(toast(&h), "Moved “trip” into “archive”. Photos: 2. Edit → Undo moves it back.");
     h.app.run("edit.undo", json!({})).unwrap();
     assert!(trip.join("beach.png").is_file(), "one Undo");
     let _ = std::fs::remove_dir_all(&root);
@@ -353,8 +352,7 @@ fn a_release_of_another_button_in_the_middle_of_a_drag_is_not_a_drop() {
 fn a_closed_folder_does_not_open_under_its_own_drag() {
     let (mut h, root) = tree("own-spring");
     let trip = root.join("trip");
-    let key = lightcraft_catalog::query::folder_key(&folder_key(&trip));
-    h.view.ctx.data_mut(|d| d.insert_temp(egui::Id::unique(("libfolder-open", key)), false));
+    h.app.ui.sidebar_trees.set(&crate::tree_state::Branch::folder(&folder_key(&trip), false), false);
     h.step();
     h.step();
     assert!(folder_row(&h, &trip.join("sub")).is_none(), "closed");

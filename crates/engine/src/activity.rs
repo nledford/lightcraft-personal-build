@@ -730,10 +730,13 @@ impl Activity {
     }
 
     /// Another library was opened: what waited in line and what could be retried was about the old one's photos and
-    /// folders, so the line empties, the rows that ended stay only as a record, and the tasks still running (an old
+    /// folders, so the line empties (the Auto Imports among what waited give their files back,
+    /// [`Activity::note_untried`]), the rows that ended stay only as a record, and the tasks still running (an old
     /// library's preview build goes on) leave rows that can't be retried. Returns how many tasks waited.
     pub fn library_changed(&self) -> usize {
-        let dropped = std::mem::take(&mut *lock(&self.inner.waiting)).len();
+        let dropped = std::mem::take(&mut *lock(&self.inner.waiting));
+        let n = dropped.len();
+        self.note_untried(&dropped);
         for e in lock(&self.inner.tasks).iter() {
             *lock(&e.request) = None;
         }
@@ -741,7 +744,7 @@ impl Activity {
             k.row.retryable = false;
             k.row.request = None;
         }
-        dropped
+        n
     }
 }
 

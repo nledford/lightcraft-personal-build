@@ -25,8 +25,10 @@ fn has(h: &Headless, id: &str) -> bool {
     h.app.widgets.iter().any(|(w, _)| w == id)
 }
 
-/// Let the activity stack lay itself out (a running task shows in it once it is half a second old; a waiting one at once).
+/// Open the list under the bell and let it lay itself out (a running task shows in it once it is half a second old; a waiting one at once).
 fn open_list(h: &mut Headless) {
+    let r = h.request("engine.execute", json!({"command": "view.tasks", "params": {"show": true}}), T);
+    assert_eq!(r["result"]["tasks"], true, "{r}");
     std::thread::sleep(Duration::from_millis(600));
     for _ in 0..4 {
         h.step();
