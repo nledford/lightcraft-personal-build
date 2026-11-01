@@ -1204,6 +1204,7 @@ fn an_import_ends_with_an_error_at_the_fourth_skipped_read() {
 fn skip_on_the_review_scans_row_lists_the_file_as_unreadable() {
     let (mut h, dir, gate) = hanging_import("scan-skip");
     crate::import::open(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
+    open_list(&mut h);
     let row = stalled_row(&mut h);
     assert_eq!(row.kind, "scan", "{row:?}");
     assert_eq!(row.stalled.as_ref().map(|s| s.what.as_str()), Some("IMG_hang.jpg"));
