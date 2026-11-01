@@ -169,7 +169,13 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
         ui.add_space(LABEL_W);
         if app.services.pick_folder.is_some() {
             let r = Button::new("Choose Folder…").widget("button:settingsSmartChoose").show(ui);
-            if r.clicked() {
+            if r.clicked() && existing == "discard" && count > 0 {
+                // deleting the previews already built is asked about before anything changes: the
+                // folder is chosen now, and only the answer applies it
+                if let Some(dir) = app.services.pick_folder.as_mut().and_then(|f| f()) {
+                    change = Some(json!({"path": dir, "existing": existing}));
+                }
+            } else if r.clicked() {
                 // the dialog runs off the UI thread; the folder changes when it closes
                 crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::SmartPreviewsFolder);
             }

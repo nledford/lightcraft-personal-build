@@ -61,15 +61,22 @@ fn tasks_message(stops: &[String], unstoppable: &[String], waiting: usize) -> St
             names = unstoppable.join(", ")
         ));
     }
-    if waiting > 0 {
-        // (nothing waits across a quit: the files may change before the next launch)
-        lines.push(if waiting == 1 {
-            crate::i18n::tr("1 task waiting in line won't run.").to_string()
-        } else {
-            crate::i18n::tr_format!("{n} tasks waiting in line won't run.", n = waiting)
-        });
+    let text = lines.join("\n");
+    if waiting == 0 {
+        return text;
     }
-    lines.join("\n")
+    // (nothing waits across a quit: the files may change before the next launch)
+    let line = if waiting == 1 {
+        crate::i18n::tr("1 task waiting in line won't run.").to_string()
+    } else {
+        crate::i18n::tr_format!("{n} tasks waiting in line won't run.", n = waiting)
+    };
+    // (sentences that end in a full-width stop are not followed by a space)
+    match text.chars().last() {
+        None => line,
+        Some('。') => format!("{text}{line}"),
+        Some(_) => format!("{text} {line}"),
+    }
 }
 
 /// The quit goes through: the jobs that can stop are asked to, the ones that can't are what the prompt said it doesn't
@@ -842,13 +849,9 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
         app.quit_prompt = None;
         if buttons.get(i).is_some_and(|(_, _, choice)| *choice == Choice::QuitAnyway) {
             // the jobs are not asked about again for this quit: the ones with no ✕ are still running when the window's
-            // close request or Try Saving Again comes back through `may_close`
+            // close request or Try Saving Again comes back through `may_close`. The ones that can stop are asked to
+            // only once the quit goes through (`may_close`'s tail), so a Cancel on a later prompt leaves them running
             app.quit_tasks_answered = true;
-            // (not the backup this quit waits for: see `tasks_quitting_would_stop`)
-            for task in tasks_quitting_would_stop(app) {
-                // (one that ended meanwhile has nothing left to stop)
-                let _ = app.session.activity.cancel(task.id);
-            }
             // tasks waiting in line are taken out of it (they would not run), or `may_close` would ask about them again
             for task in app.session.activity.waiting() {
                 let _ = app.session.activity.cancel(task.id);

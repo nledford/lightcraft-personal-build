@@ -169,7 +169,13 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
             if moved > 0 && run.dont_ask {
                 app.ui.settings.ask_before_move = false;
             }
-            app.toast(ctx, text);
+            // a move that went through is one undo step: its toast offers Undo, as the move's
+            // question and hint say (a stopped one leaves a partial step, so it does not)
+            if moved > 0 && r["stopped"].as_bool() != Some(true) {
+                app.toast_undoable(ctx, text);
+            } else {
+                app.toast(ctx, text);
+            }
         }
         Err(e) => app.toast_for(ctx, e.clone(), 12.0),
     }

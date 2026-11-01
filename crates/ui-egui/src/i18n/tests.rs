@@ -1316,13 +1316,24 @@ fn sync_with_system_takes_the_host_default_until_a_language_is_picked() {
     app.ui.follow_system_language = false;
     set(&mut app, serde_json::json!({"followSystemLanguage": true}));
     assert_eq!((app.ui.language, language()), (Locale::De, Locale::De));
-    // And no language's menu command is checked while it is on
-    assert_eq!(crate::menubar::checked(&app, "app.language.german"), Some(false));
+    // And no language's menu command is checked while it is on: the commands are in no menu at
+    // all (Settings ▸ General ▸ Language is where the language is chosen), so no row can be
+    fn in_no_menu(app: &crate::LightcraftApp, id: &str) -> bool {
+        fn has(nodes: &[crate::menus::menubar::MenuNode], id: &str) -> bool {
+            nodes.iter().any(|n| match n {
+                crate::menus::menubar::MenuNode::Item { id: i, .. } => i == id,
+                crate::menus::menubar::MenuNode::Submenu { children, .. } => has(children, id),
+                _ => false,
+            })
+        }
+        !crate::menubar::menu_bar(app).iter().any(|(_, n)| has(n, id))
+    }
+    assert!(in_no_menu(&app, "app.language.german"));
     // When a language is picked by its command, the sync is off and that language is kept
     app.run("app.language.french", serde_json::json!({})).unwrap();
     assert!(!app.ui.follow_system_language);
     assert_eq!((app.ui.language, language()), (Locale::Fr, Locale::Fr));
-    assert_eq!(crate::menubar::checked(&app, "app.language.french"), Some(true));
+    assert!(in_no_menu(&app, "app.language.french"));
     // And so is a language set by its tag through the control channel
     set(&mut app, serde_json::json!({"followSystemLanguage": true}));
     set(&mut app, serde_json::json!({"language": "ja"}));
