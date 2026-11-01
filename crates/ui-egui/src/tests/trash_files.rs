@@ -324,6 +324,8 @@ fn the_delete_question_offers_move_files_to_trash_as_a_second_answer() {
 #[test]
 fn photos_on_a_disk_without_a_trash_get_a_second_question_before_anything_is_erased() {
     let dir = Scratch::new("far-disk");
+    // (a parallel test may have left the shared language elsewhere: the toast below is read as text)
+    crate::i18n::set_language(crate::i18n::Locale::En);
     let (mut h, ids, paths) = app(&dir, &["a.jpg", "nas/b.jpg", "nas/c.jpg"]);
     run(&mut h, "library.select", json!({"ids": ids}));
     run(&mut h, "dialog.trashFiles", json!({}));
