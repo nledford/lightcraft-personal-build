@@ -5,7 +5,10 @@ use super::{
     AiModel, Caches, CommandError, ControlRequest, ControlResponse, ERROR_TOAST_SECONDS, ErrorKind, GESTURE_TIMEOUT_MS, LightcraftApp,
     MAX_PENDING_GESTURES, MAX_PENDING_SHOTS, MAX_SHOT_BYTES, MAX_SHOT_TOTAL_BYTES, MAX_TEXTURE_SIDE, PendingGesture, PendingShot, Perf, QuitBackup,
     REFUSAL_SECONDS, Receiver, Refusal, SCREEN_PROFILE, SCREENSHOT_FALLBACK_MS, SCREENSHOT_SETTLE_MS, SHOT_FORCE_BUSY_MS, SHOT_SETTLE_FRAMES,
-    SHOT_SETTLE_MS, Sender, Session, ShotGeometry, TOAST_SECONDS, UNDO_TOAST_SECONDS, UiState, Value, docking, drop_overlay, export_task, focus_scan, frame_rate, headless, i18n, import, lightroom_import, menus, merge, model_setup, panels, pick, recheck, refusal_toast, render, shortcuts, slideshow_export, state, sync, tasks, theme, trash_run, updates_ui, widgets, TOAST_READ_SECONDS, };
+    SHOT_SETTLE_MS, Sender, Session, ShotGeometry, TOAST_READ_SECONDS, TOAST_SECONDS, UNDO_TOAST_SECONDS, UiState, Value, docking, drop_overlay,
+    export_task, focus_scan, frame_rate, headless, i18n, import, lightroom_import, menus, merge, model_setup, panels, pick, recheck, refusal_toast,
+    render, shortcuts, slideshow_export, state, sync, tasks, theme, trash_run, updates_ui, widgets,
+};
 
 mod control;
 mod frame;
@@ -305,9 +308,15 @@ impl LightcraftApp {
         };
         // samples coming into an empty library, however they are asked for, land on one in Detail
         // (the welcome showing: not a Local folder or Recently Deleted of an otherwise empty library)
-        let landing = id == "library.addSamples" && panels::empty_library::shown(&self.session);
         let r = self.session.execute(id, &params).map_err(Refusal::from);
-        if r.is_ok() && landing {
+        self.after_run(id, &params, &r);
+        r
+    }
+
+    /// What the app does once a command's engine result is in (the second half of [`Self::run_told`]): state that
+    /// follows a command, its toast, and what a refusal or a faces answer says in the status line.
+    fn after_run(&mut self, id: &str, params: &Value, r: &Result<Value, Refusal>) {
+        if r.is_ok() && id == "library.addSamples" && panels::empty_library::shown(&self.session) {
             panels::empty_library::land_on_samples(self);
         }
         if r.is_ok() && matches!(id, "crop.aspect" | "crop.rotateAspect") {
@@ -426,7 +435,6 @@ impl LightcraftApp {
             }
             Ok(_) => {}
         }
-        r
     }
 
     /// Say that a task waits in line at `place` of its lane: without it, asking for it seems to do nothing.

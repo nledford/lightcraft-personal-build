@@ -1500,7 +1500,7 @@ impl Catalog {
                             let mut left = Vec::new();
                             for inv in todo {
                                 if self.apply_counted(inv.clone(), false).is_err() {
-left.push(inv);
+                                    left.push(inv);
                                 }
                             }
                             self.changes.leftover = left;

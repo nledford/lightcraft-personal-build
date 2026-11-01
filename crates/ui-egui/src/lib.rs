@@ -30,8 +30,8 @@ pub mod headless;
 pub mod i18n;
 pub mod icons;
 mod import_queue;
-mod job_notice;
 pub mod increase_contrast;
+mod job_notice;
 pub mod library_work;
 pub mod lightroom_import;
 pub mod links;
@@ -59,8 +59,8 @@ pub mod tasks;
 pub mod theme;
 mod thumb;
 pub mod toast;
-pub mod trash_run;
 pub mod transparency;
+pub mod trash_run;
 pub mod tree_state;
 pub mod widgets;
 pub mod window_place;
@@ -118,8 +118,9 @@ pub use clock::{monotonic_ms, now_ms};
 #[cfg(target_os = "linux")]
 pub use services::OpenModelFolderFn;
 pub use services::{
-    CheckEditorFn, DockBadgeFn, HostAction, KeepAwakeFn, Notice, NotifyFn, OpenAllWithFn, OpenUrlFn, OpenWithFn, PickFiles, PickFolder, PngEncode, RevealFn,
-    SaveFile, ScreenProfileFn, Services, SharedWrite, SystemIncreaseContrastFn, SystemReduceMotionFn, SystemReduceTransparencyFn, SystemThemeFn, WriteFn,
+    CheckEditorFn, DockBadgeFn, HostAction, KeepAwakeFn, Notice, NotifyFn, OpenAllWithFn, OpenUrlFn, OpenWithFn, PickFiles, PickFolder, PngEncode,
+    RevealFn, SaveFile, ScreenProfileFn, Services, SharedWrite, SystemIncreaseContrastFn, SystemReduceMotionFn, SystemReduceTransparencyFn,
+    SystemThemeFn, WriteFn,
 };
 use state::{GestureFrame, InjectedPress};
 
@@ -580,7 +581,7 @@ pub struct LightcraftApp {
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) sidecars_row: Option<lightcraft_engine::activity::TaskGuard>,
     /// The library failed to open at launch: the blocking window, then the temporary-session
-/// banner (issue #100). Cleared once a library opens.
+    /// banner (issue #100). Cleared once a library opens.
     pub library_problem: Option<panels::library_problem::LibraryProblem>,
     /// First-frame focus/input state for a newly shown blocking library window.
     pub(crate) library_window_input: panels::library_problem::WindowBarrier,
