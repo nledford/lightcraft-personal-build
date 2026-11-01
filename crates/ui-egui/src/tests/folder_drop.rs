@@ -614,6 +614,7 @@ fn move_selected_photos_here_is_grayed_out_until_photos_are_selected() {
     h.step();
     menu_item(&mut h);
     assert!(trip.join("garden.png").is_file() && !home.join("garden.png").exists(), "the selected photo's file moved");
+    settle(&mut h);
     let path = h.app.session.catalog.photo(lightcraft_catalog::PhotoId(garden)).map(|p| p.source.clone());
     assert!(
         matches!(&path, Some(lightcraft_catalog::Source::File { path }) if Path::new(path) == trip.join("garden.png")),

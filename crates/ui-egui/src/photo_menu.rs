@@ -333,9 +333,20 @@ fn nodes_with(app: &LightcraftApp, photo: PhotoId, infos: &[CommandInfo], preset
     v.push(sep());
 
     // delete it: Restore and Delete Permanently in Recently Deleted and Move Files to Trash as the
-    // Photo menu has them; Delete stands alone at the end (the menu's own rule)
+    // Photo menu has them, and all of Recently Deleted's files at once to Trash as the grid's menu
+    // ran it; Delete stands alone at the end (the menu's own rule)
     for id in ["photo.restore", "photo.deletePermanently", "dialog.trashFiles"] {
         v.push(menu("Photo").iter().find(|n| matches!(n, MenuNode::Item { id: i, .. } if i == id)).cloned());
+    }
+    if app.session.source == lightcraft_engine::LibrarySource::RecentlyDeleted && crate::panels::trash_files::available() {
+        v.push(Some(menubar::item(
+            "dialog.trashFiles",
+            json!({"recentlyDeleted": true}),
+            "Move All Files in Recently Deleted to Trash…",
+            None,
+            true,
+            None,
+        )));
     }
     v.push(sep());
     v.push(menu("Photo").iter().find(|n| matches!(n, MenuNode::Item { id, .. } if id == "photo.delete")).cloned());
