@@ -33,7 +33,7 @@ fn drop_on(h: &mut Headless, ids: &[u64], pos: egui::Pos2) {
 }
 
 fn toast(h: &Headless) -> String {
-    h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default()
+    h.app.ui.toast().as_ref().map(|t| t.text.clone()).unwrap_or_default()
 }
 
 fn click(h: &mut Headless, id: &str) {
@@ -78,11 +78,11 @@ fn a_drop_that_added_nothing_has_no_undo() {
     let ids: Vec<u64> = h.app.session.visible_cloned().iter().take(2).map(|id| id.0).collect();
     drop_on(&mut h, &ids, row.center());
     // (the toast of the first drop goes away before the second is told)
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     h.step();
     drop_on(&mut h, &ids, row.center());
     // (photos that are all in the album already are refused before the drop: "Already in…", nothing is said or done)
-    assert!(h.app.ui.toast.is_none(), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_none(), "{:?}", h.app.ui.toast());
     assert!(rect(&h, "button:toastUndo").is_none(), "nothing was done, so there is nothing to undo");
 }
 
@@ -150,7 +150,7 @@ fn the_undo_button_is_drawn_above_the_toast_not_under_its_backdrop() {
     let ids: Vec<u64> = h.app.session.visible_cloned().iter().take(2).map(|id| id.0).collect();
     drop_on(&mut h, &ids, row.center());
     // (the toast fades in: look at it once it is fully there)
-    if let Some(shown) = h.app.ui.toast.as_mut() {
+    if let Some(shown) = h.app.ui.toasts.last_mut() {
         shown.shown_at -= 1.0;
     }
     h.step();

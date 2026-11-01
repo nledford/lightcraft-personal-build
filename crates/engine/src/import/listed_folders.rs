@@ -13,7 +13,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::SystemTime;
 
-use crate::sidecar::{SidecarNaming, find_sidecar, sidecar_candidates};
+use crate::sidecar::{SidecarNaming, sidecar_candidates};
 use crate::walk::EntryKind;
 
 /// One listed folder.
@@ -135,23 +135,22 @@ impl ListedFolders {
             .all(|c| c.file_name().and_then(|n| n.to_str()).is_some_and(|n| crate::sync::plain_name(n) && !xmp.contains(&n.to_ascii_lowercase())))
     }
 
-    /// [`crate::sidecar::find_sidecar_for_import`], without asking the disk where the listing shows
-    /// there is none: a file that owns its stem sidecar ([`crate::sidecar::ImportStems`]) is looked
-    /// up as [`ListedFolders::find`] does; one that doesn't reads only its own `<file>.xmp`.
-    pub(crate) fn find_for_import(&self, stems: &crate::sidecar::ImportStems, naming: SidecarNaming, original: &str) -> Option<PathBuf> {
-        if stems.owns(original) {
-            return self.find(original, naming);
+    /// Whether the disk has to be asked for `original`'s sidecar: not where the listing shows there is none. Counts
+    /// the question that is asked after all.
+    pub(crate) fn asks_disk_for(&self, original: &str, naming: SidecarNaming) -> bool {
+        if self.rules_out(original, naming) {
+            return false;
         }
         self.asked.fetch_add(1, Ordering::Relaxed);
-        crate::sidecar::find_sidecar_for_import(stems, naming, original)
+        true
     }
 
     /// [`find_sidecar`], without asking the disk where the listing shows there is none.
+    #[cfg(test)]
     pub(crate) fn find(&self, original: &str, naming: SidecarNaming) -> Option<PathBuf> {
-        if self.rules_out(original, naming) {
+        if !self.asks_disk_for(original, naming) {
             return None;
         }
-        self.asked.fetch_add(1, Ordering::Relaxed);
-        find_sidecar(original, naming)
+        crate::sidecar::find_sidecar(original, naming)
     }
 }

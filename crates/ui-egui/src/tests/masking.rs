@@ -430,7 +430,7 @@ fn the_object_tool_selects_the_mask_whose_pin_is_clicked() {
     exec(&mut h, "view.toolOverlay", json!({"mode": "always"}));
     h.app.ui.tool = "object".into();
     h.settle(SETTLE);
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone());
+    let toast = h.app.ui.toast().map(|t| t.text.clone());
     let before = develop(&h).masks;
     // the Object mask's pin: it is selected, its clicks and the selected mask's stay as they were
     pointer(&mut h, json!([{"kind": "down", "x": 0.6, "y": 0.5}, {"kind": "up", "x": 0.6, "y": 0.5}]));
@@ -438,7 +438,7 @@ fn the_object_tool_selects_the_mask_whose_pin_is_clicked() {
     assert_eq!(h.app.session.active_mask, Some(1), "the pinned mask is selected");
     assert_eq!(develop(&h).masks, before, "no Object click was added to any mask");
     assert_eq!(h.app.ui.dialog, None, "no Object click was tried");
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.clone()).filter(|t| Some(t) != toast.as_ref()), None, "no error");
+    assert_eq!(h.app.ui.toast().map(|t| t.text.clone()).filter(|t| Some(t) != toast.as_ref()), None, "no error");
     assert_eq!(h.app.ui.tool, "object", "the tool stays on to refine the Object mask");
     // the Radial mask's pin: selected, and the Object tool goes off (nothing for it to refine)
     pointer(&mut h, json!([{"kind": "down", "x": 0.2, "y": 0.8}, {"kind": "up", "x": 0.2, "y": 0.8}]));
@@ -467,7 +467,7 @@ fn the_object_tool_adds_no_click_on_the_selected_masks_own_pin() {
     exec(&mut h, "view.toolOverlay", json!({"mode": "always"}));
     h.app.ui.tool = "object".into();
     h.settle(SETTLE);
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone());
+    let toast = h.app.ui.toast().map(|t| t.text.clone());
     let before = develop(&h).masks;
     // a little off the pin's centre, as a hand clicks it
     pointer(&mut h, json!([{"kind": "down", "x": 0.601, "y": 0.501}, {"kind": "up", "x": 0.601, "y": 0.501}]));
@@ -475,7 +475,7 @@ fn the_object_tool_adds_no_click_on_the_selected_masks_own_pin() {
     assert_eq!(develop(&h).masks, before, "no Object click was added");
     assert_eq!(h.app.session.active_mask, Some(1), "the mask stays selected");
     assert_eq!(h.app.ui.dialog, None, "no Object click was tried");
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.clone()).filter(|t| Some(t) != toast.as_ref()), None, "no error");
+    assert_eq!(h.app.ui.toast().map(|t| t.text.clone()).filter(|t| Some(t) != toast.as_ref()), None, "no error");
     assert_eq!(h.app.ui.tool, "object", "the tool stays on");
 }
 
@@ -1316,7 +1316,7 @@ fn local_says_where_its_listing_stops_and_offers_the_way_on() {
     // whether it is a folder was asked on a worker thread, never on the one that draws the window
     let asked = crate::panels::left::CHECKED_ON.lock().unwrap().iter().find(|(p, _)| *p == eighth).map(|(_, t)| *t);
     assert!(asked.is_some_and(|t| t != std::thread::current().id()), "the folder is checked off the UI thread: {asked:?}");
-    let said = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let said = h.app.ui.toast().as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(said.contains("“8”") && said.contains("Local"), "the click says what it did: {said:?}");
     assert!(!on_screen(&h, &more), "a place of its own now, the row has nothing left to offer");
     // the row inside the first place says where its folders are, and is a row of its own: not
@@ -1431,7 +1431,7 @@ fn go_deeper_says_why_when_the_folder_cannot_be_added() {
     assert_eq!(r["ok"], true, "{r}");
     h.settle(SETTLE);
     assert_eq!(h.app.ui.local_roots, places, "nothing was added");
-    let said = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let said = h.app.ui.toast().as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(said.contains("not a folder"), "the refusal is said: {said:?}");
 }
 
@@ -1494,7 +1494,7 @@ fn edit_in_reports_an_editor_that_wont_open_without_failing() {
     assert_eq!(r["ok"], true, "{r}");
     assert_eq!(r["result"]["failed"], "the editor quit", "{r}");
     assert_eq!(h.app.session.catalog.len(), n + 1, "the copy stays in the library");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("the editor quit"), "{toast}");
     let _ = std::fs::remove_dir_all(&dir);
     h.settle(SETTLE);
@@ -1533,11 +1533,11 @@ fn edit_in_photocraft_opens_a_psd_copy() {
     assert_eq!(r["ok"], false, "{r}");
     assert_eq!((h.app.session.catalog.len(), opened.lock().unwrap().len()), (n, 0), "no copy without PhotoCraft");
     // and it says so, however it was asked for (menu, shortcut, context menu)
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(!toast.is_empty(), "the missing editor is reported");
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     let r = h.app.run("photo.editInPhotoCraft", json!({}));
-    assert!(r.is_err() && h.app.ui.toast.is_some(), "{r:?} {:?}", h.app.ui.toast);
+    assert!(r.is_err() && h.app.ui.toast().is_some(), "{r:?} {:?}", h.app.ui.toast());
     installed.store(true, std::sync::atomic::Ordering::SeqCst);
     let r = h.request("engine.execute", params, T);
     assert_eq!(r["ok"], true, "{r}");

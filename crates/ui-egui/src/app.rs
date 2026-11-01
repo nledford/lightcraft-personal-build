@@ -7,7 +7,7 @@ use super::{
     REFUSAL_SECONDS, Receiver, Refusal, SCREEN_PROFILE, SCREENSHOT_FALLBACK_MS, SCREENSHOT_SETTLE_MS, SHOT_FORCE_BUSY_MS, SHOT_SETTLE_FRAMES,
     SHOT_SETTLE_MS, Sender, Session, ShotGeometry, TOAST_SECONDS, UNDO_TOAST_SECONDS, UiState, Value, docking, drop_overlay, export_task, focus_scan,
     frame_rate, headless, i18n, import, lightroom_import, menus, merge, model_setup, panels, pick, recheck, refusal_toast, render, shortcuts,
-    slideshow_export, state, sync, tasks, theme, updates_ui, widgets,
+    slideshow_export, state, sync, tasks, theme, trash_run, updates_ui, widgets,
 };
 
 mod control;
@@ -44,6 +44,7 @@ impl LightcraftApp {
             backs_up_by_itself: true,
             notices: vec![],
             updates_rt: Default::default(),
+            move_notice: None,
             quit_prompt: None,
             notice_input: Default::default(),
             switch_prompt: None,
@@ -51,6 +52,7 @@ impl LightcraftApp {
             quit_backup: QuitBackup::default(),
             egui_ctx: None,
             edit_saves_refused: (0, Vec::new()),
+            quit_cuts_move: false,
             control_rx: None,
             pending_screenshots: vec![],
             pending_gestures: vec![],
@@ -70,8 +72,6 @@ impl LightcraftApp {
             ui_passes: 0,
             #[cfg(test)]
             library_passes: vec![],
-            #[cfg(test)]
-            missing_count_test_delay: None,
             shadow: None,
             drawing_offscreen: false,
             synthetic: vec![],
@@ -124,6 +124,15 @@ impl LightcraftApp {
             sync_run: None,
             sync_queued: None,
             sync_scans: None,
+            move_run: None,
+            last_move: None,
+            trash_run: None,
+            trash_erase_later: None,
+            relocate: None,
+            relocate_left_behind: Vec::new(),
+            relocate_asked: None,
+            relocate_library: 0,
+            relocate_last: None,
             lightroom: None,
             lightroom_last: None,
             lightroom_result: None,
@@ -145,6 +154,9 @@ impl LightcraftApp {
             screen_profile_read: None,
             system_reduce_motion: None,
             system_reduce_motion_read: None,
+            awake_told: None,
+            badge_told: 0,
+            job_watch: Default::default(),
             library_problem: None,
             library_window_input: Default::default(),
             alt_asks_for_library: false,
@@ -232,12 +244,12 @@ impl LightcraftApp {
     /// [`Self::act`] for a caller that hands the refusal on (a dialog's confirm, which the control
     /// channel answers with it): the toast says the reason, the `Err` is the whole error.
     pub(crate) fn act_told(&mut self, id: &str, params: Value) -> Result<Value, String> {
-        let before = self.ui.toast.clone();
+        let before = self.ui.toast().cloned();
         self.run_told(id, params).map_err(|refusal| {
             let now = self.tick_now();
             // A toast the command made itself (a partial import report) says what did happen:
             // keep it ahead of the reason rather than replacing it.
-            let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
+            let made = self.ui.toasts.pop().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
             let said = refusal_toast(made, &refusal);
             self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
             refusal.error
@@ -315,7 +327,11 @@ impl LightcraftApp {
             };
             if let Some(message) = completed {
                 let now = self.tick_now();
-                self.ui.show_toast(now, message, TOAST_SECONDS, None);
+                // (Auto Sync On / Off says a state: the new one takes the old one's place)
+                match id {
+                    "develop.autoSync" => self.ui.show_toast_on(now, "autoSync", message, TOAST_SECONDS, None),
+                    _ => self.ui.show_toast(now, message, TOAST_SECONDS, None),
+                }
             }
         }
         if r.is_ok() && matches!(id, "photo.label" | "photo.clearLabel") {
@@ -330,7 +346,7 @@ impl LightcraftApp {
                 None => i18n::tr("Color label cleared").into(),
             };
             let now = self.tick_now();
-            self.ui.show_toast(now, text, TOAST_SECONDS, label);
+            self.ui.show_toast_on(now, "label", text, TOAST_SECONDS, label);
         }
         match &r {
             Err(refusal) => {
@@ -339,6 +355,12 @@ impl LightcraftApp {
                 // no detector yet: offer it (its terms first) instead of only saying so
                 if id == "faces.detect" && refusal.kind == ErrorKind::ModelMissing(AiModel::FaceDetector) {
                     panels::faces::offer_detector(self);
+                }
+                // a move running in the background is in the way: said wherever the command came from (a menu, a key, a
+                // button), since the status line isn't drawn
+                if refusal.kind == ErrorKind::MoveInProgress {
+                    let text = refusal.error.clone();
+                    self.toast_move_in_progress(&text);
                 }
             }
             Ok(v) if id == "faces.detect" => self.ui.status = detect_summary(v),
@@ -380,13 +402,13 @@ impl LightcraftApp {
         } else {
             i18n::tr_format!("Queued: it starts after {n} more", n = place - 1)
         };
-        self.say(text);
+        self.say(text, TOAST_SECONDS);
     }
 
-    /// A toast from code that has no frame context at hand.
-    pub(crate) fn say(&mut self, text: String) {
+    /// A notice from code that has no frame at hand (a dialog's action): shown for `secs` seconds.
+    pub fn say(&mut self, text: impl Into<String>, secs: f64) {
         let now = self.tick_now();
-        self.ui.show_toast(now, text, TOAST_SECONDS, None);
+        self.ui.show_toast(now, text.into(), secs, None);
     }
 
     /// Start the tasks waiting in line whose lane is free: the engine's ([`lightcraft_engine::Session::start_waiting`])
@@ -684,23 +706,33 @@ impl LightcraftApp {
         match (unsaved, self.ui.unsaved_seen) {
             (Some((n, e)), false) => {
                 self.ui.unsaved_seen = true;
-                self.toast_error(
-                    ctx,
+                self.ui.show_toast_on(
+                    self.tick_now(),
+                    "save",
                     crate::i18n::tr_format!(
                         "{n} change{} saved in memory but not written to disk: {e} — LightCraft will retry",
                         if n == 1 { "" } else { "s" },
                         n = n,
                         e = e
                     ),
+                    ERROR_TOAST_SECONDS,
+                    None,
                 );
             }
             (None, true) => {
                 self.ui.unsaved_seen = false;
-                self.toast(ctx, crate::i18n::tr("Library saved"));
+                // (it takes the place of the warning that it couldn't be saved, if that still shows)
+                self.toast_on(ctx, "save", crate::i18n::tr("Library saved"));
             }
             (Some(_), true) => ctx.request_repaint_after(std::time::Duration::from_secs(2)), // retry
             (None, false) => {}
         }
+    }
+
+    /// Quitting: file work in the background stops after the file in hand, and what it did is
+    /// kept (the photos whose files moved to the Trash leave the library). Waits at most a minute.
+    pub fn finish_background_file_work(&mut self) {
+        trash_run::settle_for_quit(self, std::time::Duration::from_secs(60));
     }
 
     pub fn toast(&mut self, ctx: &egui::Context, text: impl Into<String>) {
@@ -715,6 +747,18 @@ impl LightcraftApp {
         {
             self.toast(ctx, crate::i18n::tr("No horizon or vertical lines to level by"));
         }
+    }
+
+    /// A toast that says the state of `topic` ("flag", "panel", "slideshow"…): it replaces the ones still showing
+    /// about that topic, but the same message again stays until the later of its times ([`state::UiState::show_toast_on`]).
+    pub fn toast_on(&mut self, _ctx: &egui::Context, topic: &'static str, text: impl Into<String>) {
+        let t = self.tick_now();
+        self.ui.show_toast_on(t, topic, text.into(), TOAST_SECONDS, None);
+    }
+
+    /// The interface's clock (seconds), for code that has no frame at hand.
+    pub fn now(&self) -> f64 {
+        self.tick_now()
     }
 
     /// A toast that stays at least `secs` seconds (messages that say where to look or what to do next).
@@ -830,6 +874,21 @@ impl LightcraftApp {
         }
     }
 
+    /// Tell the person that a background move of photos is in the way of what they asked (stays 6 s). The time is the
+    /// app clock's, which a menu click that arrives before the next frame reads as well.
+    fn toast_move_in_progress(&mut self, text: &str) {
+        let now = self.tick_now();
+        self.ui.show_toast(now, text.to_string(), 6.0, None);
+    }
+
+    /// Called as the app exits, before the library is saved and closed: a move whose worker has
+    /// already finished (its result waiting for the next frame) is applied now, so the catalog
+    /// matches the files. A worker still running is abandoned, as quitting always did.
+    pub fn finish_ready_move(&mut self) {
+        let ctx = self.tasks.repaint.clone().unwrap_or_default();
+        crate::move_task::poll(self, &ctx);
+    }
+
     /// The process is about to end (settings and library are saved by then): make sure nothing is
     /// inside the GPU driver when it does (issue #620: a render running on a worker thread while
     /// the process exits crashes in the driver). No GPU work starts from here on; the render
@@ -837,6 +896,8 @@ impl LightcraftApp {
     /// on other threads (export, denoise, the device warm-up). `false`: the deadline passed first
     /// (the host exits anyway). The app renders nothing afterwards.
     pub fn shutdown(&mut self, timeout: std::time::Duration) -> bool {
+        self.release_keep_awake();
+        self.release_dock_badge();
         lightcraft_engine::gpu::begin_shutdown();
         #[cfg(not(target_arch = "wasm32"))]
         let t0 = std::time::Instant::now();
@@ -936,7 +997,7 @@ impl LightcraftApp {
     /// (Edit > Undo from the menu or a new library would change it, and a click would then undo something else),
     /// and no dialog is open over the toast.
     pub fn toast_offers_undo(&self) -> bool {
-        match (&self.ui.toast, &self.ui.toast_undo) {
+        match (self.ui.toast(), &self.ui.toast_undo) {
             (Some(shown), Some((text, commits, steps))) => {
                 shown.text == *text
                     && *commits == self.session.commits()

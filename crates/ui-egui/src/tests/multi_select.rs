@@ -715,11 +715,11 @@ fn a_refused_question_about_several_albums_says_why() {
     h.app.session.execute("album.delete", &json!({"id": c})).unwrap();
     click(&mut h, "button:dialogOk");
     assert!(h.app.session.catalog.album(AlbumId(a)).is_some(), "refused as a whole");
-    let said = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let said = h.app.ui.toast().as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(said.contains(&c.to_string()), "the toast names the album that is gone: {said:?}");
     // only the reason, not the command it came from, and for as long as any refusal stays
     assert!(!said.contains("album.delete"), "{said:?}");
-    let (left, now) = (h.app.ui.toast.as_ref().map_or(0.0, |t| t.until), h.time());
+    let (left, now) = (h.app.ui.toast().as_ref().map_or(0.0, |t| t.until), h.time());
     assert!(left - now > 5.0, "a refusal stays {} s", left - now);
 }
 
@@ -795,9 +795,9 @@ fn cut_albums_are_not_pasted_into_themselves() {
         right_click(&mut h, &format!("source:folder:{target}"));
         assert!(has(&h, "sideMenu:clip:paste"));
         // (a refusal of the engine would toast its reason: the item must not run the command at all)
-        h.app.ui.toast = None;
+        h.app.ui.toasts.clear();
         click(&mut h, "sideMenu:clip:paste");
-        assert!(h.app.ui.toast.is_none(), "greyed out: no command ran to be refused: {:?}", h.app.ui.toast);
+        assert!(h.app.ui.toast().is_none(), "greyed out: no command ran to be refused: {:?}", h.app.ui.toast());
         assert_eq!(h.app.session.undo.len(), undo, "greyed out: nothing happens");
         assert!(h.app.ui.side.clip.is_some());
         ask(&mut h, "ui.key", json!({"key": "Escape"}));

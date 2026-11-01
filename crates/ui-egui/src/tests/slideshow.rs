@@ -284,7 +284,7 @@ fn a_manual_slideshow_waits_for_the_arrow_keys() {
             crate::panels::library_problem::blocks_file_drops(&h.app),
             h.app.renderer.in_flight(),
             h.app.renderer.pending_slots(),
-            h.app.ui.toast,
+            h.app.ui.toasts,
         );
     };
     diagnose("before-click", &h);
@@ -885,7 +885,7 @@ fn applying_a_template_while_an_overlay_text_is_edited_saves_the_edit_first() {
     }
     let typed = h.app.session.slide_templates_previous.as_ref().map(|look| look.overlays.texts.iter().map(|t| t.text.clone()).collect::<Vec<_>>());
     assert!(typed.as_ref().is_some_and(|t| t.len() == 1 && t[0].contains('x')), "the text typed is not in Previous settings: {typed:?}");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(!toast.contains("text overlay"), "the applied template raised an error for the typed text: {toast}");
 }
 

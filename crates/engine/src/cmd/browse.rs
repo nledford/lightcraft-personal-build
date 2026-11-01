@@ -259,6 +259,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "{path, name} — rename a folder on disk (its files and sidecars go along) and relink the photos in it; one undo step (undo renames it back, refused if the old name is taken); refused in plain words, with nothing changed, when the folder isn't there or its disk isn't connected, or the disk says no; refused for the home folder and its Pictures, Desktop and Downloads → {path, relinked (every catalog photo with a file in the folder), inLibrary (of those, the library's photos: not Local-only, not in Recently Deleted, virtual copies not counted)}",
             always,
             |s, p| {
+                s.refuse_while_trashing("folder.rename")?;
                 let from =
                     lexical_path(str_param(p, "path").ok_or_else(|| bad("folder.rename", "missing path"))?.trim_end_matches(std::path::is_separator));
                 refuse_protected_place("folder.rename", &from)?;
@@ -279,6 +280,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "{path, into: destination folder} or {paths: [folders], into} — move a folder on disk into another and relink the photos in it; one undo step (undo moves it back, refused if the old place is taken); the destination folder must exist (it is never created) and be on the same disk (never copied and deleted); every refusal (a missing folder, a disk that isn't connected, no permission, another disk) is a plain sentence naming the folder, with nothing changed; refused for the home folder and its Pictures, Desktop and Downloads. With `paths` every folder moves into `into` as ONE undo step, or none does: refused as a whole when one can't move (into itself, the name is taken there, one lies inside another of them, two share a name; at most 200 folders) → {path, relinked (every catalog photo with a file in the folder), inLibrary (of those, the library's photos: not Local-only, not in Recently Deleted, virtual copies not counted)}, or {paths: [new places], relinked: total}",
             always,
             |s, p| {
+                s.refuse_while_trashing("folder.move")?;
                 if p.get("paths").is_some() {
                     return move_folders(s, p);
                 }
@@ -306,9 +308,18 @@ pub fn specs() -> Vec<CommandSpec> {
             "Move to Folder",
             [],
             None,
-            "{folder, ids?} — move the photos' files (default: the selection) with their XMP sidecars into `folder` on disk and relink them; virtual copies follow their master; across volumes the file is copied, verified and only then removed; never overwrites (a name taken in `folder` refuses the whole move); missing/offline and Local photos are refused; one undo step (undo moves them back) → {moved, folder}",
+            "{folder, ids?, skip?} — move the photos' files (default: the selection) with their XMP sidecars into `folder` on disk and relink them; virtual copies follow their master; across volumes the file is copied, verified and only then removed; never overwrites (a name taken in `folder`, or a file that is missing or offline, refuses the whole move unless that photo's id is in `skip`: skipped photos stay put and the rest move); Local photos (and ones with no file) are refused unless skipped; one undo step (undo moves them back); a record in the library lets the next open follow a move cut short (a force-quit). In the desktop app `background: true` moves the files on a worker thread (`activity.list` kind `move`, `activity.cancel` stops it after the file in hand; `ui.inspect` → `move`) → {moved, of, folder, stopped, skipped: [{id, name, kind: clash|missing|asked}]}",
             always,
             move_to_folder
+        ),
+        cmd!(query
+            "photo.checkMove",
+            "Check Move to Folder",
+            [],
+            None,
+            "{folder, ids?} — how `photo.moveToFolder` would go for the photos (default: the selection), without moving anything → {folder, photos, movable, here, problems: [{id, name, kind: clash|missing|unmovable, twin?}]}; photos count as the person sees them (a virtual copy is one, though it moves with its master's file); `here`: already in the folder; a name taken in `folder`, a file that is missing or offline, or a photo that can't move as it is (Local, or no file) or a library photo of the same file as such a photo in the batch, since skipping is by file (`unmovable`) is a problem (pass those ids as `skip` to move the rest); `twin: true` marks a `clash` with another photo of the same move rather than with a file in the folder",
+            always,
+            |s, p| crate::move_check::check_command(s, p)
         ),
         cmd!(
             "library.browse",
@@ -582,7 +593,7 @@ fn remove_empty_folder(path: &str) -> std::result::Result<(), String> {
 }
 
 /// A folder path parameter without trailing separators (`None` when missing or blank).
-fn folder_param<'a>(p: &'a Value, key: &str) -> Option<&'a str> {
+pub(crate) fn folder_param<'a>(p: &'a Value, key: &str) -> Option<&'a str> {
     str_param(p, key).map(|x| x.trim_end_matches(['/', '\\'])).filter(|x| !x.is_empty())
 }
 
@@ -620,7 +631,7 @@ fn create_folder(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(bad(C, format!("{path} already exists: choose another name")));
     }
     folder_on_disk("", &path).map_err(|e| bad(C, e))?;
-    let undo = crate::FolderMove { from: path.clone(), to: String::new() };
+    let undo = crate::FolderMove { from: path.clone(), to: String::new(), on_disk: true };
     if let Err(e) = s.commit_with_folder(&format!("Create Folder “{name}”"), Op::Batch { ops: vec![] }, undo) {
         let _ = remove_empty_folder(&path);
         return Err(e);
@@ -630,70 +641,16 @@ fn create_folder(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// `photo.moveToFolder`: move the photos' files (with their sidecars) into `folder` and relink
 /// them, as one undo step. Virtual copies follow their master's file. Never overwrites: a name
-/// already taken in `folder` refuses the whole move.
+/// already taken in `folder`, or a file that is missing or offline, refuses the whole move,
+/// unless the photo is in `skip`: those stay where they are and the rest move. Refusals are plain
+/// sentences for the person (`photo.checkMove` finds the same problems beforehand). Here it waits
+/// for the files; the app runs the same job on a worker thread ([`crate::move_job`]).
 fn move_to_folder(s: &mut Session, p: &Value) -> Result<Value> {
-    const C: &str = "photo.moveToFolder";
-    let folder = folder_param(p, "folder").ok_or_else(|| bad(C, "missing folder"))?;
-    let dir = Path::new(folder);
-    if !dir.is_dir() {
-        return Err(bad(C, format!("{folder} is not a folder (create it first with folder.create)")));
-    }
-    let ids = s.targets(p)?;
-    if ids.is_empty() {
-        return Err(bad(C, "no photos to move: select some or give ids"));
-    }
-    let mut plans: Vec<crate::rename::RenamePlan> = Vec::new();
-    let mut taken: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let mut clashes: Vec<String> = Vec::new();
-    for id in ids {
-        let ph = s.catalog.photo(id).ok_or_else(|| bad(C, format!("no photo {}", id.0)))?;
-        if ph.local {
-            return Err(bad(C, format!("{} is not in the library (Local): add it first", ph.file_name)));
-        }
-        let lightcraft_catalog::Source::File { path } = &ph.source else {
-            return Err(bad(C, format!("{} has no file on disk", ph.file_name)));
-        };
-        if plans.iter().any(|pl| pl.from_path.as_deref() == Some(path.as_str())) {
-            continue; // a virtual copy of a photo already moving
-        }
-        let src = Path::new(path);
-        if !src.is_file() {
-            return Err(bad(C, format!("{path} is missing or offline: find it first (Find Missing Photos)")));
-        }
-        let Some(file) = src.file_name() else { return Err(bad(C, format!("{path}: no file name"))) };
-        if src.parent() == Some(dir) {
-            continue; // already there
-        }
-        let to = dir.join(file);
-        let to_s = to.to_string_lossy().to_string();
-        if to.exists() || !taken.insert(to_s.to_lowercase()) {
-            clashes.push(file.to_string_lossy().to_string());
-            continue;
-        }
-        let name = ph.file_name.clone();
-        plans.push(crate::rename::RenamePlan { id: id.0, from: name.clone(), to: name, from_path: Some(path.clone()), to_path: Some(to_s) });
-    }
-    if !clashes.is_empty() {
-        let s_ = if clashes.len() == 1 { "" } else { "s" };
-        return Err(bad(
-            C,
-            format!("{} already in {folder}: nothing was moved. Rename the photo{s_} first or choose another folder", clashes.join(", ")),
-        ));
-    }
-    let n = plans.len();
-    if n == 0 {
-        return Ok(json!({"moved": 0, "folder": folder}));
-    }
-    let plural = |k: usize| if k == 1 { "" } else { "s" };
-    let task = s.activity.start("move", &format!("Moving {n} photo{}", plural(n)), crate::activity::Cancel::No);
-    let name = dir.file_name().map(|f| f.to_string_lossy().to_string()).unwrap_or_else(|| folder.to_string());
-    let moved = s.apply_file_plans(&crate::rename::RealFs, &plans, &|k| format!("Move {k} Photo{} to “{name}”", plural(k)));
-    task.finish(match &moved {
-        Ok(_) => crate::activity::Outcome::default(),
-        Err(e) => crate::activity::Outcome::failed(e.to_string()),
-    });
-    moved?;
-    Ok(json!({"moved": n, "folder": folder}))
+    let Some((work, finish)) = crate::move_job::start(s, p, false)? else {
+        return Ok(json!({"moved": 0, "of": 0, "folder": folder_param(p, "folder"), "stopped": false, "skipped": []}));
+    };
+    let out = work.run();
+    finish.finish(s, out)
 }
 
 /// A folder's own name in curly quotes, for a sentence (the whole path when it has none).
@@ -902,6 +859,7 @@ pub(crate) struct Moved {
 /// the photos inside, as one undo step: undo renames the folder back and restores the photos'
 /// paths, redo repeats the move — each refused (and reported) when the destination is taken.
 pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result::Result<Moved, String> {
+    s.refuse_while_moving().map_err(|e| e.to_string())?;
     let (src, dst) = (Path::new(from), Path::new(to));
     check_places(from, to)?;
     if let Some(l) = s.library.as_ref() {
@@ -985,8 +943,12 @@ pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result:
     let name = Path::new(to).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
     let renamed = src.parent() == dst.parent();
     let label = if renamed { format!("Rename Folder to “{name}”") } else { format!("Move Folder “{name}”") };
-    let folder = crate::FolderMove { from: to.to_string(), to: from.to_string() };
+    let folder = crate::FolderMove { from: to.to_string(), to: from.to_string(), on_disk: true };
     if let Err(e) = s.commit_with_folder(&label, Op::Batch { ops }, folder) {
+        if matches!(e, crate::EngineError::Catalog(lightcraft_catalog::CatalogError::PartlyApplied { .. })) {
+            // part of it stays, and the undo step that takes it back renames the folder: it stays where it is
+            return Err(e.to_string());
+        }
         // the catalog didn't take it: put the folder back where the photos still point
         let back = rename_folder_on_disk(to, from).err().map(|b| format!("; moving it back failed too: {b}")).unwrap_or_default();
         return Err(format!("{e}{back}"));

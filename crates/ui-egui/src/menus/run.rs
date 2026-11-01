@@ -5,10 +5,10 @@ use super::{BeforeAfter, Dialog, LightcraftApp, PickRequest, Picked, RightPanel,
 fn panel(app: &mut LightcraftApp, ctx: &egui::Context, p: RightPanel, name: &str) {
     if app.ui.right == p && crate::docking::exposed(app, crate::docking::Panel::Tools) {
         app.ui.right = RightPanel::None;
-        app.toast(ctx, crate::i18n::tr_format!("{name} Off", name = crate::i18n::tr(name)));
+        app.toast_on(ctx, "panel", crate::i18n::tr_format!("{name} Off", name = crate::i18n::tr(name)));
     } else {
         app.ui.right = p;
-        app.toast(ctx, crate::i18n::tr_format!("{name} On", name = crate::i18n::tr(name)));
+        app.toast_on(ctx, "panel", crate::i18n::tr_format!("{name} On", name = crate::i18n::tr(name)));
         if p.is_edit_tool() && !matches!(app.ui.view, ViewMode::Detail) {
             app.ui.view = ViewMode::Detail;
         }
@@ -275,6 +275,69 @@ pub fn library_replaced(app: &mut LightcraftApp) {
     app.ui.compare = None;
 }
 
+/// Where `folder.locate` is to look: the command's `path`, or the folder the person chooses (`None`: not chosen, or the
+/// answer comes later).
+fn folder_locate_target(app: &mut LightcraftApp, id: &str, p: &Value) -> Result<Option<String>, String> {
+    if let Some(x) = p.get("path").and_then(Value::as_str) {
+        return Ok(Some(x.to_string()));
+    }
+    // (one folder dialog per command: a second folder asked about meanwhile would get the first one's answer)
+    if crate::pick::waiting(app, id) {
+        return Err(crate::i18n::tr("Choose the folder in the dialog that is already open").to_string());
+    }
+    match crate::pick::ask(app, id, p, "path", PickRequest::folder(crate::i18n::tr("Locate Missing Folder…")), |s| {
+        s.pick_folder.as_mut().and_then(|f| f()).map(|x| vec![x])
+    }) {
+        Picked::Now(v) => Ok(v.into_iter().next()),
+        Picked::Later => Ok(None),
+        // (a cancelled synchronous dialog answers `None` too: only a host without the service has "no dialog")
+        Picked::Unavailable if app.services.pick_folder.is_none() => Err("no folder dialog on this platform".into()),
+        Picked::Unavailable => Ok(None),
+    }
+}
+
+/// The `folder.locate` command: where a folder of the library is now (issues #1112, #1116): {folder, path?, disk?,
+/// incomplete?, synchronize?}. Without `path` a folder dialog asks; the files are then looked for there in the
+/// background and the photos relinked (`folder.updateLocation`).
+fn folder_locate_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Result<Value, String> {
+    let Some(folder) = p.get("folder").and_then(Value::as_str).filter(|x| !x.trim().is_empty()) else {
+        return Err("folder.locate: missing `folder`".into());
+    };
+    let to = folder_locate_target(app, id, p)?;
+    let flag = |key: &str| p.get(key).and_then(Value::as_bool).unwrap_or(false);
+    // Synchronize Folder afterwards only while its dialog still waits for the answer (closed meanwhile: it is not
+    // opened again unasked)
+    let synchronize = flag("synchronize") && crate::relocate::synchronizing(app, folder);
+    match to {
+        Some(to) => crate::relocate::start(
+            app,
+            crate::relocate::Request { path: folder.to_string(), to, disk: flag("disk"), incomplete: flag("incomplete"), synchronize, asks: true },
+        ),
+        None => Ok(Value::Null),
+    }
+}
+
+/// The `folder.updateLocation` command. The engine's command looks for the files on the calling thread, which here is
+/// the app's: an agent's call (control channel, `mcp --connect`) goes the way of the person's instead (a worker thread
+/// under a row in the activity stack) and is answered at once; `ui.inspect` → `relocate` says how it went.
+fn folder_update_location_command(app: &mut LightcraftApp, p: &Value) -> Result<Value, String> {
+    let text = |key: &str| p.get(key).and_then(Value::as_str).filter(|x| !x.trim().is_empty());
+    let (Some(folder), Some(to)) = (text("folder"), text("path")) else {
+        let key = if text("folder").is_none() { "folder" } else { "path" };
+        return Err(format!("folder.updateLocation: missing `{key}`"));
+    };
+    let flag = |key: &str| p.get(key).and_then(Value::as_bool).unwrap_or(false);
+    let request = crate::relocate::Request {
+        path: folder.to_string(),
+        to: to.to_string(),
+        disk: flag("disk"),
+        incomplete: flag("incomplete"),
+        synchronize: false,
+        asks: false,
+    };
+    crate::relocate::start(app, request).map(|_| json!({"background": true}))
+}
+
 /// Handle UI commands; `None` means "not a UI command — send it to the engine".
 pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Result<Value, String>> {
     if matches!(id, "ui.dock" | "ui.dock.reset") {
@@ -306,6 +369,10 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
     // the app's own context: a toast's time comes from its clock (a fresh context's clock is at 0,
     // and a toast set by it was long over by the app's clock: it never showed)
     let ctx = app.tasks.repaint.clone().unwrap_or_default();
+    if id == "photo.moveToFolder" && p.get("background").and_then(Value::as_bool) == Some(true) {
+        // the files move on a worker thread; `ui.inspect` → `move` says how it ended
+        return Some(crate::move_task::start(app, &ctx, p));
+    }
     const PARTS: [fn(&mut LightcraftApp, &egui::Context, &str, &Value) -> Option<Result<Value, String>>; 12] = [
         ui_commands_1,
         ui_commands_2,
@@ -671,7 +738,7 @@ fn ui_commands_2(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, p: &Val
         "compare.makeSelect" => crate::panels::compare::make_select(app),
         "view.autoAdvance" => {
             app.ui.auto_advance = !app.ui.auto_advance;
-            app.toast(ctx, crate::i18n::tr(if app.ui.auto_advance { "Auto Advance On" } else { "Auto Advance Off" }));
+            app.toast_on(ctx, "autoAdvance", crate::i18n::tr(if app.ui.auto_advance { "Auto Advance On" } else { "Auto Advance Off" }));
             Ok(json!({"autoAdvance": app.ui.auto_advance}))
         }
         "view.back" => view_back_command(app, ctx),
@@ -1105,7 +1172,7 @@ fn ui_commands_6(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, p: &Val
                 },
             };
             app.ui.tool_overlay = mode;
-            app.toast(ctx, tool_overlay_toast(mode));
+            app.toast_on(ctx, "toolOverlay", tool_overlay_toast(mode));
             Ok(json!({"mode": mode.name()}))
         }
         "view.visualizeSpots" => {
@@ -1426,6 +1493,7 @@ fn ui_commands_9(app: &mut LightcraftApp, _ctx: &egui::Context, id: &str, p: &Va
             app.ui.dialog = Some(Dialog::LabelNames { names, save_as: String::new() });
             Ok(Value::Null)
         }
+        "dialog.trashFiles" => crate::panels::trash_files::open(app, p),
         "dialog.rename" => {
             let template = p.get("template").and_then(Value::as_str).unwrap_or("{name}").to_string();
             app.ui.dialog = Some(Dialog::Rename { template, start: p.get("start").and_then(Value::as_u64).unwrap_or(1) as u32 });
@@ -1638,6 +1706,8 @@ fn ui_commands_11(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, p: &Va
             crate::panels::dialogs::prompt(app, "Save Metadata Preset", "Preset name", "", "metadata.savePreset", json!({}), "name");
             Ok(Value::Null)
         }
+        "folder.locate" => folder_locate_command(app, id, p),
+        "folder.updateLocation" => folder_update_location_command(app, p),
         "dialog.keywordShortcut" => {
             let now = app.session.catalog.keyword_shortcut().join(", ");
             crate::panels::dialogs::prompt(app, "Set Keyword Shortcut", "Separated by commas", &now, "keyword.setShortcut", json!({}), "keywords");
@@ -2178,7 +2248,7 @@ fn paths_or_pick(
     Ok(paths)
 }
 
-/// What an import of presets and profiles has to say: one toast for both halves (a second toast would replace the first).
+/// What an import of presets and profiles has to say: one toast for both halves, as they are one import.
 #[derive(Default)]
 struct ImportNews {
     parts: Vec<String>,

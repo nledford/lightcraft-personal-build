@@ -104,14 +104,14 @@ fn select_only_active_without_active_photo_does_not_change_selection() {
 fn a_key_after_one_that_opens_a_dialog_in_the_same_frame_does_nothing() {
     use lightcraft_catalog::PhotoId;
     let mut h = library();
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     let press = |key, modifiers| egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };
     h.events.push(press(egui::Key::E, egui::Modifiers::SHIFT));
     h.events.push(press(egui::Key::Num3, egui::Modifiers::NONE));
     h.step();
     assert!(h.app.ui.dialog.is_some(), "Shift+E opens Export");
     assert_eq!(h.app.session.catalog.photo(PhotoId(1)).unwrap().rating, 0, "the rating key was the dialog's");
-    assert!(h.app.ui.toast.is_none());
+    assert!(h.app.ui.toast().is_none());
 }
 
 /// The same for a second alias (Shift+Z flags a Pick) after Shift+E in one frame.
@@ -365,30 +365,30 @@ fn color_label_actions_show_feedback_only_after_success() {
     for shift in [false, true] {
         for (k, name) in [("6", "Red"), ("7", "Yellow"), ("8", "Green"), ("9", "Blue")] {
             h.app.session.execute("library.select", &json!({"ids": [1]})).unwrap();
-            h.app.ui.toast = None;
+            h.app.ui.toasts.clear();
             key(&mut h, k, shift);
-            assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some(format!("{name} Label").as_str()));
-            assert_eq!(h.app.ui.toast.as_ref().and_then(|t| t.label), h.app.session.catalog.photo(PhotoId(1)).unwrap().label);
+            assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some(format!("{name} Label").as_str()));
+            assert_eq!(h.app.ui.toast().and_then(|t| t.label), h.app.session.catalog.photo(PhotoId(1)).unwrap().label);
             assert_eq!(h.app.session.active(), Some(PhotoId(if shift { 2 } else { 1 })));
         }
     }
     // Menus and the Info-panel swatches dispatch the same command, including purple/clear.
     h.app.run("photo.label", json!({"label": "purple"})).unwrap();
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Purple Label"));
+    assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some("Purple Label"));
     h.app.run("photo.label", json!({"label": "none"})).unwrap();
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Color label cleared"));
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.label.is_none()), "clear uses neutral feedback");
+    assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some("Color label cleared"));
+    assert!(h.app.ui.toast().is_some_and(|t| t.label.is_none()), "clear uses neutral feedback");
     h.app.session.execute("label.setNames", &json!({"names": {"red": "Needs review"}})).unwrap();
     key(&mut h, "6", false);
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Needs review Label"));
+    assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some("Needs review Label"));
     // Native menu callbacks run before logic() catches up to the current frame's clock.
     let now = h.view.ctx.input(|i| i.time);
     h.app.last_time = now - 10.0;
     h.app.run("photo.label", json!({"label": "blue"})).unwrap();
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.until > now), "menu feedback must survive an idle gap");
-    h.app.ui.toast = None;
+    assert!(h.app.ui.toast().is_some_and(|t| t.until > now), "menu feedback must survive an idle gap");
+    h.app.ui.toasts.clear();
     assert!(h.app.run("photo.label", json!({"label": "invalid"})).is_err());
-    assert!(h.app.ui.toast.is_none(), "failed actions must not announce success");
+    assert!(h.app.ui.toast().is_none(), "failed actions must not announce success");
 }
 
 #[test]

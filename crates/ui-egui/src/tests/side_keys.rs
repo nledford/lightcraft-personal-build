@@ -321,7 +321,7 @@ impl Sidebar {
     }
 
     fn said(&self) -> String {
-        self.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default()
+        self.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default()
     }
 
     fn open_rename_of(&mut self, id: &str) -> Option<Dialog> {
@@ -781,12 +781,12 @@ fn the_first_time_says_what_the_keys_do() {
     let mut s = Sidebar::new(standard());
     s.enter();
     assert!(s.said().contains("Esc"), "{:?}", s.said());
-    s.app.ui.toast = None;
+    s.app.ui.toasts.clear();
     s.press(Key::Escape);
     s.frame();
     s.enter();
     assert!(s.on());
-    assert!(s.app.ui.toast.is_none(), "the second time the ring says it");
+    assert!(s.app.ui.toast().is_none(), "the second time the ring says it");
 }
 
 /// Keys are never left with something out of sight: when the sidebar is not drawn, the mode ends after the frames
@@ -929,7 +929,7 @@ fn f2_renames_the_row_under_the_cursor() {
     }
     #[cfg(unix)]
     {
-        s.app.ui.toast = None;
+        s.app.ui.toasts.clear();
         assert_eq!(s.open_rename_of("libfolder:/"), None, "a disk's root is not renamed");
         assert!(s.said().contains("no name"), "{:?}", s.said());
     }

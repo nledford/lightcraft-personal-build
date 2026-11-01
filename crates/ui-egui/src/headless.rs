@@ -89,6 +89,8 @@ pub struct HeadlessView {
     pub clipboard: String,
     /// Events the host owes the next frame (a paste request's paste, as a desktop host sends it).
     owed: Vec<egui::Event>,
+    /// When the last frame asked to be run again (`Duration::MAX`: only on input or an explicit repaint).
+    pub repaint_after: Duration,
 }
 
 impl Default for HeadlessView {
@@ -111,6 +113,7 @@ impl HeadlessView {
             frames: 0,
             clipboard: String::new(),
             owed: vec![],
+            repaint_after: Duration::MAX,
         }
     }
 
@@ -162,7 +165,9 @@ impl HeadlessView {
                 self.clipboard.clone_from(text);
             }
         }
-        let mut commands = out.viewport_output.remove(&ViewportId::ROOT).map(|v| v.commands).unwrap_or_default();
+        let viewport = out.viewport_output.remove(&ViewportId::ROOT);
+        self.repaint_after = viewport.as_ref().map_or(Duration::MAX, |v| v.repaint_delay);
+        let mut commands = viewport.map(|v| v.commands).unwrap_or_default();
         // 0.37: `ViewportCommand::Screenshot` carries a one-shot callback. A headless host answers
         // it here, after the pass it was issued in, exactly once.
         let mut shots = Vec::new();
@@ -260,6 +265,8 @@ pub struct Headless {
     quit: bool,
     /// The simulated window is zoomed (`Maximized(true)` seen, reported back to the app like a real host).
     pub window_maximized: bool,
+    /// The simulated window has the keyboard (false: another app is in front, and the window reports so each frame).
+    pub window_focused: bool,
     /// Window-management and pointer commands the app sent (`StartDrag`, `Maximized`,
     /// `CursorPosition`, …), oldest first.
     pub window_commands: Vec<ViewportCommand>,
@@ -311,6 +318,7 @@ impl Headless {
             control: tx,
             quit: false,
             window_maximized: false,
+            window_focused: true,
             window_commands: vec![],
             last_cursor: egui::CursorIcon::Default,
             #[cfg(test)]
@@ -359,6 +367,7 @@ impl Headless {
         (self.size, self.pixels_per_point) = bounded_viewport(self.size, self.pixels_per_point);
         let mut raw = HeadlessView::raw_input(self.size, self.pixels_per_point, self.time, std::mem::take(&mut self.events));
         raw.viewports.entry(ViewportId::ROOT).or_default().maximized = Some(self.window_maximized);
+        raw.focused = self.window_focused;
         raw.max_texture_side = (self.reported_texture_side != Some(self.max_texture_side)).then_some(self.max_texture_side);
         self.reported_texture_side = Some(self.max_texture_side);
         // A headless run's timers follow its simulated clock, not the host's wall clock.
@@ -407,6 +416,18 @@ impl Headless {
         }
     }
 
+    /// Whether the background checks of the library's files (Missing Photos) are done: the list
+    /// of the files, the sweep, what was asked meanwhile and the count of what was found gone. Not part of [`Headless::busy`]: on a
+    /// large library on a share they take minutes, and a snapshot doesn't wait for them. A test
+    /// that needs the Missing Photos row where it will be waits for them.
+    pub fn file_checks_done(&self) -> bool {
+        let files = &self.app.session.media.availability;
+        files.sweeping() == 0
+            && files.pending() == 0
+            && !self.app.caches.files_listing.load(std::sync::atomic::Ordering::Acquire)
+            && !self.app.caches.missing.walking()
+    }
+
     /// Is anything still in progress (renders, file-system checks the sidebar waits for, the albums' counts,
     /// a count of the library, queued input)?
     pub fn busy(&self) -> bool {
@@ -420,6 +441,9 @@ impl Headless {
             || self.app.sync_run.is_some()
             || self.app.sync_queued.is_some()
             || self.app.sync_scans.is_some()
+            || self.app.move_run.is_some()
+            || self.app.trash_run.as_ref().is_some_and(|r| !r.waiting_for_answer())
+            || self.app.relocate.is_some()
             || self.app.import.is_some()
             || self.app.export.is_some()
             || self.app.session.denoise_busy()

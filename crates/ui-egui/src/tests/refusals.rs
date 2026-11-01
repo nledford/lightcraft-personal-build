@@ -58,7 +58,7 @@ fn refused_move(app: &mut LightcraftApp) -> serde_json::Value {
 }
 
 fn toast(app: &LightcraftApp) -> Option<&str> {
-    app.ui.toast.as_ref().map(|t| t.text.as_str())
+    app.ui.toast().map(|t| t.text.as_str())
 }
 
 #[test]
@@ -69,7 +69,7 @@ fn a_refused_command_says_why_in_a_toast() {
     let said = toast(&app).expect("a toast");
     assert!(said.contains("not inside that folder"), "{said}");
     assert!(!said.contains("album.reorder") && !said.contains("invalid parameters"), "words for a person, not the command's id: {said}");
-    let until = app.ui.toast.clone().unwrap().until;
+    let until = app.ui.toast().cloned().unwrap().until;
     assert!(until - app.tick_now() >= 5.0, "long enough to read a sentence");
     // agents still find the full error as the status
     assert!(app.ui.status.contains("album.reorder"), "{}", app.ui.status);
@@ -114,7 +114,7 @@ fn a_refused_menu_item_says_why() {
     assert_eq!(crate::menubar::act_item(&mut app, "album.reorder", params.clone()), None);
     assert!(toast(&app).is_some_and(|t| t.contains("not inside that folder")), "{:?}", toast(&app));
     // `run_item` stays the raw form: the error back, nothing shown
-    app.ui.toast = None;
+    app.ui.toasts.clear();
     assert!(crate::menubar::run_item(&mut app, "album.reorder", params).is_err());
     assert_eq!(toast(&app), None);
     // an item that goes through answers as before
@@ -133,13 +133,13 @@ fn an_interface_command_that_wraps_an_engine_command_says_the_reason_only() {
     for (id, wrapped, own_prefix) in
         [("photo.editInExternal", "photo.editExternal", Some("Couldn't open the editor: ")), ("dialog.allMetadata", "photo.allMetadata", None)]
     {
-        app.ui.toast = None;
+        app.ui.toasts.clear();
         let whole = app.run(id, json!({})).unwrap_err();
         assert!(whole.contains(&format!("`{wrapped}`")), "agents get the engine's error as it was: {whole}");
         if own_prefix.is_none() {
             assert_eq!(toast(&app), None);
         }
-        app.ui.toast = None;
+        app.ui.toasts.clear();
         assert_eq!(app.act(id, json!({})), None);
         let said = toast(&app).expect("a toast").to_string();
         assert!(!said.contains(wrapped) && !said.contains("not available right now") && !said.contains("invalid parameters"), "{said}");
@@ -175,7 +175,7 @@ fn a_refused_key_behind_a_dialog_says_nothing() {
     h.app.run("dialog.export", json!({})).unwrap();
     h.step();
     assert!(h.app.ui.dialog.is_some());
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     key(&mut h, "3", false);
     assert_eq!(toast(&h.app), None);
     h.app.ui.dialog = None;
@@ -293,7 +293,7 @@ fn a_preset_row_doesnt_claim_success_when_refused() {
     click(&mut h, &id);
     assert!(toast(&h.app).is_some_and(|t| t.starts_with("Preset: ")), "{:?}", toast(&h.app));
     // with none, why not
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     h.app.session.selection = Default::default();
     h.step();
     let id = row(&h).expect("a preset row with nothing selected");
@@ -340,12 +340,12 @@ fn a_refused_key_says_why_instead_of_claiming_success() {
     assert_eq!(h.app.session.catalog.photo(lightcraft_catalog::PhotoId(1)).unwrap().rating, 0);
     assert_eq!(toast(&h.app), Some("Undo"));
     // nothing left to undo
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     key(&mut h, "Z", true);
     let said = toast(&h.app).expect("a toast").to_string();
     assert!(said != "Undo" && said.to_lowercase().contains("nothing to undo"), "{said}");
     // nothing selected
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     h.app.session.selection = Default::default();
     key(&mut h, "3", false);
     let said = toast(&h.app).expect("a toast").to_string();
@@ -407,7 +407,7 @@ fn a_refused_flag_step_key_says_why_instead_of_naming_the_flag() {
     disk.full.store(true, std::sync::atomic::Ordering::SeqCst);
     let flag = |h: &Headless| h.app.session.active().and_then(|id| h.app.session.catalog.photo(id)).map(|p| p.flag);
     for (k, cmd) in [("`", false), ("ArrowUp", true), ("ArrowDown", true)] {
-        h.app.ui.toast = None;
+        h.app.ui.toasts.clear();
         let before = flag(&h);
         key(&mut h, k, cmd);
         assert_ne!(flag(&h), before, "{k} reached the command (the change stays in memory)");
@@ -461,7 +461,7 @@ fn a_refusal_keeps_the_toast_the_command_made() {
     let effect = dir.join("Soft.lceffect");
     std::fs::write(&effect, json!({"effects": [{"name": "Soft"}]}).to_string()).unwrap();
     let paths = [cube.to_string_lossy().to_string(), effect.to_string_lossy().to_string()];
-    app.ui.toast = None;
+    app.ui.toasts.clear();
     assert_eq!(app.act("file.importPresets", json!({"paths": paths})), None, "the preset half is refused");
     let said = toast(&app).expect("a toast").to_string();
     assert!(said.starts_with("Import failed: ") && said.contains("prefs.json couldn't be read"), "what the import said is kept: {said}");

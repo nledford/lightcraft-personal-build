@@ -1,6 +1,6 @@
 use super::fs::{ListedSources, MoveFs, RealFs, folded_path, is_respelling, move_one, sidecars};
 use super::sidecar::{RetainedPacket, SidecarMove, advance_packets, note_companions, packet_aliases};
-use super::{HashMap, HashSet, Op, Path, PathBuf, SidecarNaming, Source};
+use super::{HashMap, HashSet, Op, Path, PathBuf, PhotoId, SidecarNaming, Source};
 
 /// Why [`move_file`] failed, and what it left behind.
 #[derive(Clone, Debug, PartialEq)]
@@ -17,6 +17,42 @@ impl std::fmt::Display for MoveError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.message)
     }
+}
+
+/// A sidecar candidate of [`sidecars`] that is there. An upper-case `.XMP` spelling that only
+/// answers through a case-insensitive volume is the lower-case sidecar: it is tracked and moved
+/// under its own name, so `a.xmp` doesn't become `b.XMP`.
+fn sidecar_present(fs: &dyn MoveFs, (sc, _, upper): &(PathBuf, SidecarNaming, bool)) -> bool {
+    fs.is_file(sc) && (!*upper || fs.listed(sc))
+}
+
+/// The sidecars of the photo file `from` that go along to `to`, worked out lazily: each one is
+/// looked at only when the one before it has moved (two spellings can name one file).
+fn sidecar_moves<'a>(fs: &'a dyn MoveFs, from: &str, to: &'a str) -> impl Iterator<Item = SidecarMove> + 'a {
+    sidecars(from).into_iter().filter(move |s| sidecar_present(fs, s)).map(move |(sc, naming, upper)| {
+        let mut dst = crate::sidecar::sidecar_path(to, naming);
+        if upper {
+            dst = dst.with_extension("XMP");
+        }
+        // A stem sidecar another photo still uses is copied, not taken away (issue #92).
+        let copied = naming == SidecarNaming::Stem && fs.stem_sibling(&sc).is_some();
+        SidecarMove { from: sc, to: dst, copied, companions: Vec::new() }
+    })
+}
+
+/// The photo file already went from `from` to `to`, and its sidecars may not have (the app was
+/// stopped between the two): take them along, as [`move_file`] would have. Never overwrites: a
+/// sidecar whose place is taken stays where it is. How many moved, or the first that couldn't.
+pub(crate) fn finish_sidecars(fs: &dyn MoveFs, from: &str, to: &str) -> std::result::Result<usize, String> {
+    let mut moved = 0;
+    for m in sidecar_moves(fs, from, to) {
+        if !m.needed(fs) {
+            continue;
+        }
+        m.apply(fs).map_err(|e| format!("{} → {}: {e}", m.from.display(), m.to.display()))?;
+        moved += 1;
+    }
+    Ok(moved)
 }
 
 /// Move `from` to `to` (never over an existing file) together with its sidecars. On error the
@@ -37,22 +73,14 @@ pub(crate) fn move_file_with(fs: &dyn MoveFs, from: &str, to: &str) -> std::resu
     if fs.exists(t) && !is_respelling(fs, f, t) {
         return Err(fail(format!("{to} already exists")));
     }
-    // An upper-case `.XMP` spelling that only answers through a case-insensitive volume is the
-    // lower-case sidecar: track and move it under its own name, so `a.xmp` doesn't become `b.XMP`.
-    let present = |(sc, _, upper): &(PathBuf, SidecarNaming, bool)| fs.is_file(sc) && (!*upper || fs.listed(sc));
-    let mut packets: Vec<RetainedPacket> =
-        sidecars(from).into_iter().filter(present).map(|(path, _, _)| RetainedPacket { version: fs.packet_version(&path).ok(), path }).collect();
+    let mut packets: Vec<RetainedPacket> = sidecars(from)
+        .into_iter()
+        .filter(|s| sidecar_present(fs, s))
+        .map(|(path, _, _)| RetainedPacket { version: fs.packet_version(&path).ok(), path })
+        .collect();
     move_one(fs, f, t).map_err(|e| fail(format!("rename {from}: {e}")))?;
     let mut done: Vec<SidecarMove> = Vec::new();
-    let mut remaining = sidecars(from).into_iter().filter(present).map(|(sc, naming, upper)| {
-        let mut dst = crate::sidecar::sidecar_path(to, naming);
-        if upper {
-            dst = dst.with_extension("XMP");
-        }
-        // A stem sidecar another photo still uses is copied, not taken away (issue #92).
-        let copied = naming == SidecarNaming::Stem && fs.stem_sibling(&sc).is_some();
-        SidecarMove { from: sc, to: dst, copied, companions: Vec::new() }
-    });
+    let mut remaining = sidecar_moves(fs, from, to);
     while let Some(m) = remaining.next() {
         if !m.needed(fs) {
             continue; // never overwrite: the old sidecar stays where it was
@@ -123,10 +151,24 @@ pub(crate) struct BatchMoveError {
 /// Move the files `moves` names, all or nothing: after a failure the earlier moves are undone.
 /// Moves that can't be undone (e.g. the network share went away) are reported, not ignored.
 pub(crate) fn move_all(fs: &dyn MoveFs, moves: &[(String, String)]) -> std::result::Result<(), BatchMoveError> {
+    move_all_with(fs, moves, &mut |_, _| true).map(|_| ())
+}
+
+/// [`move_all`], asking `go_on(k, move)` before each move (`k` moved so far): `false` stops there,
+/// keeping the `k` files already moved where they are now. How many moved: all of `moves` unless
+/// stopped. A failure still undoes every earlier move, as in [`move_all`].
+pub(crate) fn move_all_with(
+    fs: &dyn MoveFs,
+    moves: &[(String, String)],
+    go_on: &mut dyn FnMut(usize, &(String, String)) -> bool,
+) -> std::result::Result<usize, BatchMoveError> {
     let listed = ListedSources::new(fs, moves);
     let fs: &dyn MoveFs = &listed;
     let mut done: Vec<&(String, String)> = Vec::new();
     for m in moves {
+        if !go_on(done.len(), m) {
+            return Ok(done.len());
+        }
         let Err(e) = move_file_with(fs, &m.0, &m.1) else {
             done.push(m);
             continue;
@@ -148,7 +190,42 @@ pub(crate) fn move_all(fs: &dyn MoveFs, moves: &[(String, String)]) -> std::resu
         }
         return Err(BatchMoveError { message, stuck, pending_sidecars });
     }
-    Ok(())
+    Ok(done.len())
+}
+
+/// `rest`, what is left of a rollback that failed part-way, once the files were moved back (`moved_back`, the result of
+/// `move_all` on the moves back): the `SetFile`s of a photo whose file did go back become `Relink`s, the same change to the
+/// catalog that moves no file; those of a photo whose file stayed where it went keep moving it. A photo is judged by the
+/// path its last `SetFile` points to, as `Session::file_moves` plans its move.
+pub(crate) fn rest_after_move_back(rest: Op, moved_back: &std::result::Result<(), BatchMoveError>) -> Op {
+    fn targets<'a>(op: &'a Op, out: &mut HashMap<PhotoId, &'a str>) {
+        match op {
+            Op::Batch { ops } => ops.iter().for_each(|op| targets(op, out)),
+            Op::SetFile { id, source: Source::File { path }, .. } => {
+                out.insert(*id, path);
+            }
+            _ => {}
+        }
+    }
+    fn rewrite(op: Op, back: &HashSet<PhotoId>) -> Op {
+        match op {
+            Op::Batch { ops } => Op::Batch { ops: ops.into_iter().map(|op| rewrite(op, back)).collect() },
+            Op::SetFile { id, file_name, source } if back.contains(&id) => Op::Relink { id, file_name, source, format: None },
+            op => op,
+        }
+    }
+    let mut to = HashMap::new();
+    targets(&rest, &mut to);
+    // (on a failed move back, `stuck` holds the moves back that stayed done: those files are at their old path)
+    let back: HashSet<PhotoId> = to
+        .into_iter()
+        .filter(|(_, path)| match moved_back {
+            Ok(()) => true,
+            Err(e) => e.stuck.iter().any(|m| Path::new(&m.1) == Path::new(path)),
+        })
+        .map(|(id, _)| id)
+        .collect();
+    rewrite(rest, &back)
 }
 
 /// Final `SetFile` per photo (nested batches included), filtered by destination only afterward.

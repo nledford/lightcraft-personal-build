@@ -1,6 +1,7 @@
 //! Background tasks in flight (issue #345): imports, exports, preview builds, downloads, the face scan… Each one
 //! registers here while it runs, so every frontend can show them in one place (the desktop app's activity stack) and
-//! cancel the ones that can be cancelled (`activity.list`, `activity.cancel`).
+//! cancel the ones that can be cancelled (`activity.list`, `activity.cancel`), and skip what a task is stuck waiting
+//! on (`activity.skip`).
 //!
 //! A job holds a [`TaskGuard`] for as long as it runs; dropping it — when the job ends, fails or its thread unwinds
 //! from a panic — removes the row, so a dead worker never leaves a stuck bar. Jobs keep the cancel flag they already
@@ -12,12 +13,16 @@
 //! to: it ran long enough to walk away from, or it did not go well. That row stays until it is dismissed
 //! (`activity.finished`, `activity.dismiss`), for this session. A guard dropped by a panic leaves "stopped
 //! unexpectedly" instead of nothing.
-//!
 //! Jobs that must not run side by side share a [`Lane`]. One asked for while its lane is busy can wait in line
 //! ([`Activity::enqueue`]): it keeps what it was asked ([`Request`], the command and its parameters) and runs it
 //! when the jobs ahead of it are over ([`crate::Session::start_waiting`]), planning its work then, not when it was
 //! asked. A job that kept its request and did not end well can be asked for again ([`Activity::retry`]). Nothing
 //! waits across another library: the files may have changed meanwhile.
+//!
+//! A job that is waiting on something that may never answer (a file on a network drive that stopped responding) says
+//! so ([`TaskGuard::waiting_on`]): the row then shows what it waits for and for how long ([`TaskInfo::stalled`]) and
+//! offers Skip (`activity.skip`, [`Activity::skip`]). The request reaches the job through [`TaskGuard::take_skip`];
+//! what skipping does is up to the job.
 
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -117,6 +122,7 @@ impl Waiting {
             place,
             lane: Some(self.lane),
             facts: capped(&self.request.facts),
+            stalled: None,
         }
     }
 }
@@ -331,8 +337,9 @@ impl Unit {
 #[serde(rename_all = "camelCase")]
 pub struct TaskInfo {
     pub id: u64,
-    /// A stable id: `import`, `export`, `scan`, `sync`, `previews`, `smartPreviews`, `backup`, `lightroom`, `merge`, `download`,
-    /// `faces`, `denoise`, `findMissing`, `applePhotos`, `cache`, `focus`, `saveMetadata`, `readMetadata`.
+    /// A stable id: `import`, `export`, `scan`, `sync`, `move`, `previews`, `smartPreviews`, `backup`, `lightroom`,
+    /// `merge`, `download`, `faces`, `facesGpu`, `denoise`, `findMissing`, `applePhotos`, `cache`, `focus`, `geocode`,
+    /// `recheck`, `reload`, `relocate`, `restore`, `trash`, `saveMetadata`, `readMetadata`.
     pub kind: &'static str,
     /// English; the frontend translates it.
     pub label: String,
@@ -353,6 +360,17 @@ pub struct TaskInfo {
     pub lane: Option<Lane>,
     /// Waiting tasks: what else is known of the task besides what it works on (`detail`).
     pub facts: String,
+    /// What the task has been waiting on without an answer, and for how many seconds: set while a job reports it
+    /// ([`TaskGuard::waiting_on`]). Such a task can be skipped (`activity.skip`).
+    pub stalled: Option<Stalled>,
+}
+
+/// What a task waits on without an answer ([`TaskInfo::stalled`]).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct Stalled {
+    /// A name (a file), never a sentence.
+    pub what: String,
+    pub secs: u64,
 }
 
 struct Entry {
@@ -374,6 +392,10 @@ struct Entry {
     gate: Mutex<()>,
     /// What it was asked, for asking again ([`TaskGuard::set_request`]).
     request: Mutex<Option<Request>>,
+    /// What the job is stuck waiting on, and since when ([`TaskGuard::waiting_on`]).
+    stalled: Mutex<Option<(String, web_time::Instant)>>,
+    /// Skip was asked for while it waited ([`Activity::skip`]); the job takes it ([`TaskGuard::take_skip`]).
+    skip: AtomicBool,
 }
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -435,7 +457,29 @@ impl Entry {
             place: 0,
             lane: Lane::of(self.kind),
             facts: String::new(),
+            stalled: lock(&self.stalled).as_ref().map(|(what, since)| Stalled { what: what.clone(), secs: since.elapsed().as_secs() }),
         }
+    }
+
+    fn waiting_on(&self, what: &str, waited: std::time::Duration) {
+        let now = web_time::Instant::now();
+        *lock(&self.stalled) = Some((capped(what), now.checked_sub(waited).unwrap_or(now)));
+    }
+
+    /// Nothing is waited on any more; a skip not taken yet is moot.
+    fn clear_waiting(&self) {
+        let mut stalled = lock(&self.stalled);
+        *stalled = None;
+        self.skip.store(false, Ordering::Relaxed);
+    }
+
+    /// Ask the job to skip what it waits on; false when it waits on nothing.
+    fn try_skip(&self) -> bool {
+        let stalled = lock(&self.stalled);
+        if stalled.is_some() {
+            self.skip.store(true, Ordering::Relaxed);
+        }
+        stalled.is_some()
     }
 }
 
@@ -464,6 +508,8 @@ impl Activity {
             cancel,
             gate: Mutex::new(()),
             request: Mutex::new(None),
+            stalled: Mutex::new(None),
+            skip: AtomicBool::new(false),
         });
         lock(&self.inner.tasks).push(entry.clone());
         TaskGuard { activity: self.clone(), entry, reported: false }
@@ -582,6 +628,15 @@ impl Activity {
         lock(&self.inner.tasks).iter().find(|e| e.cancel.as_ref().is_some_and(|f| Arc::ptr_eq(f, flag))).map(|e| e.id)
     }
 
+    /// Ask task `id` to skip what it is stuck waiting on ([`TaskInfo::stalled`]): a file on a drive that stopped
+    /// responding is given up and the job goes on with the next. An unknown id (the task may have just ended) or a
+    /// task that waits on nothing is an error.
+    pub fn skip(&self, id: u64) -> Result<(), String> {
+        let tasks = lock(&self.inner.tasks);
+        let entry = tasks.iter().find(|e| e.id == id).ok_or_else(|| format!("no task {id}"))?;
+        if entry.try_skip() { Ok(()) } else { Err(format!("{} is not waiting on anything to skip", entry.label)) }
+    }
+
     /// Ask every cancellable task to stop, and empty the line (what waits would start as soon as they stopped);
     /// returns how many were asked or taken out.
     pub fn cancel_all(&self) -> usize {
@@ -589,6 +644,12 @@ impl Activity {
         self.note_untried(&dropped);
         let tasks = lock(&self.inner.tasks);
         dropped.len() + tasks.iter().filter(|e| e.try_cancel()).count()
+    }
+
+    /// Whether a task of one of `kinds` is in flight. Its guard's lifetime is the answer: a task that
+    /// ends, fails or panics stops counting.
+    pub fn any_of(&self, kinds: &[&str]) -> bool {
+        lock(&self.inner.tasks).iter().any(|e| kinds.contains(&e.kind))
     }
 
     /// Tasks that quitting would cut short: cancellable ones not already stopping.
@@ -746,6 +807,40 @@ impl Activity {
         }
         n
     }
+
+    /// Why the machine should stay awake for the work in flight, or `None` when nothing needs it: the label of the
+    /// oldest job the person started, with `+ N more` when others run too. A job asked to stop no longer counts, and
+    /// neither does housekeeping the person did not ask for ([`started_by_person`]). The label is English: it is for
+    /// the system's logs and tools (`pmset -g assertions`), not for the window.
+    pub fn wake_reason(&self) -> Option<String> {
+        let tasks = lock(&self.inner.tasks);
+        let mut holding = tasks.iter().filter(|e| started_by_person(e.kind) && !e.is_cancelled());
+        let first = holding.next()?;
+        Some(match holding.count() {
+            0 => first.label.clone(),
+            more => format!("{} + {more} more", first.label),
+        })
+    }
+
+    /// How many jobs the person started are running, for the Dock badge. A job asked to stop still counts until it
+    /// has stopped (it is still running); housekeeping the person did not ask for does not ([`started_by_person`]).
+    pub fn running_jobs(&self) -> usize {
+        lock(&self.inner.tasks).iter().filter(|e| started_by_person(e.kind)).count()
+    }
+
+    /// The jobs the person started that are running, oldest first, each as [`Activity::list`] shows it: what the
+    /// person is told about when one ends ([`started_by_person`]).
+    pub fn person_jobs(&self) -> Vec<TaskInfo> {
+        lock(&self.inner.tasks).iter().filter(|e| started_by_person(e.kind)).map(|e| e.info()).collect()
+    }
+}
+
+/// Whether a task of `kind` is work the person started, one they would not want cut short by the machine sleeping
+/// and would want counted in the Dock. The thumbnail cache tidy, the GPU check, the focus-point reading, the face
+/// scan and the checks of recent libraries and of raw files start by themselves (and the first can hang on an
+/// offline share).
+fn started_by_person(kind: &str) -> bool {
+    !matches!(kind, "cache" | "facesGpu" | "focus" | "faces" | "library" | "recheck")
 }
 
 /// A task's place in the list, held by whoever owns the job; dropping it removes the row.
@@ -792,6 +887,22 @@ impl TaskGuard {
 
     pub fn is_cancelled(&self) -> bool {
         self.entry.is_cancelled()
+    }
+
+    /// The job is stuck waiting on `what` (a file name) and has been for `waited`: the row says so and offers Skip.
+    /// Call it again to update the name or the time; [`TaskGuard::clear_waiting`] when it answers.
+    pub fn waiting_on(&self, what: &str, waited: std::time::Duration) {
+        self.entry.waiting_on(what, waited);
+    }
+
+    /// The job waits on nothing any more.
+    pub fn clear_waiting(&self) {
+        self.entry.clear_waiting();
+    }
+
+    /// Whether Skip was asked for (`activity.skip`) since the last time; asking clears it.
+    pub fn take_skip(&self) -> bool {
+        self.entry.skip.swap(false, Ordering::Relaxed)
     }
 
     /// For progress from another thread; it does not keep the row.
@@ -900,6 +1011,114 @@ impl TaskHandle {
     /// after turning it off: a cancel accepted before is seen then, any later one is refused.
     pub fn set_cancellable(&self, yes: bool) {
         self.entry.set_cancellable(yes);
+    }
+}
+
+#[cfg(test)]
+mod wake_tests {
+    use super::*;
+
+    #[test]
+    fn nothing_running_needs_no_wake() {
+        assert_eq!(Activity::default().wake_reason(), None);
+    }
+
+    #[test]
+    fn a_running_export_names_itself() {
+        let a = Activity::default();
+        let _g = a.start("export", "Exporting", Cancel::Yes);
+        assert_eq!(a.wake_reason().as_deref(), Some("Exporting"));
+    }
+
+    #[test]
+    fn housekeeping_the_person_did_not_ask_for_does_not_count() {
+        let a = Activity::default();
+        let _c = a.start("cache", "Tidying the thumbnail cache", Cancel::Yes);
+        let _f = a.start("facesGpu", "Checking the GPU for faces", Cancel::No);
+        let _s = a.start("faces", "Finding faces", Cancel::No);
+        let _p = a.start("focus", "Reading focus points", Cancel::Yes);
+        let _l = a.start("library", "Checking recent libraries", Cancel::No);
+        let _r = a.start("recheck", "Checking raw files", Cancel::Yes);
+        assert_eq!(a.wake_reason(), None);
+        let _e = a.start("import", "Importing", Cancel::Yes);
+        assert_eq!(a.wake_reason().as_deref(), Some("Importing"));
+    }
+
+    #[test]
+    fn several_jobs_name_the_oldest_and_count_the_rest() {
+        let a = Activity::default();
+        let _x = a.start("export", "Exporting", Cancel::Yes);
+        let _c = a.start("cache", "Tidying the thumbnail cache", Cancel::Yes);
+        let _i = a.start("import", "Importing", Cancel::Yes);
+        let _p = a.start("previews", "Building previews", Cancel::Yes);
+        assert_eq!(a.wake_reason().as_deref(), Some("Exporting + 2 more"));
+    }
+
+    #[test]
+    fn the_hold_ends_when_the_last_job_ends() {
+        let a = Activity::default();
+        let x = a.start("export", "Exporting", Cancel::Yes);
+        let i = a.start("import", "Importing", Cancel::Yes);
+        drop(x);
+        assert_eq!(a.wake_reason().as_deref(), Some("Importing"));
+        drop(i);
+        assert_eq!(a.wake_reason(), None);
+    }
+
+    #[test]
+    fn a_job_that_was_asked_to_stop_no_longer_holds() {
+        let a = Activity::default();
+        let x = a.start("export", "Exporting", Cancel::Yes);
+        a.cancel(x.id()).unwrap();
+        assert_eq!(a.wake_reason(), None);
+    }
+}
+
+#[cfg(test)]
+mod running_jobs_tests {
+    use super::*;
+
+    #[test]
+    fn nothing_running_counts_zero() {
+        assert_eq!(Activity::default().running_jobs(), 0);
+    }
+
+    #[test]
+    fn each_job_the_person_started_counts_once() {
+        let a = Activity::default();
+        let _x = a.start("export", "Exporting", Cancel::Yes);
+        assert_eq!(a.running_jobs(), 1);
+        let _i = a.start("import", "Importing", Cancel::Yes);
+        let _p = a.start("previews", "Building previews", Cancel::Yes);
+        assert_eq!(a.running_jobs(), 3);
+    }
+
+    #[test]
+    fn housekeeping_does_not_count() {
+        let a = Activity::default();
+        let _c = a.start("cache", "Tidying the thumbnail cache", Cancel::Yes);
+        let _f = a.start("faces", "Finding faces", Cancel::No);
+        assert_eq!(a.running_jobs(), 0);
+    }
+
+    #[test]
+    fn a_job_still_stopping_counts_until_it_ends() {
+        let a = Activity::default();
+        let x = a.start("export", "Exporting", Cancel::Yes);
+        a.cancel(x.id()).unwrap();
+        assert_eq!(a.running_jobs(), 1);
+        drop(x);
+        assert_eq!(a.running_jobs(), 0);
+    }
+
+    #[test]
+    fn person_jobs_lists_what_the_person_started_oldest_first() {
+        let a = Activity::default();
+        let _x = a.start("export", "Exporting", Cancel::Yes);
+        let _c = a.start("cache", "Tidying the thumbnail cache", Cancel::Yes);
+        let _i = a.start("import", "Importing", Cancel::Yes);
+        let labels: Vec<_> = a.person_jobs().into_iter().map(|t| t.label).collect();
+        assert_eq!(labels, ["Exporting", "Importing"]);
     }
 }
 
@@ -1125,6 +1344,26 @@ mod tests {
         assert!(a.inner.tasks.is_poisoned());
         let _g = a.start("export", "E", Cancel::Yes);
         assert_eq!(a.list().len(), 1);
+    }
+
+    #[test]
+    fn any_of_asks_for_the_kinds_in_flight_and_a_dropped_guard_stops_counting() {
+        let a = Activity::default();
+        assert!(!a.any_of(&["scan", "import"]));
+        let scan = a.start("scan", "Reading photos", Cancel::No);
+        let other = a.start("export", "Exporting", Cancel::No);
+        assert!(a.any_of(&["scan", "import"]) && a.any_of(&["export"]) && !a.any_of(&["import", "sync"]));
+        drop(scan);
+        assert!(!a.any_of(&["scan", "import"]), "the guard's lifetime is the answer");
+        // a task whose thread panics lets go as well
+        let a2 = a.clone();
+        let _ = std::thread::spawn(move || {
+            let _held = a2.start("import", "Importing", Cancel::No);
+            panic!("synthetic panic in an import");
+        })
+        .join();
+        assert!(!a.any_of(&["import"]));
+        drop(other);
     }
 
     /// Codex review of #643: a worker that turns cancelling off and then reads the cancel flag

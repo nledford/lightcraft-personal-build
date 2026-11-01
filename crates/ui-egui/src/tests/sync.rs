@@ -89,6 +89,16 @@ fn imported_folder(dir: &Scratch, then: impl FnOnce()) -> Headless {
     let r = h.request("ui.set", json!({"view": "photoGrid", "leftPanel": true}), T);
     assert_eq!(r["ok"], true, "{r}");
     h.settle(SETTLE);
+    // The sidebar looks for the photos' files on a worker thread that `Headless::busy` does not count, and the
+    // Missing Photos row it adds above Folders moves every row below it down when the answer lands. Wait for that
+    // row, so a row's place read after this is still right when it is right-clicked (a loaded machine took longer
+    // than the quiet frames `settle` waits for).
+    h.step_until(T, |h| h.file_checks_done());
+    let gone = h.app.session.catalog.photos().any(|p| p.library_file().is_some_and(|f| !std::path::Path::new(f).exists()));
+    if gone {
+        assert!(h.step_until(T, |h| h.app.widgets.iter().any(|(w, _)| w == "source:missing")), "the Missing Photos row is drawn");
+        assert!(h.settle(SETTLE), "the sidebar did not settle after the Missing Photos row was drawn");
+    }
     h
 }
 
@@ -160,6 +170,16 @@ fn tick_remove_missing(h: &mut Headless) {
         }
     }
     panic!("the box never ticked: {:?}", h.app.ui.dialog);
+}
+
+/// A folder with a photo gone from disk: the fixture returns once the Missing Photos row is drawn. The
+/// row comes from the background checks of the files and moves every row below it down when it lands, so a
+/// test that read a folder row's place before it, and right-clicked there after, hit the row above or below.
+#[test]
+fn a_folder_with_a_photo_gone_is_handed_over_with_the_missing_photos_row_drawn() {
+    let dir = Scratch::new("missing-row");
+    let h = changed_folder(&dir);
+    assert!(h.app.widgets.iter().any(|(w, _)| w == "source:missing"), "the Missing Photos row is not drawn yet");
 }
 
 fn counts(h: &Headless) -> crate::state::SyncCounts {
@@ -437,7 +457,7 @@ fn a_stopped_synchronize_says_it_was_stopped_and_stays_at_most_one_step() {
     // Cancel (what the row's ✕ does), before any frame committed anything
     h.app.sync_run.as_mut().expect("running").cancel();
     assert!(h.step_until(T, |h| h.app.sync_run.is_none()), "it ends");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("Stopped"), "never 'up to date': {toast:?}");
     assert!(h.app.session.undo.len() <= steps + 1, "what was done by then is at most one step");
 }
@@ -478,7 +498,7 @@ fn a_synchronize_and_an_import_wait_for_each_other() {
     let id = r["queued"].as_u64().unwrap_or_else(|| panic!("queued: {r}"));
     let waiting = h.app.session.activity.waiting();
     assert_eq!(waiting.iter().map(|t| (t.id, t.kind, t.label.as_str())).collect::<Vec<_>>(), vec![(id, "import", "Importing")]);
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Queued")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().as_ref().is_some_and(|t| t.text.starts_with("Queued")), "{:?}", h.app.ui.toast());
     assert!(h.step_until(SETTLE, idle), "both ran");
     let c = h.app.session.catalog.photos().filter(|p| p.in_library() && p.file_name == "c.png").count();
     assert_eq!(c, 1, "the import found c already in the library when its turn came");
@@ -511,7 +531,7 @@ fn a_waiting_synchronize_removes_only_the_missing_photos_its_dialog_showed() {
     drop(hold);
     assert!(h.step_until(SETTLE, idle), "it ran");
     assert_eq!(in_library(&h), vec!["a.png", "c.png"], "b (shown) was removed, a (gone since) was not");
-    let said = h.app.ui.toast.iter().map(|t| t.text.clone()).collect::<String>();
+    let said = h.app.ui.toast().iter().map(|t| t.text.clone()).collect::<String>();
     assert!(said.contains("Left alone: 1"), "{said}");
 }
 
@@ -552,7 +572,7 @@ fn a_waiting_synchronize_reads_only_the_sidecars_its_dialog_showed() {
     drop(hold);
     assert!(h.step_until(SETTLE, idle), "it ran");
     assert_eq!((rating_of(&h, "a.png"), rating_of(&h, "b.png")), (4, 0), "a (shown) was read, b (changed since) was not");
-    let said = h.app.ui.toast.iter().map(|t| t.text.clone()).collect::<String>();
+    let said = h.app.ui.toast().iter().map(|t| t.text.clone()).collect::<String>();
     assert!(said.contains("Left alone: 1"), "{said}");
 }
 
@@ -614,7 +634,7 @@ fn a_waiting_synchronize_never_acts_on_another_library() {
     h.app.session.open_library(dir.path("other"), false).unwrap();
     assert!(h.step_until(SETTLE, idle), "it ended");
     assert_eq!(h.app.session.catalog.photos().count(), 0, "nothing came into the new library, nothing was removed");
-    let said = h.app.ui.toast.iter().map(|t| t.text.clone()).collect::<String>();
+    let said = h.app.ui.toast().iter().map(|t| t.text.clone()).collect::<String>();
     assert!(said.contains("Another library was opened"), "{said}");
 }
 
@@ -650,7 +670,7 @@ fn a_waiting_synchronize_does_nothing_on_a_scan_the_library_moved_past() {
     gate.store(true, std::sync::atomic::Ordering::Release);
     assert!(h.step_until(SETTLE, idle), "it ended");
     assert_eq!(in_library(&h), vec!["b.png"], "the missing b stays, c did not come in");
-    let said = h.app.ui.toast.iter().map(|t| t.text.clone()).collect::<String>();
+    let said = h.app.ui.toast().iter().map(|t| t.text.clone()).collect::<String>();
     assert!(said.contains("Photos of the folder changed while it was read"), "{said}");
 }
 
@@ -666,7 +686,7 @@ fn a_waiting_synchronize_whose_folder_went_away_says_so() {
     std::fs::rename(dir.path("trip"), dir.path("trip-away")).unwrap();
     drop(hold);
     assert!(h.step_until(SETTLE, idle), "it ended");
-    let said = h.app.ui.toast.iter().map(|t| t.text.clone()).collect::<String>();
+    let said = h.app.ui.toast().iter().map(|t| t.text.clone()).collect::<String>();
     assert!(said.contains("isn't there"), "{said}");
     assert!(!in_library(&h).contains(&"c.png".to_string()), "{:?}", in_library(&h));
 }
@@ -697,7 +717,7 @@ fn a_synchronize_shows_a_row_and_its_cross_stops_it() {
     // the row's ✕ (as `activity.cancel`): what was done stays, and the end says it was stopped
     h.app.session.activity.cancel(rows[0].id).unwrap();
     assert!(h.step_until(T, |h| h.app.sync_run.is_none()), "it ends");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("Stopped"), "{toast:?}");
     assert!(h.app.session.activity.list().is_empty(), "the row goes with the run");
     let row = h.app.session.activity.finished().into_iter().next().expect("a stopped run leaves a row");
@@ -1038,7 +1058,7 @@ fn a_background_scan_that_found_nothing_only_says_so() {
     assert!(r.is_ok(), "{r:?}");
     assert!(h.step_until(T, |h| h.app.sync.is_none()), "the scan ends");
     assert!(h.app.sync_ready.is_none(), "no notice: there is nothing to look at");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("up to date"), "{toast:?}");
     assert!(h.app.session.folder_changes.is_none());
 }
@@ -1355,7 +1375,7 @@ fn several_folders_are_scanned_in_one_dialog_and_synchronized_one_after_another(
         ],
         "each ✕ says which folder it removes"
     );
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("2 folders")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().as_ref().is_some_and(|t| t.text.contains("2 folders")), "{:?}", h.app.ui.toast());
     assert!(h.step_until(SETTLE, idle), "both ran");
     assert_eq!(in_library(&h), vec!["a.png", "c.png", "f.png", "g.png", "s.png", "x.png"], "b went; the gone folder's x stays");
 }
@@ -1425,7 +1445,7 @@ fn folders_with_nothing_to_do_for_the_choices_ticked_say_so() {
     let r = crate::panels::dialogs::confirm_dialog(&mut h.app, &dlg).expect("nothing to do is not an error");
     assert_eq!(r["queued"].as_array().map(Vec::len), Some(0), "{r}");
     assert!(h.app.session.activity.waiting().is_empty(), "nothing waits");
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text == "Nothing to do with the choices ticked"), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().as_ref().is_some_and(|t| t.text == "Nothing to do with the choices ticked"), "{:?}", h.app.ui.toast());
 }
 
 /// The folders' scans have one row; its ✕ stops them and closes the dialog, which then opens nothing later.
@@ -1470,4 +1490,133 @@ fn the_folders_dialog_stays_open_when_confirmed_for_a_full_line_from_the_control
     assert!(matches!(h.app.ui.dialog, Some(Dialog::SynchronizeFolders { .. })), "the dialog stays: {:?}", h.app.ui.dialog);
     assert_eq!(h.app.session.activity.waiting().len(), MAX_WAITING - 1, "neither of the folders took a place");
     drop(hold);
+}
+
+/// Given a Synchronize Folder scan whose read of a new file never answers,
+/// When its row names the file and Skip is asked for (`activity.skip`),
+/// Then the scan finishes and the dialog counts that file as unreadable, with the other new file found.
+#[test]
+fn skip_on_the_folders_scan_row_lists_the_file_as_unreadable() {
+    use super::activity::Gate;
+    let dir = Scratch::new("scanstall");
+    let mut h = changed_folder(&dir);
+    h.app.session.import_stall_after = Duration::from_millis(500);
+    h.app.session.stuck_readers = std::sync::Arc::new(lightcraft_engine::import::StuckReaders::new(lightcraft_engine::import::MAX_STUCK_READERS));
+    let gate = Gate::default();
+    let in_probe = gate.clone();
+    let real = h.app.session.media.file_probe.clone().expect("the files' probe");
+    h.app.session.media.file_probe = Some(std::sync::Arc::new(move |p: &str| {
+        if p.ends_with("hang.png") {
+            in_probe.wait();
+        }
+        real(p)
+    }));
+    write_png(&dir.path("trip/hang.png"), 9);
+    crate::sync::open(&mut h.app, &dir.path("trip"), "trip", false).unwrap();
+    assert!(h.step_until(T, |h| h.app.session.activity.list().first().is_some_and(|t| t.stalled.is_some())), "no stall");
+    let row = h.app.session.activity.list().remove(0);
+    assert_eq!((row.kind, row.stalled.as_ref().map(|s| s.what.as_str())), ("sync", Some("hang.png")));
+    let r = h.request("engine.execute", json!({"command": "activity.skip", "params": {"id": row.id}}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    assert!(h.step_until(T, |h| matches!(&h.app.ui.dialog, Some(Dialog::SynchronizeFolder { counts: Some(_), .. }))), "the scan went on");
+    gate.open();
+    let c = counts(&h);
+    assert_eq!((c.new, c.unreadable), (1, 1), "c.png is new, hang.png could not be read");
+    h.app.ui.dialog = None;
+}
+
+/// Given a Synchronize Folder scan whose reads of new files stop answering one after another,
+/// When the fourth is skipped,
+/// Then an error toast says the scan stopped, and the dialog still lists what was reached.
+#[test]
+fn a_folders_scan_that_stops_at_the_cap_says_so() {
+    use super::activity::Gate;
+    let dir = Scratch::new("scancap");
+    let mut h = changed_folder(&dir);
+    h.app.session.import_stall_after = Duration::from_millis(500);
+    h.app.session.stuck_readers = std::sync::Arc::new(lightcraft_engine::import::StuckReaders::new(lightcraft_engine::import::MAX_STUCK_READERS));
+    let gate = Gate::default();
+    let in_probe = gate.clone();
+    let real = h.app.session.media.file_probe.clone().expect("the files' probe");
+    h.app.session.media.file_probe = Some(std::sync::Arc::new(move |p: &str| {
+        if p.contains("hang-") {
+            in_probe.wait();
+        }
+        real(p)
+    }));
+    for i in 0..4 {
+        write_png(&dir.path(&format!("trip/hang-{i}.png")), 40 + i as u8);
+    }
+    crate::sync::open(&mut h.app, &dir.path("trip"), "trip", false).unwrap();
+    let ended = h.step_until(T, |h| {
+        if let Some(row) = h.app.session.activity.list().first()
+            && row.stalled.is_some()
+        {
+            let _ = h.app.session.activity.skip(row.id);
+        }
+        matches!(&h.app.ui.dialog, Some(Dialog::SynchronizeFolder { counts: Some(_), .. }))
+    });
+    gate.open();
+    assert!(ended, "the scan never ended");
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
+    assert!(toast.starts_with("Stopped:") && toast.contains("not answering"), "{toast}");
+    // a run made from it only imports: the other choices are off, and the dialog says why
+    let c = counts(&h);
+    assert!(c.stopped, "{c:?}");
+    match &h.app.ui.dialog {
+        Some(Dialog::SynchronizeFolder { relink_moved, remove_missing, read_metadata, .. }) => {
+            assert_eq!((*relink_moved, *remove_missing, *read_metadata), (false, false, false));
+        }
+        d => panic!("{d:?}"),
+    }
+    h.app.ui.dialog = None;
+}
+
+/// Given a scan that stopped (its choices were forced off) that then goes stale,
+/// When Synchronize is refused and the folder is scanned again,
+/// Then the new dialog has the default choices, not the forced-off ones.
+#[test]
+fn a_rescan_after_a_stopped_scan_starts_from_the_default_choices() {
+    let dir = Scratch::new("restopped");
+    let mut h = changed_folder(&dir);
+    open_and_scan(&mut h, &dir.path("trip"));
+    if let Some(Dialog::SynchronizeFolder { counts: Some(c), relink_moved, import_new, .. }) = &mut h.app.ui.dialog {
+        c.stopped = true;
+        *relink_moved = false;
+        // (the one choice the person can still make)
+        *import_new = false;
+    }
+    // the folder gets another photo some other way while the dialog is open (work on the
+    // folder's own photos no longer makes the scan stale)
+    write_png(&dir.path("trip/d.png"), 4);
+    let r = h.request("engine.execute", json!({"command": "library.import", "params": {"paths": [dir.path("trip/d.png")]}}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    let r = h.request("ui.dialog.confirm", json!({}), T);
+    assert_eq!(r["ok"], false, "{r}");
+    let rescanned = h.step_until(T, |h| matches!(&h.app.ui.dialog, Some(Dialog::SynchronizeFolder { counts: Some(_), .. })));
+    assert!(rescanned);
+    assert!(
+        matches!(h.app.ui.dialog, Some(Dialog::SynchronizeFolder { relink_moved: true, import_new: false, .. })),
+        "Relink back to its default, Import new as the person left it: {:?}",
+        h.app.ui.dialog
+    );
+}
+
+/// A scan that stopped with nothing found does not say the library is up to date: it did not look at everything.
+/// The same for a scan that gave up on a photo's check.
+#[test]
+fn a_stopped_scan_that_found_nothing_is_not_up_to_date() {
+    let mut c = crate::state::SyncCounts::default();
+    assert!(c.up_to_date());
+    c.stopped = true;
+    assert!(!c.up_to_date());
+    // nor does one that could not check a photo (its check was skipped): the dialog lists it and has nothing to choose
+    c = crate::state::SyncCounts { unchecked: 1, unreadable: 1, ..Default::default() };
+    assert!(!c.up_to_date());
+    assert!(c.nothing_to_choose(), "no Synchronize to run, only the list and Done");
+    c.stopped = true;
+    assert!(c.nothing_to_choose(), "a stopped scan with no new photo has nothing to choose: Synchronize would only say it stopped");
+    assert!(!c.up_to_date());
+    c.new = 1;
+    assert!(!c.nothing_to_choose(), "a stopped scan keeps Import new photos");
 }

@@ -844,7 +844,7 @@ fn waiting_files_wait_for_a_running_import_instead_of_being_dropped() {
     assert!(h.app.waiting_import.files.is_empty(), "the files went into the line");
     let line = h.app.session.activity.waiting();
     assert_eq!(line.len(), 1, "the waiting file is kept, in line behind the running import: {line:?}");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.starts_with("Queued"), "{toast}");
     // the files belong to this library: a switch asks first while they wait, also when what they wait for
     // is a Synchronize Folder, which doesn't hold switching back by itself (the import set aside)

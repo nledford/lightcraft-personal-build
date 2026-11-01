@@ -241,20 +241,22 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
             }
             Ok(moved)
         }
-        Dialog::MovePhotos { ids, folder, dont_ask, library, .. } => {
+        Dialog::MovePhotos { ids, folder, dont_ask, library, problems, .. } => {
             // another library opened meanwhile (from the menu bar, an agent): these numbers are
             // other photos there
             if *library != app.session.library_generation() {
                 return Err(crate::i18n::tr("Another library was opened since the photos were dropped: nothing was moved").to_string());
             }
-            let moved = crate::panels::left::move_photos(app, Some(ids), folder)?;
-            // only a move that began turns the question off: one refused, or that found the photos there already,
-            // leaves it as it was
-            if *dont_ask && moved > 0 {
-                app.ui.settings.ask_before_move = false;
+            let ctx = app.tasks.repaint.clone().unwrap_or_default();
+            // the photos found to have a problem stay where they are, the rest move
+            let mut params = json!({"ids": ids, "folder": folder});
+            if !problems.is_empty() {
+                params["skip"] = json!(problems.iter().map(|p| p.id).collect::<Vec<u64>>());
             }
-            Ok(json!({"moved": moved}))
+            // (the question is turned off by the move itself, once a photo has moved: see `move_task::start_asked`)
+            crate::move_task::start_asked(app, &ctx, &params, *dont_ask)
         }
+        Dialog::TrashFiles(ask) => crate::panels::trash_files::run(app, ask),
         // the catalog found: no file dialog; none: File ▸ Import Lightroom Catalog… asks for it
         Dialog::LightroomCatalog { catalog, .. } => {
             app.run("file.importLightroom", catalog.as_ref().map_or_else(|| json!({}), |c| json!({"path": c})))
@@ -267,6 +269,7 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
         Dialog::RemoveFolder { path, disk, .. } => app.run("library.removeFolder", json!({"path": path, "disk": disk})),
         d @ Dialog::SynchronizeFolder { .. } => crate::sync::confirm(app, d),
         d @ Dialog::SynchronizeFolders { .. } => crate::sync::confirm_many(app, d),
+        d @ Dialog::LocateFolder { .. } => crate::relocate::confirm(app, d),
         Dialog::About | Dialog::Shortcuts | Dialog::Settings { .. } | Dialog::ManageEffects { .. } | Dialog::ViewOptions => {
             Ok(serde_json::Value::Null)
         }

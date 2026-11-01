@@ -23,6 +23,9 @@ pub struct Toast {
     pub hovered: bool,
     /// Colour-label styling.
     pub label: Option<ColorLabel>,
+    /// What it says the state of ("save", "label", "autoSync"…), if anything: a newer message on the same topic
+    /// replaces it ([`crate::state::UiState::show_toast_on`]).
+    pub topic: Option<&'static str>,
 }
 
 /// CJK ideographs, kana and hangul: scripts that don't separate words with spaces.

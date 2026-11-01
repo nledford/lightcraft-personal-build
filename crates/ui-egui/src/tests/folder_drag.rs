@@ -299,7 +299,7 @@ fn a_destination_that_went_away_meanwhile_is_not_made_again() {
     std::fs::rename(root.join("archive-old"), &archive).unwrap();
     h.step();
     h.app.ui.settings.ask_before_move = false;
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     drag_over(&mut h, &trip, &archive);
     std::fs::rename(&archive, root.join("archive-old")).unwrap();
     let at = centre(&h, &archive);

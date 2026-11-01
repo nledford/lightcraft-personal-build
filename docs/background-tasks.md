@@ -1,5 +1,17 @@
 # Long-running tasks and the activity stack
 
+Everything that takes a while runs off the UI thread and shows up in **one** place: the activity stack, the listunder the bell in the top bar (issue #345). While something runs the bell wears a ring (how far along the work is, asweep while that isn't known) and a line beside it names the task ("Exporting · 40 %") or says how many run("3 tasks"). The line takes the room between the filter icon and the bell, so it depends on the window's width: awide window has the name (cut short where it must be) and the percentage, a narrower one only the percentage or thecount, and a narrow one the ring alone, with the count on the bell when several run and the rest in the bell'stooltip. A click on the bell or the line opensthe list (Window ▸ Tasks, `view.tasks`): each task has a row with its name, a progress bar, the count and what it'sworking on, and ✕ if it can stop, the task started last at the top. "No tasks are running" when none is. Esc, a clickelsewhere or a dialog closes it. Nothing floats over the panels: the list covers them only while it is open.Quitting asks first while a task that can stop is running. Agents see the same list through `activity.list` /`activity.cancel`, and `ui.inspect` reports it as `activity` (and whether the list is open as `activityOpen`); the tasks that ended and left a row are `activity.finished` / `activity.dismiss` and `activityFinished`. A task stuck on something that doesn't answer (an import's file on a networkdrive that stopped responding) names it on its row and offers Skip (`activity.skip`).
+
+On macOS a running job the person started also keeps the Mac awake: `Activity::wake_reason` names the oldest such job
+(housekeeping that starts by itself, like the thumbnail-cache tidy, the focus-point reading and the face scan, doesn't count, and neither does a job that was asked to stop), the UI tells
+the host when that changes (`Services::keep_awake`), and the app holds an `NSProcessInfo` activity (user initiated,
+idle system sleep disabled) with that reason until the last job ends, is cancelled or the app quits.
+`pmset -g assertions` lists it. A new `kind` that is background housekeeping rather than something the person asked for
+goes in `started_by_person` in `activity.rs`, which also decides what the Dock badge counts.
+
+On macOS the Dock icon carries a badge with the number of running jobs the person started (`Activity::running_jobs`,
+`Services::dock_badge`), cleared when none is left. A job that was asked to stop counts until it has stopped.
+
 Everything that takes a while runs off the UI thread and shows up in **one** place: the activity stack, the list
 under the bell in the top bar (issue #345). While something runs the bell wears a ring (how far along the work is, a
 sweep while that isn't known) and a line beside it names the task ("Exporting · 40 %") or says how many run
@@ -22,6 +34,10 @@ task that just ended is named beside the bell for a few seconds. Which jobs repo
 how it ended" below.
 Quitting asks first while a task that can stop is running, or one waits in line. Agents see the same list through `activity.list` /
 `activity.cancel`, and `ui.inspect` reports it as `activity` (and whether the list is open as `activityOpen`); the tasks that ended and left a row are `activity.finished` / `activity.dismiss` and `activityFinished`.
+When a job the person started ends while the window is in the background, the host shows a system notification
+(`Services::notify`, `job_notice.rs`: it waits a moment for the job's own toast, so the text can carry it, and says
+nothing for jobs that end in front). `UNUserNotificationCenter` needs an app bundle, so a binary run from a build folder
+shows nothing. Settings ▸ General ▸ Notifications turns it off.
 
 The registry is `lightcraft_engine::activity` (`crates/engine/src/activity.rs`, `Session::activity`). The stack is
 `crates/ui-egui/src/panels/activity.rs`. Every job that can last more than a moment uses it; **don't add a progress
@@ -49,7 +65,7 @@ guard.detail(&file_name);
   `SyncRun`…), or move it into the worker thread. Dropping it removes the row, also when the worker panics, so a
   dead job never leaves a stuck bar. A worker that only reports progress takes a `TaskHandle` (`guard.handle()`,
   `Clone + Send`).
-- **`kind`** is a stable camelCase id that agents filter by (`export`, `import`, `scan`, `sync`, `previews`,
+- **`kind`** is a stable camelCase id that agents filter by (`export`, `import`, `scan`, `sync`, `move`, `previews`,
   `download`, `faces`, `cache`, `focus`, `backup`, `restore`, `saveMetadata`, `readMetadata`…). **`label`** is a short English name in sentence case ("Building previews"). The stack shows it
   translated, so add it to every catalog in `crates/ui-egui/locales/`.
 - **Progress:** `progress(done, total)`. A `total` of 0 means the amount of work isn't known yet, and the bar sweeps.
@@ -63,6 +79,27 @@ guard.detail(&file_name);
   - `Cancel::Yes`: the job polls `guard.is_cancelled()` itself.
   - `Cancel::No`: the job can't stop; it gets no ✕ and doesn't make Quit ask.
   - `set_cancellable(false)` for a phase that has to finish once started (a Lightroom import adding its photos).
+- **Quit** doesn't ask about a task that ✕ has already stopped ("Stopping…"). The one exception is the move to another
+  folder: it is still finishing the file in hand and quitting cuts it short, so Quit asks until it ends
+  (`crates/ui-egui/src/panels/notices.rs`, `may_close`).
+- **Something that may never answer** (a file on a network drive that dropped its connection): `guard.waiting_on(name,
+  waited)` puts it in the row's `stalled` (`{what, secs}`), which the stack words as "Waiting for IMG_0457.jpg · 14 s"
+  in the caution colour and answers with a Skip button next to ✕ (`activity:skip:<id>`, `activity.skip {id}`).
+  `guard.clear_waiting()` when it answers; `guard.take_skip()` says whether Skip was asked for (once). What skipping
+  does is the job's: an import fails that file ("skipped: no answer after N s"), a scan lists it as unreadable, and
+  the work goes on. A blocked read can't be interrupted, so such a job reads on threads it can abandon, and ✕ must not
+  wait for them. `crates/engine/src/import/reads.rs` is that pool: it reports a read as stalled after 10 s *without
+  progress* (a chunk read or written; code that works long without touching the disk calls `import::progressed()`), a
+  skip gives up only the read the row names, and an abandoned read keeps its memory permit
+  (`memory::work_gate`) until the drive answers, so later large jobs can wait for it. The fourth skipped read of a scan
+  or import ends it with an error (and so does a run that starts while 32 or more abandoned reads, of any drive, are still blocked in the system: `StuckReaders` (`Session::stuck_readers`, the process-wide count by default) counts them across cancel and restart and is looked at when a run starts and after each Skip, so repeated ✕ and rescans cannot pile up blocked threads; ✕ can still add the readers of the runs under way. The error says so rather than naming the drive being read, and goes when the system lets the reads go or LightCraft restarts): an import says so in its toast (`Prepared::stopped`), a scan in an error toast (`ScanOutput::stopped`,
+  `FolderChanges::stopped`), and a Synchronize run stops there and reports it (`SyncReport::stopped`). A run made from a scan that stopped imports the new files the scan listed, then stops: no relink, remove or sidecar step (what the scan lists is only what it reached), and the dialog disables those choices. A wait for memory at
+  the gate counts as progress (the gate reports once a second) only while a holder that was not given up is working: a
+  wait blocked only by abandoned reads, which keep their memory (`WorkGate::abandoned_bytes`), is named and can be
+  skipped too. `ScanProgress::reads` / `SyncProgress::files.reads` / `ImportJob::reads`
+  are the `ReadWatch` a frontend mirrors onto the row each frame (`panels::activity::follow_reads`). Not covered:
+  listing folders (the walk), a few path checks before a copy, and Synchronize Folder's sidecar reads and file checks
+  after the scan.
 - **Quiet periodic work** shows no row: the auto-import folder listing runs every few seconds through
   `tasks::spawn(.., None, ..)`.
 - **Say how it ended:** `guard.finish(Outcome { ending, summary, detail, failures, failed, path })` in place of
@@ -148,6 +185,8 @@ lane, for the same photos. Opening another library makes old rows unretryable.
 | Find Missing Photos | `crates/ui-egui/src/tasks.rs` | a generic background task with a row (`kind: Some(..)`) |
 | Reload from Disk | `crates/ui-egui/src/reload.rs`, `crates/engine/src/cmd/reload.rs` | a command split into plan / probe / apply so the app reads the files on a worker thread (`tasks::spawn_tracked`: progress and `Cancel::Flag`); the result is committed through `Session::execute_fn` (undo step, save, XMP auto-write), and dropped for a photo a later-started reload has already updated; `wait: true` runs it in place |
 | Reading focus points | `crates/engine/src/focus_scan.rs` | a worker paced by the UI's per-frame pump (`focus.pump {pace}`); `Cancel::Flag`; commits in batches without undo steps |
+| Moving photos to another folder | `crates/engine/src/move_job.rs`, `crates/ui-egui/src/move_task.rs` | split a job into a session half (plan, row, finish) and a `Send` worker half; `Cancel::Yes` checked between files, keeping what is done; the library follows the files once the worker is done; hold back conflicting commands while it runs; a record on disk so a force-quit part-way is followed at the next open (`crates/engine/src/move_intent.rs`) |
+| Import reads that stop answering | `crates/engine/src/import/reads.rs`, `crates/ui-egui/src/dialogs/import/task.rs` | publish what the job waits for each frame (`waiting_on`, `clear_waiting`) and take Skip (`take_skip`); the reads themselves run on detached threads so that a blocked one never holds the job |
 
 ## Testing
 

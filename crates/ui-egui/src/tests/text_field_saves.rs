@@ -459,7 +459,7 @@ fn a_refused_save_stops_the_window_closing_and_a_second_close_discards() {
     h.request_close();
     h.step();
     assert!(h.window_commands.contains(&egui::ViewportCommand::CancelClose), "the close was not canceled: the refused text would be lost");
-    assert!(h.app.ui.toast.is_some(), "the error is shown");
+    assert!(h.app.ui.toast().is_some(), "the error is shown");
     assert!(h.view.ctx.memory(|m| m.has_focus(crate::text_field::id("field:gps"))), "the box still holds the text");
     h.window_commands.clear();
     h.request_close();
@@ -475,7 +475,7 @@ fn a_refused_save_stops_quit_and_a_second_quit_discards() {
     let mut h = typing_refused_gps();
     let ctx = h.view.ctx.clone();
     assert!(!h.app.may_close_after_saving_edits(&ctx), "Quit went ahead with refused text typed");
-    assert!(h.app.ui.toast.is_some(), "the error is shown");
+    assert!(h.app.ui.toast().is_some(), "the error is shown");
     steps(&mut h);
     assert!(h.app.may_close_after_saving_edits(&ctx), "Quit again, after the error was shown, gives the text up");
 }

@@ -317,7 +317,7 @@ fn switching_libraries_asks_before_dropping_the_line() {
     click(&mut h, "button:switchAnyway");
     assert_eq!(library_dir(&h), Some(dir.join("second")));
     assert!(h.app.session.activity.waiting().is_empty());
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Waiting tasks dropped: 1"));
+    assert_eq!(h.app.ui.toast().as_ref().map(|t| t.text.as_str()), Some("Waiting tasks dropped: 1"));
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -452,11 +452,11 @@ fn a_switch_that_agreed_to_drop_the_line_says_how_many_went() {
     let (mut h, dir) = library_app("switch-agreed");
     let quiet = h.app.run("app.newLibrary", json!({"path": dir.join("quiet").to_string_lossy()})).expect("opens");
     assert!(quiet.get("asked").is_none(), "{quiet}");
-    assert!(h.app.ui.toast.as_ref().is_none_or(|t| !t.text.contains("dropped")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().as_ref().is_none_or(|t| !t.text.contains("dropped")), "{:?}", h.app.ui.toast());
     let _running = hold_a_line(&mut h);
     h.app.run("app.newLibrary", json!({"path": dir.join("second").to_string_lossy(), "dropWaiting": true})).expect("opens");
     assert_eq!(library_dir(&h), Some(dir.join("second")));
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Waiting tasks dropped: 1"));
+    assert_eq!(h.app.ui.toast().as_ref().map(|t| t.text.as_str()), Some("Waiting tasks dropped: 1"));
     let _ = std::fs::remove_dir_all(&dir);
 }
 

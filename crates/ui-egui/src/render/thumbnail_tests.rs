@@ -259,9 +259,19 @@ fn a_failed_thumbnail_is_retried_only_when_its_photo_changes() {
     r.follow_catalog(&catalog, &files);
     assert!(r.request_needed(slot, 77, 10), "which photos changed is unknown");
     // a file known to be missing (its drive unplugged) is tried at every change, as before, so
-    // the photo comes back with its drive
+    // the photo comes back with its drive. Known means what the checks found (the sweep refreshes
+    // it), not a fresh probe ask: an edit that moves no file asks about no file.
     r.failed.insert(slot, (77, "file not found".into(), r.catalog_rev, p.id));
     here.store(false, Ordering::SeqCst);
+    files.run_in_background(Arc::new(|| {}));
+    assert!(files.sweep(vec!["audit.jpg".into()]), "the sweep starts");
+    assert!(
+        (0..300).any(|_| {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            files.is_gone("audit.jpg")
+        }),
+        "the checks find the file gone"
+    );
     catalog.apply(Op::SetRating { id: other, rating: 1 }).unwrap();
     r.follow_catalog(&catalog, &files);
     assert!(r.request_needed(slot, 77, 10), "a missing file is tried again");

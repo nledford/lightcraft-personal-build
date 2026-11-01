@@ -82,7 +82,7 @@ fn a_scanned_folder_queues_without_review_while_the_lane_is_busy() {
     assert!(h.app.scan.is_none(), "the scan was let go");
     let waiting = h.app.session.activity.waiting();
     assert_eq!(waiting.len(), 1, "{waiting:?}");
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Queued")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().as_ref().is_some_and(|t| t.text.starts_with("Queued")), "{:?}", h.app.ui.toast());
     assert!(has(&h, &format!("activity:review:{}", waiting[0].id)), "its row can still be reviewed");
     let w = h.app.session.activity.take_ready();
     drop(_lane);
@@ -145,7 +145,7 @@ fn review_takes_a_queued_folder_out_of_the_line_and_scans_it() {
     let other = crate::import::stall_scan_in(&mut h.app, vec!["/nowhere/other".into()], false);
     click(&mut h, &format!("activity:review:{id}"));
     assert_eq!(h.app.session.activity.waiting().len(), 1, "the row stays");
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("A folder is already being scanned"));
+    assert_eq!(h.app.ui.toast().as_ref().map(|t| t.text.as_str()), Some("A folder is already being scanned"));
     drop((other, scan));
     h.app.scan = None;
     // (called, not clicked: the scan of a folder that isn't there ends within the frames a click plays out)

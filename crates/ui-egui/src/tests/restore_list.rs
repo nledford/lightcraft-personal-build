@@ -204,7 +204,7 @@ fn a_backup_kept_elsewhere_is_found_with_choose_folder() {
     h.step();
     click(&mut h, "button:restoreChooseFolder");
     assert_eq!(h.app.session.restore.clone().map(|r| Arc::as_ptr(&r) as usize), before);
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("backup")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_some_and(|t| t.text.contains("backup")), "{:?}", h.app.ui.toast());
     for d in [dir, vault] {
         let _ = std::fs::remove_dir_all(d);
     }
@@ -244,7 +244,7 @@ fn a_backup_that_is_gone_when_restore_is_pressed_leaves_the_list_as_the_folder_i
     click(&mut h, "button:dialogOk");
     let (_, names, selected) = listed(&h).expect("the list stays");
     assert_eq!((names, selected), (vec!["2026-01-10 09.00.00 UTC".to_string()], None));
-    assert!(h.app.session.restore.is_none() && h.app.ui.toast.is_some(), "{:?}", h.app.ui.toast);
+    assert!(h.app.session.restore.is_none() && h.app.ui.toast().is_some(), "{:?}", h.app.ui.toast());
     assert_eq!(rating(&h), 2, "the library is as it was");
     // and a restore into another folder says which backup: the list is of backups for this library
     click(&mut h, "button:dialogCancel");
@@ -297,7 +297,7 @@ fn a_folder_dialog_that_answers_later_is_taken_as_it_finds_the_app() {
     h.app.ui.dialog = Some(Dialog::WhatsNew);
     answer(&mut h, &vault.to_string_lossy());
     assert_eq!(h.app.ui.dialog, Some(Dialog::WhatsNew));
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("another dialog")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_some_and(|t| t.text.contains("another dialog")), "{:?}", h.app.ui.toast());
     h.app.ui.dialog = None;
 
     // the answer comes when a backup has begun: nothing is listed or restored

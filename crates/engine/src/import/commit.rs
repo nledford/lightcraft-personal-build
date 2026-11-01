@@ -1,9 +1,13 @@
 use super::defaults::apply_import_defaults_beside;
 use super::files::copy_into;
+#[cfg(not(target_arch = "wasm32"))]
+use super::files::shown;
 use super::job::{Prepared, PreparedItem, ReadyFile};
+#[cfg(not(target_arch = "wasm32"))]
+use super::reads;
 use super::scan::note_content;
 use super::types::{Duplicate, ImportOptions, ImportReport, Kept, Moved, OnDeleted};
-use super::{HashMap, Op, Path, PathBuf, Photo, PhotoId, ProbeInfo, Session, Source};
+use super::{HashMap, Op, Path, PathBuf, Photo, PhotoId, ProbeInfo, ReadWatch, Session, Source, progressed};
 
 /// A batch's items in file order while its transfers are pending ([`ImportJob::run_plan`]).
 #[derive(Default)]
@@ -80,63 +84,74 @@ pub fn batch_size() -> usize {
 }
 
 /// Run `transfers` (several at once where threads exist); their outcomes in order, `None` for one
-/// not started because `cancel` was set. `done` counts each one finished.
+/// not started because `cancel` was set, or cut off by it. `done` counts each one finished. A transfer that stops
+/// answering is reported by `watch` and given up when it is asked to, like a read ([`ReadWatch`]): its item is
+/// `Failed` then, and whatever it writes later is taken back.
 pub(super) fn run_transfers(
     transfers: Vec<Transfer>,
-    file_bytes: Option<&crate::merge::ByteReader>,
+    file_bytes: Option<crate::merge::ByteReader>,
     cancel: &std::sync::atomic::AtomicBool,
     done: &std::sync::atomic::AtomicUsize,
+    watch: &ReadWatch,
 ) -> Vec<Option<PreparedItem>> {
     use std::sync::atomic::Ordering::Relaxed;
-    let one = |t: Transfer| {
-        if cancel.load(Relaxed) {
-            return None;
-        }
-        let path = t.path.clone();
-        // last-resort guard: a panic is this file's failure, not the import's
-        let item = crate::guard::catch("import", || run_transfer(t, file_bytes)).unwrap_or_else(|e| PreparedItem::Failed(path, e));
-        done.fetch_add(1, Relaxed);
-        Some(item)
-    };
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let n = workers(transfers.len());
-        if n > 1 {
-            let mut results: Vec<Option<PreparedItem>> = std::iter::repeat_with(|| None).take(transfers.len()).collect();
-            let queue = std::sync::Mutex::new(transfers.into_iter().enumerate());
-            let out = std::sync::Mutex::new(&mut results);
-            // (the tests' injected faults hold for the workers too)
-            #[cfg(test)]
+        use std::sync::Arc;
+        let paths: Vec<String> = transfers.iter().map(|t| t.path.clone()).collect();
+        let pool = reads::Pool { watch, cancel, name: "lc-import-copy", threads: workers(transfers.len()) };
+        let work: Arc<dyn Fn(Transfer) -> PreparedItem + Send + Sync> = Arc::new(move |t| run_transfer(t, file_bytes.as_ref()));
+        // (the tests' injected faults hold for the workers too)
+        #[cfg(test)]
+        let init: Arc<dyn Fn() + Send + Sync> = {
             let fault = crate::import_move::injected_fault();
-            let work = &|| {
-                #[cfg(test)]
-                crate::import_move::inject(fault);
-                loop {
-                    let next = queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).next();
-                    let Some((i, t)) = next else { break };
-                    let r = one(t);
-                    if let Some(slot) = out.lock().unwrap_or_else(std::sync::PoisonError::into_inner).get_mut(i) {
-                        *slot = r;
-                    }
-                }
-            };
-            std::thread::scope(|sc| {
-                let handles: Vec<_> =
-                    (0..n).filter_map(|i| std::thread::Builder::new().name(format!("lc-import-copy-{i}")).spawn_scoped(sc, work).ok()).collect();
-                if handles.is_empty() {
-                    // no thread to be had: copy here, one after another
-                    work();
-                }
-                for h in handles {
-                    if h.join().is_err() {
-                        log::error!("import: a copy worker stopped unexpectedly");
-                    }
-                }
-            });
-            return results;
-        }
+            Arc::new(move || crate::import_move::inject(fault))
+        };
+        #[cfg(not(test))]
+        let init: Arc<dyn Fn() + Send + Sync> = Arc::new(|| {});
+        let outcomes = pool.run(transfers, &|i| paths.get(i).map(|p| shown(p)).unwrap_or_default(), work, Arc::new(discard), init, &|_| {
+            done.fetch_add(1, Relaxed);
+        });
+        outcomes
+            .into_iter()
+            .zip(paths)
+            .map(|(o, path)| match o {
+                reads::Outcome::Done(item) => Some(item),
+                reads::Outcome::Failed(why) => Some(PreparedItem::Failed(path, why)),
+                reads::Outcome::Unreached => None,
+            })
+            .collect()
     }
-    transfers.into_iter().map(one).collect()
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = watch;
+        transfers
+            .into_iter()
+            .map(|t| {
+                if cancel.load(Relaxed) {
+                    return None;
+                }
+                let path = t.path.clone();
+                // last-resort guard: a panic is this file's failure, not the import's
+                let item = crate::guard::catch("import", || run_transfer(t, file_bytes.as_ref())).unwrap_or_else(|e| PreparedItem::Failed(path, e));
+                done.fetch_add(1, Relaxed);
+                Some(item)
+            })
+            .collect()
+    }
+}
+
+/// What a transfer made after it was given up is not wanted: a placed file is taken back (its source was never
+/// touched), a copy removed.
+pub(super) fn discard(item: PreparedItem) {
+    let PreparedItem::Ready(ready) = item else { return };
+    match &ready.placed {
+        Some(placed) => crate::import_move::rollback(placed),
+        None if ready.stored != ready.path => {
+            let _ = std::fs::remove_file(&ready.stored);
+        }
+        None => {}
+    }
 }
 
 /// Copy or move one planned file (and Copy as DNG); its item.
@@ -161,7 +176,10 @@ fn run_transfer(t: Transfer, file_bytes: Option<&crate::merge::ByteReader>) -> P
         // decoding the raw twice and encoding it takes several times the file's size in memory
         let weight = usize::try_from(info.file_size).unwrap_or(usize::MAX).saturating_mul(6);
         let _permit = crate::memory::work_gate().acquire(weight);
-        match crate::cmd::convert::write_dng_with(file_bytes, &stored, String::new()) {
+        progressed();
+        let made = crate::cmd::convert::write_dng_with(file_bytes, &stored, String::new());
+        progressed();
+        match made {
             Ok(dng) => {
                 let _ = std::fs::remove_file(&stored);
                 stored = dng;
@@ -190,6 +208,52 @@ fn trashed_file_is_gone(cat: &lightcraft_catalog::Catalog, id: PhotoId) -> bool 
         }
 }
 
+/// Which of this batch's contents a photo of the library already has, when files whose content a photo already
+/// has are imported ([`ImportOptions::import_duplicates`]): such a file's photo gets a key of its own. Only the
+/// batch's contents are kept (no table of the whole library: the commit runs on the session's thread, batch after
+/// batch), and a trashed photo a Fresh import replaces holds nothing.
+fn held_contents(s: &Session, opts: &ImportOptions, prepared: &Prepared) -> std::collections::HashSet<String> {
+    if !opts.import_duplicates {
+        return Default::default();
+    }
+    let batch: std::collections::HashSet<&str> = prepared
+        .items
+        .iter()
+        .filter_map(|it| match it {
+            PreparedItem::Ready(r) => r.info.content_hash.as_deref(),
+            _ => None,
+        })
+        .collect();
+    let fresh = opts.on_deleted == OnDeleted::Fresh;
+    let mut held = std::collections::HashSet::new();
+    if !batch.is_empty() {
+        for p in s.catalog.photos().filter(|p| !(fresh && p.deleted)) {
+            if let Some(h) = p.content_hash.as_deref().map(crate::sync::base_hash)
+                && batch.contains(h)
+            {
+                held.insert(h.to_string());
+            }
+        }
+    }
+    held
+}
+
+/// Fresh: trashed photos a new import replaces, by content and by file (each removed once).
+fn trashed_lookups(s: &Session, opts: &ImportOptions) -> (HashMap<String, (bool, PhotoId)>, HashMap<String, PhotoId>) {
+    let (mut trash_content, mut trash_path) = (HashMap::new(), HashMap::new());
+    if opts.on_deleted == OnDeleted::Fresh {
+        for p in s.catalog.photos().filter(|p| p.deleted) {
+            if let Some(h) = &p.content_hash {
+                note_content(&mut trash_content, h, p.id);
+            }
+            if let Source::File { path } = &p.source {
+                trash_path.insert(path.clone(), p.id);
+            }
+        }
+    }
+    (trash_content, trash_path)
+}
+
 /// The catalog half of an import: add the photos [`ImportJob::prepare`] readied (one undoable op;
 /// a Move's sources are removed once it is saved). On a failed commit a Move's placed files are
 /// taken back.
@@ -208,50 +272,27 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
     // a key of its own. Only the batch's contents are kept (no table of the whole library: this runs
     // on the session's thread, batch after batch), and a trashed photo a Fresh import replaces holds
     // nothing.
-    let held: std::collections::HashSet<String> = if opts.import_duplicates {
-        let batch: std::collections::HashSet<&str> = prepared
-            .items
-            .iter()
-            .filter_map(|it| match it {
-                PreparedItem::Ready(r) => r.info.content_hash.as_deref(),
-                _ => None,
-            })
-            .collect();
-        let fresh = opts.on_deleted == OnDeleted::Fresh;
-        let mut held = std::collections::HashSet::new();
-        if !batch.is_empty() {
-            for p in s.catalog.photos().filter(|p| !(fresh && p.deleted)) {
-                if let Some(h) = p.content_hash.as_deref().map(crate::sync::base_hash)
-                    && batch.contains(h)
-                {
-                    held.insert(h.to_string());
-                }
-            }
-        }
-        held
-    } else {
-        Default::default()
-    };
-    // Fresh: trashed photos a new import replaces (by content or by file), each removed once
-    let mut trash_content: HashMap<String, (bool, PhotoId)> = HashMap::new();
-    let mut trash_path: HashMap<String, PhotoId> = HashMap::new();
-    if opts.on_deleted == OnDeleted::Fresh {
-        for p in s.catalog.photos().filter(|p| p.deleted) {
-            if let Some(h) = &p.content_hash {
-                note_content(&mut trash_content, h, p.id);
-            }
-            if let Source::File { path } = &p.source {
-                trash_path.insert(path.clone(), p.id);
-            }
-        }
-    }
+    let held = held_contents(s, opts, &prepared);
+    let (trash_content, trash_path) = trashed_lookups(s, opts);
     let mut purge: Vec<PhotoId> = Vec::new();
     let mut purged: std::collections::HashSet<PhotoId> = Default::default();
     for it in prepared.items {
         match it {
-            PreparedItem::Promote(id) => {
+            PreparedItem::Promote(id, fresh) => {
+                // the file was replaced since it was browsed: the record takes what it is now before it joins the library
+                if let Some(info) = &fresh {
+                    crate::cmd::convert::reload_ops(&s.catalog, id, info, &mut ops, &mut Vec::new());
+                }
                 if s.catalog.photo(id).is_some_and(|p| p.local) {
                     ops.push(Op::SetLocal { id, local: false });
+                }
+                // "Import as new": a trashed photo with the same content is replaced, as for a new file
+                let content =
+                    fresh.as_ref().and_then(|i| i.content_hash.clone()).or_else(|| s.catalog.photo(id).and_then(|p| p.content_hash.clone()));
+                if let Some(old) = content.as_ref().and_then(|h| trash_content.get(crate::sync::base_hash(h))).map(|(_, id)| id)
+                    && purged.insert(*old)
+                {
+                    purge.push(*old);
                 }
                 report.imported.push(id.0);
             }
@@ -259,10 +300,11 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 let existing = existing.or_else(|| {
                     let h = hash?;
                     // the plain key first, then a Duplicate's `<hash>:dup<id>`
+
                     new_hash
                         .get(&h)
                         .copied()
-                        .or_else(|| s.catalog.photos().find(|p| p.content_hash.as_deref() == Some(h.as_str())).map(|p| p.id))
+                        .or_else(|| s.catalog.photos().find(|p| !p.local && p.content_hash.as_deref() == Some(h.as_str())).map(|p| p.id))
                         .or_else(|| {
                             s.catalog
                                 .photos()
@@ -278,7 +320,11 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                             ops.push(Op::SetDeleted { id, deleted: false });
                             // matched by content from another path, and the file the record
                             // points at is gone (moved, renamed): the photo follows the file
-                            if reason == "content" && trashed_file_is_gone(&s.catalog, id) {
+                            // (not onto a path another record holds, a file only browsed in Local)
+                            if reason == "content"
+                                && trashed_file_is_gone(&s.catalog, id)
+                                && !s.catalog.photos().any(|p| matches!(&p.source, Source::File { path: held } if *held == path))
+                            {
                                 ops.push(crate::cmd::missing::relink_op(id, &path));
                             }
                             report.restored.push(id.0);

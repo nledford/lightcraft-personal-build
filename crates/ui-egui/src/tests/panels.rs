@@ -1292,7 +1292,7 @@ fn a_smart_album_cant_be_dropped_on_the_folder_it_shows() {
     for folder in [t.trips, t.sub] {
         t.drag_row(view, folder);
         assert_eq!(t.parent(view), None);
-        assert!(t.h.app.ui.toast.is_none(), "not a drop at all: {:?}", t.h.app.ui.toast);
+        assert!(t.h.app.ui.toast().is_none(), "not a drop at all: {:?}", t.h.app.ui.toast());
         assert!(t.h.app.ui.dragging_album.is_none(), "the drag ended");
     }
     assert_eq!(t.h.app.session.undo.len(), steps);
@@ -1574,11 +1574,6 @@ fn folders_app_sized(paths: &[&str], size: [f32; 2]) -> Headless {
 }
 
 fn folders_app_with_services(paths: &[&str], size: [f32; 2], services: Services) -> Headless {
-    folders_app_prepared(paths, size, services, |_| {})
-}
-
-/// [`folders_app_with_services`], with `prepare` run on the app before its first frame.
-fn folders_app_prepared(paths: &[&str], size: [f32; 2], services: Services, prepare: impl FnOnce(&mut LightcraftApp)) -> Headless {
     use lightcraft_catalog::{Op, Photo, Source};
     let mut session = lightcraft_engine::Session::new();
     for path in paths {
@@ -1586,11 +1581,14 @@ fn folders_app_prepared(paths: &[&str], size: [f32; 2], services: Services, prep
         let p = Photo::new(id, Source::File { path: (*path).into() }, "x.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
         session.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
     }
-    let mut app = LightcraftApp::new(session, services);
-    prepare(&mut app);
+    let app = LightcraftApp::new(session, services);
     let mut h = Headless::new(app, size, 1.0);
     let r = h.request("ui.set", json!({"view": "photoGrid", "leftPanel": true}), T);
     assert_eq!(r["ok"], true, "{r}");
+    h.settle(SETTLE);
+    // (these files are not on disk: the Missing Photos row appears, and moves the rows below it, when the
+    // background checks find them gone; the tests aim at rows, so they wait for it)
+    h.step_until(T, |h| h.file_checks_done());
     h.settle(SETTLE);
     // The sidebar looks for the photos' files on a worker thread that `Headless::busy` does not
     // count, and the Missing Photos row it adds above Folders pushes every row below it down when
@@ -2412,53 +2410,68 @@ fn a_folder_menu_locates_its_missing_tree_only() {
     assert!(sources.contains(&format!("{old}/other/c.jpg")), "another missing folder stays untouched: {sources:?}");
 }
 
-/// The Missing Photos row appears when the background count of missing files lands, and moves
-/// every row below it down. Settling waits for that count, so a click aimed at a folder row from
-/// the settled layout doesn't land on the row above it (on a busy machine, Locate Missing Files…
-/// above ran for `other` instead of `trip`).
+/// A library of file-backed photos that exist only in the catalog; each file's check answers
+/// after `delay` (`present` says which files are there) and is not waited for by settling.
+fn folders_app_with_slow_files(paths: &[&str], delay: Duration, present: fn(&str) -> bool) -> Headless {
+    use lightcraft_catalog::{Op, Photo, Source};
+    let mut session = lightcraft_engine::Session::new();
+    session.media.availability.set_probe(std::sync::Arc::new(move |p: &str| {
+        std::thread::sleep(delay);
+        present(p)
+    }));
+    for path in paths {
+        let id = session.catalog.alloc_photo_id();
+        let p = Photo::new(id, Source::File { path: (*path).into() }, "x.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
+        session.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    }
+    let app = LightcraftApp::new(session, Services { png: None, ..Default::default() });
+    let mut h = Headless::new(app, [1400.0, 900.0], 1.0);
+    let r = h.request("ui.set", json!({"view": "photoGrid", "leftPanel": true}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    h.settle(SETTLE);
+    h
+}
+
+/// The Missing Photos row appears when the background checks find the files gone, and moves every
+/// row below it down. [`Headless::file_checks_done`] is what waits for it (the checks are not part
+/// of `busy`: on a large library on a share they take minutes), so a click aimed at a folder row
+/// after it doesn't land on the row above (on a busy machine, Locate Missing Files… ran for
+/// `other` instead of `trip`). Nothing moves the rows afterwards, and no thread is spawned for the
+/// count, so none can fail to start.
 #[test]
-fn settling_waits_for_the_missing_photos_count() {
-    // longer than settling takes without the count (a few hundred ms here)
-    let delay = Duration::from_secs(1);
-    let paths = ["/lc-missing-count/other/a.jpg", "/lc-missing-count/trip/b.jpg"];
-    let services = Services { png: None, ..Default::default() };
-    let mut h = folders_app_prepared(&paths, [1400.0, 900.0], services, |app| app.missing_count_test_delay = Some(delay));
-    assert!(has(&h, "source:missing"), "the Missing Photos row is on screen once the sidebar settled");
+fn the_missing_photos_row_is_there_once_the_file_checks_are_done_and_nothing_moves_after() {
+    let delay = Duration::from_millis(400);
+    let mut h = folders_app_with_slow_files(&["/lc-missing-count/other/a.jpg", "/lc-missing-count/trip/b.jpg"], delay, |_| false);
+    assert!(h.step_until(T, |h| h.file_checks_done()), "the checks end");
+    h.settle(SETTLE);
+    assert!(has(&h, "source:missing"), "the Missing Photos row is on screen once the checks are done");
     click(&mut h, "libraryFolderToggle:/lc-missing-count");
     let settled = widget(&h, "source:libfolder:/lc-missing-count/trip");
     let t0 = std::time::Instant::now();
-    while t0.elapsed() < delay / 4 {
+    while t0.elapsed() < delay {
         h.step();
         std::thread::sleep(Duration::from_millis(5));
     }
-    assert_eq!(widget(&h, "source:libfolder:/lc-missing-count/trip"), settled, "nothing moves the folder rows after settling");
-    // the timed refresh of a slow count is not waited for: the fast simulated clock would start
-    // the next one before the last finished, and settling would never end
-    assert!(h.settle(Duration::from_secs(30)), "the sidebar settles while a slow count refreshes");
+    assert_eq!(widget(&h, "source:libfolder:/lc-missing-count/trip"), settled, "nothing moves the folder rows after the checks");
 }
 
-/// A catalog change while a slow timed refresh of the count runs: its recount starts only when
-/// the refresh ends, but settling waits for it from the frame the change is seen, so the Missing
-/// Photos row it adds is on screen once the sidebar settled.
+/// A photo whose file is gone comes in while the app is settled: the row it adds is on screen once
+/// the file checks are done.
 #[test]
-fn settling_waits_for_a_recount_owed_during_a_timed_refresh() {
+fn a_missing_photo_that_comes_in_adds_the_row_once_the_file_checks_are_done() {
     use lightcraft_catalog::{Op, Photo, Source};
-    let dir = std::env::temp_dir().join(format!("lc-ui-missing-owed-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    let here = dir.join("a.jpg");
-    std::fs::write(&here, b"photo").unwrap();
-    // settling takes the first count (2 s), in which the simulated clock passes the 5 s refresh
-    // interval: a timed refresh is running when it returns
-    let delay = Duration::from_secs(2);
-    let services = Services { png: None, ..Default::default() };
-    let mut h = folders_app_prepared(&[&here.to_string_lossy()], [1400.0, 900.0], services, |app| app.missing_count_test_delay = Some(delay));
+    let mut h = folders_app_with_slow_files(&["/lc-missing-owed/here.jpg"], Duration::from_millis(200), |p| p.contains("here"));
+    assert!(h.step_until(T, |h| h.file_checks_done()), "the first checks end");
+    h.settle(SETTLE);
     assert!(!has(&h, "source:missing"), "no photo is missing yet");
     let id = h.app.session.catalog.alloc_photo_id();
     let gone = Photo::new(id, Source::File { path: "/lc-missing-owed/gone.jpg".into() }, "gone.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
     h.app.session.catalog.apply(Op::AddPhoto { photo: Box::new(gone) }).unwrap();
-    assert!(h.settle(Duration::from_secs(30)), "the sidebar settles");
-    assert!(has(&h, "source:missing"), "the Missing Photos row is on screen once the sidebar settled");
-    let _ = std::fs::remove_dir_all(dir);
+    // (a check asked for may still be in flight when the queue is empty: the row itself is waited for)
+    assert!(h.step_until(T, |h| has(h, "source:missing")), "the Missing Photos row appears");
+    assert!(h.step_until(T, |h| h.file_checks_done()), "the checks end");
+    h.settle(SETTLE);
+    assert!(has(&h, "source:missing"), "the Missing Photos row is on screen once the checks are done");
 }
 
 /// Right-click a folder ▸ Set Color Label ▸ a colour: the folder's row shows the label's dot (a
@@ -2581,12 +2594,12 @@ fn export_folder_is_grayed_out_for_a_row_that_cant_be_shown_or_holds_nothing() {
     let mut h = folders_app_with_services(&["/Volumes/1.jpg", "/Volumes/tokyo/x.jpg"], [1400.0, 900.0], reveal_and_pick_services(Ok(())));
     right_click(&mut h, "source:libfolder:/Volumes");
     assert!(has(&h, "folderExport") && has(&h, "folderExportPresetMenu"), "the rows are listed");
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     click(&mut h, "folderExport");
     assert_eq!(h.app.session.library_folder, None, "a grayed-out row shows nothing");
     assert!(h.app.ui.dialog.is_none());
     // an enabled row would try, and the engine's refusal would show as a toast
-    assert!(h.app.ui.toast.is_none(), "a grayed-out row does nothing: {:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_none(), "a grayed-out row does nothing: {:?}", h.app.ui.toast());
     let node = |selectable, count| lightcraft_catalog::FolderNode {
         name: "x".into(),
         path: "/x".into(),
@@ -2609,9 +2622,9 @@ fn a_folder_that_cant_be_shown_in_the_file_manager_says_why() {
     let mut h = folders_app_with_services(&["/pics/trip/a.jpg", "/pics/home/b.jpg"], [1400.0, 900.0], services);
     click(&mut h, "libraryFolderToggle:/pics");
     right_click(&mut h, "source:libfolder:/pics/trip");
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     click(&mut h, "folderReveal");
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("no file manager")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().as_ref().is_some_and(|t| t.text.contains("no file manager")), "{:?}", h.app.ui.toast());
 }
 
 /// A Local place's menu takes the Folders order: Add to My Photos… and Synchronize first, then the disk, the file
@@ -2709,11 +2722,11 @@ fn copy_path_puts_a_folders_path_on_the_clipboard_from_each_kind_of_row() {
     let copy_from = |h: &mut Headless, row: &str, path: &str| {
         assert!(h.step_until(T, |h| has(h, row)), "{row} is listed");
         h.view.clipboard.clear();
-        h.app.ui.toast = None;
+        h.app.ui.toasts.clear();
         right_click(h, row);
         click(h, "folderCopyPath");
         assert_eq!(h.view.clipboard, native(path), "{row}");
-        assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some(crate::i18n::Locale::En.tr("Path copied")), "{row}");
+        assert_eq!(h.app.ui.toast().as_ref().map(|t| t.text.as_str()), Some(crate::i18n::Locale::En.tr("Path copied")), "{row}");
         assert!(!popup_open(h), "choosing closes the menu");
     };
     copy_from(&mut h, "source:libfolder:/pics/trip", "/pics/trip");
@@ -3259,7 +3272,7 @@ fn a_menu_commands_toast_shows_after_a_while() {
     assert_eq!(r["ok"], true, "{r}");
     h.step();
     h.step();
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Auto Advance")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_some_and(|t| t.text.starts_with("Auto Advance")), "{:?}", h.app.ui.toasts);
 }
 
 /// Auto-Tag from Tracklog's toast shows too: it was stamped by a clock of its own, which starts at
@@ -3284,7 +3297,7 @@ fn the_tracklog_toast_shows_after_a_while() {
     assert_eq!(r["ok"], true, "{r}");
     h.step();
     h.step();
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Tagged")), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_some_and(|t| t.text.starts_with("Tagged")), "{:?}", h.app.ui.toasts);
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -3409,7 +3422,7 @@ fn local_photos_cannot_be_added_to_albums_until_they_join_my_photos() {
     h.settle(SETTLE);
     assert!(h.app.session.catalog.album(album_id).unwrap().photos.is_empty(), "nothing invisible was added");
     assert!(h.app.ui.dragging_photos.is_none(), "the drag ended");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("Add to My Photos first"), "{toast:?}");
 
     // in My Photos: the menu entries come on, the submenu opens, and the album takes the photo
@@ -3819,7 +3832,7 @@ fn the_new_smart_album_shortcut_says_why_a_view_of_several_albums_cannot_be_save
     assert_eq!(r["ok"], true, "{r}");
     h.step();
     h.step();
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("\"Rated\" is a smart album"), "{toast:?}");
     assert!(h.app.ui.dialog.is_none());
 }

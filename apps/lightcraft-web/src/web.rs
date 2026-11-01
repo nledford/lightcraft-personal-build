@@ -256,6 +256,9 @@ fn services(originals: Originals, backend: Option<Backend>, files: Files, frozen
         pick_folder: None,
         // the browser reports prefers-color-scheme to egui
         system_theme: None,
+        keep_awake: None,
+        dock_badge: None,
+        notify: None,
     }
 }
 
@@ -727,6 +730,7 @@ impl eframe::App for WebApp {
     /// eframe's non-drawing pass for the browser host: drain safety notices and queued inbox work,
     /// load originals the UI requested, apply the cache budget, run the app's logic, then save.
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // (several notices at once each get their toast: they no longer replace one another)
         for text in safety::take_notices() {
             let now = self.app.tick_now();
             self.app.ui.show_toast(now, text, NOTICE_SECS, None);

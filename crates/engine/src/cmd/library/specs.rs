@@ -963,12 +963,28 @@ pub fn specs() -> Vec<CommandSpec> {
             "Empty Recently Deleted",
             ["Photo"],
             None,
-            "{} → {deleted} — removes every photo in Recently Deleted from the library (files on disk stay)",
+            "{files?: keep|trash, noTrash?: keep|delete} → {deleted} — removes every photo in Recently Deleted from the library (files on disk stay). With `files: \"trash\"` their files go to the system Trash as photo.trashFiles does it (→ its answer as well, `deleted` = `removed`; just `{deleted: 0}` when Recently Deleted is empty)",
             always,
-            |s, _| {
+            |s, p| {
+                const C: &str = "library.emptyRecentlyDeleted";
+                let trash = match p.get("files") {
+                    None | Some(Value::Null) => false,
+                    Some(v) => match v.as_str() {
+                        Some("keep") => false,
+                        Some("trash") => true,
+                        _ => return Err(bad(C, "`files` is \"keep\" (the default) or \"trash\"")),
+                    },
+                };
+                // (both answers are checked before anything else, so a bad one is an error whatever is there)
+                let no_trash = crate::cmd::trash::NoTrashParam::read(p, C)?;
                 let ids: Vec<PhotoId> = s.catalog.photos().filter(|p| p.deleted).map(|p| p.id).collect();
                 if ids.is_empty() {
                     return Ok(json!({"deleted": 0}));
+                }
+                if trash {
+                    let mut r = crate::cmd::trash::trash_files(s, &ids, no_trash, C)?;
+                    r["deleted"] = r["removed"].clone();
+                    return Ok(r);
                 }
                 let op = s.catalog.delete_photos_permanently_ops(&ids);
                 s.commit("Empty Recently Deleted", op)?;
@@ -1812,6 +1828,8 @@ pub fn specs() -> Vec<CommandSpec> {
                 "lastError": lib.last_error,
                 // settings files that were unreadable or damaged at open (kept, defaults used)
                 "settingsWarnings": lib.settings_warnings,
+                // moves an earlier run cut short, followed when the library opened (null: none)
+                "recoveredMoves": lib.recovered_moves,
                 // changes applied in memory whose write failed (retried by every save)
                 "unsavedOps": s.unsaved().map_or(0, |u| u.0),
                 "unsavedError": s.unsaved().map(|u| u.1),

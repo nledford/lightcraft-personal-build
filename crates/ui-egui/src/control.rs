@@ -149,6 +149,7 @@ pub fn inspect(app: &LightcraftApp, ctx: &egui::Context) -> Value {
         "status": app.ui.status,
         "copied": app.copied,
         "notices": app.notices,
+        "moveNotice": app.move_notice,
         "quitPrompt": app.quit_prompt.as_ref().map(crate::QuitPrompt::text),
         // how hard the background face scan may work right now, and why it is judged so (see `panels::faces::scan_pace`)
         "faceScan": {"pace": app.caches.faces_pace, "focused": app.caches.faces_in_front, "pending": app.caches.faces_pending, "indexed": app.caches.faces_indexed},
@@ -157,7 +158,10 @@ pub fn inspect(app: &LightcraftApp, ctx: &egui::Context) -> Value {
         "scan": app.scan.as_ref().map(crate::import::ScanTask::status),
         "export": {"running": app.export.as_ref().map(crate::export_task::ExportTask::status), "last": app.last_export_result},
         "import": app.import.as_ref().map(crate::import::ImportTask::status),
+        "relocate": crate::relocate::status(app),
         "tasks": app.tasks.labels(),
+        // photos being moved to another folder (`photo.moveToFolder {background: true}`), and how the last move ended
+        "move": {"running": app.move_run.as_ref().map(crate::move_task::MoveRun::status), "last": app.last_move},
         // every long-running task in flight and every task waiting in line (`activity.list`); the list under the bell draws them all, the waiting ones under "Waiting"
         "activity": app.session.activity.list(),
         // the list of them under the top bar's bell is open (`view.tasks`)
@@ -458,7 +462,7 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
                     }
                     u.collapsed_sidebar.clear();
                     u.normalize_folder_parents();
-                    u.toast = app.ui.toast.clone();
+                    u.toasts = app.ui.toasts.clone();
                     u.dialog = app.ui.dialog.clone();
                     u.status = app.ui.status.clone();
                     crate::docking::cancel_replaced_gesture(app, u.docking.as_ref());
@@ -470,8 +474,11 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
                 Err(e) => err(e),
             }
         }
-        "ui.dialog.confirm" => match app.ui.dialog.take() {
+        "ui.dialog.confirm" => match app.ui.dialog.clone() {
             Some(d) => {
+                // the dialog is open while its action runs, as when its button is pressed: an
+                // action may ask whether it is (`folder.locate` scans the folder afterwards only
+                // for the Synchronize dialog that is waiting for it)
                 let r = crate::panels::dialogs::confirm_dialog(app, &d);
                 // a refused one-line prompt says why on screen, as with its button; a folder made says where
                 match (&r, &d) {
@@ -479,8 +486,9 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
                     (Ok(made), crate::state::Dialog::TextPrompt { .. }) => crate::dialogs::toast_created_folder(app, ctx, &d, made),
                     _ => {}
                 }
-                // the import review, the rule editor, the one-line prompts and the folders' Synchronize stay open on an error, as with their buttons
-                if (r.is_err()
+                // the import review, the rule editor, the one-line prompts, Synchronize Folder and the folders'
+                // Synchronize stay open on an error, as with their buttons (other dialogs the button keeps open close here)
+                let stays = (r.is_err()
                     && matches!(
                         d,
                         crate::state::Dialog::Import { .. }
@@ -490,12 +498,14 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
                             | crate::state::Dialog::CaptureTime { .. }
                             | crate::state::Dialog::TextPrompt { .. }
                             | crate::state::Dialog::RestoreBackup { .. }
+                            | crate::state::Dialog::SynchronizeFolder { .. }
                             | crate::state::Dialog::SynchronizeFolders { .. }
                     ))
                     || (r.is_ok() && crate::panels::dialogs::keeps_open(app, &d))
-                    || (r.is_err() && crate::lightroom_destination::keeps_open_on_error(app, &d))
-                {
-                    app.ui.dialog = Some(d);
+                    || (r.is_err() && crate::lightroom_destination::keeps_open_on_error(app, &d));
+                // (a dialog the action opened or changed takes its place)
+                if !stays && app.ui.dialog.as_ref() == Some(&d) {
+                    app.ui.dialog = None;
                 }
                 wrap(r)
             }

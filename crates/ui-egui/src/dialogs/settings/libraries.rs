@@ -21,6 +21,9 @@ pub(crate) fn can_switch_library(app: &LightcraftApp) -> Result<(), String> {
     if !app.waiting_import.files.is_empty() {
         return Err("wait for the photos waiting to be imported before switching libraries".into());
     }
+    if app.move_run.is_some() {
+        return Err("wait for the photos being moved to arrive (or stop the move) before switching libraries".into());
+    }
     Ok(())
 }
 
@@ -127,6 +130,8 @@ fn switch_library(app: &mut LightcraftApp, path: &str, agreed: bool) -> Result<V
     // an edit under way in a box (the Info panel's, Settings') is for this library's photos: saved first
     app.save_edits_before_library_closes()?;
     app.session.close_library().map_err(|e| e.to_string())?;
+    // what the open of the library being left found of its moves isn't about the next one
+    app.move_notice = None;
     let opened = app.session.open_library(&dir, false).map(|_| ()).map_err(|e| format!("{path}: {e}"));
     app.lightroom_last = None;
     app.lightroom_result = None;
@@ -157,7 +162,7 @@ fn switch_library(app: &mut LightcraftApp, path: &str, agreed: bool) -> Result<V
     }
     remember_library(&mut app.ui.settings.recent_libraries, &path);
     if dropped > 0 {
-        app.say(crate::i18n::tr_format!("Waiting tasks dropped: {n}", n = dropped));
+        app.say(crate::i18n::tr_format!("Waiting tasks dropped: {n}", n = dropped), crate::TOAST_SECONDS);
     }
     Ok(json!({"path": path, "name": library_name(&dir), "photos": app.session.catalog.len()}))
 }

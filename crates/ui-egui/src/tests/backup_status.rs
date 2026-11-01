@@ -125,10 +125,10 @@ fn while_a_backup_is_made_the_row_says_so_and_a_second_cannot_be_started() {
     // Then the row says a backup is being made
     assert!(says(&h, "Backing up"), "{:?}", h.painted_text().iter().filter(|t| t.contains("ack")).collect::<Vec<_>>());
     // And pressing the button again starts nothing and says nothing went wrong: it is not on offer
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     let _ = h.request("ui.clickWidget", json!({"id": "button:settingsBackupNow"}), T);
     steps(&mut h);
-    assert!(h.app.ui.toast.is_none(), "no refusal is shown: {:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_none(), "no refusal is shown: {:?}", h.app.ui.toast());
     // When the backup goes on and ends
     h.app.session.backup_hold.store(false, Ordering::SeqCst);
     assert!(h.step_until(T, |h| h.app.session.last_backup.is_some()));
