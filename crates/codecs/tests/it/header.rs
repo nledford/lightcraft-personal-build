@@ -231,7 +231,7 @@ fn samsung_sef_trailer_without_eoi() {
     // marker. With data to show it is read and says so (`truncated`, shown from the data present,
     // #2705); it is refused only when the bytes the trailer left read as malformed (an offset
     // outside the file) or the cut is before the first scan
-    let read = |b: &[u8]| read_header(b).map(|h| (h.width, h.truncated));
+    let read = |b: &[u8]| read_header(b).map(|h| (h.width, h.truncated)).map_err(|e| e.to_string());
     assert_eq!(read(scan), Ok((160, true)));
     assert_eq!(read(&with_sef_trailer(scan, block - 1, b"SEFH")), Ok((160, true)));
     assert_eq!(read(&with_sef_trailer(scan, block, b"SEFX")), Ok((160, true)));
