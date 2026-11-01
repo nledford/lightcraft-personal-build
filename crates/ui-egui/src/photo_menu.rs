@@ -332,11 +332,13 @@ fn nodes_with(app: &LightcraftApp, photo: PhotoId, infos: &[CommandInfo], preset
     v.push(Some(submenu("Export with Preset", export)));
     v.push(sep());
 
-    // delete it (Restore and Delete Permanently in Recently Deleted: the menu bar's choice), and
-    // Move Files to Trash as the Photo menu has it
-    for id in ["photo.delete", "photo.restore", "photo.deletePermanently", "dialog.trashFiles"] {
+    // delete it: Restore and Delete Permanently in Recently Deleted and Move Files to Trash as the
+    // Photo menu has them; Delete stands alone at the end (the menu's own rule)
+    for id in ["photo.restore", "photo.deletePermanently", "dialog.trashFiles"] {
         v.push(menu("Photo").iter().find(|n| matches!(n, MenuNode::Item { id: i, .. } if i == id)).cloned());
     }
+    v.push(sep());
+    v.push(menu("Photo").iter().find(|n| matches!(n, MenuNode::Item { id, .. } if id == "photo.delete")).cloned());
     menubar::tidy(v.into_iter().flatten().collect())
 }
 

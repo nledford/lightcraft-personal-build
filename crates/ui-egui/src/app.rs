@@ -308,15 +308,16 @@ impl LightcraftApp {
         };
         // samples coming into an empty library, however they are asked for, land on one in Detail
         // (the welcome showing: not a Local folder or Recently Deleted of an otherwise empty library)
+        let landing = id == "library.addSamples" && panels::empty_library::shown(&self.session);
         let r = self.session.execute(id, &params).map_err(Refusal::from);
-        self.after_run(id, &params, &r);
+        self.after_run(id, &params, &r, landing);
         r
     }
 
     /// What the app does once a command's engine result is in (the second half of [`Self::run_told`]): state that
     /// follows a command, its toast, and what a refusal or a faces answer says in the status line.
-    fn after_run(&mut self, id: &str, params: &Value, r: &Result<Value, Refusal>) {
-        if r.is_ok() && id == "library.addSamples" && panels::empty_library::shown(&self.session) {
+    fn after_run(&mut self, id: &str, params: &Value, r: &Result<Value, Refusal>, landing: bool) {
+        if r.is_ok() && landing {
             panels::empty_library::land_on_samples(self);
         }
         if r.is_ok() && matches!(id, "crop.aspect" | "crop.rotateAspect") {

@@ -1591,9 +1591,12 @@ fn import_review_and_report_name_the_jpegs_cut_short() {
     let r = s.execute("library.import", &json!({"paths": paths})).unwrap();
     assert_eq!(r["imported"].as_array().map(Vec::len), Some(2), "{r}");
     assert_eq!(r["truncated"], json!([cut_path.to_string_lossy()]), "{r}");
-    // a cut file first browsed in Local and then imported for real is reported too
+    // a cut file first browsed in Local and then imported for real is reported too (its bytes are
+    // no library photo's: a browsed copy of one is matched as a duplicate before it is promoted)
+    let rgb2: Vec<u8> = (0..160 * 96 * 3).map(|i| (i * 13 % 241) as u8).collect();
+    let whole2 = encode_jpeg(&EncodeImage::new(160, 96, 3, Samples::U8(&rgb2)), 90, ChromaSubsampling::S420, &EncodeMeta::default()).unwrap();
     let browsed = files.join("browsed.jpg");
-    std::fs::write(&browsed, &whole[..whole.len() / 2]).unwrap();
+    std::fs::write(&browsed, &whole2[..whole2.len() / 2]).unwrap();
     s.execute("library.import", &json!({"paths": [browsed.to_string_lossy()], "local": true})).unwrap();
     let r = s.execute("library.import", &json!({"paths": [browsed.to_string_lossy()]})).unwrap();
     assert_eq!(r["imported"].as_array().map(Vec::len), Some(1), "{r}");
