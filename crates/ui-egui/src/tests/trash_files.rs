@@ -341,11 +341,15 @@ fn photos_on_a_disk_without_a_trash_get_a_second_question_before_anything_is_era
     assert!(matches!(h.app.ui.dialog, Some(Dialog::TrashFiles(TrashAsk::Erase { .. }))), "its button waits a moment");
     assert!(in_library(&h, ids[1]) && exists(&paths[1]) && exists(&paths[2]), "nothing of them is touched yet");
     wait_for_erase(&mut h);
-    click(&mut h, "button:dialogOk");
+    // the OK goes as queued input without the settle a click waits out: those frames keep moving
+    // the simulated clock, and on a busy host enough of them pass between the notice and a later
+    // read for it to be gone. It is read in the frame it comes, with the photos' leaving (the
+    // erase, the library's change and the notice all land in one).
+    let r = h.request("ui.clickWidget", json!({"id": "button:dialogOk"}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    assert!(h.step_until(T, |h| toast(h).to_lowercase().contains("erased")), "no erased toast: {:?}", toast(&h));
     assert!(ids.iter().all(|id| !in_library(&h, *id)) && paths.iter().all(|p| !exists(p)));
     assert_eq!(h.app.ui.dialog, None);
-    // (the erase's toast comes in a frame of its own, later on a busy host)
-    assert!(h.step_until(T, |h| toast(h).to_lowercase().contains("erased")), "no erased toast: {:?}", toast(&h));
     // one step: the file in the Trash comes back, the erased ones are shown as missing
     run(&mut h, "edit.undo", json!({}));
     assert!(ids.iter().all(|id| in_library(&h, *id)) && exists(&paths[0]) && !exists(&paths[1]));
