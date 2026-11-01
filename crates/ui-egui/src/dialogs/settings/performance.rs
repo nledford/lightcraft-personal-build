@@ -152,6 +152,19 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     let kept: Option<SmartAsk> = ui.data(|d| d.get_temp(ask_id));
     let mut ask = kept.filter(|k| pass.saturating_sub(k.pass) <= 1 && k.library == library && k.folder == path).unwrap_or_default();
     let mut mode = ask.mode;
+    // a folder chosen in the host's dialog while "Delete them" was the choice: its answer is the
+    // question's to give (nothing to delete: the folder changes at once)
+    let pending: Option<String> = ui.ctx().data(|d| d.get_temp(smart_pending_id()));
+    if let Some(path) = pending {
+        ui.ctx().data_mut(|d| d.remove::<String>(smart_pending_id()));
+        if count > 0 {
+            ask.waiting = Some(json!({"path": path, "existing": "discard"}));
+        } else {
+            let existing = "discard";
+            let result = app.run("library.smartPreviewsLocation", json!({"path": path, "existing": existing}));
+            smart_previews_changed(app, ui.ctx(), existing, result);
+        }
+    }
     if count > 0 {
         row(ui, t, crate::i18n::tr("Existing previews"), |ui| {
             choices(ui, "settingsSmartExisting", &[(0u8, "Move them"), (1, "Leave them"), (2, "Delete them")], &mut mode);
@@ -320,6 +333,14 @@ pub(crate) fn smart_previews_changed(app: &mut LightcraftApp, ctx: &egui::Contex
 #[cfg(not(target_arch = "wasm32"))]
 fn smart_existing_id() -> egui::Id {
     egui::Id::unique("smart-existing")
+}
+
+/// Where a folder chosen in the host's dialog waits while "Delete them" is the choice: deleting the
+/// previews of the folder used until now is asked about once the folder is known, and the question
+/// is Settings' own ([`smart_previews`]); the folder changes only with its answer.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn smart_pending_id() -> egui::Id {
+    egui::Id::unique("smart-pending")
 }
 
 /// What a change of the smart previews folder does to the previews already built: the choice in

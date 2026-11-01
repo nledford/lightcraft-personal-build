@@ -23,7 +23,8 @@ pub enum Field {
     /// Settings ▸ Import ▸ Watched folder.
     AutoImportFolder,
     /// Settings ▸ Performance ▸ Smart previews ▸ Choose Folder…. What happens to the previews
-    /// already built is the "Existing previews" choice when the dialog closes.
+    /// already built is the "Existing previews" choice when the dialog closes, except "Delete
+    /// them", which Settings asks about once the folder is known (its own gate).
     #[cfg(not(target_arch = "wasm32"))]
     SmartPreviewsFolder,
     /// The Lightroom import's location for a new library.
@@ -212,6 +213,13 @@ pub(super) fn apply(app: &mut LightcraftApp, ctx: &egui::Context, field: &Field,
         #[cfg(not(target_arch = "wasm32"))]
         Field::SmartPreviewsFolder => {
             let existing = crate::dialogs::settings::existing_previews(ctx);
+            if existing == "discard" {
+                // deleting the previews of the folder used until now is asked about once the folder
+                // is known (Settings' own gate): the answer waits for that question, which Settings
+                // shows while it is open; with nothing to delete it goes ahead on its own
+                ctx.data_mut(|d| d.insert_temp(crate::dialogs::settings::smart_pending_id(), path));
+                return;
+            }
             let result = app.run("library.smartPreviewsLocation", json!({"path": path, "existing": existing}));
             crate::dialogs::settings::smart_previews_changed(app, ctx, existing, result);
         }

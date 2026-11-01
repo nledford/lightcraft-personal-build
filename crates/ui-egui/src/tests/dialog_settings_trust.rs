@@ -214,6 +214,12 @@ fn write_png(path: &str, seed: u8) {
 
 /// A library on disk with one photo and its smart preview built, whose folder picker answers `to`.
 fn with_smart_preview(dir: &TempFolder, to: &str) -> Headless {
+    let to = to.to_string();
+    with_smart_preview_services(dir, Services { png: None, ..Default::default() }, &to)
+}
+
+/// [`with_smart_preview`] on a host with `services` of its own (its own folder picker).
+fn with_smart_preview_services(dir: &TempFolder, services: Services, to: &str) -> Headless {
     write_png(&dir.path("trip/a.png"), 3);
     let mut session = lightcraft_engine::Session::new().with_fs();
     session.open_library(dir.0.join("library"), false).unwrap();
@@ -221,7 +227,9 @@ fn with_smart_preview(dir: &TempFolder, to: &str) -> Headless {
     session.execute("library.smartPreviews", &json!({})).unwrap();
     std::fs::create_dir_all(to).unwrap();
     let to = to.to_string();
-    headless(session, Services { pick_folder: Some(Box::new(move || Some(to.clone()))), ..Default::default() })
+    let mut services = services;
+    services.pick_folder = Some(Box::new(move || Some(to.clone())));
+    headless(session, services)
 }
 
 fn smart(h: &mut Headless) -> Value {
@@ -272,6 +280,56 @@ fn saying_yes_deletes_the_smart_previews_and_changes_the_folder() {
     let now = smart(&mut h);
     assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(0), json!(true)), "{now}");
     assert_eq!(now["path"], json!(to));
+    assert!(!has(&h, "button:settingsSmartDelete"));
+}
+
+/// A folder chosen in the host's own dialog while another choice was made, closed after the choice
+/// became "Delete them": the delete is still asked about first, in Settings (the answer is what
+/// changes the folder), and nothing is deleted before it.
+#[test]
+fn a_delete_chosen_while_the_folder_dialog_was_up_is_asked_about_when_it_closes() {
+    let dir = TempFolder::new("settings-trust-smart-deferred");
+    let to = dir.path("elsewhere");
+    // the host's dialog: its answer channel is handed over when it opens, and the test speaks on it
+    let tx_slot = std::sync::Arc::new(std::sync::Mutex::new(None::<std::sync::mpsc::Sender<Vec<String>>>));
+    let slot = tx_slot.clone();
+    let to_for_picker = to.to_string();
+    let mut h = with_smart_preview_services(
+        &dir,
+        Services {
+            picker: Some(Box::new(move |_| {
+                let (tx, rx) = std::sync::mpsc::channel();
+                *slot.lock().unwrap() = Some(tx);
+                Ok(rx)
+            })),
+            png: None,
+            ..Default::default()
+        },
+        &to_for_picker,
+    );
+    show(&mut h, "library");
+    assert_eq!(smart(&mut h)["count"], 1);
+    // Given "Move them" chosen, so the click defers to the host's dialog
+    click(&mut h, "button:settingsSmartChoose");
+    assert_eq!(smart(&mut h)["custom"], json!(false), "nothing changed yet: the dialog is up");
+    let tx = tx_slot.lock().unwrap().take().expect("the dialog opened");
+    // When the choice becomes "Delete them" while the dialog is up, and the dialog then closes
+    click(&mut h, "button:settingsSmartExisting-2");
+    tx.send(vec![to.to_string()]).unwrap();
+    // Then nothing has been deleted or moved: the question is Settings' to ask
+    let mut steps = 0;
+    while !has(&h, "button:settingsSmartDelete") && steps < 40 {
+        h.step();
+        steps += 1;
+    }
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(1), json!(false)), "nothing before the answer: {now}");
+    assert!(has(&h, "button:settingsSmartDelete"), "it asks");
+    // and the answer is what changes the folder and deletes
+    scroll_down(&mut h);
+    click(&mut h, "button:settingsSmartDelete");
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(0), json!(true)), "{now}");
     assert!(!has(&h, "button:settingsSmartDelete"));
 }
 
