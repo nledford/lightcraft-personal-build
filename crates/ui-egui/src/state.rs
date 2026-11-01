@@ -377,9 +377,6 @@ pub struct UiState {
     /// [`UiState::toast`] is the newest; the painter extends `until` while one is hovered, and drops what has expired).
     #[serde(skip)]
     pub toasts: Vec<crate::toast::Toast>,
-    /// How many times a toast was shown ([`UiState::show_toast`]), a repeat of one showing included: what
-    /// [`LightcraftApp::act`] reads to tell whether a command made a toast of its own.
-    pub toasts_shown: u64,
     /// The result of the last Find Missing Photos (it searches in the background).
     #[serde(skip)]
     pub last_find_missing: Option<serde_json::Value>,
@@ -547,7 +544,6 @@ impl Default for UiState {
             compare: None,
             reference: None,
             toasts: Vec::new(),
-            toasts_shown: 0,
             last_find_missing: None,
             last_find_missing_result: None,
             #[cfg(test)]
@@ -582,7 +578,6 @@ impl UiState {
         // toasts whose time is already over go first, so a gone one never costs a showing one its place (notices
         // arrive before the frame that expires them)
         self.expire_toasts(now);
-        self.toasts_shown += 1;
         let until = now + crate::toast::Toast::duration(&text, floor);
         let same = |t: &crate::toast::Toast| t.text == text && t.label == label && (t.topic == topic || t.topic.is_none() || topic.is_none());
         let kept = self.toasts.iter().position(same).map(|at| self.toasts.remove(at));

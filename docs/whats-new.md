@@ -133,6 +133,12 @@
 - The Dock icon of LightCraft carries a badge with the number of jobs you started that are running (an export, an
   import, a preview build…). It goes away when the last one ends, so a job in a minimized window can still be seen.
 
+### On macOS, a notification tells you when a job has finished
+- When a job you started (an export, an import, a preview build…) ends while LightCraft is in the background, macOS
+  shows a notification. It says what the job reported ("Exported 24 photos"), or names it, or says how many ended
+  when several did. The first time, macOS asks whether LightCraft may notify you. Turn it off in Settings ▸ General ▸
+  Notifications.
+
 ### On macOS, a long job keeps the Mac awake
 - While an export, import, preview build, merge or other job you started is running, the Mac no longer goes to sleep
   on its own and macOS no longer slows the app down when its window is hidden or minimized. Both end as soon as the
@@ -349,12 +355,6 @@
 - macOS, Linux and the other Unix systems for now. On Windows and in the browser the command says it is not available and changes
   nothing. The answer has the counts `removed`, `trashed`, `erased`, `missing`, `shared`, `sidecarsLeft`, `skipped`
   and `stopped` (always 0 here), `noTrash` (the photos on a disk without a Trash) and `failed` (what could not move, and why).
-
-### On macOS, a notification tells you when a job has finished
-- When a job you started (an export, an import, a preview build…) ends while LightCraft is in the background, macOS
-  shows a notification. It says what the job reported ("Exported 24 photos"), or names it, or says how many ended
-  when several did. The first time, macOS asks whether LightCraft may notify you. Turn it off in Settings ▸ General ▸
-  Notifications.
 
 ## 2026-10-24
 
