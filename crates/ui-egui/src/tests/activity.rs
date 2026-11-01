@@ -699,7 +699,7 @@ fn a_photo_that_cannot_be_prepared_ends_the_export_with_its_error() {
     let r = h.request("engine.execute", json!({"command": "app.export", "params": params}), T);
     assert_eq!(r["ok"], true, "{r}");
     assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
-    let toast = h.app.ui.toast.clone().map(|t| t.text).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("generated demo photo"), "{toast}");
     assert!(written.lock().unwrap().is_empty(), "nothing is written");
     assert!(h.app.session.activity.list().is_empty(), "no row is left");
@@ -2141,7 +2141,7 @@ fn import_message_counts_the_jpegs_cut_short() {
     assert!(h.step_until(Duration::from_secs(60), |h| h.app.import.is_none()));
     assert_eq!(h.app.session.catalog.len(), 3);
     assert_eq!(h.app.session.catalog.photos().filter(|p| p.truncated).count(), 1);
-    assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Imported 3 photos · 1 damaged"));
+    assert_eq!(h.app.ui.toast().map(|t| t.text.as_str()), Some("Imported 3 photos · 1 damaged"));
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -2179,7 +2179,7 @@ fn a_row_that_only_waits_shows_no_percent() {
     let rows = s.activity.list();
     let of = |kind: &str| rows.iter().find(|t| t.kind == kind).cloned().unwrap();
     let (wait, run) = (of("xmpWaiting"), of("export"));
-    assert_eq!(readout_text(std::slice::from_ref(&wait)), "Waiting to write XMP sidecars");
+    assert_eq!(readout_text(std::slice::from_ref(&wait), 0), "Waiting to write XMP sidecars");
     assert_eq!(overall(std::slice::from_ref(&wait)), None);
     assert_eq!(overall(&[wait, run]), Some(0.5));
     drop((waiting, running));

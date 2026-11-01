@@ -176,7 +176,7 @@ pub fn ask(
     now: impl FnOnce(&mut Services) -> Option<Vec<String>>,
 ) -> Picked {
     let kind = request.kind;
-    if let Started::Later = start(app, command, request, Then::Run { params: params.clone(), key, kind, library }) {
+    if let Started::Later = start(app, command, request, Then::Run { params: params.clone(), key, kind }) {
         return Picked::Later;
     }
     match now(&mut app.services) {

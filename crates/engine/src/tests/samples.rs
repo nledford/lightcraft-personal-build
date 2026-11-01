@@ -117,7 +117,7 @@ fn removing_the_samples_during_an_open_drag_records_the_drag_as_its_own_undo_ste
 fn removing_the_samples_clears_a_filter_on_an_album_that_goes() {
     // Given the person's own photo in the sample album Portfolio (which stays), and the filter and the one put aside
     // on albums while All is shown: one on Mountains (only samples; it goes), the other on Portfolio, in both orders
-    for filter_on_the_removed_one in [true, false] {
+    for (filter_on_the_removed_one, put_aside) in [(true, false), (false, false), (true, true), (false, true)] {
         let dir = temp_dir("filter-album");
         png(&dir.join("own.png"));
         let mut s = Session::with_demo().with_fs();
@@ -128,22 +128,21 @@ fn removing_the_samples_clears_a_filter_on_an_album_that_goes() {
         photos.push(own);
         s.catalog.apply(Op::SetAlbumPhotos { id: portfolio, photos }).unwrap();
         let mountains = album(&s, "Mountains").unwrap();
-        let (now, aside) = if filter_on_the_removed_one { (mountains, portfolio) } else { (portfolio, mountains) };
-        s.filter.album = Some(now);
-        s.shelved_filter = Some(lightcraft_catalog::Filter { album: Some(aside), ..Default::default() });
+        let on = if filter_on_the_removed_one { mountains } else { portfolio };
+        s.set_filter(lightcraft_catalog::Filter { album: Some(on), ..Default::default() });
+        if put_aside {
+            s.execute("library.toggleFilters", &json!({})).unwrap();
+            assert!(s.filters_off());
+        }
         // When the samples are removed
         s.execute("library.removeSamples", &json!({})).unwrap();
         // Then a filter naming the album that went is cleared (the filter bar has no album chip, so it would narrow the
-        // view unseen), and one naming an album that stays is left alone
-        let keep = |gone: bool, id| if gone { None } else { Some(id) };
-        assert_eq!(s.filter.album, keep(filter_on_the_removed_one, portfolio), "the filter's album after removal");
-        assert_eq!(
-            s.shelved_filter.as_ref().and_then(|f| f.album),
-            keep(!filter_on_the_removed_one, portfolio),
-            "the shelved filter's album after removal"
-        );
+        // view unseen), and one naming an album that stays is left alone, in use or put aside
+        let kept = (!filter_on_the_removed_one).then_some(portfolio);
+        let held = if put_aside { s.filters.aside().and_then(|f| f.album) } else { s.filter().album };
+        assert_eq!(held, kept, "the filter's album after removal (put aside: {put_aside})");
         // (a filter put aside that the removal emptied is dropped, not left as an empty one)
-        assert_eq!(s.shelved_filter.is_none(), !filter_on_the_removed_one, "an emptied filter is left put aside");
+        assert_eq!(s.filters.aside().is_none(), !put_aside || filter_on_the_removed_one, "an emptied filter is not left put aside");
     }
 }
 

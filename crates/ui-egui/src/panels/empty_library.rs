@@ -31,7 +31,7 @@ pub fn shown(session: &lightcraft_engine::Session) -> bool {
 /// Detail's empty filmstrip aren't drawn, and the sidebar's empty sections fold into one line.
 pub fn in_view(app: &LightcraftApp) -> bool {
     let view = match app.ui.view {
-        ViewMode::PhotoGrid | ViewMode::SquareGrid => app.session.filter == Default::default(),
+        ViewMode::PhotoGrid | ViewMode::SquareGrid => *app.session.filter() == Default::default(),
         ViewMode::Detail => app.session.active().is_none(),
         _ => false,
     };

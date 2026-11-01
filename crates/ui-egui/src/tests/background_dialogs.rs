@@ -277,10 +277,10 @@ fn the_smart_previews_folder_dialog_does_not_block_and_its_answer_is_applied() {
     h.app.ui.dialog = Some(Dialog::Settings { tab: "performance".into() });
     h.settle(T);
     press(&mut h, &asked, &blocked, Field::SmartPreviewsFolder, PickKind::Folder);
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     answer(&mut h, &asked, 0, "/no/such/folder");
     assert!(h.app.pending_picks.is_empty());
-    assert!(h.app.ui.toast.is_some(), "the answer was applied: the engine's refusal is shown");
+    assert!(h.app.ui.toast().is_some(), "the answer was applied: the engine's refusal is shown");
 }
 
 #[test]
@@ -332,7 +332,7 @@ fn print_template_export_does_not_block_and_its_answer_writes_the_file() {
     assert!(!file.exists(), "nothing is written before the dialog closes");
     answer(&mut h, &asked, 0, &file.to_string_lossy());
     assert!(file.is_file(), "the answer was exported");
-    assert!(h.app.ui.toast.is_some());
+    assert!(h.app.ui.toast().is_some());
     let _ = std::fs::remove_dir_all(&dir);
 }
 

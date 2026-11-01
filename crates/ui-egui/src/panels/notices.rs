@@ -71,15 +71,6 @@ fn tasks_message(stops: &[String], unstoppable: &[String], waiting: usize) -> St
     }
     lines.join("\n")
 }
-    }
-    if !unstoppable.is_empty() {
-        lines.push(crate::i18n::tr_format!(
-            "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.",
-            names = unstoppable.join(", ")
-        ));
-    }
-    lines.join("\n")
-}
 
 /// The quit goes through: the jobs that can stop are asked to, the ones that can't are what the prompt said it doesn't
 /// wait for. Not before: Cancel on a later prompt is back to work with everything still running.
@@ -93,6 +84,51 @@ fn unsaved_message(n: usize, e: &str) -> String {
     let s = crate::i18n::plural_s(n);
     let lost = if n == 1 { "it is" } else { "they are" };
     crate::i18n::tr_format!("{n} change{} couldn't be written to disk: {e}\nIf you quit now, {} lost.", s, lost, n = n, e = e)
+}
+
+/// What following moves an earlier run cut short came to, in the person's language; `None` when there is nothing to
+/// say.
+pub fn recovered_text(r: &Recovered) -> Option<String> {
+    use crate::i18n::tr_format;
+    if r.is_empty() {
+        return None;
+    }
+    let mut parts = Vec::new();
+    if r.relinked > 0 {
+        parts.push(tr_format!(
+            "Photos being moved when LightCraft last closed: {}. The library now points at where the files are; Edit → Undo moves them back.",
+            r.relinked
+        ));
+    }
+    if r.waiting > 0 {
+        parts.push(tr_format!(
+            "Files being moved that can't be reached now (a disk not connected?): {}. LightCraft looks again the next time this library opens.",
+            r.waiting
+        ));
+    }
+    if r.copies_removed > 0 {
+        parts.push(tr_format!("Copies removed from the new place, because the original was still where the library has it: {}.", r.copies_removed));
+    }
+    for p in &r.problems {
+        parts.push(match p {
+            MoveProblem::UnreadableRecord { record, error } => {
+                tr_format!("A record of a move ({}) can't be read ({}); it was left as it is.", record, error)
+            }
+            MoveProblem::BothPlaces { from, to } => tr_format!("{} was being moved and is now at both places: the library keeps {}.", to, from),
+            MoveProblem::SidecarStayed { to, error } => tr_format!("A sidecar of {} couldn't follow it ({}).", to, error),
+            MoveProblem::NotFollowed { error } => {
+                tr_format!("The library couldn't follow the files that were being moved ({}); Find Missing Photos relinks them.", error)
+            }
+            MoveProblem::NotSaved { error } => {
+                tr_format!("The files that were being moved are followed, but that couldn't be saved ({}).", error)
+            }
+            MoveProblem::Unprotected => crate::i18n::tr(
+                "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.",
+            )
+            .to_string(),
+        });
+    }
+    Some(parts.join(" "))
 }
 
 /// The window may close now (`true`), or the quit prompt is shown (`false`). Every running task is asked about first (an

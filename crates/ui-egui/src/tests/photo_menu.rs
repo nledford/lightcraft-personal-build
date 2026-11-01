@@ -41,7 +41,7 @@ fn go(h: &mut Headless, method: &str, id: &str) {
 }
 
 fn toast(h: &Headless) -> String {
-    h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default()
+    h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default()
 }
 
 /// Give a demo photo a file on disk (the path is only read, never opened, by these rows).
@@ -75,7 +75,7 @@ fn a_refused_row_says_why() {
     let p = h.app.session.visible_cloned()[0];
     h.app.session.execute("library.select", &json!({"ids": [p.0]})).unwrap();
     let expected = h.app.run("photo.duplicate", json!({})).expect_err("a demo photo has no file to duplicate");
-    h.app.ui.toast = None;
+    h.app.ui.toasts.clear();
     right_click(&mut h, &format!("thumb:{}", p.0));
     go(&mut h, "ui.clickWidget", "photomenu:photo.duplicate");
     // (the reason, as the menu bar's click says it, not the engine's "invalid parameters for …" error)

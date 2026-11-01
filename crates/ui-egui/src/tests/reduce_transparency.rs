@@ -162,7 +162,7 @@ fn a_toast_is_solid_with_it_on() {
         let ctx = h.view.ctx.clone();
         h.app.toast(&ctx, "Saved");
         // (faded in already: the fade is a state change and stays see-through by design)
-        if let Some(t) = h.app.ui.toast.as_mut() {
+        if let Some(t) = h.app.ui.toasts.last_mut() {
             t.shown_at -= 10.0;
             t.until += 60.0;
         }
