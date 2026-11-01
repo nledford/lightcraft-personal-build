@@ -136,7 +136,9 @@ fn detail_labels_the_navigator_and_the_filmstrip_are_solid_with_it_on() {
     assert!(!usual.is_empty(), "the filmstrip's badges are see-through as usual");
     run(&mut h, "view.reduceTransparency", json!({"on": true}));
     h.settle(SETTLE);
-    assert_eq!(see_through(&h), vec![]);
+    // (the dimming of a rejected photo shows the photo's own state and stays as it is)
+    let rejected_dim = egui::Color32::from_black_alpha(110);
+    assert_eq!(see_through(&h).into_iter().filter(|(_, fill)| *fill != rejected_dim).collect::<Vec<_>>(), vec![]);
 }
 
 #[test]
@@ -159,6 +161,11 @@ fn a_toast_is_solid_with_it_on() {
         run(&mut h, "view.reduceTransparency", json!({"on": on}));
         let ctx = h.view.ctx.clone();
         h.app.toast(&ctx, "Saved");
+        // (faded in already: the fade is a state change and stays see-through by design)
+        if let Some(t) = h.app.ui.toast.as_mut() {
+            t.shown_at -= 10.0;
+            t.until += 60.0;
+        }
         h.step();
         assert!(h.view.painted_text().iter().any(|t| t == "Saved"), "the toast is up");
         // the toast's rectangle is the one the text sits in

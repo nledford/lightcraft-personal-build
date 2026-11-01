@@ -220,6 +220,15 @@ fn the_watched_folder_dialog_does_not_block_and_its_answer_is_watched() {
     let (mut h, asked, blocked) = app();
     h.app.ui.dialog = Some(Dialog::Settings { tab: "import".into() });
     h.settle(T);
+    // the merged Import tab is taller than the dialog's fold: the Watched folder row sits at the
+    // foot of the page, so the wheel (at the dialog's centre) scrolls it into view
+    let window = h.app.widgets.iter().find(|(w, _)| w == "dialog:window").map(|(_, r)| *r).expect("the settings window");
+    h.request("ui.move", json!({"x": window.center().x, "y": window.center().y}), T);
+    for _ in 0..6 {
+        h.request("ui.scroll", json!({"dy": -400.0}), T);
+        h.step();
+    }
+    h.settle(T);
     assert_up(&mut h, &asked, &blocked, "button:settingsAutoFolder", PickKind::Folder);
     answer(&mut h, &asked, 0, &dir.to_string_lossy());
     // (JSON escapes a Windows path's backslashes: compare with the folder as JSON text)

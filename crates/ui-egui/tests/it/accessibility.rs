@@ -286,7 +286,10 @@ fn button_described(h: &Harness<'_, LightcraftApp>, name: &str, help: &str) -> b
     h.root()
         .children_recursive()
         .map(|n| n.accesskit_node())
-        .any(|n| n.role() == Role::Button && n.label().as_deref() == Some(name) && n.description().as_deref() == Some(help))
+        // (a view button is a choice, announced as a radio button: its key is still its description)
+        .any(|n| {
+            matches!(n.role(), Role::Button | Role::RadioButton) && n.label().as_deref() == Some(name) && n.description().as_deref() == Some(help)
+        })
 }
 
 /// A screen reader reads a control's name every time it lands on it: the shortcut belongs in the
@@ -317,7 +320,7 @@ fn tool_strip_and_toolbar_buttons_are_named_by_label_with_the_shortcut_as_descri
         .root()
         .children_recursive()
         .map(|n| n.accesskit_node())
-        .filter(|n| n.role() == Role::Button)
+        .filter(|n| matches!(n.role(), Role::Button | Role::RadioButton))
         .filter_map(|n| n.label())
         .filter(|l| ["Edit (E)", "Presets (Shift+P)", "Photo Grid (G)", "Filmstrip (/)"].contains(&l.as_str()))
         .collect();

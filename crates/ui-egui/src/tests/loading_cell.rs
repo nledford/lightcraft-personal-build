@@ -58,12 +58,13 @@ fn a_cell_still_loading_differs_from_one_that_failed() {
         first_grid_frame(&mut h);
         let loading = ids(&h, "badge:loading:");
         assert!(loading.len() >= 6, "{view:?}: the cells on screen are loading: {loading:?}");
-        assert!(!h.painted_text().iter().any(|t| t == "!"), "{view:?}: none of them has failed yet");
+        assert!(ids(&h, "badge:failed:").is_empty(), "{view:?}: none of them has failed yet");
 
         open.set(true);
         assert!(h.settle(SETTLE));
         assert!(ids(&h, "badge:loading:").is_empty(), "{view:?}: the cue goes once the failure is known: {:?}", ids(&h, "badge:loading:"));
-        assert!(h.painted_text().iter().any(|t| t == "!"), "{view:?}: an unreadable cell says so");
+        // (the mark is an icon drawn as a widget, `badge:failed:…`, not a "!" glyph)
+        assert!(!ids(&h, "badge:failed:").is_empty(), "{view:?}: an unreadable cell says so");
     }
 }
 
@@ -113,7 +114,7 @@ fn a_filmstrip_tile_asks_for_its_thumbnail_before_it_reads_an_old_failure() {
         }
     }
     assert!(drawn, "the strip is drawn");
-    assert!(!h.painted_text().iter().any(|t| t == "!"), "no tile says it can't be opened on an old failure");
+    assert!(ids(&h, "film:failed:").is_empty(), "no tile says it can't be opened on an old failure");
 }
 
 /// The smallest square cells still hold the cue: its size is judged against the cell, and the cue

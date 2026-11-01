@@ -44,6 +44,26 @@ fn app() -> Headless {
     h
 }
 
+/// An app whose library is open, with a photo in it: an empty one shows the first-launch screen
+/// instead (#2878–#2892), which covers the window and takes the keys, so Settings could not be opened.
+fn app_with_a_library(tag: &str) -> Headless {
+    let mut session = lightcraft_engine::Session::new().with_fs();
+    session.open_library(temp(tag).join("library"), false).unwrap();
+    let photo = lightcraft_catalog::Photo::new(
+        lightcraft_catalog::PhotoId(1),
+        lightcraft_catalog::Source::File { path: "/import-read/IMG_0001.jpg".into() },
+        "IMG_0001.jpg",
+        "JPEG",
+        6000,
+        4000,
+        "2026-01-01T00:00:00",
+    );
+    session.catalog.apply(lightcraft_catalog::Op::AddPhoto { photo: Box::new(photo) }).unwrap();
+    let mut h = Headless::new(LightcraftApp::new(session, Services::default()), [1400.0, 1000.0], 1.0);
+    h.step();
+    h
+}
+
 fn click(h: &mut Headless, id: &str) {
     h.step();
     h.step();
@@ -81,7 +101,7 @@ fn import_what_is_reviewed(h: &mut Headless, photos: usize) {
 /// it again reads them again. The other kinds stay as they were.
 #[test]
 fn what_imports_read_from_photos_is_chosen_in_settings() {
-    let mut h = app();
+    let mut h = app_with_a_library("settings");
     assert_eq!(read(&mut h), json!({"keywords": true, "ratings": true, "descriptions": true, "location": true, "develop": true}));
     assert_eq!(h.request("ui.key", json!({"key": ",", "cmd": true}), T)["ok"], true);
     click(&mut h, "button:settingsTab-import");

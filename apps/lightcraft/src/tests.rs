@@ -139,10 +139,11 @@ fn a_remembered_library_missing_at_launch_is_reported_not_made_anew() {
     let (s, problem) = open_session(false, &launch, true);
     assert!(problem.as_ref().is_some_and(|p| p.existing_only) && s.library.is_none() && s.catalog.is_empty(), "{problem:?}");
     assert!(!lightcraft_engine::library::is_library(&lib), "nothing written in it");
-    // the default location (or --library) is still made when it's missing, with the demo photos
+    // the default location (or --library) is still made when it's missing, and starts empty
+    // (the first-launch chain #2878–#2892: its first screen asks how to begin, sample photos are one way)
     let fresh = d.join("fresh").join("Lib");
     let (s, problem) = open_session(false, &Launch::Open { dir: Some(fresh.clone()), alt_asks: true, remembered: false }, true);
-    assert!(problem.is_none() && s.library.is_some() && !s.catalog.is_empty(), "{problem:?}");
+    assert!(problem.is_none() && s.library.is_some() && s.catalog.is_empty(), "{problem:?}");
     assert!(lightcraft_engine::library::is_library(&fresh));
     drop(s);
     let _ = std::fs::remove_dir_all(&d);
