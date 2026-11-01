@@ -1140,16 +1140,11 @@ fn ui_commands_6(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, p: &Val
         "local.addRoot" => {
             // a folder kept in Local's sidebar (saved with the UI state); nothing on disk changes
             let Some(path) = p.get("path").and_then(Value::as_str) else { return Some(Err("local.addRoot needs a path".into())) };
-            let abs = std::path::absolute(path).map(|a| a.to_string_lossy().trim_end_matches(['/', '\\']).to_string()).unwrap_or(path.into());
-            let abs = if abs.is_empty() { path.to_string() } else { abs };
+            let abs = crate::panels::left::local_root_path(path);
             if !std::path::Path::new(&abs).is_dir() {
                 return Some(Err(format!("{path}: not a folder")));
             }
-            use crate::panels::left::same_folder;
-            if !app.ui.local_roots.iter().any(|r| same_folder(r, &abs)) {
-                app.ui.local_roots.push(abs.clone());
-            }
-            app.ui.hidden_locations.retain(|h| !same_folder(h, &abs));
+            crate::panels::left::keep_local_root(app, &abs);
             Ok(json!({"roots": app.ui.local_roots}))
         }
         "local.hide" => match p.get("path").and_then(Value::as_str) {
@@ -2003,8 +1998,13 @@ fn find_missing_timeout(p: &Value) -> Result<std::time::Duration, String> {
     std::time::Duration::try_from_secs_f64(s).map_err(|_| "file.findMissing: `timeout` is too large".to_string())
 }
 
-/// The toast for a finished search, and the result it leaves for a caller that waits.
-fn find_missing_done(app: &mut LightcraftApp, ctx: &egui::Context, plan: Result<lightcraft_engine::cmd::missing::FindPlan, String>) {
+/// The toast for a finished search, and the result it leaves for a caller that waits; how it ended, for the activity
+/// stack.
+fn find_missing_done(
+    app: &mut LightcraftApp,
+    ctx: &egui::Context,
+    plan: Result<lightcraft_engine::cmd::missing::FindPlan, String>,
+) -> lightcraft_engine::activity::Outcome {
     // relinked under the session as it is now: photos relinked meanwhile and files
     // now in use are skipped
     let r = plan.and_then(|plan| app.run("library.findMissing", plan.to_json()));
@@ -2018,22 +2018,22 @@ fn find_missing_done(app: &mut LightcraftApp, ctx: &egui::Context, plan: Result<
             } else {
                 String::new()
             };
-            app.toast(
-                ctx,
-                crate::i18n::tr_format!(
-                    "Found {n} missing photo{}; {left} still missing{unsure}",
-                    if n == 1 { "" } else { "s" },
-                    left = left,
-                    n = n,
-                    unsure = unsure
-                ),
+            let said = crate::i18n::tr_format!(
+                "Found {n} missing photo{}; {left} still missing{unsure}",
+                if n == 1 { "" } else { "s" },
+                left = left,
+                n = n,
+                unsure = unsure
             );
+            app.toast(ctx, said.clone());
             app.ui.last_find_missing = Some(v.clone());
             app.ui.last_find_missing_result = Some(Ok(v));
+            lightcraft_engine::activity::Outcome { summary: said, ..Default::default() }
         }
         Err(e) => {
             app.toast_error(ctx, e.clone());
-            app.ui.last_find_missing_result = Some(Err(e));
+            app.ui.last_find_missing_result = Some(Err(e.clone()));
+            lightcraft_engine::activity::Outcome::failed(e)
         }
     }
 }

@@ -63,6 +63,8 @@ impl LightcraftApp {
         merge::poll(self, ctx);
         import::poll_scan(self, ctx);
         sync::poll(self, ctx);
+        sync::poll_many(self, ctx);
+        sync::poll_rescan(self, ctx);
         sync::poll_run(self, ctx);
         // Import commits batches and must not run twice in one host frame. The first layout pass
         // and a hidden logic tick both report pass index 0; a second pass reports 1. A wall-clock
@@ -75,7 +77,7 @@ impl LightcraftApp {
         recheck::tick(self);
         tasks::poll(self, ctx);
         updates_ui::tick(self, ctx);
-        self.preview_build_status(ctx);
+        self.tick_preview_builds(ctx);
         self.backup_schedule(ctx);
         self.backup_status(ctx);
         panels::notices::quit_after_backup(self);
@@ -96,16 +98,10 @@ impl LightcraftApp {
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(folder) = self.session.import_defaults.auto_folder.clone() {
             const LABEL: &str = "Auto Import";
-            if now - self.ui.auto_import_at >= 3.0
-                && !import::running(self)
-                && self.sync.is_none()
-                && self.sync_run.is_none()
-                && self.lightroom.is_none()
-                && !self.tasks.is_running(LABEL)
-            {
+            // (it waits for the whole library lane: what runs, rescans or waits there goes first)
+            if now - self.ui.auto_import_at >= 3.0 && !import::library_busy(self) && self.lightroom.is_none() && !self.tasks.is_running(LABEL) {
                 self.ui.auto_import_at = now;
                 let listed = folder.clone();
-                let watched = folder.clone();
                 let work = move || lightcraft_engine::cmd::library::list_auto_import_folder(&listed);
                 let done = move |app: &mut LightcraftApp, _ctx: &egui::Context, listing: Result<Vec<(String, u64)>, String>| {
                     // the watched folder changed while this one was listed: its result is for nothing on screen
@@ -132,24 +128,19 @@ impl LightcraftApp {
                             return;
                         }
                     };
-                    // an import, a scan (a finished Local browse replaces `app.import`), a Synchronize Folder (its scan
-                    // or its run) or a Lightroom migration that started while the folder was listed: scanning now would
-                    // mark the new files as tried without importing them; the next listing picks them up
-                    if import::running(app) || app.sync.is_some() || app.sync_run.is_some() || app.lightroom.is_some() {
+                    // a Lightroom migration that started while the folder was listed: scanning now would mark the new files as
+                    // tried without importing them; the next listing picks them up (an import or a Synchronize Folder that
+                    // started meanwhile is no reason: the files wait in line for it)
+                    if app.lightroom.is_some() {
                         return;
                     }
-                    let p = serde_json::json!({"listing": listing, "start": false});
-                    let Ok(r) = app.session.execute("library.autoImportScan", &p) else { return };
-                    let Some(mut params) = r.get("import").cloned().filter(|_| app.import.is_none()) else { return };
-                    let paths: Vec<String> =
-                        params["paths"].as_array().into_iter().flatten().filter_map(|v| v.as_str().map(str::to_string)).collect();
-                    if let Some(o) = params.as_object_mut() {
-                        o.remove("paths");
-                    }
-                    let undo0 = app.session.undo.len();
-                    app.import = Some(import::ImportTask::new(paths, params, undo0, false).named_below(vec![watched]).auto());
+                    import::auto_import_listed(app, listing);
                 };
-                // listed every few seconds: quiet, no row in the activity stack
+                // listed every few seconds: quiet, no row in the activity stack (so nothing to say of how it ended)
+                let done = move |app: &mut LightcraftApp, ctx: &egui::Context, listing| {
+                    done(app, ctx, listing);
+                    lightcraft_engine::activity::Outcome::default()
+                };
                 if let Err(e) = tasks::spawn(self, LABEL, None, work, done) {
                     log::warn!("{e}");
                 }
@@ -279,6 +270,7 @@ impl LightcraftApp {
         // Recent-library checks and launch-list keys read focus/time/keys: they belong to the UI
         // phase, not the hidden-capable `logic` tick (plan §4.5 / migration input contract).
         panels::library_problem::logic(self, ctx);
+        panels::side_select::keys_frame(self, ctx);
         if self.fonts_ready && !updates_ui::blocks_input(self) {
             shortcuts::handle(self, ctx);
         }
@@ -324,6 +316,8 @@ impl LightcraftApp {
         // (a row's id in the last library may name another row in this one)
         self.ui.sidebar_cursor = None;
         panels::side_keys::forget_rows(ctx);
+        // (how a review of another library was confirmed is no guide for this one)
+        self.last_import = None;
         // an edit still recorded names photos of the library that was left (their ids are local to
         // it): it is dropped, never run against this one
         drop(crate::text_field::take_all(ctx));
@@ -574,6 +568,7 @@ impl LightcraftApp {
         if !self.drawing_offscreen {
             panels::grid::drag_feedback(self, &ctx);
             panels::left::album_drag_feedback(self, &ctx);
+            panels::left::folder_drag_feedback(self, &ctx);
             panels::left::section_drag_feedback(self, &ctx);
             panels::keyword_list::drag_feedback(self, &ctx);
         }

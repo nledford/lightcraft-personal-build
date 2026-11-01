@@ -2,13 +2,19 @@
 //! something runs the bell wears a ring (how far along the work is, or a sweep while that isn't known), and the bar
 //! names the task beside it when there is room. A click opens the list: a row each with its name, a progress bar,
 //! what it is working on, and ✕ for the ones that can be cancelled. Nothing floats over the panels, so the list
-//! covers them only while it is open. The tasks come from the engine's registry
-//! ([`lightcraft_engine::activity`]); ✕ runs `activity.cancel` like any other frontend would.
+//! covers them only while it is open. A task that said how it ended stays in the list until it is dismissed: what it
+//! did, what went wrong and for which files, and where its results are. One that did not end well comes first there,
+//! and puts a mark on the bell until it is dismissed; Retry asks for it again when it kept what it was asked. Tasks
+//! waiting in line for the ones ahead of them (a second preview build) are listed under the running ones, with ✕ to
+//! take them out of the line. The tasks come from the engine's registry ([`lightcraft_engine::activity`]); ✕ runs
+//! `activity.cancel` and Retry `activity.retry`, like any other frontend would. While the library lane is busy, the
+//! row of the review's folder scan offers Queue without review, and a folder queued that way offers Review… on its
+//! waiting row ([`crate::import`]).
 
 use std::f32::consts::{FRAC_PI_2, TAU};
 
 use egui::{Align, Layout, Rect, RichText, Sense, Stroke, StrokeKind, pos2, vec2};
-use lightcraft_engine::activity::{TaskInfo, Unit};
+use lightcraft_engine::activity::{Ending, Finished, TaskInfo, Unit};
 use serde_json::json;
 
 use crate::LightcraftApp;
@@ -31,6 +37,11 @@ const RING_WIDTH: f32 = 2.0;
 const READOUT_MAX: f32 = 220.0;
 const READOUT_NAME_MIN: f32 = 56.0;
 const READOUT_GAP: f32 = 8.0;
+/// A task that just ended is named beside the bell for this long (while nothing runs).
+const ANNOUNCE_MS: u64 = 6_000;
+/// The failed files an opened row lists; "Copy all" has every one that was kept.
+const FAILURES_SHOWN: usize = 5;
+const MARK: f32 = 14.0;
 
 /// "3 of 25", "12 of 340 MB", "40 %"; empty while the amount of work isn't known.
 pub fn count_text(t: &TaskInfo) -> String {
@@ -68,9 +79,10 @@ fn detail_line(t: &TaskInfo) -> String {
 }
 
 /// The line beside the bell, in its two parts: the one task's name, and what changes about it (how far along it
-/// is, or that it is stopping); with several tasks only how many run ("3 tasks"). Both empty when nothing runs.
-fn readout_parts(tasks: &[TaskInfo]) -> (String, String) {
-    match tasks {
+/// is, or that it is stopping); with several tasks only how many run ("3 tasks"). Tasks waiting in line are counted
+/// after that ("2 waiting"). Both empty when nothing runs or waits.
+fn readout_parts(tasks: &[TaskInfo], waiting: usize) -> (String, String) {
+    let (name, value) = match tasks {
         [] => (String::new(), String::new()),
         [one] => {
             let value = if one.cancelling {
@@ -83,12 +95,18 @@ fn readout_parts(tasks: &[TaskInfo]) -> (String, String) {
             (tr(&one.label).to_string(), value)
         }
         many => (String::new(), tr_format!("{n} tasks", n = many.len())),
+    };
+    if waiting == 0 {
+        return (name, value);
     }
+    let queued = tr_format!("{n} waiting", n = waiting);
+    (name, if value.is_empty() { queued } else { format!("{value} · {queued}") })
 }
 
-/// The line beside the bell as one text: "Exporting · 40 %", "Finding faces", "3 tasks". Empty when nothing runs.
-pub fn readout_text(tasks: &[TaskInfo]) -> String {
-    match readout_parts(tasks) {
+/// The line beside the bell as one text: "Exporting · 40 %", "Finding faces", "3 tasks", "Building previews · 1
+/// waiting". Empty when nothing runs or waits.
+pub fn readout_text(tasks: &[TaskInfo], waiting: usize) -> String {
+    match readout_parts(tasks, waiting) {
         (name, value) if !name.is_empty() && !value.is_empty() => format!("{name} · {value}"),
         (name, value) => name + &value,
     }
@@ -129,10 +147,22 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
         // look again soon: a young task becomes due, the ring and the bars move
         ctx.request_repaint_after(std::time::Duration::from_millis(100));
     }
+    // those waiting in line, in the order they start
+    let (mut waiting, all): (Vec<TaskInfo>, Vec<TaskInfo>) = all.into_iter().partition(|t| t.waiting);
+    waiting.reverse();
     // the bell shows the tasks old enough not to be a flash; the open list shows them all
     let tasks: Vec<TaskInfo> = all.iter().filter(|t| t.age_ms >= SHOW_AFTER_MS).cloned().collect();
-    let text = readout_text(&tasks);
-    let (name, value) = readout_parts(&tasks);
+    let problems = app.session.activity.problems();
+    // with nothing running, a task that just ended says beside the bell how it went
+    let ended =
+        app.session.activity.last_finished().filter(|f| tasks.is_empty() && waiting.is_empty() && f.age_ms < ANNOUNCE_MS).as_ref().map(summary_of);
+    if ended.is_some() {
+        ctx.request_repaint_after(std::time::Duration::from_millis(250));
+    }
+    let (text, (name, value)) = match ended {
+        Some(said) => (said.clone(), (said, String::new())),
+        None => (readout_text(&tasks, waiting.len()), readout_parts(&tasks, waiting.len())),
+    };
     // The line beside the bell, in the room the bar has for it. What changes (the percentage, the count) is kept
     // whole; the task's name is cut short to fit, and left out when there is hardly room for any of it.
     let room = (icon.left() - READOUT_GAP - room_left).min(READOUT_MAX);
@@ -155,10 +185,11 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
     let was_open = is_open(&ctx);
     let resp = ui.interact(chip, egui::Id::unique(("top", "bell")), Sense::click());
     let label = match tasks.len() {
-        0 => tr("Tasks").to_string(),
-        1 => format!("{}: {text}", tr("Tasks")),
+        0 if text.is_empty() => tr("Tasks").to_string(),
+        0 | 1 => format!("{}: {text}", tr("Tasks")),
         _ => text,
     };
+    let label = if problems > 0 { format!("{label} · {}", tr("Needs attention")) } else { label };
     resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, true, was_open, label.as_str()));
     register(ui, "icon:bell", icon);
     let p = ui.painter();
@@ -186,7 +217,7 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
         paint(p, icon.shrink(7.5), Icon::Bell, if lit { t.text } else { t.icon });
         ring(ui, t, icon, &tasks);
         register(ui, "activity:ring", icon);
-        if tasks.len() > 1 && !has_readout {
+        if tasks.len() > 1 && !has_readout && problems == 0 {
             // no room to say how many: a count at the bell's shoulder, clear of the ring
             let c = icon.center() + vec2(15.5, -12.5);
             p.circle_filled(c, 6.5, progress_ink(t));
@@ -200,6 +231,13 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
         p.circle_filled(c, 4.0, progress_ink(t));
         register(ui, "activity:ready", Rect::from_center_size(c, vec2(10.0, 10.0)));
     }
+    if problems > 0 {
+        // a task did not end well and its row has not been dismissed: a mark at the bell's shoulder
+        let c = icon.center() + vec2(15.5, -12.5);
+        p.circle_filled(c, 6.5, t.caution);
+        p.text(c, egui::Align2::CENTER_CENTER, "!", t.semibold(9.5), t.canvas);
+        register(ui, "activity:attention", Rect::from_center_size(c, vec2(13.0, 13.0)));
+    }
     // a dialog, a notice or the question before quitting takes the window: the list gives way to it
     let asked = app.activity_set.take();
     let set = if blocked(app).is_some() {
@@ -211,23 +249,152 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
         resp.clicked().then_some(egui::SetOpenCommand::Toggle)
     };
     let resp = if was_open { resp } else { resp.on_hover_text(label.as_str()) };
-    let mut cancel = None;
-    let mut notice = None;
+    let mut act = None;
+    // (imports queued without a review that have left the line are forgotten)
+    crate::import::prune_unreviewed(app);
+    let queue_scan = crate::import::queueable_scan(app);
+    let unreviewed: Vec<(u64, String)> = app.unreviewed.iter().map(|u| (u.id, crate::import_queue::describe(&u.transfer))).collect();
+    let (activity, opened, reveal) = (app.session.activity.clone(), app.activity_failures, app.services.reveal.is_some());
     egui::Popup::from_response(&resp)
         .id(popup_id())
         .open_memory(set)
         .align(egui::RectAlign::BOTTOM_END)
         .gap(6.0)
         .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| (cancel, notice) = list(ui, t, &all, ready.as_ref()));
+        .show(|ui| {
+            // (the ended tasks with all their failed files are only read while the list is on screen)
+            let finished = activity.finished();
+            act = list(
+                ui,
+                t,
+                &Rows {
+                    tasks: &all,
+                    waiting: &waiting,
+                    finished: &finished,
+                    opened,
+                    reveal,
+                    ready: ready.as_ref(),
+                    queue_scan,
+                    unreviewed: &unreviewed,
+                },
+            );
+        });
     app.activity_open = is_open(&ctx);
-    if let Some(id) = cancel {
-        self::cancel(app, id);
-    }
-    match notice {
-        Some(Notice::Review) => crate::sync::review(app),
-        Some(Notice::Dismiss) => crate::sync::dismiss(app),
+    match act {
+        Some(Act::Cancel(id)) => self::cancel(app, id),
+        Some(Act::Dismiss(id)) => {
+            // refusal expected: the row may have been dismissed by an agent between the frame that drew ✕ and the click
+            let _ = app.session.execute("activity.dismiss", &json!({"id": id}));
+            if app.activity_failures == Some(id) {
+                app.activity_failures = None;
+            }
+        }
+        Some(Act::Clear) => {
+            // refusal expected: none (`all` never fails); nothing to say if it did
+            let _ = app.session.execute("activity.dismiss", &json!({"all": true}));
+            app.activity_failures = None;
+        }
+        Some(Act::Failures(id)) => app.activity_failures = (app.activity_failures != Some(id)).then_some(id),
+        Some(Act::Retry(id)) => {
+            // (the row may have gone meanwhile, or the line be full: say why, as a toast)
+            if let Err(e) = app.session.execute("activity.retry", &json!({"id": id})) {
+                app.toast(&ctx, e.to_string());
+            }
+            if app.activity_failures == Some(id) {
+                app.activity_failures = None;
+            }
+        }
+        Some(Act::Copy(text)) => ctx.copy_text(text),
+        Some(Act::Reveal(path)) => {
+            if let Some(Err(e)) = app.services.reveal.as_mut().map(|reveal| reveal(&path)) {
+                app.toast(&ctx, e);
+            }
+        }
+        Some(Act::Notice(Notice::Review)) => crate::sync::review(app),
+        Some(Act::Notice(Notice::Dismiss)) => crate::sync::dismiss(app),
+        Some(Act::QueueScan) => {
+            if let Err(e) = crate::import::queue_scan(app) {
+                app.toast(&ctx, e);
+            }
+        }
+        Some(Act::Review(id)) => {
+            if let Err(e) = crate::import::review_queued(app, id) {
+                app.toast(&ctx, e);
+            }
+        }
         None => {}
+    }
+}
+
+/// What the list shows.
+struct Rows<'a> {
+    /// Running, newest first.
+    tasks: &'a [TaskInfo],
+    /// Waiting in line, next first.
+    waiting: &'a [TaskInfo],
+    /// Ended, newest first.
+    finished: &'a [Finished],
+    /// The ended task whose failed files are listed.
+    opened: Option<u64>,
+    /// The host can show a folder in the file manager.
+    reveal: bool,
+    /// The scan that finished in the background and waits to be looked at.
+    ready: Option<&'a crate::sync::SyncReady>,
+    /// The review scan that can be queued without its review (its task id).
+    queue_scan: Option<u64>,
+    /// The imports in line that were queued without a review: task id and how their files come in.
+    unreviewed: &'a [(u64, String)],
+}
+
+/// What was asked for in the list.
+enum Act {
+    Cancel(u64),
+    Dismiss(u64),
+    Clear,
+    /// Ask again for an ended task that did not go well.
+    Retry(u64),
+    /// List the failed files of an ended task, or put them away again.
+    Failures(u64),
+    Copy(String),
+    Reveal(String),
+    /// What was done with the notice of a scan that finished in the background.
+    Notice(Notice),
+    /// Put the folder being scanned in line without its review.
+    QueueScan,
+    /// Open the review of an import waiting in line.
+    Review(u64),
+}
+
+/// What an ended task says of itself; one that said nothing is worded from its name and how it ended.
+pub fn summary_of(f: &Finished) -> String {
+    if !f.summary.is_empty() {
+        return f.summary.clone();
+    }
+    let task = tr(&f.label);
+    match f.ending {
+        Ending::Done => tr_format!("{task}: done", task = task),
+        Ending::Problems => tr_format!("{task}: done, with problems", task = task),
+        Ending::Failed => tr_format!("{task}: failed", task = task),
+        Ending::Stopped => tr_format!("{task}: stopped", task = task),
+        Ending::Died => tr_format!("{task}: stopped unexpectedly", task = task),
+    }
+}
+
+/// What else an ended task's row says: what the task said, or how many it could not do when it only counted them
+/// (a preview build).
+pub fn detail_of(f: &Finished) -> String {
+    if f.detail.is_empty() && f.failures.is_empty() && f.failed > 0 { tr_format!("{n} failed", n = f.failed) } else { f.detail.clone() }
+}
+
+/// "took 42 s", "took 12 min", "took 1 h 52 min".
+pub fn took(ran_ms: u64) -> String {
+    let s = ran_ms / 1000;
+    if s < 60 {
+        tr_format!("took {n} s", n = s)
+    } else if s < 3600 {
+        tr_format!("took {n} min", n = s / 60)
+    } else {
+        tr_format!("took {h} h {m} min", h = s / 3600, m = (s % 3600) / 60)
     }
 }
 
@@ -271,9 +438,19 @@ fn ring(ui: &egui::Ui, t: &Tokens, icon: Rect, tasks: &[TaskInfo]) {
 /// The colour progress is drawn in: the accent, lightened or darkened towards the text colour in the themes where it
 /// would be too close to the panel behind it to see (3:1, WCAG 1.4.11).
 fn progress_ink(t: &Tokens) -> egui::Color32 {
+    accent_at(t, 3.0)
+}
+
+/// The colour of a link in the list: the accent at the contrast text needs (4.5:1).
+fn link_ink(t: &Tokens) -> egui::Color32 {
+    accent_at(t, 4.5)
+}
+
+/// The accent, moved towards the text colour until it is `ratio`:1 against the panel.
+fn accent_at(t: &Tokens, ratio: f32) -> egui::Color32 {
     let mut ink = t.accent;
     for step in 1..=10 {
-        if contrast(ink, t.chrome) >= 3.0 {
+        if contrast(ink, t.chrome) >= ratio {
             break;
         }
         ink = t.accent.lerp_to_gamma(t.text, step as f32 / 10.0);
@@ -294,31 +471,45 @@ fn contrast(a: egui::Color32, b: egui::Color32) -> f32 {
     (la.max(lb) + 0.05) / (la.min(lb) + 0.05)
 }
 
-/// The list under the bell: its name, then a row a task (or that nothing runs). The id of the task whose ✕ was
-/// clicked, and what was done with the notice of a scan that finished in the background, if one waits.
-fn list(ui: &mut egui::Ui, t: &Tokens, tasks: &[TaskInfo], ready: Option<&crate::sync::SyncReady>) -> (Option<u64>, Option<Notice>) {
+/// The list under the bell: its name, then the tasks. Those that did not end well come first, then the running ones,
+/// then those waiting in line, then those that ended well, each group under its name when there is more than one.
+/// What was asked for in it.
+fn list(ui: &mut egui::Ui, t: &Tokens, rows: &Rows) -> Option<Act> {
     let screen = ui.ctx().content_rect();
     let width = WIDTH.min(screen.width() - 40.0).max(160.0);
-    let mut cancel = None;
-    let mut notice = None;
+    let mut act = None;
     // A popup lays out in the size it had last frame, and the scroll area would take that as all the room there is:
     // the list would never grow when rows are added. Give it the whole height below the top bar instead (the scroll
     // area keeps to `max_height`).
     ui.set_max_height((screen.height() - t.top_bar_h - 16.0).max(80.0));
+    let (problems, done): (Vec<&Finished>, Vec<&Finished>) = rows.finished.iter().partition(|f| f.ending.needs_attention());
+    let groups = [!problems.is_empty(), !rows.tasks.is_empty(), !rows.waiting.is_empty(), !done.is_empty()].iter().filter(|shown| **shown).count();
     let r = ui
         .vertical(|ui| {
             ui.set_width(width);
             ui.spacing_mut().item_spacing.y = 3.0;
-            ui.add(egui::Label::new(RichText::new(tr("Tasks")).font(t.semibold(12.5)).color(t.text)));
+            ui.horizontal(|ui| {
+                ui.add(egui::Label::new(RichText::new(tr("Tasks")).font(t.semibold(12.5)).color(t.text)));
+                if !rows.finished.is_empty() {
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        // (every ended task's row, those that did not go well too: named for what it does)
+                        if link(ui, t, tr("Clear all"), "activity:clear") {
+                            act = Some(Act::Clear);
+                        }
+                    });
+                }
+            });
             ui.add_space(5.0);
-            if let Some(ready) = ready {
-                notice = scan_notice(ui, t, ready, width);
-                if !tasks.is_empty() {
+            if let Some(ready) = rows.ready {
+                if let Some(notice) = scan_notice(ui, t, ready, width) {
+                    act = Some(Act::Notice(notice));
+                }
+                if groups > 0 {
                     ui.add_space(6.0);
                 }
             }
-            if tasks.is_empty() {
-                if ready.is_some() {
+            if groups == 0 {
+                if rows.ready.is_some() {
                     return;
                 }
                 let r = ui
@@ -334,19 +525,203 @@ fn list(ui: &mut egui::Ui, t: &Tokens, tasks: &[TaskInfo], ready: Option<&crate:
             // as many rows as the window has room for; the rest scroll
             let max_height = (screen.height() - t.top_bar_h - 96.0).max(80.0);
             egui::ScrollArea::vertical().max_height(max_height).auto_shrink([false, true]).show(ui, |ui| {
-                for (i, task) in tasks.iter().enumerate() {
+                let mut first = true;
+                let mut group = |ui: &mut egui::Ui, name: &str| {
+                    if !std::mem::take(&mut first) {
+                        ui.add_space(10.0);
+                    }
+                    if groups > 1 {
+                        ui.add(egui::Label::new(RichText::new(tr(name)).font(t.semibold(11.0)).color(t.text_dim)));
+                        ui.add_space(2.0);
+                    }
+                };
+                if !problems.is_empty() {
+                    group(ui, "Needs attention");
+                }
+                for (i, f) in problems.iter().enumerate() {
+                    if i > 0 {
+                        ui.add_space(8.0);
+                    }
+                    act = finished_row(ui, t, f, width, rows).or(act.take());
+                }
+                if !rows.tasks.is_empty() {
+                    group(ui, "Running");
+                }
+                for (i, task) in rows.tasks.iter().enumerate() {
                     if i > 0 {
                         ui.add_space(8.0);
                     }
                     if row(ui, t, task, width) {
-                        cancel = Some(task.id);
+                        act = Some(Act::Cancel(task.id));
                     }
+                    if rows.queue_scan == Some(task.id) && link(ui, t, tr("Queue without review"), "activity:queueScan") {
+                        act = Some(Act::QueueScan);
+                    }
+                }
+                if !rows.waiting.is_empty() {
+                    group(ui, "Waiting");
+                }
+                for (i, task) in rows.waiting.iter().enumerate() {
+                    if i > 0 {
+                        ui.add_space(8.0);
+                    }
+                    if waiting_row(ui, t, task, width) {
+                        act = Some(Act::Cancel(task.id));
+                    }
+                    if let Some((_, how)) = rows.unreviewed.iter().find(|(id, _)| *id == task.id)
+                        && let Some(id) = review_line(ui, t, how, task.id, width)
+                    {
+                        act = Some(Act::Review(id));
+                    }
+                }
+                if !done.is_empty() {
+                    group(ui, "Finished");
+                }
+                for (i, f) in done.iter().enumerate() {
+                    if i > 0 {
+                        ui.add_space(8.0);
+                    }
+                    act = finished_row(ui, t, f, width, rows).or(act.take());
                 }
             });
         })
         .response;
     register(ui, "activity:list", r.rect);
-    (cancel, notice)
+    act
+}
+
+/// A link in the list (widget `id`). True when clicked.
+fn link(ui: &mut egui::Ui, t: &Tokens, text: &str, id: impl Into<String>) -> bool {
+    let r = ui.add(egui::Link::new(RichText::new(text).font(t.font(11.0)).color(link_ink(t))));
+    if ui.is_rect_visible(r.rect) {
+        register(ui, id, r.rect);
+    }
+    r.clicked()
+}
+
+/// A task that ended: a mark for how, what it says of itself and ✕ to let go of it; what else needs reading and how
+/// long it took; then what can be done with it (its failed files, its folder). What was asked for.
+fn finished_row(ui: &mut egui::Ui, t: &Tokens, f: &Finished, width: f32, rows: &Rows) -> Option<Act> {
+    let mut act = None;
+    let said = summary_of(f);
+    let r = ui.vertical(|ui| {
+        ui.set_width(width);
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 6.0;
+            let (mark, _) = ui.allocate_exact_size(vec2(MARK, 18.0), Sense::hover());
+            ending_mark(ui, t, Rect::from_center_size(mark.center(), vec2(MARK, MARK)), f.ending);
+            let label_w = width - MARK - CROSS - 12.0;
+            ui.allocate_ui_with_layout(vec2(label_w, 18.0), Layout::left_to_right(Align::Center), |ui| {
+                ui.set_width(label_w);
+                ui.add(egui::Label::new(RichText::new(said.as_str()).font(t.font(12.5)).color(t.text)).truncate());
+            });
+            let (rect, resp) = ui.allocate_exact_size(vec2(CROSS, CROSS), Sense::click());
+            resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, format!("{}: {said}", tr("Dismiss"))));
+            paint(ui.painter(), rect.shrink(2.0), Icon::Close, if resp.hovered() || resp.has_focus() { t.text } else { t.icon });
+            if ui.is_rect_visible(rect) {
+                register(ui, format!("activity:dismiss:{}", f.id), rect);
+            }
+            if resp.on_hover_text(tr("Dismiss")).clicked() {
+                act = Some(Act::Dismiss(f.id));
+            }
+        });
+        let took = took(f.ran_ms);
+        let detail = detail_of(f);
+        let line = if detail.is_empty() { took } else { format!("{detail} · {took}") };
+        ui.add(egui::Label::new(RichText::new(line).font(t.font(11.0)).color(t.text_dim)).truncate());
+        // (the failed files can be listed when the job named them; one that only counted them says how many, above)
+        let listed = !f.failures.is_empty();
+        let path = f.path.as_deref().filter(|path| rows.reveal && !path.is_empty());
+        if listed || path.is_some() || f.retryable {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 12.0;
+                if f.retryable && link(ui, t, tr("Retry"), format!("activity:retry:{}", f.id)) {
+                    act = Some(Act::Retry(f.id));
+                }
+                if listed && link(ui, t, &tr_format!("Show failed ({n})", n = f.failed), format!("activity:failures:{}", f.id)) {
+                    act = Some(Act::Failures(f.id));
+                }
+                if let Some(path) = path
+                    && link(ui, t, tr(crate::menus::reveal_label()), format!("activity:reveal:{}", f.id))
+                {
+                    act = Some(Act::Reveal(path.to_string()));
+                }
+            });
+        }
+        if rows.opened == Some(f.id) && !f.failures.is_empty() {
+            // the first few, each with its reason; the whole list goes to the clipboard
+            for failure in f.failures.iter().take(FAILURES_SHOWN) {
+                let line = format!("{} — {}", failure.name, failure.reason);
+                ui.add(egui::Label::new(RichText::new(line).font(t.font(11.0)).color(t.text_label)).truncate());
+            }
+            // what is not shown here, and what was not kept at all, is said: nothing goes missing silently
+            let more = failures_not_listed(f.failed, f.failures.len());
+            if more > 0 {
+                let more = tr_format!("and {n} more", n = more);
+                ui.add(egui::Label::new(RichText::new(more).font(t.font(11.0)).color(t.text_dim)));
+            }
+            if link(ui, t, tr("Copy all"), format!("activity:copy:{}", f.id)) {
+                act = Some(Act::Copy(failures_text(f)));
+            }
+        }
+    });
+    if ui.is_rect_visible(r.response.rect) {
+        register(ui, format!("activity:done:{}", f.id), r.response.rect);
+    }
+    act
+}
+
+/// How many of an ended task's failures the expanded list does not draw: those past `FAILURES_SHOWN` and those the job
+/// counted but did not keep (a job can count more failures than it names).
+fn failures_not_listed(failed: usize, kept: usize) -> usize {
+    failed.saturating_sub(kept.min(FAILURES_SHOWN))
+}
+
+/// The failed files of an ended task for the clipboard: a line each, the name and the reason with a tab between,
+/// and a last line saying how many more there were when not all were kept.
+pub fn failures_text(f: &Finished) -> String {
+    let one_line = |text: &str| text.replace(['\n', '\r', '\t'], " ");
+    let mut lines: Vec<String> = f.failures.iter().map(|x| format!("{}\t{}", one_line(&x.name), one_line(&x.reason))).collect();
+    if f.failed > f.failures.len() {
+        lines.push(tr_format!("and {n} more", n = f.failed - f.failures.len()));
+    }
+    lines.join("\n")
+}
+
+/// How a task ended, as a mark that differs in shape as well as colour: a tick, a warning triangle, a square for
+/// one that was stopped.
+fn ending_mark(ui: &egui::Ui, t: &Tokens, rect: Rect, ending: Ending) {
+    let p = ui.painter();
+    match ending {
+        Ending::Done => paint(p, rect, Icon::Check, t.text_label),
+        Ending::Stopped => {
+            p.rect_stroke(rect.shrink(3.5), 1.0, Stroke::new(1.5, t.text_dim), StrokeKind::Inside);
+        }
+        Ending::Problems | Ending::Failed | Ending::Died => {
+            let (c, h) = (rect.center(), rect.height() / 2.0 - 1.0);
+            let triangle = vec![c + vec2(0.0, -h), c + vec2(h, h * 0.85), c + vec2(-h, h * 0.85)];
+            p.add(egui::Shape::closed_line(triangle, Stroke::new(1.3, t.caution)));
+            p.line_segment([c + vec2(0.0, -h * 0.35), c + vec2(0.0, h * 0.25)], Stroke::new(1.3, t.caution));
+            p.circle_filled(c + vec2(0.0, h * 0.55), 0.8, t.caution);
+        }
+    }
+}
+
+/// The line under a waiting row of a folder queued without its review: how it brings its files in, and Review…
+/// (the link is laid out first, from the right: a long destination is cut short, never the link).
+fn review_line(ui: &mut egui::Ui, t: &Tokens, how: &str, id: u64, width: f32) -> Option<u64> {
+    let mut asked = None;
+    ui.allocate_ui_with_layout(vec2(width, 16.0), Layout::right_to_left(Align::Center), |ui| {
+        if link(ui, t, tr("Review…"), format!("activity:review:{id}")) {
+            asked = Some(id);
+        }
+        let room = ui.available_width();
+        ui.allocate_ui_with_layout(vec2(room, 16.0), Layout::left_to_right(Align::Center), |ui| {
+            ui.set_width(room);
+            ui.add(egui::Label::new(RichText::new(how).font(t.font(11.0)).color(t.text_dim)).truncate());
+        });
+    });
+    asked
 }
 
 /// ✕ on task `id`'s row. The task may have just finished or stopped being cancellable: nothing to tell the user then,
@@ -415,7 +790,58 @@ fn scan_notice(ui: &mut egui::Ui, t: &Tokens, ready: &crate::sync::SyncReady, wi
     reviewed.then_some(Notice::Review)
 }
 
-/// One task: name and ✕, the bar, the detail line. True when ✕ was clicked.
+/// What ✕ on `task`'s row is called, for screen readers.
+pub(crate) fn cross_name(task: &TaskInfo) -> String {
+    if task.waiting { tr_format!("Remove from Queue: {label}", label = waiting_name(task)) } else { tr("Cancel").to_string() }
+}
+
+/// What is said when a task is asked for and the line is full (the engine's own refusal is English only).
+pub fn line_full_text() -> String {
+    tr_format!("Too many tasks are waiting ({n}): wait for some to finish", n = lightcraft_engine::activity::MAX_WAITING)
+}
+
+/// A task named for the person: its label, and what it works on (a folder's name) when it says.
+pub(crate) fn waiting_name(task: &TaskInfo) -> String {
+    if task.detail.is_empty() { tr(&task.label).to_string() } else { format!("{} · {}", tr(&task.label), task.detail) }
+}
+
+/// The same line as one text, for tests.
+#[cfg(test)]
+pub(crate) fn waiting_line_text(task: &TaskInfo) -> String {
+    let starts = if task.place <= 1 { tr("Starts next").to_string() } else { tr_format!("Starts after {n} more", n = task.place - 1) };
+    let head = [task.detail.as_str(), task.facts.as_str()].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" · ");
+    if head.is_empty() { starts } else { format!("{head} · {starts}") }
+}
+
+/// A waiting task's second line: what it works on and what else is known of it, then when it starts. The timing stays
+/// whole; the name and the facts are what give way when the line is too long.
+fn waiting_line(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) {
+    // (counted as the Queued toast counts: the waiting tasks ahead of it, after the running one)
+    let starts = if task.place <= 1 { tr("Starts next").to_string() } else { tr_format!("Starts after {n} more", n = task.place - 1) };
+    let head = [task.detail.as_str(), task.facts.as_str()].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" · ");
+    let font = t.font(11.0);
+    let at = format!("activity:starts:{}", task.id);
+    if head.is_empty() {
+        let r = ui.add(egui::Label::new(RichText::new(starts).font(font).color(t.text_dim)).truncate());
+        register(ui, at, r.rect);
+        return;
+    }
+    let tail = format!(" · {starts}");
+    let measure = |text: &str| ui.painter().layout_no_wrap(text.to_string(), font.clone(), t.text_dim).size().x;
+    let tail_w = measure(&tail);
+    let head_w = (measure(&head) + 1.0).min((width - tail_w - 2.0).max(40.0));
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 0.0;
+        ui.allocate_ui_with_layout(vec2(head_w, 14.0), Layout::left_to_right(Align::Center), |ui| {
+            ui.set_width(head_w);
+            ui.add(egui::Label::new(RichText::new(head).font(font.clone()).color(t.text_dim)).truncate());
+        });
+        let r = ui.add(egui::Label::new(RichText::new(tail).font(font).color(t.text_dim)).wrap_mode(egui::TextWrapMode::Extend));
+        register(ui, at, r.rect);
+    });
+}
+
+/// One task: name and ✕, the bar, the detail line. True when ✕ was clicked (a task waiting in line has [`waiting_row`]).
 fn row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> bool {
     let mut clicked = false;
     let r = ui.vertical(|ui| {
@@ -460,9 +886,48 @@ pub(crate) fn bar(ui: &mut egui::Ui, task: &TaskInfo, width: f32) -> egui::Respo
     response
 }
 
+/// A task waiting in line: its name and ✕ (out of the line), and when it starts. True when ✕ was clicked.
+fn waiting_row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> bool {
+    let mut clicked = false;
+    let r = ui.vertical(|ui| {
+        ui.set_width(width);
+        ui.horizontal(|ui| {
+            let label_w = width - CROSS - 6.0;
+            ui.allocate_ui_with_layout(vec2(label_w, 18.0), Layout::left_to_right(Align::Center), |ui| {
+                ui.set_width(label_w);
+                ui.add(egui::Label::new(RichText::new(tr(&task.label)).font(t.font(12.5)).color(t.text_label)).truncate());
+            });
+            let (rect, resp) = ui.allocate_exact_size(vec2(CROSS, CROSS), Sense::click());
+            crate::widgets::announce(&resp, cross_name(task));
+            paint(ui.painter(), rect.shrink(2.0), Icon::Close, if resp.hovered() || resp.has_focus() { t.text } else { t.icon });
+            if ui.is_rect_visible(rect) {
+                register(ui, format!("activity:cancel:{}", task.id), rect);
+            }
+            clicked = resp.on_hover_text(tr("Remove from Queue")).clicked();
+        });
+        waiting_line(ui, t, task, width);
+    });
+    if ui.is_rect_visible(r.response.rect) {
+        register(ui, format!("activity:row:{}", task.id), r.response.rect);
+    }
+    clicked
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_failures_the_list_does_not_draw_are_counted_against_the_lines_it_draws() {
+        // counted 700, named 2: two lines are drawn, so 698 are left out
+        assert_eq!(failures_not_listed(700, 2), 698);
+        // counted 4, named 2: nothing is hidden behind the cap, yet two were not kept
+        assert_eq!(failures_not_listed(4, 2), 2);
+        // counted 9, named 7: five lines are drawn
+        assert_eq!(failures_not_listed(9, 7), 4);
+        // all counted ones are drawn: nothing to say
+        assert_eq!(failures_not_listed(2, 2), 0);
+    }
 
     #[test]
     fn progress_can_be_told_from_the_panel_in_every_theme() {

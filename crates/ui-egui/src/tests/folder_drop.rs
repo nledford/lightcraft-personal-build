@@ -13,7 +13,7 @@ use crate::headless::Headless;
 use crate::{LightcraftApp, Services};
 
 /// Folders `trip` and `home` in a fresh temporary folder, with a photo file in each.
-fn folders(tag: &str) -> (PathBuf, PathBuf, PathBuf) {
+pub(crate) fn folders(tag: &str) -> (PathBuf, PathBuf, PathBuf) {
     let root = std::env::temp_dir().join(format!("lc-folder-drop-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     let (trip, home) = (root.join("trip"), root.join("home"));
@@ -33,7 +33,7 @@ fn write_png(path: &Path, rgb: [u8; 3]) {
 
 /// The photos at `paths` in the catalog (`local`: browsed, not in the library), in the grid with
 /// the sidebar out, tall enough for the Folders section.
-fn app(paths: &[(PathBuf, bool)]) -> Headless {
+pub(crate) fn app(paths: &[(PathBuf, bool)]) -> Headless {
     app_with(paths, Services { png: None, ..Default::default() })
 }
 
@@ -57,24 +57,24 @@ fn app_with(paths: &[(PathBuf, bool)], services: Services) -> Headless {
     h
 }
 
-fn widget(h: &Headless, id: &str) -> Option<Rect> {
+pub(crate) fn widget(h: &Headless, id: &str) -> Option<Rect> {
     h.app.widgets.iter().find(|(w, _)| w == id).map(|(_, r)| *r)
 }
 
 /// How the Folders section names `dir` in widget ids: with `/` separators, on Windows too.
-fn folder_key(dir: &Path) -> String {
+pub(crate) fn folder_key(dir: &Path) -> String {
     dir.to_string_lossy().replace('\\', "/")
 }
 
-fn folder_row(h: &Headless, dir: &Path) -> Option<Rect> {
+pub(crate) fn folder_row(h: &Headless, dir: &Path) -> Option<Rect> {
     widget(h, &format!("source:libfolder:{}", folder_key(dir)))
 }
 
-fn id_of(h: &Headless, file: &str) -> u64 {
+pub(crate) fn id_of(h: &Headless, file: &str) -> u64 {
     h.app.session.catalog.photos().find(|p| p.file_name == file).map(|p| p.id.0).unwrap()
 }
 
-fn press(h: &mut Headless, at: Pos2) {
+pub(crate) fn press(h: &mut Headless, at: Pos2) {
     h.app.synthetic.push(egui::Event::PointerMoved(at));
     h.app.synthetic.push(egui::Event::PointerButton {
         pos: at,
@@ -86,14 +86,14 @@ fn press(h: &mut Headless, at: Pos2) {
 }
 
 /// Move the pointer, pressed, from `from` to `to` over a few frames.
-fn glide(h: &mut Headless, from: Pos2, to: Pos2) {
+pub(crate) fn glide(h: &mut Headless, from: Pos2, to: Pos2) {
     for i in 1..=8 {
         h.app.synthetic.push(egui::Event::PointerMoved(from + (to - from) * (i as f32 / 8.0)));
         h.step();
     }
 }
 
-fn release(h: &mut Headless, at: Pos2) {
+pub(crate) fn release(h: &mut Headless, at: Pos2) {
     h.app.synthetic.push(egui::Event::PointerButton {
         pos: at,
         button: egui::PointerButton::Primary,
@@ -105,18 +105,18 @@ fn release(h: &mut Headless, at: Pos2) {
 }
 
 /// What the dragged label says this frame instead of the count, if a drop target set it.
-fn hint(h: &Headless) -> Option<String> {
+pub(crate) fn hint(h: &Headless) -> Option<String> {
     h.view.ctx.data(|d| d.get_temp::<(u64, String)>(egui::Id::unique("drag-photos-hint"))).map(|(_, text)| text)
 }
 
 /// Click a widget the way a person does (press and release on it).
-fn click(h: &mut Headless, id: &str) {
+pub(crate) fn click(h: &mut Headless, id: &str) {
     let at = widget(h, id).unwrap_or_else(|| panic!("no {id}")).center();
     press(h, at);
     release(h, at);
 }
 
-fn toast(h: &Headless) -> String {
+pub(crate) fn toast(h: &Headless) -> String {
     h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default()
 }
 
@@ -240,6 +240,7 @@ fn photos_already_in_the_folder_stay_put() {
     release(&mut h, target.center());
     assert!(home.join("garden.png").is_file());
     assert_eq!(h.app.session.undo.len(), undo, "nothing done");
+    assert!(widget(&h, "button:toastUndo").is_none(), "nothing to undo");
     let _ = std::fs::remove_dir_all(&root);
 }
 
@@ -839,5 +840,55 @@ fn export_folder_with_a_preset_writes_exactly_the_folders_photos() {
     assert_eq!(names.len(), 2, "{names:?}");
     assert!(names.iter().any(|n| n.contains("beach")) && names.iter().any(|n| n.contains("sand")), "{names:?}");
     assert!(!names.iter().any(|n| n.contains("garden")), "{names:?}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Open the folder `root` (it holds `trip` and `home`) and drag the beach photo onto `home`'s row.
+fn drag_beach_onto_home(h: &mut Headless, root: &Path, home: &Path) {
+    let toggle = widget(h, &format!("libraryFolderToggle:{}", folder_key(root))).unwrap();
+    press(h, toggle.center());
+    release(h, toggle.center());
+    let target = folder_row(h, home).expect("opened");
+    let beach = id_of(h, "beach.png");
+    let from = widget(h, &format!("thumb:{beach}")).unwrap().center();
+    press(h, from);
+    glide(h, from, target.center());
+    release(h, target.center());
+}
+
+#[test]
+fn a_move_by_drop_offers_undo_on_its_toast() {
+    let (root, trip, home) = folders("undo");
+    let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
+    drag_beach_onto_home(&mut h, &root, &home);
+    assert!(matches!(h.app.ui.dialog, Some(crate::state::Dialog::MovePhotos { .. })), "{:?}", h.app.ui.dialog);
+    h.step();
+    click(&mut h, "button:dialogOk");
+    assert!(home.join("beach.png").is_file(), "moved");
+    h.step();
+    // Then the toast has an Undo button, and a click on it moves the photo back
+    click(&mut h, "button:toastUndo");
+    assert!(trip.join("beach.png").is_file() && !home.join("beach.png").exists(), "back where it was");
+    assert_eq!(toast(&h), "Undo");
+    // and the button goes with the toast it belonged to
+    h.step();
+    assert!(widget(&h, "button:toastUndo").is_none(), "no button on the toast that says Undo");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn undo_is_not_offered_once_something_else_was_done() {
+    let (root, trip, home) = folders("undo-stale");
+    let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
+    h.app.ui.settings.ask_before_move = false;
+    drag_beach_onto_home(&mut h, &root, &home);
+    h.step();
+    assert!(toast(&h).starts_with("Moved 1 file"), "{}", toast(&h));
+    assert!(widget(&h, "button:toastUndo").is_some(), "offered after the drop");
+    // When another step is committed while the toast is still up, Undo would reach that step instead
+    h.app.run("photo.rate", json!({"rating": 3})).unwrap();
+    h.step();
+    assert!(toast(&h).starts_with("Moved 1 file"), "still the same toast");
+    assert!(widget(&h, "button:toastUndo").is_none(), "withdrawn: it would undo the rating");
     let _ = std::fs::remove_dir_all(&root);
 }

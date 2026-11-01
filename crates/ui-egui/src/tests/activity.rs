@@ -3,11 +3,11 @@
 
 use std::time::Duration;
 
-use lightcraft_engine::activity::{Cancel, Ending, TaskInfo, Unit};
+use lightcraft_engine::activity::{Cancel, Ending, Failure, Outcome, TaskInfo, Unit};
 use serde_json::json;
 
 use crate::headless::Headless;
-use crate::panels::activity::{WIDTH, count_text, overall, readout_text};
+use crate::panels::activity::{WIDTH, count_text, detail_of, failures_text, overall, readout_text, summary_of, took};
 use crate::{LightcraftApp, Services};
 
 // generous: merges and renders run on worker threads that a busy machine (a full workspace test run) slows a lot
@@ -78,6 +78,10 @@ fn info(label: &str, done: u64, total: u64) -> TaskInfo {
         cancellable: true,
         cancelling: false,
         age_ms: 600,
+        waiting: false,
+        place: 0,
+        lane: None,
+        facts: String::new(),
     }
 }
 
@@ -172,12 +176,16 @@ fn count_text_by_unit() {
 
 #[test]
 fn the_line_beside_the_bell_names_one_task_or_counts_several() {
-    assert_eq!(readout_text(&[]), "");
-    assert_eq!(readout_text(&[info("Exporting", 10, 25)]), "Exporting · 40 %");
-    assert_eq!(readout_text(&[info("Finding faces", 0, 0)]), "Finding faces", "nothing to say about how far while that isn't known");
+    assert_eq!(readout_text(&[], 0), "");
+    assert_eq!(readout_text(&[info("Exporting", 10, 25)], 0), "Exporting · 40 %");
+    assert_eq!(readout_text(&[info("Finding faces", 0, 0)], 0), "Finding faces", "nothing to say about how far while that isn't known");
     let stopping = TaskInfo { cancelling: true, ..info("Exporting", 10, 25) };
-    assert_eq!(readout_text(&[stopping]), "Exporting · Stopping…");
-    assert_eq!(readout_text(&[info("Exporting", 1, 2), info("Importing", 0, 0), info("Merging", 3, 4)]), "3 tasks");
+    assert_eq!(readout_text(&[stopping], 0), "Exporting · Stopping…");
+    assert_eq!(readout_text(&[info("Exporting", 1, 2), info("Importing", 0, 0), info("Merging", 3, 4)], 0), "3 tasks");
+    // those waiting in line are counted after what runs, and alone in the moment before the next one starts
+    assert_eq!(readout_text(&[info("Building previews", 1, 4)], 2), "Building previews · 25 % · 2 waiting");
+    assert_eq!(readout_text(&[info("Finding faces", 0, 0)], 1), "Finding faces · 1 waiting");
+    assert_eq!(readout_text(&[], 1), "1 waiting");
 }
 
 #[test]
@@ -485,17 +493,17 @@ fn quit_anyway_gives_up_files_waiting_to_be_imported() {
     let mut h = demo();
     // the file waits behind an import that is still running
     crate::import::start_paths(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
-    h.app.waiting_import.files = vec![dir.join("0.png").to_string_lossy().to_string()];
+    crate::import::start_paths(&mut h.app, vec![dir.join("0.png").to_string_lossy().to_string()]).unwrap();
     wait_visible(&mut h);
-    assert!(h.app.import.is_some() && !h.app.waiting_import.files.is_empty(), "still waiting");
+    assert!(h.app.import.is_some() && !h.app.session.activity.waiting().is_empty(), "still waiting");
     assert!(!crate::panels::notices::may_close(&mut h.app));
     assert!(matches!(h.app.quit_prompt, Some(crate::QuitPrompt::Tasks(_))), "{:?}", h.app.quit_prompt);
     h.step();
-    assert!(h.app.import.is_some() && !h.app.waiting_import.files.is_empty(), "still waiting at the click");
+    assert!(h.app.import.is_some() && !h.app.session.activity.waiting().is_empty(), "still waiting at the click");
     click(&mut h, "button:quitAnyway");
     assert!(h.app.quit_prompt.is_none(), "not asked again: {:?}", h.app.quit_prompt);
     assert!(h.quit_requested());
-    assert!(h.app.waiting_import.files.is_empty());
+    assert!(h.app.session.activity.waiting().is_empty());
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -559,7 +567,7 @@ fn export_shows_a_row_and_stops_on_activity_cancel() {
 }
 
 #[test]
-fn dead_export_worker_leaves_no_row() {
+fn dead_export_worker_leaves_no_running_row() {
     let mut h = demo();
     h.app.services.write_shared = Some(std::sync::Arc::new(|_: &str, _: &[u8]| -> Result<(), String> { panic!("synthetic writer panic") }));
     start_export(&mut h, 2);
@@ -621,6 +629,11 @@ fn import_cancelled_by_command_reports_cancelled() {
     assert!(h.step_until(Duration::from_secs(60), |h| h.app.import.is_none()));
     assert!(h.app.session.activity.list().is_empty());
     assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Import cancelled")), "{:?}", h.app.ui.toast);
+    // and, once the toast has passed, it is still in the list under the bell, saying how far it got
+    let rows = h.app.session.activity.finished();
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert_eq!((rows[0].kind, rows[0].ending), ("import", Ending::Stopped));
+    assert!(rows[0].summary.starts_with("Import cancelled"), "{}", rows[0].summary);
     assert!(h.app.session.catalog.len() < n, "stopped part-way");
     assert_eq!(h.app.session.undo.len(), undo0 + 1, "one undo step");
     let _ = std::fs::remove_dir_all(&dir);
@@ -663,7 +676,7 @@ fn scan_shows_a_row_and_cancel_closes_it() {
         h.step();
     }
     assert!(h.app.ui.dialog.is_none(), "no review opened");
-    let row = h.app.session.activity.finished().into_iter().next().expect("a stopped scan leaves a row");
+    let row = h.app.session.activity.last_finished().expect("a stopped scan leaves a row");
     assert_eq!((row.label.as_str(), row.ending), ("Scanning folder", Ending::Stopped));
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -707,6 +720,8 @@ fn final_merge_shows_a_row_and_cancels() {
     assert!(h.app.session.activity.list().is_empty());
     let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert_eq!(toast, "HDR merge cancelled");
+    let row = h.app.session.activity.last_finished().expect("a stopped merge leaves a row");
+    assert_eq!((row.ending, row.summary.as_str()), (Ending::Stopped, "HDR merge cancelled"));
     let _ = std::fs::remove_dir_all(dir);
 }
 
@@ -824,6 +839,7 @@ fn batch_merge_runs_each_set_in_turn() {
 #[test]
 fn find_missing_shows_an_indeterminate_row() {
     let mut h = demo();
+    h.app.session.activity.keep_after(0);
     let dir = std::env::temp_dir().join(format!("lc-activity-findmissing-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     // run directly, not through a request (which runs frames): the search of an empty folder is over at once, but its
@@ -836,6 +852,25 @@ fn find_missing_shows_an_indeterminate_row() {
     assert_eq!((rows[0].total, rows[0].cancellable), (0, false), "indeterminate, no ✕");
     assert!(h.step_until(T, |h| h.app.tasks.is_empty()));
     assert!(h.app.session.activity.list().is_empty(), "the row goes with the task");
+    let row = h.app.session.activity.last_finished().expect("and a row says what it found");
+    assert_eq!(row.ending, Ending::Done);
+    assert!(row.summary.starts_with("Found 0 missing photos"), "{:?}", row.summary);
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+/// A Lightroom catalog that can't be read leaves a row saying the task failed, and why.
+#[test]
+fn a_lightroom_catalog_that_cannot_be_read_leaves_a_failed_row() {
+    let mut h = demo();
+    let dir = std::env::temp_dir().join(format!("lc-activity-lrcat-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("Not a catalog.lrcat");
+    std::fs::write(&path, b"this is not a Lightroom catalog").unwrap();
+    let r = crate::menus::run_ui_command(&mut h.app, "library.inspectLightroom", &json!({"path": path.to_string_lossy(), "wait": true}));
+    assert!(r.is_some(), "the command is the interface's");
+    let row = h.app.session.activity.last_finished().expect("a failed task always leaves a row");
+    assert_eq!((row.kind, row.ending), ("lightroom", Ending::Failed));
+    assert!(row.summary.starts_with("Lightroom inspection failed"), "{:?}", row.summary);
     let _ = std::fs::remove_dir_all(dir);
 }
 
@@ -893,6 +928,193 @@ fn immediate_library_commands_and_auto_sync_show_completion() {
     assert!(h.app.ui.toast.is_none());
 }
 
+/// A task that ended `ending`, kept in the list whatever time it took. Its id.
+fn ended(h: &mut Headless, label: &str, ending: Ending, summary: &str) -> u64 {
+    h.app.session.activity.keep_after(0);
+    let g = h.app.session.activity.start("export", label, Cancel::Yes);
+    let id = g.id();
+    assert!(g.finish(Outcome { ending, summary: summary.into(), ..Default::default() }));
+    id
+}
+
+#[test]
+fn a_task_that_ended_stays_in_the_list_until_dismissed() {
+    let mut h = demo();
+    // Given an export that ran long and ended well, and nothing running
+    let id = ended(&mut h, "Exporting", Ending::Done, "Exported 5,000 photos");
+    h.step();
+    h.step();
+    // Then the bell asks for nothing: no ring, no mark
+    assert!(!has(&h, "activity:ring") && !has(&h, "activity:attention"));
+    // When the list is opened, Then the task is there, and "No tasks are running" is not said over it
+    open_list(&mut h);
+    assert!(has(&h, &format!("activity:done:{id}")) && !has(&h, "activity:empty"));
+    let inspect = h.request("ui.inspect", json!({}), T);
+    assert_eq!(inspect["result"]["activityFinished"][0]["summary"], "Exported 5,000 photos", "{inspect}");
+    // And it stays, frame after frame
+    for _ in 0..20 {
+        h.step();
+    }
+    assert!(has(&h, &format!("activity:done:{id}")));
+    // When its ✕ is clicked, Then it is gone, and the list is still open
+    click(&mut h, &format!("activity:dismiss:{id}"));
+    assert!(h.app.session.activity.finished().is_empty());
+    assert!(has(&h, "activity:empty"), "the list stays open on what is left");
+}
+
+#[test]
+fn a_task_that_did_not_end_well_marks_the_bell_until_its_row_is_dismissed() {
+    let mut h = demo();
+    let id = ended(&mut h, "Exporting", Ending::Failed, "The disk is full");
+    let other = ended(&mut h, "Importing", Ending::Stopped, "Import cancelled");
+    h.step();
+    h.step();
+    // the mark is on the bell while the list is closed, however many frames pass
+    assert!(has(&h, "activity:attention"));
+    for _ in 0..10 {
+        h.step();
+    }
+    assert!(has(&h, "activity:attention"));
+    // looking at the list does not answer it: the mark stays while the list is open, and after it is closed
+    open_list(&mut h);
+    assert!(has(&h, "activity:attention") && has(&h, &format!("activity:done:{id}")));
+    click(&mut h, "icon:bell");
+    assert!(!has(&h, "activity:list") && has(&h, "activity:attention"), "seen is not dealt with");
+    // dismissing one of two leaves the mark; dismissing the last takes it away
+    open_list(&mut h);
+    click(&mut h, &format!("activity:dismiss:{id}"));
+    assert!(has(&h, "activity:attention") && h.app.session.activity.problems() == 1);
+    click(&mut h, &format!("activity:dismiss:{other}"));
+    assert!(!has(&h, "activity:attention") && h.app.session.activity.problems() == 0);
+}
+
+#[test]
+fn rows_are_grouped_by_what_they_need_and_clear_finished_lets_go_of_the_ended_ones() {
+    let mut h = demo();
+    let bad = ended(&mut h, "Importing", Ending::Problems, "Imported 90 photos");
+    let good = ended(&mut h, "Exporting", Ending::Done, "Exported 24 photos");
+    let running = h.app.session.activity.start("previews", "Building previews", Cancel::Yes);
+    wait_visible(&mut h);
+    open_list(&mut h);
+    // what needs looking at first, then what runs, then what ended well
+    let y = |id: &str| rect(&h, id).top();
+    let (bad_y, run_y, good_y) =
+        (y(&format!("activity:done:{bad}")), y(&format!("activity:row:{}", running.id())), y(&format!("activity:done:{good}")));
+    assert!(bad_y < run_y && run_y < good_y, "{bad_y} < {run_y} < {good_y}");
+    // Clear finished lets go of both ended tasks and leaves the running one
+    click(&mut h, "activity:clear");
+    assert!(h.app.session.activity.finished().is_empty());
+    assert!(has(&h, &format!("activity:row:{}", running.id())) && !has(&h, "activity:clear"));
+    assert!(!has(&h, "activity:attention"), "and with them the mark on the bell");
+    assert!(!running.is_cancelled(), "clearing stops nothing");
+}
+
+#[test]
+fn a_task_that_just_ended_is_named_beside_the_bell_for_a_moment() {
+    let mut h = demo_sized([1600.0, 900.0]);
+    ended(&mut h, "Exporting", Ending::Done, "Exported 24 photos");
+    h.step();
+    h.step();
+    assert!(has(&h, "activity:readout"), "the line says how it ended");
+    // after a few seconds the line is gone; the row is not
+    std::thread::sleep(Duration::from_millis(6_100));
+    h.step();
+    h.step();
+    assert!(!has(&h, "activity:readout") && h.app.session.activity.finished().len() == 1);
+}
+
+#[test]
+fn an_ended_task_is_worded_from_its_name_when_it_said_nothing_and_says_how_long_it_took() {
+    let mut h = demo();
+    let id = ended(&mut h, "Building previews", Ending::Died, "");
+    let rows = h.app.session.activity.finished();
+    let row = rows.iter().find(|f| f.id == id).unwrap();
+    assert_eq!(summary_of(row), "Building previews: stopped unexpectedly");
+    assert_eq!(
+        (took(42_900).as_str(), took(12 * 60_000 + 5_000).as_str(), took(6_720_000).as_str()),
+        ("took 42 s", "took 12 min", "took 1 h 52 min")
+    );
+}
+
+#[test]
+fn an_export_that_failed_for_a_file_leaves_a_row_with_the_file_and_the_reason() {
+    let mut h = demo();
+    // Given a disk that refuses the first file of five
+    let refuse = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+    h.app.services.write_shared =
+        Some(std::sync::Arc::new(
+            move |_: &str, _: &[u8]| {
+                if refuse.swap(false, std::sync::atomic::Ordering::Relaxed) { Err("The disk is full".into()) } else { Ok(()) }
+            },
+        ));
+    // When five photos are exported
+    start_export(&mut h, 5);
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
+    // Then the export is in the list, however short it was: done, with problems, in its folder
+    let rows = h.app.session.activity.finished();
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    let row = &rows[0];
+    assert_eq!((row.kind, row.ending, row.failed), ("export", Ending::Problems, 1), "{row:?}");
+    assert_eq!(row.summary, "Exported 4 of 5 photos");
+    assert!(row.path.as_deref().is_some_and(|p| p.starts_with("/lc-test-out/")), "one of the files written: {:?}", row.path);
+    assert!(!row.failures[0].name.is_empty() && row.failures[0].reason.contains("The disk is full"), "{:?}", row.failures);
+    // And it is said at once too, as ever; the bell is marked for when the toast has passed
+    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Exported 4 of 5")), "{:?}", h.app.ui.toast);
+    h.step();
+    assert!(has(&h, "activity:attention"));
+    // When the row's failed files are asked for, Then the file and the reason can be copied
+    open_list(&mut h);
+    click(&mut h, &format!("activity:failures:{}", row.id));
+    click(&mut h, &format!("activity:copy:{}", row.id));
+    let want = format!("{}\t{}", row.failures[0].name, row.failures[0].reason);
+    assert!(h.step_until(T, |h| h.app.copied.as_deref() == Some(want.as_str())), "{:?}", h.app.copied);
+}
+
+#[test]
+fn a_short_clean_export_is_a_toast_and_leaves_no_row() {
+    let mut h = demo();
+    // (short by any machine's clock: the ten seconds a row is kept after are far away here)
+    h.app.session.activity.keep_after(600_000);
+    h.app.services.write_shared = Some(slow_writer(1));
+    start_export(&mut h, 2);
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
+    assert!(h.app.session.activity.finished().is_empty(), "watched to its end: nothing to come back to");
+    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Exported 2 of 2")), "{:?}", h.app.ui.toast);
+}
+
+#[test]
+fn a_stopped_export_and_a_dead_export_worker_each_leave_a_row() {
+    let mut h = demo();
+    h.app.services.write_shared = Some(slow_writer(200));
+    start_export(&mut h, 5);
+    assert_eq!(h.app.session.activity.cancel_all(), 1);
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
+    let rows = h.app.session.activity.finished();
+    assert_eq!(rows.iter().map(|f| f.ending).collect::<Vec<_>>(), vec![Ending::Stopped], "{rows:?}");
+    // a writer that panics takes the worker with it: the export says so instead of vanishing
+    h.app.services.write_shared = Some(std::sync::Arc::new(|_: &str, _: &[u8]| -> Result<(), String> { panic!("synthetic writer panic") }));
+    start_export(&mut h, 2);
+    assert!(h.step_until(Duration::from_secs(60), |h| h.app.export.is_none()));
+    let rows = h.app.session.activity.finished();
+    assert_eq!(rows.len(), 2, "{rows:?}");
+    assert_eq!((rows[0].ending, rows[0].summary.as_str()), (Ending::Died, "Export stopped unexpectedly"), "{:?}", rows[0]);
+}
+
+#[test]
+fn the_failed_files_copied_say_how_many_were_not_kept_and_stay_a_line_each() {
+    let h = demo();
+    h.app.session.activity.keep_after(0);
+    let g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    let failures = vec![
+        Failure { name: "IMG_1.jpg".into(), reason: "The disk\nis full".into() },
+        Failure { name: "IMG\t2.jpg".into(), reason: "No permission".into() },
+    ];
+    // a job that counted 700 failures and could name two of them
+    g.finish(Outcome { ending: Ending::Problems, failures, failed: 700, ..Default::default() });
+    let row = &h.app.session.activity.finished()[0];
+    assert_eq!(failures_text(row), "IMG_1.jpg\tThe disk is full\nIMG 2.jpg\tNo permission\nand 698 more");
+}
+
 /// The demo app, reading the files as they are on disk (the demo library reads none), keeping every ended task's row.
 fn demo_on_disk() -> Headless {
     let mut h = demo();
@@ -916,7 +1138,7 @@ fn folder_with_a_truncated_jpeg(tag: &str) -> std::path::PathBuf {
     dir
 }
 
-/// What an import's row says it could not read.
+/// What an import's row says it could not read, and the text Copy all would put on the clipboard.
 fn the_row_names_the_truncated_jpeg(h: &Headless) {
     let rows = h.app.session.activity.finished();
     assert_eq!(rows.len(), 1, "{rows:?}");
@@ -925,6 +1147,7 @@ fn the_row_names_the_truncated_jpeg(h: &Headless) {
     let names: Vec<&str> = row.failures.iter().map(|f| f.name.as_str()).collect();
     assert_eq!(names, vec![std::path::Path::new("trip").join("bad.jpg").to_string_lossy()], "{row:?}");
     assert!(row.failures[0].reason.contains("truncated"), "{}", row.failures[0].reason);
+    assert!(failures_text(row).contains(&format!("bad.jpg\t{}", row.failures[0].reason)), "{}", failures_text(row));
 }
 
 #[test]
@@ -958,6 +1181,21 @@ fn a_reviewed_imports_row_names_unreadable_files_below_its_source() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A task that only counted what it could not do (a preview build) has the count said under its name; one that said
+/// more keeps what it said.
+#[test]
+fn an_ended_task_that_only_counted_its_failures_says_how_many() {
+    let h = demo();
+    h.app.session.activity.keep_after(0);
+    let g = h.app.session.activity.start("previews", "Building previews", Cancel::Yes);
+    g.finish(Outcome { ending: Ending::Problems, failed: 3, ..Default::default() });
+    let f = h.app.session.activity.last_finished().unwrap();
+    assert_eq!((summary_of(&f), detail_of(&f)), ("Building previews: done, with problems".to_string(), "3 failed".to_string()));
+    let g = h.app.session.activity.start("import", "Importing", Cancel::Yes);
+    g.finish(Outcome { ending: Ending::Problems, failed: 2, detail: "2 not readable".into(), ..Default::default() });
+    assert_eq!(detail_of(&h.app.session.activity.last_finished().unwrap()), "2 not readable");
+}
+
 /// A scan that ran to its end says so, and says when it found nothing to import.
 #[test]
 fn a_scan_that_found_nothing_leaves_a_row_saying_so() {
@@ -967,7 +1205,7 @@ fn a_scan_that_found_nothing_leaves_a_row_saying_so() {
     std::fs::create_dir_all(&dir).unwrap();
     crate::import::open(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
     assert!(h.step_until(T, |h| h.app.scan.is_none()));
-    let row = h.app.session.activity.finished().into_iter().next().expect("a row for the scan");
+    let row = h.app.session.activity.last_finished().expect("a row for the scan");
     assert_eq!((row.label.as_str(), row.ending, row.detail.as_str()), ("Scanning folder", Ending::Done, "No photos found"));
     let _ = std::fs::remove_dir_all(dir);
 }
@@ -1013,9 +1251,207 @@ fn a_scan_that_met_unreadable_files_leaves_a_row_with_problems() {
             assert_eq!(row.path.as_deref(), Some(folder.as_str()), "{row:?}");
             scan(&mut h);
             let rows = h.app.session.activity.finished();
-            assert_eq!(rows.len(), 1, "one row for the folder: {rows:?}");
+            assert_eq!((rows.len(), h.app.session.activity.problems()), (1, 1), "one row for the folder: {rows:?}");
             assert!(rows[0].id != row.id && rows[0].failed == 2, "the new row is the one kept: {rows:?}");
         }
         let _ = std::fs::remove_dir_all(dir);
     }
+}
+
+/// The menu item of `command` whose params have `size`, anywhere in the menu tree (`ui.menu.tree`).
+fn menu_item(tree: &serde_json::Value, command: &str, size: &str) -> Option<serde_json::Value> {
+    match tree {
+        serde_json::Value::Array(nodes) => nodes.iter().find_map(|n| menu_item(n, command, size)),
+        serde_json::Value::Object(node) => {
+            let found = node.get("id").and_then(|v| v.as_str()) == Some(command) && node.get("params").is_some_and(|p| p["size"] == size);
+            if found { Some(tree.clone()) } else { node.values().find_map(|v| menu_item(v, command, size)) }
+        }
+        _ => None,
+    }
+}
+
+/// Given a preview build running, then Build Standard-Sized Previews is still offered. When it is chosen, then it
+/// waits in line: a toast says so, and the list shows it under the running build, starting next. When its ✕ is
+/// clicked, then it leaves the line, and the running build goes on.
+#[test]
+fn a_second_preview_build_waits_in_line_and_can_be_taken_out_of_it() {
+    let mut h = demo();
+    let build = std::sync::Arc::new(lightcraft_engine::cmd::previews::PreviewBuild::default());
+    h.app.session.preview_build = Some(build.clone());
+    let running = h.app.session.activity.start("previews", "Building previews", Cancel::Yes);
+    let tree = h.request("ui.menu.tree", json!({}), T)["result"].clone();
+    let item = menu_item(&tree, "library.buildPreviews", "standard").expect("Build Standard-Sized Previews in the menus");
+    assert_eq!(item["enabled"], true, "not greyed out while a build runs: {item}");
+    let r = h.request("ui.menu.invoke", json!({"id": "library.buildPreviews", "params": item["params"]}), T);
+    let id = r["result"]["queued"].as_u64().unwrap_or_else(|| panic!("it waits in line: {r}"));
+    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Queued")), "{:?}", h.app.ui.toast);
+    open_list(&mut h);
+    let (waiting, ahead) = (rect(&h, &format!("activity:row:{id}")), rect(&h, &format!("activity:row:{}", running.id())));
+    assert!(waiting.top() > ahead.bottom(), "the waiting build is listed under the running one");
+    click(&mut h, &format!("activity:cancel:{id}"));
+    assert!(h.app.session.activity.waiting().is_empty(), "✕ took it out of the line");
+    assert!(!running.is_cancelled(), "and left the running build alone");
+    build.finished.store(true, std::sync::atomic::Ordering::Release);
+    drop(running);
+}
+
+/// Given a preview build that did not go well, then its row offers Retry. When Retry is clicked, then the row goes and
+/// the build runs again, for the same photos.
+#[test]
+fn a_build_that_did_not_go_well_offers_retry() {
+    let mut h = demo();
+    let photo = h.app.session.catalog.photos().next().map(|p| p.id.0).unwrap();
+    let g = h.app.session.activity.start("previews", "Building previews", Cancel::Yes);
+    let request = lightcraft_engine::activity::Request {
+        command: "library.buildPreviews".into(),
+        params: json!({"ids": [photo], "edge": 256}),
+        ..Default::default()
+    };
+    g.set_request(request);
+    let failed = g.id();
+    g.finish(Outcome::failed("The disk is full"));
+    open_list(&mut h);
+    click(&mut h, &format!("activity:retry:{failed}"));
+    assert!(h.app.session.activity.finished().iter().all(|f| f.id != failed), "the row was taken up by the retry");
+    let progress = h.app.session.execute("library.previewProgress", &json!({})).unwrap();
+    assert_eq!(progress["total"], 1, "a build of that one photo started: {progress}");
+    assert!(h.step_until(T, |h| h.app.session.activity.list().is_empty()));
+}
+
+/// Given a preview build that did not go well and a free lane, when an agent asks `activity.retry`, then the build has
+/// started by the time it answers, and no toast says it was queued.
+#[test]
+fn a_retry_asked_by_an_agent_that_starts_at_once_does_not_say_it_was_queued() {
+    let mut h = demo();
+    let photo = h.app.session.catalog.photos().next().map(|p| p.id.0).unwrap();
+    let g = h.app.session.activity.start("previews", "Building previews", Cancel::Yes);
+    g.set_request(lightcraft_engine::activity::Request {
+        command: "library.buildPreviews".into(),
+        params: json!({"ids": [photo], "edge": 256}),
+        ..Default::default()
+    });
+    let failed = g.id();
+    g.finish(Outcome::failed("The disk is full"));
+    h.app.ui.toast = None;
+    let r = h.app.run("activity.retry", json!({"id": failed}));
+    assert!(r.as_ref().is_ok_and(|v| v["queued"].as_u64().is_some()), "{r:?}");
+    assert!(!h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Queued")), "{:?}", h.app.ui.toast);
+    assert!(h.step_until(T, |h| h.app.session.activity.list().is_empty()));
+}
+
+/// Given a preview build running and another waiting for it, when Quit is chosen, then the question says that one
+/// runs and one won't run; Quit Anyway stops the one and empties the line.
+#[test]
+fn quitting_says_how_many_tasks_waiting_in_line_would_not_run() {
+    let mut h = demo();
+    let build = std::sync::Arc::new(lightcraft_engine::cmd::previews::PreviewBuild::default());
+    h.app.session.preview_build = Some(build.clone());
+    let running = h.app.session.activity.start("previews", "Building previews", Cancel::Yes);
+    let r = h.app.run("library.buildPreviews", json!({"edge": 256, "queue": true}));
+    assert!(r.as_ref().is_ok_and(|v| v["place"] == 1), "{r:?}");
+    assert!(!crate::panels::notices::may_close(&mut h.app));
+    let Some(crate::QuitPrompt::Tasks(text)) = h.app.quit_prompt.clone() else { panic!("{:?}", h.app.quit_prompt) };
+    assert_eq!(text, "1 task is still running: Building previews. Quitting stops it. 1 task waiting in line won't run.");
+    // (what Quit Anyway does)
+    h.app.session.activity.cancel_all();
+    assert!(running.is_cancelled() && h.app.session.activity.waiting().is_empty());
+    build.finished.store(true, std::sync::atomic::Ordering::Release);
+    drop(running);
+}
+
+/// Given a preview build running and another waiting in line behind it, then the list shows both, and the waiting
+/// one starts by itself, in a frame, when the build ahead of it ends.
+#[test]
+fn a_task_waiting_in_line_has_a_row_and_starts_when_the_lane_frees() {
+    use lightcraft_engine::cmd::previews::PreviewBuild;
+    use std::sync::atomic::Ordering;
+
+    let mut h = demo();
+    let build = std::sync::Arc::new(PreviewBuild::default());
+    h.app.session.preview_build = Some(build.clone());
+    let running = h.app.session.activity.start("previews", "Building previews", Cancel::Yes);
+    let ids: Vec<u64> = h.app.session.catalog.photos().take(1).map(|p| p.id.0).collect();
+    let queued = h.app.session.execute("library.buildPreviews", &json!({"ids": ids, "edge": 256, "queue": true})).unwrap();
+    let waiting = queued["queued"].as_u64().expect("it waits");
+    assert_eq!(h.app.session.activity.list().len(), 2);
+    wait_visible(&mut h);
+    open_list(&mut h);
+    assert!(has(&h, &format!("activity:row:{}", running.id())));
+    assert!(
+        has(&h, &format!("activity:row:{waiting}")) && has(&h, &format!("activity:cancel:{waiting}")) && rows(&h) == 2,
+        "a waiting task draws a row with ✕"
+    );
+    let info = h.app.session.activity.waiting().remove(0);
+    assert_eq!(crate::panels::activity::cross_name(&info), "Remove from Queue: Building previews");
+    let running_row = h.app.session.activity.list().into_iter().find(|t| !t.waiting).expect("the running build");
+    assert_eq!(crate::panels::activity::cross_name(&running_row), "Cancel");
+    // the lane frees with no command asked: the frame loop starts it
+    build.finished.store(true, Ordering::Release);
+    drop(running);
+    let t0 = std::time::Instant::now();
+    while h.app.session.activity.list().iter().any(|t| t.id == waiting && t.label == "Building previews") && t0.elapsed() < T {
+        h.step();
+        let started = h.app.session.preview_build.as_ref().is_some_and(|b| !std::sync::Arc::ptr_eq(b, &build));
+        if started {
+            break;
+        }
+    }
+    assert!(h.app.session.preview_build.as_ref().is_some_and(|b| !std::sync::Arc::ptr_eq(b, &build)), "the waiting build started");
+    assert!(h.step_until(T, |h| h.app.session.activity.list().is_empty()), "the started build ends");
+}
+
+/// Given a build that ended and a build waiting behind it, when a command starts the waiting one before the frame that
+/// announces the first, then the first one's end is still announced, and once.
+#[test]
+fn a_build_replaced_by_the_one_waiting_behind_it_is_still_announced() {
+    use lightcraft_engine::cmd::previews::PreviewBuild;
+    use std::sync::atomic::Ordering;
+
+    let mut h = demo();
+    let first = std::sync::Arc::new(PreviewBuild::default());
+    first.done.store(2, Ordering::Relaxed);
+    h.app.session.preview_build = Some(first.clone());
+    let row = h.app.session.activity.start("previews", "Building previews", Cancel::Yes);
+    let ids: Vec<u64> = h.app.session.catalog.photos().take(1).map(|p| p.id.0).collect();
+    h.app.session.execute("library.buildPreviews", &json!({"ids": ids, "edge": 256, "queue": true})).unwrap();
+    first.finished.store(true, Ordering::Release);
+    drop(row);
+    // a command in the same frame, before the app looks at the finished build
+    h.app.session.execute("activity.list", &json!({})).unwrap();
+    assert!(h.app.session.preview_build.as_ref().is_some_and(|b| !std::sync::Arc::ptr_eq(b, &first)), "the waiting build replaced it");
+    h.step();
+    assert!(first.reported.load(Ordering::Relaxed), "its end was announced");
+    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    assert!(toast.contains("Previews ready for 2 photos"), "{toast}");
+    assert!(h.app.session.take_unreported_builds().is_empty());
+    assert!(h.step_until(T, |h| h.app.session.activity.list().is_empty()), "the started build ends");
+}
+
+/// Given a build that ended and a build waiting behind it, when the frame starts the waiting one, then the same frame
+/// asks to be drawn again to see how it goes: nothing else repaints an idle window (the list is closed, or Full Screen
+/// Preview hides it).
+#[test]
+fn the_frame_that_starts_a_waiting_build_asks_for_the_next_one() {
+    use lightcraft_engine::cmd::previews::PreviewBuild;
+    use std::sync::atomic::Ordering;
+
+    let mut h = demo();
+    let first = std::sync::Arc::new(PreviewBuild::default());
+    h.app.session.preview_build = Some(first.clone());
+    let row = h.app.session.activity.start("previews", "Building previews", Cancel::Yes);
+    let ids: Vec<u64> = h.app.session.catalog.photos().take(1).map(|p| p.id.0).collect();
+    h.app.session.execute("library.buildPreviews", &json!({"ids": ids, "edge": 256, "queue": true})).unwrap();
+    first.finished.store(true, Ordering::Release);
+    drop(row);
+    let ctx = egui::Context::default();
+    // (a few empty passes let the context's own first-frame requests go by)
+    for _ in 0..4 {
+        let mut out = ctx.run_ui(egui::RawInput::default(), |_| {});
+        out.textures_delta.clear();
+    }
+    assert!(!ctx.has_requested_repaint(), "an idle context asks for nothing");
+    h.app.tick_preview_builds(&ctx);
+    assert!(h.app.session.preview_build.as_ref().is_some_and(|b| !std::sync::Arc::ptr_eq(b, &first)), "the waiting build started");
+    assert!(ctx.has_requested_repaint(), "and the frame asked to look at it again");
+    assert!(h.step_until(T, |h| h.app.session.activity.list().is_empty()), "the started build ends");
 }

@@ -30,6 +30,10 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
                 filter["only"] = json!([]);
                 filter["labels"] = json!([]);
                 filter["flags"] = json!([]);
+                filter["keywords"] = json!([]);
+                filter["dates"] = json!([]);
+                filter["albums"] = json!([]);
+                filter["libraryFolders"] = json!([]);
                 filter["ruleSet"] = serde_json::Value::Null;
                 app.run("library.filter", filter)?;
                 app.run("library.select", json!({"ids": [first]}))?;
@@ -141,6 +145,7 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
             }
         }
         Dialog::DeleteKeyword { keyword, .. } => app.run("keyword.delete", json!({"keyword": keyword})),
+        Dialog::Several(s) => crate::panels::side_select::several_run(app, s),
         Dialog::KeywordSet { replaces, name, slots, as_new } => {
             use lightcraft_catalog::keywords::same;
             let name = name.trim();
@@ -223,6 +228,19 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
         Dialog::Merge { opts } => crate::merge::start_final(app, opts),
         Dialog::Import { opts } => crate::import::start(app, opts),
         Dialog::ConfirmDelete { .. } => app.run("photo.delete", json!({})),
+        Dialog::MoveFolder { path, into, dont_ask, library, .. } => {
+            // another library opened meanwhile (from the menu bar, an agent): the folder's photos
+            // in this one aren't the ones the question counted
+            if *library != app.session.library_generation() {
+                return Err(crate::i18n::tr("Another library was opened since the folder was dropped: nothing was moved").to_string());
+            }
+            // only a move that happened turns the question off: the next one still asks after a refusal
+            let moved = crate::panels::left::run_folder_move(app, path, into)?;
+            if *dont_ask {
+                app.ui.settings.ask_before_move = false;
+            }
+            Ok(moved)
+        }
         Dialog::MovePhotos { ids, folder, dont_ask, library, .. } => {
             // another library opened meanwhile (from the menu bar, an agent): these numbers are
             // other photos there
@@ -248,6 +266,7 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
         Dialog::DeleteEffects { names } => app.run("mask.deleteEffect", json!({"names": names})),
         Dialog::RemoveFolder { path, disk, .. } => app.run("library.removeFolder", json!({"path": path, "disk": disk})),
         d @ Dialog::SynchronizeFolder { .. } => crate::sync::confirm(app, d),
+        d @ Dialog::SynchronizeFolders { .. } => crate::sync::confirm_many(app, d),
         Dialog::About | Dialog::Shortcuts | Dialog::Settings { .. } | Dialog::ManageEffects { .. } | Dialog::ViewOptions => {
             Ok(serde_json::Value::Null)
         }

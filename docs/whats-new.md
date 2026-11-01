@@ -2,6 +2,15 @@
 
 ## 2026-10-30
 
+### Rating a photo in a big view no longer stalls the grid
+- The photo count the grid shows beside the source's name ("1,234 of 5,678") was worked out again from every photo in the
+  library after each edit, so in a library of hundreds of thousands of photos each rating, flag or label in a large
+  smart album or folder took about half a second to show. After an edit it now asks only the photos the edit touched, the
+  way the grid's list already did; an edit to many photos at once, to an album's rules or photos, or a source that
+  reads the clock is still counted from every photo. Opening a source with nothing narrowing it takes the count from the
+  pass that builds the grid instead of a second pass.
+
+
 ### A keyboard shortcut for Clear Color Label
 - Clear Color Label is now a command of its own in Help ▸ Keyboard Shortcuts, so it can have a key like Set Rating or
   Set Flag; before, only the red, yellow, green and blue labels (6–9) had keys and clearing a label was menu-only. It has
@@ -324,6 +333,16 @@
   save keeps the sidecars it wrote, a stopped read commits what it read as one undo step. A photo whose file can't be
   written or read is listed in `failed` and the rest go on. The Folders menu items that use them come later.
 
+### Synchronize several folders at once
+- Choose several folders in the Folders list (Cmd/Ctrl+click, Shift+click) and right-click: Synchronize N Folders…
+  opens one dialog. It looks at the folders one after another and says, for each, what changed (new, moved, missing,
+  with changed sidecars) or that it is up to date; the choices below count them all.
+- Synchronize then brings the library up to date with each folder in turn, in the order the sidebar lists them, under
+  the bell. Each one removes, relinks or reads sidecars of only the photos its scan found, and a folder that is up to date, isn't there (moved,
+  renamed, or on a disk that isn't connected) or is a whole disk is passed over, and the dialog says why.
+- A folder inside another chosen one is taken in with it, not done twice. Cancel leaves nothing behind under the bell;
+  the rows waiting in line name their folder.
+
 ## 2026-10-26
 
 ### The sidebar from the keyboard
@@ -369,6 +388,62 @@
   name or folder you had picked yourself when you undid the step, as undo did, for as long as you keep it. When View ▸
   Enable Filters had the filter put aside, a folder that undo restores while another folder is shown stays in it and
   comes back with Enable Filters once that other folder is no longer shown.
+
+### Choose several albums, folders, keywords or dates in the sidebars
+- In the left panel, Cmd+click (Ctrl+click on Windows and Linux) adds an album, a folder, a keyword or a date to the
+  ones chosen, or takes it away; Shift+click takes every row between the last one clicked and this one, except rows
+  inside a folder that is closed. The grid shows the photos of any of them, each once, and the title says how many
+  albums or folders are shown. A plain click chooses one row alone, as before.
+- In the Keyword List (right panel, Keywords) the same clicks pick several keywords. Picking does not change the grid.
+- With several albums shown, Remove from Album is not offered and the Delete key is the photos' Delete once you click
+  elsewhere (it asks first while Settings ▸ Confirm before moving photos to Recently Deleted is on), because there is no
+  telling which album is meant.
+- Right-click one of several rows chosen to act on them all, as one step to undo: move albums into a folder, export
+  them, or delete them; give folders a color label or remove them from the library; give keywords to the selected
+  photos, take them away, merge them or delete them. Deleting or removing several asks first and says what goes.
+  Right-click a row that is not among them and you get that row's own menu; the others stay chosen.
+- Dragging one of several albums or keywords moves them all (albums go into the folder they are dropped in or
+  beside; dropped beside a row, the one you dragged is placed there and the others come into that folder).
+- Right after choosing several rows with Cmd or Shift, the Delete key asks about those rows. Click anywhere else,
+  or select photos or change what is shown in any other way, and Delete is about the photos again; after a plain
+  click on an album it always was.
+- For agents: `album.delete` and `album.move` take `ids`, `keyword.delete` and `keyword.move` take `keywords`,
+  `library.removeFolder` and `folder.label` take `paths`, as one undo step each; `album.reorder` takes `with`, the
+  albums chosen beside the one it places, which come to the same folder in the same step.
+
+### Cut, Copy and Paste for albums and keywords
+- In the menus of albums and keywords in the left panel and the Keyword List, Cut and Copy take the rows (one or
+  several chosen) and Paste puts them down: cut albums move into the folder where you choose Paste (the Albums +
+  menu pastes at the top level), copied albums are duplicated there with their photos, a copied smart album keeps its
+  rules and a copied folder everything inside it; cut keywords are nested inside the keyword where you choose Paste;
+  copied keywords are text you can paste in a keyword box. Paste is grayed out where it can't work, such as a
+  folder inside itself, and one Edit ▸ Undo takes back a paste.
+- For agents: the new `album.duplicate` takes `id` or `ids` and an optional `parent` (null: the top level).
+
+### A second preview build waits for the first
+- File ▸ Previews stays available while a build runs. Build Previews or Build / Discard Smart Previews chosen
+  meanwhile now waits in line and starts by itself when the builds ahead of it end, with the photos that were chosen
+  when you asked. Before, the items were greyed out until the build ended.
+- Waiting builds are listed under the bell below the running one, with when each starts and ✕ to take it out of the
+  line. The line beside the bell counts them ("2 waiting").
+- A build that did not go well has Retry in its row: it runs again for the same photos.
+- Nothing waits across a quit or another library: the files may have changed meanwhile. Quitting says how many would
+  not run.
+- Agents queue a build with `queue: true`, see it in `activity.list` (`waiting`, `place`, `lane`), take it out with
+  `activity.cancel` and ask again for one that did not go well with `activity.retry`.
+
+### `albums.list` no longer freezes the window in a large library
+- The `albums.list` command (also reached as `cmd_albums_list` through MCP when connected to the app) used to count every
+  smart album's photos on the window's thread before it answered: with many smart albums in a large library, seconds
+  in which the window did not respond. It now answers at once from the counts the Albums list in the sidebar keeps.
+  A smart album or folder whose count is not of the library as it is now yet (new rules, an edit to many photos, a
+  library just opened, or a new minute for an album asking about “the last N days”, itself or through an album it
+  tests, or a folder with one inside) has `countPending: true`, with the count made before (0 if there is none); ask
+  again a moment later. A folder's count (the photos of the albums inside it) is put together from their counts, with
+  no pass over the library of its own, and followed through edits to a few photos like theirs. A script or MCP client
+  with no window (`lightcraft-cli run`, the headless MCP server) gets the counts counted once and kept, followed
+  through edits to a few photos instead of counted again with every call.
+
 
 ## 2026-10-24
 
@@ -558,6 +633,52 @@
   when Tab reaches it, the Edit panel's Auto, B&W, HDR and Reset among them. The star
   that makes a theme a favourite is a Tab stop for every theme, not only for one that is a favourite already.
 
+### Queue a folder without waiting for its review
+- While an import or Synchronize Folder runs (or waits), the "Scanning folder" row in the activity stack has Queue
+  without review. It stops the scan, which on a network share can take minutes, and puts the folder in line to be
+  imported the way your last import review was confirmed: added in place, or copied with the same destination, folders,
+  file names and DNG conversion. Before any review it is added in place; a camera or card is copied into the library. An album chosen
+  by Import into this album is kept. Keywords, presets and other albums are not: they belong to one batch.
+- It never moves files. After a review that moved its originals the folder is copied instead, and the originals stay.
+- The waiting row says how the folder comes in ("Without review: add in place", "…copy to <folder>") and has Review…:
+  it takes the folder out of the line and scans it for the usual review. Review… is refused (the row stays) while
+  another folder is being scanned, or a finished scan's review waits for a dialog to close. With the library free there is nothing to queue: the review opens when the scan is in.
+- What your last review chose is kept until you quit or open another library.
+
+### Imports and Synchronize Folder wait for each other
+- An import confirmed (or photos dropped on the window) while a Synchronize Folder runs, or a Synchronize Folder
+  confirmed while an import runs, now waits in line and starts by itself when the other ends, with a message that it
+  was queued. Before, it was refused ("Wait for the import to finish", "A folder is being synchronized").
+- Photos dropped on the window, or an import review confirmed, while another import runs also wait in line instead of
+  being refused with "An import is running"; a drop is still refused while a folder is being scanned for the review or
+  read for the Local view, or while a finished scan's review waits behind another dialog.
+- A task waiting in line shows in the activity stack at once: its name, "Starts next" or "Starts after N more", and ✕
+  to take it out of the line, so a mistaken one can be withdrawn. This holds for a waiting preview build too.
+- A waiting import checks for duplicates against the library as it is when its turn comes, so nothing is added twice.
+- A waiting Synchronize Folder looks at its folder again when its turn comes. It removes, relinks or reads sidecars of
+  only the photos its dialog showed: one that went missing, moved or got a sidecar update while it waited is left
+  alone, and the message at the end says how many ("Left alone: 1 (synchronize again to review them)").
+- An Auto Import that waits in line and is taken out of it (✕, `activity.cancel`), or is refused when its turn comes (its album was deleted meanwhile),
+  is not lost: its files are looked at again by the next Auto Import scans and imported then.
+- Nothing waits across another library: a Synchronize Folder that is still scanning when another library opens does
+  nothing. It also does nothing, and says so, when a photo of its folder is changed in the library (a rating, an edit)
+  while it scans, because what it saw is no longer what is there.
+
+### Waiting imports and syncs say which folder they are
+- A task waiting in line, and the import or Synchronize Folder that is running, name their folder in the activity stack
+  ("Rome"; "3 items" when an import has several sources). A waiting import also says how many photos the review chose
+  and how they come in, beside when it starts: "Rome · 3 photos · Copy · Starts next". ✕ and screen readers name the
+  folder too ("Remove from Queue: Importing · Rome").
+- While another import or synchronize holds the library, the import review's button says "Queue 3 Photos" (or "Queue
+  Move 3 Photos"), the Synchronize Folder dialog's says "Queue Synchronize", and both say what they start after
+  ("Starts after: Importing · Oslo").
+- A drop that is refused says why instead of "An import is running": a folder is still being scanned for the import
+  review, a folder is still being read for the Local view, or an import review is waiting to open.
+- Opening or creating a library while tasks wait in line asks first ("Switch library while tasks are waiting?") and
+  names them; after a switch that dropped them, a message says how many ("Waiting tasks dropped: 2").
+- A full waiting line is refused in the window's language ("Too many tasks are waiting (100): wait for some to finish").
+
+
 ### Relative-date filters and smart albums follow the clock
 - A current view or source count using “in the last” rules now refreshes when the session clock moves into a new
   minute, even when no catalog edit occurred. This fixes stale photos remaining in the grid and stale counts for
@@ -600,6 +721,31 @@
   white balance.) On a test library of 100,000 photos, 90 % unedited JPEGs, 8 % raws with one as-shot white balance
   and 2 % edited, a photo takes about 2.8 kB where it took 4.4 kB (285 MB instead of 441 MB). Nothing changes on
   screen, and the library's files are byte for byte what they were, so earlier versions open them as before.
+
+### Reorder rules and groups in the smart album editor
+- Every rule and every group in the New / Edit Smart Album window has a grip (six dots) at the start of its row. Drag it
+  to move the row: a line shows where it will land, the row's name follows the pointer, and Esc gives the drag up. Drop
+  on a rule inside a group to put it in that group, beside the group's frame to take it out; drag a whole group to
+  nest it in another. A group can't go inside itself or deeper than three levels: the pointer shows a not-allowed
+  cursor and says why, and nothing moves. A group a move leaves empty goes away.
+- With the keyboard, Tab to a grip and press ↑ or ↓ to move the row one place (at the end of a group it moves out of
+  the group), → to move it into the group above it (or below it, if that is the one next to it) and ← to move it out
+  of its group. The focus stays on the moved row's grip, and a screen reader says where the row is: "Rule 2 of 4:
+  Rating is ≥ 3. Move with the arrow keys".
+- OK saves the rules in the order shown, in one undo step like any other change to the rules.
+
+### An album caught in a loop is empty, and says so
+- A smart album that tests another album, which tests it back (or that tests itself), used to show a share of
+  its photos, and which photos depended on the album you asked about. Now every album on such a loop shows no
+  photos, however you look at it: in the grid, in the count beside it in the sidebar, and in an Album rule of
+  another smart album.
+- The empty album says why instead of "No photos": "This album is in a loop, so it shows nothing", then the album it
+  loops through and where to fix it (Edit Smart Album…). The row in the sidebar keeps its ⚠, and hovering it says the
+  same.
+- An album that only tests a looping album is not on the loop: it keeps working, and sees the looping album as empty
+  (so an Album rule set to "isn't" that album matches every photo). Change the rules of one album on the loop and its albums hold
+  their photos again.
+- A library that already holds such a loop opens as before; only what the albums on it show changes.
 
 ## 2026-10-23
 
@@ -830,6 +976,34 @@
   underneath it.
 - A toast fades in over a fraction of a second, as it already faded out.
 
+### Dragged photos step back in the grid
+- While you drag photos from the grid, their thumbnails are dimmed (as dark as a rejected photo's), so the label at
+  the pointer and the row it is over are what stands out. They return to normal when you let go of them.
+
+### Undo from the toast after a drop
+- After photos dragged from the grid are moved to a folder, added to an album or given a keyword, the message that
+  names the result has an Undo button, and so does the message after Move Selected Photos Here in a folder's menu.
+  One click takes the move back, as Edit ▸ Undo would. The button stays for six seconds and goes away sooner if you do
+  something else meanwhile (or take the drop back from the Edit menu), so it can only undo the drop. A drop that
+  changed nothing (photos already in the album, already in the folder) has no button.
+
+### Moving a folder says plainly why it can't
+- Moving a folder into a folder that isn't there is refused ("“Archive” isn't there (is its disk connected?)"); it no
+  longer creates the missing folders. A folder, or a destination, on a disk or share that isn't connected says so
+  instead of "is not a folder". No permission, a move to another disk (still refused: LightCraft never copies a
+  folder and deletes the original; use Finder or your file manager) and other disk errors are sentences that name the
+  folder, with no `os error` number. Refusing to move a folder that holds the open library names the library.
+
+### Drag a Folders row onto another to move that folder
+- A folder in the sidebar's Folders section can be dragged onto another Folders row to move it there on disk, with
+  its photos, as the row's Move Folder To… menu item does. The row under the pointer lights up (a closed one opens after a
+  moment, so a folder inside it can be reached) and the dragged label says "Move “trip” into “archive”". A row that
+  can't take the folder (the folder itself, one inside it, the folder it is in already, a row that covers several
+  disks, the library's own folder) shows the not-allowed cursor and says why in the label. A drop asks first, naming
+  both folders and how many photos go along; "Don't ask again" (Settings → Confirm before moving photos to another
+  folder on disk) moves it at once. Esc gives the drag up, and Edit ▸ Undo moves the folder back. A click on a row
+  still chooses it.
+
 ## 2026-10-22
 
 ### Exports don't create a photo's sidecar
@@ -878,6 +1052,13 @@
   `a/../b/x` goes with folder `b`, not with `a`.
 - Move Folder To… in the folder menus now has a tooltip, and a widget id for agents and tests (`folderMove:<path>`
   in Folders, `localFolderMove:<path>` in Local).
+
+### Moving a folder says where it went
+- After Move Folder To…, the message now says where the folder went in plain words, for example Moved “Trip” into
+  “Archive”. Edit → Undo moves it back. When library photos went with the folder, it adds “Photos: 12”. The Folders
+  tree and Local say the same, in every language; before, the Folders tree showed an English “Moved; 12 photo(s)
+  relinked” in every language, and Local a translated version of it.
+
 
 ## 2026-10-21
 
@@ -962,6 +1143,21 @@
 - What an empty view says (no photo selected, nothing to compare, no reference photo) is wrapped inside the view
   and centred; a long sentence ran out of a narrow one.
 - German: the day of a date has two figures as its month does ("Freitag, 04.09.2026", not "4.09.2026").
+
+### A finished task stays in the list under the bell
+- An export, import, Synchronize Folder, folder scan, Build Previews or Smart Previews, Photo Merge, Lightroom
+  catalog inspect or import, model or place-name download, Fill Location from GPS, move or Find Missing Photos that
+  ran for 10 seconds or more, was stopped, or did not go well stays in the list under the bell when it ends, until
+  you dismiss it: what it did, how long it took, and the files that failed with the reason for each (Show failed,
+  Copy all) and Show in Finder (Explorer, File Manager) for what an export made. The message that passes still
+  shows, as before; until now it was the only record. A preview build says how many photos it could not make.
+- One that did not go well puts a mark on the bell until you dismiss it, and comes first in the list, under "Needs
+  attention". A task whose worker crashed says that it stopped unexpectedly. Clear all lets go of every ended row.
+- With nothing else running, the top bar says for a few seconds how the task that just ended went.
+- Slideshow export, Print to PDF from an agent, reading focus points, thumbnail-cache tidying, the face GPU check,
+  Apple Photos imports, the face scan and AI Denoise do not leave a row yet.
+- Agents: `activity.finished` lists the ended rows, `activity.dismiss` lets go of one (or all), and `ui.inspect`
+  reports them as `activityFinished`.
 
 ### Background tasks under the bell
 - Running tasks (imports, exports, preview builds…) no longer float over the top-left corner, where they covered the
@@ -1268,6 +1464,12 @@
   photos is the same as before.
   Photos added or removed (an import, an undone import) go into or out of that order, even after more changes than
   LightCraft remembers one by one, instead of sorting the whole library again.
+
+### Local says where its listing stops
+- In the left panel's Local, a folder eight levels below its place used to open onto nothing. It now says **Go Deeper**:
+  click it to add that folder to Local as a place of its own (a message says so), where it opens further. A folder
+  that is already a place of its own says "Opens as its own place" there instead, where the listing stops.
+
 
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a
@@ -2127,6 +2329,10 @@
 - A folder's view can be saved as a smart album that follows the folder, also after its rules are edited (editing
   the rules of a saved album view used to drop the album). It can't be made in, or moved into, the folder it shows
   (it would include itself): that folder is no drop target and isn't offered under Move to, and commands say why.
+- No edit can make a smart album include itself any more, whichever command, importer or task makes it: the library
+  itself refuses it and names the album. A library that already holds such a loop still opens; each album on the loop
+  is marked ⚠ and holds nothing (it used to hold different photos depending on which album was looked at first, and
+  many of them in one folder made the folder slow to show), and moving it out or changing its rules mends it.
 - Agents show a folder with `library.source {"kind": "album", "id": <folder id>}`; `albums.list` reports a folder's
   `count`.
 

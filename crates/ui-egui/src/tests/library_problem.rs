@@ -806,8 +806,8 @@ fn typing_reaches_the_launch_lists_own_new_library_prompt() {
 }
 
 /// Issue #2779: files waiting for a library (the command line, drops on the launch list) that
-/// find another import running when a library opens are kept, with a toast saying why, and
-/// imported once that import ends instead of being dropped.
+/// find another import running when a library opens wait in line for it (a toast says so), and
+/// are imported once that import ends instead of being dropped.
 #[test]
 fn waiting_files_wait_for_a_running_import_instead_of_being_dropped() {
     let dir = std::env::temp_dir().join(format!("lightcraft-waiting-import-{}", std::process::id()));
@@ -841,32 +841,35 @@ fn waiting_files_wait_for_a_running_import_instead_of_being_dropped() {
     h.step();
     h.step();
     assert!(h.app.library_problem.is_none(), "the problem is over");
-    assert_eq!(h.app.waiting_import.files, vec![waiting.to_string_lossy().to_string()], "the waiting file is kept");
+    assert!(h.app.waiting_import.files.is_empty(), "the files went into the line");
+    let line = h.app.session.activity.waiting();
+    assert_eq!(line.len(), 1, "the waiting file is kept, in line behind the running import: {line:?}");
     let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
-    assert!(toast.contains("An import is running") && toast.contains("once it ends"), "{toast}");
-    // the files belong to this library: no switch while they wait, also when what they wait for
+    assert!(toast.starts_with("Queued"), "{toast}");
+    // the files belong to this library: a switch asks first while they wait, also when what they wait for
     // is a Synchronize Folder, which doesn't hold switching back by itself (the import set aside)
     let running = h.app.import.take();
     let r = h.app.run("app.openLibrary", json!({"path": dir.join("other").to_string_lossy()}));
     h.app.import = running;
-    assert!(r.as_ref().is_err_and(|e| e.contains("waiting")), "{r:?}");
+    assert!(r.as_ref().is_ok_and(|v| v["asked"] == true), "the switch asks before it drops what waits in line: {r:?}");
     assert_eq!(h.app.session.library.as_ref().map(|l| l.dir.clone()), Some(lib.clone()));
+    // (answered Cancel)
+    h.app.switch_prompt = None;
 
     // quitting while the file waits asks first
     assert!(!crate::panels::notices::may_close(&mut h.app));
     h.app.quit_prompt = None;
 
     // the window is hidden from here on: only the background logic runs. The tick that hands the
-    // file to a new import (once the first one ends) leaves that import unlisted until its own
-    // first tick, and quitting right then still asks
+    // file to a new import (once the first one ends), and quitting right then still asks
     let t0 = std::time::Instant::now();
-    while !h.app.waiting_import.files.is_empty() && t0.elapsed() < T {
+    while !h.app.session.activity.waiting().is_empty() && t0.elapsed() < T {
         let ctx = h.view.ctx.clone();
         h.app.logic(&ctx);
         std::thread::sleep(Duration::from_millis(2));
     }
-    assert!(h.app.waiting_import.files.is_empty(), "the file was handed to a new import");
-    assert!(h.app.import.as_ref().is_some_and(|t| !t.listed()), "not listed before its first tick");
+    assert!(h.app.session.activity.waiting().is_empty(), "the file was handed to a new import");
+    assert!(h.app.import.is_some(), "a new import has it");
     assert!(!crate::panels::notices::may_close(&mut h.app), "quitting asks about the import just handed over");
     h.app.quit_prompt = None;
     while !(h.app.import.is_none() && h.app.session.catalog.len() == 101) && t0.elapsed() < T {

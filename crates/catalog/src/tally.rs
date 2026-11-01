@@ -20,7 +20,7 @@ const MAX_FOLLOWED: usize = 256;
 const WORDS_A_MEMBER: usize = 4;
 const WORDS_TO_START: usize = 1024;
 
-/// The photos a smart album holds.
+/// The photos a smart album or a folder of albums holds.
 #[derive(Clone, Debug)]
 pub(crate) enum Members {
     /// One bit a photo id, and how many are set.
@@ -34,6 +34,30 @@ pub(crate) enum Members {
 impl Members {
     fn none() -> Members {
         Members::Bits { words: Vec::new(), len: 0 }
+    }
+
+    /// The photos `ids` (in any order, each once), as bits when the largest id is in proportion to how many there
+    /// are, as a set when not. Setting them one by one in a list's order (a sort order is not an id order) would
+    /// start with a far-off id and turn into a set at once.
+    fn of_ids(ids: &[PhotoId]) -> Members {
+        let Some(top) = ids.iter().map(|id| id.0).max() else { return Members::none() };
+        match usize::try_from(top / 64 + 1) {
+            Ok(needed) if needed <= ids.len().saturating_mul(WORDS_A_MEMBER).saturating_add(WORDS_TO_START) => {
+                let mut words = vec![0u64; needed];
+                let mut len = 0usize;
+                for id in ids {
+                    let bit = 1u64 << (id.0 % 64);
+                    if let Some(word) = usize::try_from(id.0 / 64).ok().and_then(|at| words.get_mut(at))
+                        && *word & bit == 0
+                    {
+                        *word |= bit;
+                        len += 1;
+                    }
+                }
+                Members::Bits { words, len }
+            }
+            _ => Members::Set(ids.iter().copied().collect()),
+        }
     }
 
     fn len(&self) -> usize {
@@ -102,15 +126,49 @@ impl Members {
             }
         }
     }
+
+    /// Every photo held.
+    fn ids(&self) -> Box<dyn Iterator<Item = PhotoId> + '_> {
+        match self {
+            Members::Bits { words, .. } => Box::new(
+                words
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(at, word)| (0..64u64).filter(move |b| word & (1u64 << b) != 0).map(move |b| PhotoId(at as u64 * 64 + b))),
+            ),
+            Members::Set(set) => Box::new(set.iter().copied()),
+        }
+    }
+
+    /// Put every photo `other` holds in as well.
+    fn absorb(&mut self, other: &Members) {
+        if let (Members::Bits { words, len }, Members::Bits { words: more, .. }) = (&mut *self, other) {
+            if words.len() < more.len() {
+                words.resize(more.len(), 0);
+            }
+            for (word, more) in words.iter_mut().zip(more) {
+                *word |= more;
+            }
+            *len = words.iter().map(|word| word.count_ones() as usize).sum();
+            return;
+        }
+        if let Members::Set(set) = self {
+            set.extend(other.ids());
+            return;
+        }
+        for id in other.ids() {
+            self.set(id, true);
+        }
+    }
 }
 
-/// [`Catalog::album_count`] of every album, as of one revision of the catalog. Folders of albums are not counted:
-/// the sidebar shows them no count, and theirs would cost a pass each.
+/// [`Catalog::album_count`] of every album, as of one revision of the catalog. A folder of albums is counted from the
+/// photos of the albums inside it, not by a pass over the library of its own.
 #[derive(Clone, Debug)]
 pub struct AlbumTally {
     revision: u64,
     counts: HashMap<AlbumId, usize>,
-    /// The smart albums' photos.
+    /// The photos each smart album and each folder of albums holds.
     members: HashMap<AlbumId, Members>,
 }
 
@@ -161,6 +219,21 @@ impl AlbumTally {
         for album in cat.albums().filter(|a| !a.is_smart() && !a.folder) {
             counts.insert(album.id, cat.album_count(album.id));
         }
+        // A folder holds what the albums inside it do: put together from theirs, with no pass over the library (and kept,
+        // so that an edit to a few photos is followed in folders too). The smart albums' photos go in first: bits OR
+        // together, where the photos of an album of chosen photos go in one by one.
+        for folder in cat.albums().filter(|a| a.folder) {
+            let inside: Vec<_> = cat.album_members(folder.id).into_iter().filter_map(|m| cat.album(m)).collect();
+            let mut held = Members::none();
+            for smart in inside.iter().filter_map(|m| members.get(&m.id)) {
+                held.absorb(smart);
+            }
+            for chosen in inside.iter().filter(|m| !members.contains_key(&m.id)) {
+                chosen.photos.iter().filter(|id| cat.photo(**id).is_some_and(|p| !p.deleted)).for_each(|id| held.set(*id, true));
+            }
+            counts.insert(folder.id, held.len());
+            members.insert(folder.id, held);
+        }
         AlbumTally { revision: cat.revision, counts, members }
     }
 
@@ -194,11 +267,12 @@ impl AlbumTally {
         }
     }
 
-    /// The counts after ops that touched only `touched`: each smart album asks those photos again; an album of
-    /// chosen photos counts again only when a photo came, went or was deleted (who is in it did not change: that
-    /// is an op on the album, and not followed).
+    /// The counts after ops that touched only `touched`: each smart album asks those photos again; an album of chosen
+    /// photos counts again only when a photo came, went or was deleted (who is in it did not change: that is an op on
+    /// the album, and not followed); a folder holds what the albums inside it now hold of them.
     fn follow(&mut self, cat: &Catalog, touched: &[PhotoId], changed: Aspects) {
-        for (album, held) in &mut self.members {
+        let folders: HashSet<AlbumId> = cat.albums().filter(|a| a.folder).map(|a| a.id).collect();
+        for (album, held) in self.members.iter_mut().filter(|(album, _)| !folders.contains(album)) {
             for id in touched {
                 held.set(*id, cat.photo(*id).is_some_and(|p| cat.album_contains(*album, p)));
             }
@@ -209,7 +283,82 @@ impl AlbumTally {
                 self.counts.insert(album.id, cat.album_count(album.id));
             }
         }
+        // After the albums inside them, whose photos they are put together from. No deleted photo is in a folder's count.
+        for folder in &folders {
+            let inside = cat.album_members(*folder);
+            let holds = |p: &crate::Photo| {
+                !p.deleted && inside.iter().any(|m| self.members.get(m).map_or_else(|| cat.album_contains(*m, p), |held| held.holds(p.id)))
+            };
+            let now: Vec<(PhotoId, bool)> = touched.iter().map(|id| (*id, cat.photo(*id).is_some_and(|p| holds(p)))).collect();
+            if let Some(held) = self.members.get_mut(folder) {
+                for (id, is) in now {
+                    held.set(id, is);
+                }
+                self.counts.insert(*folder, held.len());
+            }
+        }
         self.revision = cat.revision;
+    }
+}
+
+/// How many photos match one [`Filter`], as of one revision of the catalog, kept up to date the way [`AlbumTally`] keeps
+/// an album's count: after a small edit only the photos the edit touched are asked the filter again. The filter has to
+/// be one whose answer for a photo depends on that photo alone (and on albums and rules that only an op on the
+/// album changes, which is not followed): not one that reaches over the library (Recently Added's cut-off) or the
+/// clock ("in the last…" rules).
+#[derive(Clone, Debug)]
+pub struct FilterTally {
+    revision: u64,
+    members: Members,
+}
+
+impl FilterTally {
+    /// Counted from every photo.
+    pub fn of(cat: &Catalog, filter: &Filter) -> FilterTally {
+        let prepared = filter.prepare(cat);
+        let mut members = Members::none();
+        for p in cat.photos().filter(|p| filter.matches_in(p, cat, &prepared)) {
+            members.set(p.id, true);
+        }
+        FilterTally { revision: cat.revision, members }
+    }
+
+    /// What a pass that already listed the photos matching the filter at `revision` knows: those photos, not asked
+    /// again. `matching` has to be every photo `filter` matches at that revision, each once, and no other, in any order.
+    pub fn from_matching(revision: u64, matching: &[PhotoId]) -> FilterTally {
+        FilterTally { revision, members: Members::of_ids(matching) }
+    }
+
+    /// How many photos match.
+    pub fn len(&self) -> usize {
+        self.members.len()
+    }
+
+    /// Whether no photo matches.
+    pub fn is_empty(&self) -> bool {
+        self.members.len() == 0
+    }
+
+    /// The catalog's revision the count is of.
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+
+    /// Bring the count up to `cat` as it is now, for the same `filter`. `true` when that was done from the photos the
+    /// ops since touched (or nothing had changed), `false` when it could not be: the edit touched more than
+    /// [`MAX_FOLLOWED`] photos or more than photos, or is not remembered. The count is then untouched and to be made
+    /// again with [`FilterTally::of`]. `cat` has to be the catalog counted, further along (see [`AlbumTally::update`]).
+    pub fn update(&mut self, cat: &Catalog, filter: &Filter) -> bool {
+        if self.revision == cat.revision {
+            return true;
+        }
+        let Some(touched) = cat.touched_since(self.revision).filter(|touched| touched.len() <= MAX_FOLLOWED) else { return false };
+        let prepared = filter.prepare_one(cat);
+        for id in touched {
+            self.members.set(id, cat.photo(id).is_some_and(|p| filter.matches_in(p, cat, &prepared)));
+        }
+        self.revision = cat.revision;
+        true
     }
 }
 
@@ -311,5 +460,52 @@ mod tests {
         }
         assert!(matches!(&dense, Members::Bits { words, .. } if words.len() <= 200_000 / 64 + 1));
         assert_eq!(dense.len(), 200_000);
+    }
+
+    #[test]
+    fn photos_listed_in_any_order_are_kept_as_bits_when_their_ids_are_close_and_as_a_set_when_not() {
+        // a list in sort order starts anywhere: newest first has the largest id first
+        let listed: Vec<PhotoId> = (1..=200_000u64).rev().map(PhotoId).collect();
+        let tally = FilterTally::from_matching(7, &listed);
+        assert_eq!((tally.len(), tally.revision()), (200_000, 7));
+        assert!(matches!(&tally.members, Members::Bits { words, .. } if words.len() <= 200_000 / 64 + 1));
+        assert!(tally.members.holds(PhotoId(1)) && tally.members.holds(PhotoId(200_000)) && !tally.members.holds(PhotoId(200_001)));
+        let far = FilterTally::from_matching(7, &[PhotoId(9_000_000_000), PhotoId(3)]);
+        assert!(matches!(far.members, Members::Set(_)));
+        assert_eq!(far.len(), 2);
+        assert!(FilterTally::from_matching(7, &[]).is_empty());
+    }
+    #[test]
+    fn a_union_of_members_counts_each_photo_once_whether_they_are_bits_or_sets() {
+        let mut smart = Members::none();
+        for id in 1..=500u64 {
+            smart.set(PhotoId(id), true);
+        }
+        let mut more = Members::none();
+        for id in 400..600u64 {
+            more.set(PhotoId(id), true);
+        }
+        assert!(matches!((&smart, &more), (Members::Bits { .. }, Members::Bits { .. })));
+        // bits into bits: stays bits, counted once each
+        let mut union = Members::none();
+        union.absorb(&smart);
+        union.absorb(&more);
+        assert!(matches!(union, Members::Bits { .. }));
+        assert_eq!(union.len(), 599);
+        assert_eq!(ids(&union, &[0, 1, 450, 599, 600]), vec![1, 450, 599]);
+        // a set into bits, and bits into a set, and a set into a set
+        let mut sparse = Members::none();
+        for id in [3, 9_000_000_000] {
+            sparse.set(PhotoId(id), true);
+        }
+        assert!(matches!(sparse, Members::Set(_)));
+        union.absorb(&sparse);
+        assert_eq!((union.len(), union.holds(PhotoId(3)), union.holds(PhotoId(9_000_000_000))), (600, true, true));
+        let mut both = Members::none();
+        both.absorb(&sparse);
+        both.absorb(&smart);
+        assert_eq!((both.len(), both.holds(PhotoId(9_000_000_000)), both.holds(PhotoId(450))), (501, true, true));
+        both.absorb(&sparse);
+        assert_eq!(both.len(), 501, "a set taken into a set again adds nothing");
     }
 }

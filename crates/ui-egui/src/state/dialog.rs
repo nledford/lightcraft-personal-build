@@ -148,6 +148,8 @@ pub enum Dialog {
         /// Photos that have it (or one below it).
         count: usize,
     },
+    /// Delete or remove several sidebar rows at once (albums, keywords, folders), after asking.
+    Several(crate::panels::side_select::Several),
     /// Merge keywords into another one on every photo.
     MergeKeywords {
         from: Vec<String>,
@@ -323,6 +325,20 @@ pub enum Dialog {
         /// numbered per library, so in another one they name other photos.
         library: u64,
     },
+    /// Confirm moving a Folders row dropped on another row: the folder `path` goes into `into` on
+    /// disk (`folder.move`). `name` and `into_name` are as the question says them; `count` is
+    /// the library photos in the folder and the folders inside it.
+    MoveFolder {
+        path: String,
+        into: String,
+        name: String,
+        into_name: String,
+        count: usize,
+        dont_ask: bool,
+        /// The library the row was dragged in (`Session::library_generation`): the question's
+        /// folder and photo count belong to it.
+        library: u64,
+    },
     /// Confirm taking a folder's photos out of the library (`library.removeFolder`).
     RemoveFolder {
         path: String,
@@ -356,6 +372,21 @@ pub enum Dialog {
         /// opens as it was last used, see `ImportDefaults::read_in`).
         #[serde(default)]
         read: lightcraft_engine::import::ReadFromPhotos,
+    },
+    /// Synchronize N Folders: the folders chosen in the sidebar, scanned one after another, then synchronized with one
+    /// set of choices, one after another in the library lane (the scans run in [`crate::sync`]).
+    SynchronizeFolders {
+        /// In the sidebar's order; a folder inside another chosen one is left out (the other covers it).
+        folders: Vec<SyncFolder>,
+        import_new: bool,
+        #[serde(default = "yes")]
+        relink_moved: bool,
+        remove_missing: bool,
+        read_metadata: bool,
+        /// The library the folders were scanned in (`Session::library_generation`): photo ids are numbered per
+        /// library, so in another one they name other photos.
+        #[serde(default)]
+        library: u64,
     },
     About,
     Shortcuts,
@@ -404,5 +435,34 @@ impl SyncCounts {
     pub fn nothing_to_do(&self, import_new: bool, import_duplicates: bool) -> bool {
         let has_incoming = import_new && (self.new != 0 || (import_duplicates && self.copies != 0));
         !self.offline && !has_incoming && self.moved == 0 && self.missing == 0 && self.metadata == 0
+    }
+}
+
+/// One folder of the Synchronize N Folders dialog.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncFolder {
+    pub path: String,
+    /// What the dialog calls it (a folder's last two names).
+    pub name: String,
+    /// What its scan found (`None` until it was scanned).
+    pub counts: Option<SyncCounts>,
+    /// Why it is left out (a whole disk, a folder that can't be scanned); it isn't scanned then.
+    #[serde(default)]
+    pub skipped: Option<String>,
+    /// The missing and moved photos its scan found: the only ones its synchronize may remove or relink.
+    #[serde(default)]
+    pub missing: Vec<u64>,
+    #[serde(default)]
+    pub moved: Vec<u64>,
+    /// The photos whose sidecar changed: the only ones its synchronize may read.
+    #[serde(default)]
+    pub metadata: Vec<u64>,
+}
+
+impl SyncFolder {
+    /// Whether it was scanned, or left out.
+    pub fn settled(&self) -> bool {
+        self.counts.is_some() || self.skipped.is_some()
     }
 }

@@ -5,9 +5,9 @@ use super::{
     AiModel, Caches, CommandError, ControlRequest, ControlResponse, ERROR_TOAST_SECONDS, ErrorKind, GESTURE_TIMEOUT_MS, LightcraftApp,
     MAX_PENDING_GESTURES, MAX_PENDING_SHOTS, MAX_SHOT_BYTES, MAX_SHOT_TOTAL_BYTES, MAX_TEXTURE_SIDE, PendingGesture, PendingShot, Perf, QuitBackup,
     REFUSAL_SECONDS, Receiver, Refusal, SCREEN_PROFILE, SCREENSHOT_FALLBACK_MS, SCREENSHOT_SETTLE_MS, SHOT_FORCE_BUSY_MS, SHOT_SETTLE_FRAMES,
-    SHOT_SETTLE_MS, Sender, Session, ShotGeometry, TOAST_SECONDS, UiState, Value, docking, drop_overlay, export_task, focus_scan, frame_rate,
-    headless, i18n, import, lightroom_import, menus, merge, model_setup, panels, pick, recheck, refusal_toast, render, shortcuts, slideshow_export,
-    state, sync, tasks, theme, updates_ui, widgets,
+    SHOT_SETTLE_MS, Sender, Session, ShotGeometry, TOAST_SECONDS, UNDO_TOAST_SECONDS, UiState, Value, docking, drop_overlay, export_task, focus_scan,
+    frame_rate, headless, i18n, import, lightroom_import, menus, merge, model_setup, panels, pick, recheck, refusal_toast, render, shortcuts,
+    slideshow_export, state, sync, tasks, theme, updates_ui, widgets,
 };
 
 mod control;
@@ -46,6 +46,7 @@ impl LightcraftApp {
             updates_rt: Default::default(),
             quit_prompt: None,
             notice_input: Default::default(),
+            switch_prompt: None,
             quit_confirmed: false,
             quit_backup: QuitBackup::default(),
             egui_ctx: None,
@@ -114,11 +115,15 @@ impl LightcraftApp {
             scan: None,
             waiting_import: Default::default(),
             review_listed: None,
+            last_import: None,
+            unreviewed: Vec::new(),
             sync: None,
             sync_owns_changes: false,
             sync_scanned_at: f64::NEG_INFINITY,
             sync_ready: None,
             sync_run: None,
+            sync_queued: None,
+            sync_scans: None,
             lightroom: None,
             lightroom_last: None,
             lightroom_result: None,
@@ -146,6 +151,7 @@ impl LightcraftApp {
             recent_checks: Default::default(),
             activity_open: false,
             activity_set: None,
+            activity_failures: None,
             model_setup: Default::default(),
         }
     }
@@ -220,19 +226,22 @@ impl LightcraftApp {
     /// It flags `let _ = app.session.execute(…)`, which goes round this, too, unless a comment
     /// on its line or the one above says why (`// refusal expected: <reason>`).
     pub fn act(&mut self, id: &str, params: Value) -> Option<Value> {
+        self.act_told(id, params).ok()
+    }
+
+    /// [`Self::act`] for a caller that hands the refusal on (a dialog's confirm, which the control
+    /// channel answers with it): the toast says the reason, the `Err` is the whole error.
+    pub(crate) fn act_told(&mut self, id: &str, params: Value) -> Result<Value, String> {
         let before = self.ui.toast.clone();
-        match self.run_told(id, params) {
-            Ok(v) => Some(v),
-            Err(refusal) => {
-                let now = self.tick_now();
-                // A toast the command made itself (a partial import report) says what did happen:
-                // keep it ahead of the reason rather than replacing it.
-                let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
-                let said = refusal_toast(made, &refusal);
-                self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
-                None
-            }
-        }
+        self.run_told(id, params).map_err(|refusal| {
+            let now = self.tick_now();
+            // A toast the command made itself (a partial import report) says what did happen:
+            // keep it ahead of the reason rather than replacing it.
+            let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
+            let said = refusal_toast(made, &refusal);
+            self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
+            refusal.error
+        })
     }
 
     /// Run a command whose refusal is expected here and means nothing to the person (it is
@@ -241,7 +250,6 @@ impl LightcraftApp {
     pub fn quiet(&mut self, id: &str, params: Value) -> Option<Value> {
         self.run_told(id, params).ok()
     }
-
     /// [`Self::run`], keeping what a refusal says to a person apart from the whole error.
     fn run_told(&mut self, id: &str, params: Value) -> Result<Value, Refusal> {
         if let Some(result) = model_setup::intercept(self, id, &params) {
@@ -341,9 +349,81 @@ impl LightcraftApp {
                     self.follow_renamed_person(from, &to);
                 }
             }
+            // (`place` tells a task put in line from the older `queued` counts of AI Denoise and Read Focus Points; a retried one
+            // may have started already)
+            Ok(v)
+                if id != "activity.retry"
+                    && v.get("queued").and_then(Value::as_u64).is_some()
+                    && v.get("place").and_then(Value::as_u64).is_some() =>
+            {
+                // a task asked for while one of its lane runs waits in line: say so, or nothing seems to happen
+                let place = v.get("place").and_then(Value::as_u64).unwrap_or(1);
+                // (counted as its row counts: the waiting tasks ahead of it, after the running one)
+                let text = if place <= 1 {
+                    i18n::tr("Queued: it starts when the task ahead of it ends").to_string()
+                } else {
+                    i18n::tr_format!("Queued: it starts after {n} more", n = place - 1)
+                };
+                let now = self.tick_now();
+                self.ui.show_toast(now, text, TOAST_SECONDS, None);
+            }
             Ok(_) => {}
         }
         r
+    }
+
+    /// Say that a task waits in line at `place` of its lane: without it, asking for it seems to do nothing.
+    pub(crate) fn queued_toast(&mut self, place: u64) {
+        // (counted as its row counts: the waiting tasks ahead of it, after the running one)
+        let text = if place <= 1 {
+            i18n::tr("Queued: it starts when the task ahead of it ends").to_string()
+        } else {
+            i18n::tr_format!("Queued: it starts after {n} more", n = place - 1)
+        };
+        self.say(text);
+    }
+
+    /// A toast from code that has no frame context at hand.
+    pub(crate) fn say(&mut self, text: String) {
+        let now = self.tick_now();
+        self.ui.show_toast(now, text, TOAST_SECONDS, None);
+    }
+
+    /// Start the tasks waiting in line whose lane is free: the engine's ([`lightcraft_engine::Session::start_waiting`])
+    /// and the app's own (`app:import`, `app:synchronize`), each the way it was asked. One that can't start says why
+    /// in a toast; the next in line goes on.
+    fn start_waiting(&mut self, ctx: &egui::Context) {
+        // nothing leaves the line while the question about dropping it is open: a task started now would refuse the
+        // switch (an import) or escape the drop the person is agreeing to (a build). A question about a library no
+        // longer open is stale (the next drawn frame drops it; a hidden window draws none) and holds nothing.
+        let asked = self.switch_prompt.as_ref().is_some_and(|p| p.generation == self.session.library_generation());
+        self.session.activity.hold_line(asked);
+        self.session.start_waiting();
+        // The app's own wait while its slots are taken, row or no row yet: an import set this frame (Auto Import, its
+        // row comes at the next tick), a synchronize, or a Local folder being read (it becomes an import when read).
+        let held = self.lightroom.is_some()
+            || self.import.is_some()
+            || self.sync_run.is_some()
+            || self.sync_queued.is_some()
+            || self.scan.as_ref().is_some_and(|t| t.browse);
+        if held {
+            return;
+        }
+        // (bounded: each turn takes one task out of a line that is at most this long)
+        for _ in 0..lightcraft_engine::activity::MAX_WAITING {
+            let Some(w) = self.session.activity.take_ready_if(|r| r.command.starts_with("app:")) else { break };
+            let r = match w.request.command.as_str() {
+                import::IMPORT_REQUEST => import::start_request(self, ctx, &w.request),
+                sync::SYNC_REQUEST => sync::start_request(self, ctx, &w.request),
+                other => Err(format!("unknown request {other}")),
+            };
+            self.session.activity.started();
+            if let Err(e) = r {
+                log::warn!("{}: a task that waited could not start: {e}", w.request.command);
+                self.session.activity.start_failed(&w.request);
+                self.toast_error(ctx, e);
+            }
+        }
     }
 
     /// The remembered ratio belongs to the tool until the user starts editing the crop.
@@ -548,36 +628,53 @@ impl LightcraftApp {
         }
     }
 
-    /// Announce the end of a Build Previews run.
+    /// A task waiting in line whose lane freed while nothing was asked starts now (commands start them too); then the
+    /// run in progress is looked at, so that one started here is polled for its end from this frame on.
+    pub(crate) fn tick_preview_builds(&mut self, ctx: &egui::Context) {
+        self.start_waiting(ctx);
+        self.preview_build_status(ctx);
+    }
+
+    /// Announce the end of a Build Previews run, and of those a build waiting in line replaced before it was announced
+    /// (in one toast, oldest first). A build is announced once: its `reported` flag says so, not where it lives.
     fn preview_build_status(&mut self, ctx: &egui::Context) {
         use std::sync::atomic::Ordering;
-        let Some(b) = self.session.preview_build.clone() else { return };
-        let key = std::sync::Arc::as_ptr(&b) as usize;
-        if b.finished.load(Ordering::Relaxed) {
-            if self.ui.preview_build_seen != Some((key, true)) {
-                self.ui.preview_build_seen = Some((key, true));
-                let (done, failed) = (b.done.load(Ordering::Relaxed), b.failed.load(Ordering::Relaxed));
-                let plural = if done == 1 { "" } else { "s" };
-                let mut msg = match (b.error(), b.what) {
-                    (Some(e), what) => format!("{}: {e}", if what.is_empty() { "previews" } else { what }),
-                    (None, "") => crate::i18n::tr_format!("Previews ready for {done} photo{plural}", done = done, plural = plural),
-                    (None, what) => {
-                        crate::i18n::tr_format!("Done ({what}): {done} photo{plural}", done = done, plural = plural, what = crate::i18n::tr(what))
-                    }
-                };
-                if failed > 0 {
-                    msg.push_str(&crate::i18n::tr_format!(" · {failed} couldn't be rendered", failed = failed));
-                }
-                if failed > 0 || b.error().is_some() {
-                    self.toast_error(ctx, msg);
-                } else {
-                    self.toast(ctx, msg);
-                }
+        let mut ended = self.session.take_unreported_builds();
+        match self.session.preview_build.clone() {
+            Some(b) if b.finished.load(Ordering::Relaxed) => ended.push(b),
+            Some(_) => {
+                // The activity stack shows the run while it works; poll for the end.
+                ctx.request_repaint_after(std::time::Duration::from_millis(250));
             }
-        } else {
-            // The activity stack shows the run while it works; poll for the end.
-            ctx.request_repaint_after(std::time::Duration::from_millis(250));
+            None => {}
         }
+        let reported: Vec<_> = ended.iter().filter(|b| !b.reported.swap(true, Ordering::Relaxed)).collect();
+        if !reported.is_empty() {
+            let msg = reported.iter().map(|b| Self::build_message(b)).collect::<Vec<_>>().join("; ");
+            if reported.iter().any(|b| b.failed.load(Ordering::Relaxed) > 0 || b.error().is_some()) {
+                self.toast_error(ctx, msg);
+            } else {
+                self.toast(ctx, msg);
+            }
+        }
+    }
+
+    /// How a finished Build Previews run ended, as the toast words it.
+    fn build_message(b: &lightcraft_engine::cmd::previews::PreviewBuild) -> String {
+        use std::sync::atomic::Ordering;
+        let (done, failed) = (b.done.load(Ordering::Relaxed), b.failed.load(Ordering::Relaxed));
+        let plural = if done == 1 { "" } else { "s" };
+        let mut msg = match (b.error(), b.what) {
+            (Some(e), what) => format!("{}: {e}", if what.is_empty() { "previews" } else { what }),
+            (None, "") => crate::i18n::tr_format!("Previews ready for {done} photo{plural}", done = done, plural = plural),
+            (None, what) => {
+                crate::i18n::tr_format!("Done ({what}): {done} photo{plural}", done = done, plural = plural, what = crate::i18n::tr(what))
+            }
+        };
+        if failed > 0 {
+            msg.push_str(&crate::i18n::tr_format!(" · {failed} couldn't be rendered", failed = failed));
+        }
+        msg
     }
 
     /// Announce when saving the library starts failing (changes then live only in memory and are
@@ -624,6 +721,7 @@ impl LightcraftApp {
     pub fn toast_for(&mut self, _ctx: &egui::Context, text: impl Into<String>, secs: f64) {
         let t = self.tick_now();
         self.ui.show_toast(t, text.into(), secs, None);
+        self.ui.toast_undo = None;
     }
 
     /// Reverse geocoding: say how a place-names download ended (a failure stays readable, with what to do).
@@ -717,6 +815,7 @@ impl LightcraftApp {
     pub fn toast_error_for(&mut self, _ctx: &egui::Context, text: impl Into<String>, secs: f64) {
         let t = self.tick_now();
         self.ui.show_toast(t, text.into(), secs.max(ERROR_TOAST_SECONDS), None);
+        self.ui.toast_undo = None;
     }
 
     /// The toast for what a drop of photos came to (`library.import`'s report, via
@@ -821,6 +920,32 @@ impl LightcraftApp {
         self.ui.dragging_photos = None;
         self.ui.dragging_section = None;
         self.ui.dragging_keyword = None;
+    }
+
+    /// A toast for an action that has just committed one undo step (a drop or a menu move that moved, added or tagged
+    /// photos): it carries an Undo button for [`UNDO_TOAST_SECONDS`], until the next step is committed or
+    /// the toast is replaced, whichever comes first.
+    pub fn toast_undoable(&mut self, ctx: &egui::Context, text: impl Into<String>) {
+        let text = text.into();
+        self.toast_for(ctx, text.clone(), UNDO_TOAST_SECONDS);
+        self.ui.toast_undo = Some((text, self.session.commits(), self.session.undo.len()));
+    }
+
+    /// Whether the toast on screen offers Undo: it is the one [`Self::toast_undoable`] showed, nothing has been
+    /// committed since (a later step would make Undo reach that instead), the undo stack is as the drop left it
+    /// (Edit > Undo from the menu or a new library would change it, and a click would then undo something else),
+    /// and no dialog is open over the toast.
+    pub fn toast_offers_undo(&self) -> bool {
+        match (&self.ui.toast, &self.ui.toast_undo) {
+            (Some(shown), Some((text, commits, steps))) => {
+                shown.text == *text
+                    && *commits == self.session.commits()
+                    && *steps == self.session.undo.len()
+                    && self.session.redo.is_empty()
+                    && self.ui.dialog.is_none()
+            }
+            _ => false,
+        }
     }
 
     /// Lay out the whole window: input/setup for the known UI phase, then presentation, then the
