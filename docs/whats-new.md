@@ -10,6 +10,8 @@
   reads the clock is still counted from every photo. Opening a source with nothing narrowing it takes the count from the
   pass that builds the grid instead of a second pass.
 
+### The Flatpak may talk to the accessibility bus
+- The Flatpak package now has access to the accessibility bus (`org.a11y.Bus`) and no other new permission; its network, Pictures folder and GPU access are unchanged. Without it the sandbox hid the bus, which AccessKit needs to reach a screen reader such as Orca; this has not been tried with Orca yet. The Flatpak build is the only one affected.
 
 ### A keyboard shortcut for Clear Color Label
 - Clear Color Label is now a command of its own in Help ▸ Keyboard Shortcuts, so it can have a key like Set Rating or
