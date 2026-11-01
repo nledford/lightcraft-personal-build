@@ -333,6 +333,54 @@ fn a_delete_chosen_while_the_folder_dialog_was_up_is_asked_about_when_it_closes(
     assert!(!has(&h, "button:settingsSmartDelete"));
 }
 
+/// The same, with Settings' Library tab left while the dialog was up: the section's own remembered
+/// question went stale, and the parked folder still comes back as that question, not silence.
+#[test]
+fn a_delete_parked_over_a_settings_tab_switch_still_asks() {
+    let dir = TempFolder::new("settings-trust-smart-tab");
+    let to = dir.path("elsewhere");
+    let tx_slot = std::sync::Arc::new(std::sync::Mutex::new(None::<std::sync::mpsc::Sender<Vec<String>>>));
+    let slot = tx_slot.clone();
+    let to_for_picker = to.to_string();
+    let mut h = with_smart_preview_services(
+        &dir,
+        Services {
+            picker: Some(Box::new(move |_| {
+                let (tx, rx) = std::sync::mpsc::channel();
+                *slot.lock().unwrap() = Some(tx);
+                Ok(rx)
+            })),
+            png: None,
+            ..Default::default()
+        },
+        &to_for_picker,
+    );
+    show(&mut h, "library");
+    click(&mut h, "button:settingsSmartChoose");
+    let tx = tx_slot.lock().unwrap().take().expect("the dialog opened");
+    click(&mut h, "button:settingsSmartExisting-2");
+    // another Settings tab is up when the dialog closes (and stays a while after it)
+    show(&mut h, "general");
+    tx.send(vec![to.to_string()]).unwrap();
+    for _ in 0..10 {
+        h.step();
+    }
+    // When the Library section is shown again, the question is there
+    show(&mut h, "library");
+    let mut steps = 0;
+    while !has(&h, "button:settingsSmartDelete") && steps < 40 {
+        h.step();
+        steps += 1;
+    }
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(1), json!(false)), "still nothing before the answer: {now}");
+    assert!(has(&h, "button:settingsSmartDelete"), "the parked folder comes back as the question");
+    scroll_down(&mut h);
+    click(&mut h, "button:settingsSmartDelete");
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(0), json!(true)), "{now}");
+}
+
 #[test]
 fn moving_the_smart_previews_needs_no_question() {
     let dir = TempFolder::new("settings-trust-smart-move");

@@ -216,8 +216,10 @@ pub(super) fn apply(app: &mut LightcraftApp, ctx: &egui::Context, field: &Field,
             if existing == "discard" {
                 // deleting the previews of the folder used until now is asked about once the folder
                 // is known (Settings' own gate): the answer waits for that question, which Settings
-                // shows while it is open; with nothing to delete it goes ahead on its own
-                ctx.data_mut(|d| d.insert_temp(crate::dialogs::settings::smart_pending_id(), path));
+                // shows while it is open; with nothing to delete it goes ahead on its own. Bound to
+                // the library it was asked in: one left in between drops it, as a dialog's answer is
+                let library = app.session.library_generation();
+                ctx.data_mut(|d| d.insert_temp(crate::dialogs::settings::smart_pending_id(), (library, path)));
                 return;
             }
             let result = app.run("library.smartPreviewsLocation", json!({"path": path, "existing": existing}));

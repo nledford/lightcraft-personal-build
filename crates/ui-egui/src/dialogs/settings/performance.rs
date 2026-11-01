@@ -153,16 +153,21 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     let mut ask = kept.filter(|k| pass.saturating_sub(k.pass) <= 1 && k.library == library && k.folder == path).unwrap_or_default();
     let mut mode = ask.mode;
     // a folder chosen in the host's dialog while "Delete them" was the choice: its answer is the
-    // question's to give (nothing to delete: the folder changes at once)
-    let pending: Option<String> = ui.ctx().data(|d| d.get_temp(smart_pending_id()));
-    if let Some(path) = pending {
-        ui.ctx().data_mut(|d| d.remove::<String>(smart_pending_id()));
-        if count > 0 {
-            ask.waiting = Some(json!({"path": path, "existing": "discard"}));
-        } else {
-            let existing = "discard";
-            let result = app.run("library.smartPreviewsLocation", json!({"path": path, "existing": existing}));
-            smart_previews_changed(app, ui.ctx(), existing, result);
+    // question's to give (nothing to delete: the folder changes at once). Its library binds it (a
+    // library left in between drops it), and it says the choice it was parked with, whatever the
+    // section last drew: the question is what the person sees, not a silently dropped folder
+    let pending: Option<(u64, String)> = ui.ctx().data(|d| d.get_temp(smart_pending_id()));
+    if let Some((parked_library, path)) = pending {
+        ui.ctx().data_mut(|d| d.remove::<(u64, String)>(smart_pending_id()));
+        if parked_library == app.session.library_generation() {
+            mode = 2;
+            if count > 0 {
+                ask.waiting = Some(json!({"path": path, "existing": "discard"}));
+            } else {
+                let existing = "discard";
+                let result = app.run("library.smartPreviewsLocation", json!({"path": path, "existing": existing}));
+                smart_previews_changed(app, ui.ctx(), existing, result);
+            }
         }
     }
     if count > 0 {
