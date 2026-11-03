@@ -397,7 +397,13 @@ fn context_choice_on(h: &mut Headless, name: &str, sub: &str, command: &str, par
     assert_eq!(r["ok"], true, "{sub}: {r}");
     h.settle(SETTLE);
     let prefix = format!("photomenu:{command}|");
-    let row = h.app.widgets.iter().map(|(w, _)| w.clone()).find(|w| w.starts_with(&prefix) && w.contains(param)).unwrap_or_else(|| panic!("no {command} row with {param}"));
+    let row = h
+        .app
+        .widgets
+        .iter()
+        .map(|(w, _)| w.clone())
+        .find(|w| w.starts_with(&prefix) && w.contains(param))
+        .unwrap_or_else(|| panic!("no {command} row with {param}"));
     let r = h.request("ui.clickWidget", json!({"id": row}), T);
     assert_eq!(r["ok"], true, "{row}: {r}");
     h.settle(SETTLE);
