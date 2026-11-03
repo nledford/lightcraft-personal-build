@@ -441,5 +441,6 @@
   "{n} jobs finished": "完了したジョブ: {n}",
   " · {} damaged": "・{}件は破損",
   "Copied {n} file paths": "{n} 件のファイルパスをコピーしました",
-  "Photos waiting: {n}": "待機中の写真：{n}枚"
+  "Photos waiting: {n}": "待機中の写真：{n}枚",
+  "{toast} · {n} photos": "{toast}・{n}枚"
 }

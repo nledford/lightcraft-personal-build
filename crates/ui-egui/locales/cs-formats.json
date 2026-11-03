@@ -441,5 +441,6 @@
   "{n} jobs finished": "Dokončené úlohy: {n}",
   " · {} damaged": " · poškozené: {}",
   "Copied {n} file paths": "Zkopírované cesty k souborům: {n}",
-  "Photos waiting: {n}": "Čekající fotografie: {n}"
+  "Photos waiting: {n}": "Čekající fotografie: {n}",
+  "{toast} · {n} photos": "{toast} · fotografií: {n}"
 }

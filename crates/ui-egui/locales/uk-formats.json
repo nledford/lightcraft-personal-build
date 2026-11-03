@@ -441,5 +441,6 @@
   "{n} jobs finished": "Завершено завдань: {n}",
   " · {} damaged": " · пошкоджено: {}",
   "Copied {n} file paths": "Скопійовано шляхів до файлів: {n}",
-  "Photos waiting: {n}": "Фото в черзі: {n}"
+  "Photos waiting: {n}": "Фото в черзі: {n}",
+  "{toast} · {n} photos": "{toast} · фото: {n}"
 }

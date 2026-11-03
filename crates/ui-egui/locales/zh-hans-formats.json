@@ -441,5 +441,6 @@
   "{n} jobs finished": "已完成的任务：{n}",
   " · {} damaged": " · {0} 个已损坏",
   "Copied {n} file paths": "已复制 {n} 个文件路径",
-  "Photos waiting: {n}": "{n} 张照片等待中"
+  "Photos waiting: {n}": "{n} 张照片等待中",
+  "{toast} · {n} photos": "{toast} · {n} 张照片"
 }

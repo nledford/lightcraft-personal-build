@@ -441,5 +441,6 @@
   "Press {key} to see it beside the original.": "Paina {key} nähdäksesi sen alkuperäisen vieressä.",
   " · {} damaged": " · vahingoittuneita: {}",
   "Copied {n} file paths": "Kopioituja tiedostopolkuja: {n}",
-  "Photos waiting: {n}": "Odottavia kuvia: {n}"
+  "Photos waiting: {n}": "Odottavia kuvia: {n}",
+  "{toast} · {n} photos": "{toast} · kuvia: {n}"
 }

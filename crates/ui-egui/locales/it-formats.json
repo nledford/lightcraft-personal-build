@@ -441,5 +441,6 @@
   "{n} jobs finished": "Attività completate: {n}",
   " · {} damaged": " · danneggiate: {}",
   "Copied {n} file paths": "Percorsi dei file copiati: {n}",
-  "Photos waiting: {n}": "Foto in attesa: {n}"
+  "Photos waiting: {n}": "Foto in attesa: {n}",
+  "{toast} · {n} photos": "{toast} · {n} foto"
 }

@@ -441,5 +441,6 @@
   "Press {key} to see it beside the original.": "Nhấn {key} để xem nó cạnh bản gốc.",
   " · {} damaged": " · {} bị hỏng",
   "Copied {n} file paths": "Đã sao chép {n} đường dẫn tệp",
-  "Photos waiting: {n}": "Ảnh đang chờ: {n}"
+  "Photos waiting: {n}": "Ảnh đang chờ: {n}",
+  "{toast} · {n} photos": "{toast} · {n} ảnh"
 }
