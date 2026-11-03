@@ -2786,5 +2786,6 @@
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Anslut disken igen eller använd Fil → Sök efter saknade foton… och försök igen.",
   "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ett foto utan fil kan inte flyttas. Ett lokalt foto kan det, när du har använt Lägg till i Mina foton.",
   "Notifications": "Aviseringar",
-  "Notify me when a job finishes while LightCraft is in the background": "Meddela mig när ett jobb är klart medan LightCraft ligger i bakgrunden"
+  "Notify me when a job finishes while LightCraft is in the background": "Meddela mig när ett jobb är klart medan LightCraft ligger i bakgrunden",
+  "Check for updates at start": "Sök efter uppdateringar vid start"
 }

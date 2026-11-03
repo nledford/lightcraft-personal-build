@@ -2878,5 +2878,6 @@
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Ricollega il disco o usa File → Trova foto mancanti…, poi riprova.",
   "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Una foto senza file non può essere spostata. Una foto locale sì, dopo aver usato Aggiungi a Le mie foto.",
   "Notifications": "Notifiche",
-  "Notify me when a job finishes while LightCraft is in the background": "Avvisami quando un'attività termina mentre LightCraft è in background"
+  "Notify me when a job finishes while LightCraft is in the background": "Avvisami quando un'attività termina mentre LightCraft è in background",
+  "Check for updates at start": "Cerca aggiornamenti all'avvio"
 }

@@ -2764,5 +2764,6 @@
   "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Znovu připojte disk nebo použijte Soubor → Najít chybějící fotografie… a zkuste to znovu.",
   "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Fotografii bez souboru nelze přesunout. Místní fotografii lze, jakmile použijete Přidat do mých fotografií.",
   "Notifications": "Oznámení",
-  "Notify me when a job finishes while LightCraft is in the background": "Upozornit mě, když se dokončí úloha, zatímco LightCraft běží na pozadí"
+  "Notify me when a job finishes while LightCraft is in the background": "Upozornit mě, když se dokončí úloha, zatímco LightCraft běží na pozadí",
+  "Check for updates at start": "Kontrolovat aktualizace při spuštění"
 }

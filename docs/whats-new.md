@@ -444,10 +444,11 @@
 - Renaming or moving a Local folder you browsed earlier no longer narrows All Photos to it, and no longer replaces the
   filter View ▸ Enable Filters put aside: the browsed folder follows the rename, and the filter is left as it was.
 
-### `--no-update-check` for throwaway copies
-- Starting LightCraft with `--no-update-check` skips the look for a newer release at start, so a throwaway copy (a test
-  or scripted run) makes no request to GitHub and never opens the update prompt. Help ▸ Check for Updates… still
-  checks when you ask; without the option nothing changes.
+### The update check at start can be turned off
+- Settings ▸ General ▸ Startup has a new "Check for updates at start" switch, on until you turn it off, for the people
+  who don't use the command line. Starting LightCraft with `--no-update-check` skips the look for a newer release for
+  that run whatever the setting says, so a throwaway copy (a test or scripted run) makes no request to GitHub and never
+  opens the update prompt. Help ▸ Check for Updates… still checks when you ask.
 
 ### The desktop app starts in the system's language
 - On macOS, Windows and Linux, a library with no saved settings now opens in the first of the system's preferred
