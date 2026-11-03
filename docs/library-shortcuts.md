@@ -59,8 +59,8 @@ cleared"). The toast names the photo that changed, not the one Shift or Auto Adv
 Survey (which act on the active photo only) it names that one. When the change reaches several photos it adds how
 many: "Rated ★★★ · 12 photos". The count is the photos the key acted on, including any that already had the value.
 A `[` / `]` or backtick step on a mixed selection that leaves the photos different says "Rating changed · 12 photos"
-or "Flag changed · 12 photos". A key that is refused (no photo to act on) shows no toast, only the reason in the
-status line.
+or "Flag changed · 12 photos". A key that is refused (no photo to act on) shows no confirmation, only its reason (in the
+status line and a toast).
 Labelled thumbnails have a translucent matching colour on the square-grid surround, photo-grid
 footer (translucent, over the bottom of the photo) and Detail filmstrip surround. The white active-photo outline remains clear.
 The label confirmation uses a pale matching background with dark text; ratings and errors retain
@@ -89,8 +89,8 @@ Fixed keys.
 
 Grid actions apply to all selected photos and support Undo / Redo. In Compare and Survey, culling
 actions apply to the active photo; a right-click on a selected photo there (or on its filmstrip
-thumbnail) makes it the active one, so the rating, flag and colour label rows of its menu act on
-that photo alone. Auto Advance moves forward
+thumbnail; one the panes or tiles don't show stays as it is) makes it the active one, so the rating, flag and colour
+label rows of its menu act on that photo alone. Auto Advance moves forward
 after an action, from the keys and from those menu rows alike; holding Shift with
 Auto Advance on still advances only once. The last photo stays selected. Text fields keep their
 keyboard input. With the Crop panel open `P` and `U` still pick and unflag (Auto Advance and the

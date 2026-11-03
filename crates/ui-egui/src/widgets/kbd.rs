@@ -62,12 +62,12 @@ impl<'a> Kbd<'a> {
         self
     }
 
-    /// The one compact string, `⌘⇧Z` or `Ctrl+Shift+Z`.
+    /// The one compact string, `⇧⌘Z` or `Ctrl+Shift+Z`.
     pub fn text(&self) -> String {
         crate::menubar::shortcut_text(self.shortcut, self.mac)
     }
 
-    /// The keys one by one: `["⌘", "⇧", "Z"]` or `["Ctrl", "Shift", "Z"]`.
+    /// The keys one by one: `["⇧", "⌘", "Z"]` or `["Ctrl", "Shift", "Z"]`.
     pub fn keys(&self) -> Vec<String> {
         let mut parts: Vec<&str> = self.shortcut.split('+').collect();
         // a "+" key itself (`Cmd++`) splits into empty parts

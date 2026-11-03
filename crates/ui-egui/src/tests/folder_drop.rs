@@ -897,10 +897,11 @@ fn undo_is_not_offered_once_something_else_was_done() {
     // (the frame that ended the move says what it did; the button is on the frame after it)
     h.step();
     assert!(widget(&h, "button:toastUndo").is_some(), "offered after the drop");
-    // When another step is committed while the toast is still up, Undo would reach that step instead
+    // When another step is committed while the toast is still up (the rating's own toast stacks above it), Undo
+    // would reach that step instead
     h.app.run("photo.rate", json!({"rating": 3})).unwrap();
     h.step();
-    assert!(toast(&h).starts_with("Moved 1 file"), "still the same toast");
+    assert!(h.app.ui.toasts.iter().any(|t| t.text.starts_with("Moved 1 file")), "the move's toast is still up");
     assert!(widget(&h, "button:toastUndo").is_none(), "withdrawn: it would undo the rating");
     let _ = std::fs::remove_dir_all(&root);
 }

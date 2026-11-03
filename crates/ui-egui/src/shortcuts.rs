@@ -628,7 +628,7 @@ fn fixed_photo_keys(i: &egui::InputState, taken: &[(Modifiers, Key)], grid_navig
 /// Rating/flag/label keys: in Compare/Survey they act on the active photo only; `advance` (Shift+key) or
 /// Auto Advance then moves on (next candidate in Compare, next photo elsewhere). The toast is the command's own
 /// (`app::cull_toast`, shown by `run`), made before the advance, so it names the photo that changed; a refused key
-/// gets none, only the reason `run` puts in the status line.
+/// gets no confirmation, only its reason (`run` puts it in the status line and a toast).
 fn cull(app: &mut LightcraftApp, id: &str, mut params: serde_json::Value, advance: bool) {
     use crate::panels::compare;
     compare::target_active(app, &mut params);
