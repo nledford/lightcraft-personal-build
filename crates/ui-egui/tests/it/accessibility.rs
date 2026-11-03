@@ -1143,7 +1143,8 @@ fn tool_strip_and_toolbar_buttons_are_named_by_label_with_the_shortcut_as_descri
         ("Crop & Rotate", "C"),
         ("Masking", "M"),
         ("Versions", "Shift+V"),
-        // (History & Activity has no key: nothing to describe)
+        // no "History & Activity" row: panel.activity has no key of its own (Y is Before/After's,
+        // checked below); the strip button says no key, as it has since the menu row rework
         ("Keywords", "K"),
         ("Info", "I"),
         ("Photo Grid", "G"),
@@ -1156,6 +1157,14 @@ fn tool_strip_and_toolbar_buttons_are_named_by_label_with_the_shortcut_as_descri
     ] {
         assert!(button_described(&h, name, help), "a button named {name:?} describing {help:?}");
     }
+    // the strip's History & Activity button no longer shows the Y Before/After owns
+    let activity = h
+        .root()
+        .children_recursive()
+        .map(|n| n.accesskit_node())
+        .find(|n| n.role() == Role::Button && n.label().as_deref() == Some("History & Activity"))
+        .expect("a button named \"History & Activity\"");
+    assert_ne!(activity.description().as_deref(), Some("Y"), "Before/After's Y is not its key");
     let leaked: Vec<String> = h
         .root()
         .children_recursive()

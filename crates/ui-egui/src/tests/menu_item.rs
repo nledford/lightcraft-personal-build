@@ -177,7 +177,7 @@ fn every_kind_of_row_is_one_height() {
 fn a_shortcut_reads_as_the_platform_writes_it() {
     assert_eq!(Kbd::new("Cmd+Shift+Z", true).text(), "⇧⌘Z");
     assert_eq!(Kbd::new("Cmd+Shift+Z", false).text(), "Ctrl+Shift+Z");
-    assert_eq!(Kbd::new("Cmd+Shift+Z", true).keys(), ["⌘", "⇧", "Z"]);
+    assert_eq!(Kbd::new("Cmd+Shift+Z", true).keys(), ["⇧", "⌘", "Z"]);
     assert_eq!(Kbd::new("Cmd+Shift+Z", false).keys(), ["Ctrl", "Shift", "Z"]);
     assert_eq!(Kbd::new("Delete", true).keys(), ["⌫"]);
     // the plus key itself isn't lost to the separator
