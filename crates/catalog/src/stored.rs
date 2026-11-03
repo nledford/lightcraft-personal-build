@@ -982,7 +982,7 @@ impl Serialize for StoredPhoto<'_> {
             #[serde(skip_serializing_if = "Option::is_none")]
             content_hash: Option<&'a str>,
             #[serde(skip_serializing_if = "Option::is_none")]
-            embedded_lens: &'a Option<lightcraft_develop::EmbeddedLens>,
+            embedded_lens: &'a Option<Box<lightcraft_develop::EmbeddedLens>>,
             #[serde(skip_serializing_if = "crate::LeftInFile::is_nothing")]
             left_in_file: &'a crate::LeftInFile,
             #[serde(skip_serializing_if = "Option::is_none")]

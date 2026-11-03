@@ -638,7 +638,7 @@ fn set_embedded_lens_is_undoable_and_journaled() {
     let op = Op::SetEmbeddedLens { id: a, lens: Some(Box::new(lens)) };
     let op: Op = serde_json::from_str(&serde_json::to_string(&op).unwrap()).unwrap();
     let inv = c.apply(op).unwrap();
-    assert_eq!(c.photo(a).unwrap().embedded_lens, Some(lens));
+    assert_eq!(c.photo(a).unwrap().embedded_lens, Some(Box::new(lens)));
     let inv: Op = serde_json::from_str(&serde_json::to_string(&inv).unwrap()).unwrap();
     c.apply(inv).unwrap();
     assert_eq!(c.photo(a).unwrap().embedded_lens, None);
@@ -1254,4 +1254,19 @@ fn the_inverse_of_a_nested_batch_is_taken_back_op_by_op() {
     // what is left finishes the rollback
     c.apply(*remaining).unwrap();
     assert_eq!(c.to_snapshot(), before);
+}
+
+/// `Photo::embedded_lens` is boxed to keep photo records small; the box doesn't change the serialized form:
+/// a photo written with the lens reads back with it, and its JSON is the bare lens, as before the box.
+#[test]
+fn boxed_embedded_lens_serializes_like_the_bare_lens() {
+    let lens = lightcraft_develop::EmbeddedLens { warp: Some(Default::default()), vignette: None, stages: Default::default() };
+    let mut p = Photo::new(PhotoId(1), Source::File { path: "/x.dng".into() }, "x.dng", "DNG", 4000, 3000, "2026-10-06T00:00:00");
+    p.embedded_lens = Some(Box::new(lens));
+    let json = serde_json::to_value(&p).unwrap();
+    assert_eq!(json["embedded_lens"], serde_json::to_value(lens).unwrap());
+    let back: Photo = serde_json::from_value(json).unwrap();
+    assert_eq!(back.embedded_lens.as_deref(), Some(&lens));
+    p.embedded_lens = None;
+    assert!(serde_json::to_value(&p).unwrap().get("embedded_lens").is_none(), "no lens, no field");
 }

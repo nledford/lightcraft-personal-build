@@ -388,7 +388,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 p.left_in_file = read.left();
                 p.as_shot_wb = info.as_shot_wb;
                 p.content_hash = hash;
-                p.embedded_lens = info.embedded_lens;
+                p.embedded_lens = info.embedded_lens.map(Box::new);
                 p.set_preview_only(info.preview_only.clone());
                 p.truncated = info.truncated;
                 apply_import_defaults_beside(s, &mut p, own);

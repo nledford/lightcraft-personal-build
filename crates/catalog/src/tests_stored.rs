@@ -155,7 +155,7 @@ fn full() -> Photo {
     p.duration = Some(12.5);
     p.as_shot_wb = Some((5200.0, 3.0));
     p.content_hash = Some("00000000000000009e3779b97f4a7c15".into());
-    p.embedded_lens = Some(lightcraft_develop::EmbeddedLens { vignette: Some(Default::default()), ..Default::default() });
+    p.embedded_lens = Some(Box::new(lightcraft_develop::EmbeddedLens { vignette: Some(Default::default()), ..Default::default() }));
     p.copy_of = Some(PhotoId(3));
     p.copy_name = Some("Copy 1".into());
     p.import_look = Some(look);
