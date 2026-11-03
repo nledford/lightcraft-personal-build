@@ -248,7 +248,7 @@ fn folder_paths(v: &Value, c: &str) -> Result<Vec<String>> {
 
 /// Whether `path` can be shown as a `libraryFolder` source: a folder (not the whole startup
 /// disk, nor a way to several disks) the library holds photos of.
-/// (One pass over the library for all of `paths`, however many.)
+/// (Each of `paths` is looked up in the folder index, one photo of each of its folders: no pass over the library.)
 fn source_folders_check(s: &Session, paths: &[String]) -> Result<()> {
     const C: &str = "library.source";
     for path in paths {

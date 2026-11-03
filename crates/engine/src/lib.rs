@@ -1836,7 +1836,7 @@ impl Session {
     /// shows.
     fn folder_holds_photos(&self) -> bool {
         let f = Filter { library_folder: self.library_folder.clone(), library_folders: self.also_library_folders.clone(), ..Default::default() };
-        self.library_folder.is_some() && !self.catalog.query(&f, &Sort::default()).is_empty()
+        self.library_folder.is_some() && self.catalog.any(&f)
     }
 
     /// `source` as a filter over `base` (the filter bar's, or none): what [`LibrarySource::to_filter`] gives,

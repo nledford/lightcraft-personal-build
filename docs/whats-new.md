@@ -1,5 +1,17 @@
 # What's new in LightCraft
 
+## 2026-11-03
+
+### Opening on a library folder, and choosing another, looks through the library once
+- Choosing a folder in the sidebar's Folders list looked through every photo of the library twice, and so did opening
+  a library last shown on a folder: once to see that the folder still holds photos, once to list them. In a library of
+  1.6 million photos that took about 0.6 s for a folder of a hundred photos, 3.6 s for a large one, and about half a
+  second of an open. The library is now filed by folder the first time a folder is asked for (one pass, on several
+  threads, about 0.1 s for that library), and from then on a folder is read where it is filed: a folder of a few
+  thousand photos opens in milliseconds. A folder that holds most of the library still takes about a second, as
+  sorting its photos does. What a folder shows is unchanged, and so is which folders are refused for holding other
+  disks.
+
 ## 2026-10-30
 
 ### Rating a photo in a big view no longer stalls the grid
