@@ -409,6 +409,7 @@ fn drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, rect: Rect, path: &st
 /// Photos dragged over the keyword row `path`: only the photos that don't have it get it. `outline`
 /// marks the row when a release would give it to some.
 fn drop_photos_on_keyword(app: &mut LightcraftApp, ui: &mut egui::Ui, ids: &[u64], path: &str, outline: &dyn Fn(&egui::Ui)) {
+    // (photos drop on the primary's release only, like the album and folder rows)
     let released = ui.input(|i| i.pointer.primary_released());
     let lacking = |id: &u64| {
         // (as `photo.setMeta` compares: the stored keyword as it is, with the cleaned name)
