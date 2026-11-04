@@ -1069,7 +1069,15 @@ pub(crate) fn paint_loading_cue(p: &egui::Painter, t: &Tokens, tile: Rect, rect:
     crate::widgets::register_geometry(p.ctx(), format!("{prefix}{id}"), Rect::from_center_size(middle, vec2(2.0 * (GAP + RADIUS), 2.0 * RADIUS)));
 }
 
-fn paint_cell_caption(app: &LightcraftApp, ui: &egui::Ui, p: &egui::Painter, t: &Tokens, photo: &lightcraft_catalog::Photo, r: Rect, flags: CaptionFlags) {
+fn paint_cell_caption(
+    app: &LightcraftApp,
+    ui: &egui::Ui,
+    p: &egui::Painter,
+    t: &Tokens,
+    photo: &lightcraft_catalog::Photo,
+    r: Rect,
+    flags: CaptionFlags,
+) {
     let CaptionFlags { square, selected } = flags;
     if square && app.ui.show_filenames {
         let m = &photo.meta;
@@ -1104,7 +1112,15 @@ fn paint_cell_caption(app: &LightcraftApp, ui: &egui::Ui, p: &egui::Painter, t: 
 /// A clip's container (where the square grid's filename line doesn't carry it already) and its
 /// running time, which is what tells one clip from another at a glance. Laid out against the
 /// picture's rectangle (`rect`), as the rest of the thumbnail's overlay is.
-fn paint_video_badges(app: &LightcraftApp, ui: &egui::Ui, p: &egui::Painter, t: &Tokens, photo: &lightcraft_catalog::Photo, rect: Rect, square: bool) {
+fn paint_video_badges(
+    app: &LightcraftApp,
+    ui: &egui::Ui,
+    p: &egui::Painter,
+    t: &Tokens,
+    photo: &lightcraft_catalog::Photo,
+    rect: Rect,
+    square: bool,
+) {
     if !is_clip(photo) {
         return;
     }
