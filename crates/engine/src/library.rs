@@ -862,7 +862,7 @@ impl Session {
                     library_folders: self.also_library_folders.clone(),
                     ..Default::default()
                 };
-                let any = self.library_folder.is_some() && !self.catalog.query(&f, &lightcraft_catalog::Sort::default()).is_empty();
+                let any = self.library_folder.is_some() && self.catalog.any(&f);
                 if !any {
                     self.source = LibrarySource::All;
                     self.library_folder = None;

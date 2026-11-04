@@ -2009,6 +2009,8 @@ mod tests_background;
 #[cfg(test)]
 mod tests_backup;
 #[cfg(test)]
+mod tests_folder_filing;
+#[cfg(test)]
 mod tests_folder_index;
 #[cfg(test)]
 mod tests_folder_patch;

@@ -61,6 +61,7 @@ mod segment;
 mod selection_facts;
 mod settings_files;
 mod shelved_folder;
+mod single_scan;
 mod slide;
 mod slideshow_export;
 mod spots;

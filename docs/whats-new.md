@@ -2,6 +2,16 @@
 
 ## 2026-11-03
 
+### Opening on a library folder, and choosing another, looks through the library once
+- Choosing a folder in the sidebar's Folders list looked through every photo of the library twice, and so did opening
+  a library last shown on a folder: once to see that the folder still holds photos, once to list them. In a library of
+  1.6 million photos that took about 0.6 s for a folder of a hundred photos, 3.6 s for a large one, and about half a
+  second of an open. The library is now filed by folder the first time a folder is asked for (one pass, on several
+  threads, about 0.1 s for that library), and from then on a folder is read where it is filed: a folder of a few
+  thousand photos opens in milliseconds. A folder that holds most of the library still takes about a second, as
+  sorting its photos does. What a folder shows is unchanged, and so is which folders are refused for holding other
+  disks.
+
 ### Every rating, flag and label change says what it did
 - `Shift+X`, `Shift+Z`, `Shift+U` and `Shift+P` (in the grids) flagged the photo and moved on, and `[` / `]` changed its rating, without a word, so with the photo gone from the screen nothing confirmed it. They now show the same bottom toast as `X`, `U`, `P` and the number keys, naming the photo that changed, not the one you moved on to. The toast now comes from the change itself, so the Photo menu and the rating and flag buttons show it too.
 - When a change reaches several photos the toast says how many: "Rated ★★★ · 12 photos". The count is the photos the key acted on, including any that already had that value. A `[` / `]` or backtick step that leaves a mixed selection with different values says "Rating changed · 12 photos" or "Flag changed · 12 photos". A key that is refused no longer shows a success toast; the reason stays in the status line.

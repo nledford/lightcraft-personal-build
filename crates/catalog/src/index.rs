@@ -2,7 +2,8 @@
 //! don't scan a list each time: which stack a photo is in, whether a regular album holds it, which
 //! photos have the same content, the lower-cased text the free-text search reads, and the text a smart
 //! album's Text rule reads (each made for every photo the first time it is needed for every photo),
-//! which photos have their file in a folder, which have a file of a given name.
+//! which photos have their file in a folder, which have a file of a given name. A view of one library
+//! folder looks through the photos filed at or below it, not through every photo of the library.
 //!
 //! They are never saved (the on-disk format is unchanged). Each is built on first use from what
 //! the catalog holds, so a catalog read from a snapshot, replayed from the journal or cloned starts
@@ -16,10 +17,18 @@
 //! ([`Catalog::follows_contents`], [`Catalog::content_moved`]). The two texts follow every op that changes
 //! a photo's fields, and the photo moving to another place in memory.
 
-use std::collections::{HashMap, HashSet};
-use std::sync::OnceLock;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, OnceLock};
 
+use crate::query::key_within;
 use crate::{AlbumId, Catalog, Photo, PhotoId, Source, StackId};
+
+/// A folder's key, or a file name's, → the photos filed under it.
+type FileIndex = HashMap<String, HashSet<PhotoId>>;
+
+/// Below this many photos, building an index on several threads costs more than it saves.
+const BUILD_ON_THREADS_FROM: usize = 1 << 16;
 
 #[derive(Default)]
 pub(crate) struct Indexes {
@@ -45,6 +54,8 @@ pub(crate) struct Indexes {
     /// File name, lower-cased ([`file_name_index_key`]) → the photos whose file has it (same
     /// states as `folders`).
     names: OnceLock<HashMap<String, HashSet<PhotoId>>>,
+    /// Photos queries have looked at ([`Catalog::photos_looked_at`]).
+    looked_at: AtomicU64,
 }
 
 /// A copy builds its own when asked (copies are made to be saved, not queried).
@@ -369,6 +380,90 @@ fn sorted(set: Option<&HashSet<PhotoId>>) -> Vec<PhotoId> {
     v
 }
 
+/// How many threads an index may be built on (one where there are none: wasm32).
+fn build_threads() -> usize {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        std::thread::available_parallelism().map_or(1, |n| n.get()).min(8)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        1
+    }
+}
+
+/// The photos of `photos` that have a file, by the `key` of its path: one walk.
+fn file_by_key<'a>(photos: impl Iterator<Item = &'a Arc<Photo>>, key: fn(&str) -> Option<String>) -> FileIndex {
+    let mut m = FileIndex::new();
+    for p in photos {
+        if let Source::File { path } = &p.source
+            && let Some(k) = key(path)
+        {
+            m.entry(k).or_default().insert(p.id);
+        }
+    }
+    m
+}
+
+/// Every photo with a file by the `key` of its path: one walk of the library, or one walk of a run of it
+/// on each of `threads` threads when there are `from` photos or more.
+pub(crate) fn build(photos: &BTreeMap<PhotoId, Arc<Photo>>, key: fn(&str) -> Option<String>, from: usize, threads: usize) -> FileIndex {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        if let Some(m) = build_on_threads(photos, key, from, threads) {
+            return m;
+        }
+    }
+    #[cfg(target_arch = "wasm32")]
+    let _ = (from, threads);
+    file_by_key(photos.values(), key)
+}
+
+/// [`build`] on `threads` threads, each walking a run of the photos in id order. `None` when there are fewer
+/// than `from` photos or only one thread, or when a thread could not be started or failed: one walk does it then.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn build_on_threads(
+    photos: &BTreeMap<PhotoId, Arc<Photo>>,
+    key: fn(&str) -> Option<String>,
+    from: usize,
+    threads: usize,
+) -> Option<FileIndex> {
+    use std::collections::hash_map::Entry;
+    use std::ops::Bound;
+
+    if threads < 2 || photos.len() < from {
+        return None;
+    }
+    // where each run starts: the photos are walked where they are, not copied into a list to cut
+    let starts: Vec<PhotoId> = photos.keys().step_by(photos.len().div_ceil(threads).max(1)).copied().collect();
+    let parts: Option<Vec<FileIndex>> = std::thread::scope(|sc| {
+        let jobs: Vec<_> = starts
+            .iter()
+            .enumerate()
+            .map(|(i, start)| {
+                let to = starts.get(i + 1).map_or(Bound::Unbounded, |to| Bound::Excluded(*to));
+                let run = photos.range((Bound::Included(*start), to)).map(|(_, p)| p);
+                std::thread::Builder::new().spawn_scoped(sc, move || file_by_key(run, key)).ok()
+            })
+            .collect();
+        // (every job is joined before any answer is looked at; one that did not start or panicked, which it can't, makes
+        // the whole build `None`, and the caller then builds the index in one walk)
+        let done: Vec<Option<FileIndex>> = jobs.into_iter().map(|job| job?.join().ok()).collect();
+        done.into_iter().collect()
+    });
+    // a key's photos are in the run or runs that hold them: the runs are of different photos, so their sets add up
+    let mut merged = FileIndex::new();
+    for (k, ids) in parts?.into_iter().flatten() {
+        match merged.entry(k) {
+            Entry::Vacant(e) => {
+                e.insert(ids);
+            }
+            Entry::Occupied(mut e) => e.get_mut().extend(ids),
+        }
+    }
+    Some(merged)
+}
+
 impl Catalog {
     /// The stack photo `photo` is in, by the index (built on first use).
     pub(crate) fn stack_id_of(&self, photo: PhotoId) -> Option<StackId> {
@@ -476,26 +571,26 @@ impl Catalog {
         self.index.rule_text.get().is_some()
     }
 
-    fn file_index(&self, which: &str, key: fn(&str) -> Option<String>) -> HashMap<String, HashSet<PhotoId>> {
+    /// The photos with a file by the `key` of its path, built on `threads` threads for a big library.
+    fn file_index(&self, which: &str, key: fn(&str) -> Option<String>, threads: usize) -> FileIndex {
         let t = web_time::Instant::now();
-        let mut m: HashMap<String, HashSet<PhotoId>> = HashMap::new();
-        for p in self.photos.values() {
-            if let Source::File { path } = &p.source
-                && let Some(k) = key(path)
-            {
-                m.entry(k).or_default().insert(p.id);
-            }
-        }
+        self.looked_at(self.photos.len());
+        let m = build(&self.photos, key, BUILD_ON_THREADS_FROM, threads);
         log::info!("catalog: {which} index built for {} photos in {:.1} ms", self.photos.len(), t.elapsed().as_secs_f64() * 1e3);
         m
+    }
+
+    /// The photos by the folder their file is in, by the index (built on first use).
+    fn folder_index(&self) -> &FileIndex {
+        self.index.folders.get_or_init(|| self.file_index("folder", photo_folder_index_key, build_threads()))
     }
 
     /// The photos whose file is directly in the folder with key `folder_key` (from
     /// [`photo_folder_index_key`] or [`folder_index_key`]), whatever their state, sorted by id.
     /// The grouping ignores letter case: callers compare exact paths themselves. The first query
-    /// builds the index in one pass over the library; it costs about one set entry per photo.
+    /// builds the index in one pass over the library (on several threads for a big one); it costs about one set entry per photo.
     pub fn photos_in_folder_any_case(&self, folder_key: &str) -> Vec<PhotoId> {
-        sorted(self.index.folders.get_or_init(|| self.file_index("folder", photo_folder_index_key)).get(folder_key))
+        sorted(self.folder_index().get(folder_key))
     }
 
     /// The photos whose file is named `name_lower` (lower-cased, as [`file_name_index_key`] gives),
@@ -503,6 +598,38 @@ impl Catalog {
     /// names themselves. The first query builds the index in one pass over the library; it costs
     /// about one set entry per photo.
     pub fn photos_named_any_case(&self, name_lower: &str) -> Vec<PhotoId> {
-        sorted(self.index.names.get_or_init(|| self.file_index("name", file_name_index_key)).get(name_lower))
+        // one walk: almost every photo has a name of its own, so on several threads the parts and the joined index are
+        // held together (about 260 MiB more for 1.6 million photos, measured)
+        sorted(self.index.names.get_or_init(|| self.file_index("name", file_name_index_key, 1)).get(name_lower))
+    }
+
+    /// The photo sets of the folders at or below any of the folders whose [`crate::query::folder_key`] are `roots`
+    /// (every folder's when there are none), one set for each folder, whatever its photos' state: a folder below two
+    /// of the roots is read once. The index files by lower-cased folder, so these are every photo the roots can show
+    /// and, where two folders differ only in letter case, those of the other too: what a query makes of each photo is
+    /// for its filter to say. The first call builds the index.
+    pub(crate) fn folders_under<'a>(&'a self, roots: &[String]) -> impl Iterator<Item = &'a HashSet<PhotoId>> + 'a {
+        let roots: Vec<String> = roots.iter().map(|r| r.to_lowercase()).collect();
+        self.folder_index().iter().filter(move |(dir, _)| roots.is_empty() || roots.iter().any(|r| key_within(dir, r))).map(|(_, ids)| ids)
+    }
+
+    /// Whether the folders whose keys are `roots`, with what is below them, hold more than half of the library's
+    /// photos: looking each of them up costs more than walking the library then.
+    pub(crate) fn folder_holds_most(&self, roots: &[String]) -> bool {
+        self.folders_under(roots).map(HashSet::len).sum::<usize>() > self.photos.len() / 2
+    }
+
+    /// How many photos the questions asked of the catalog have looked at so far, as a running total, for tests and
+    /// benchmarks to read before and after an action: [`Catalog::query`], [`Catalog::query_keeping`],
+    /// [`Catalog::count`], [`Catalog::any`] and [`Catalog::folder_samples`] add what they go through (the whole library;
+    /// for a library folder only the photos filed at or below it, the library's size when they are more than half of
+    /// it), and building an index (the first question it answers) adds the size of the library. Other walks over the
+    /// library (tallies, date groups, the folder tree...) are not counted. A copy of the catalog starts again from 0.
+    pub fn photos_looked_at(&self) -> u64 {
+        self.index.looked_at.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn looked_at(&self, photos: usize) {
+        self.index.looked_at.fetch_add(photos as u64, Ordering::Relaxed);
     }
 }
