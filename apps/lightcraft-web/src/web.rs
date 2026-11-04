@@ -109,7 +109,7 @@ async fn store_file(originals: Originals, backend: Option<Backend>, file: &web_s
     }
     let hash = content_hash(&bytes);
     if let Some(b) = &backend
-        && let Err(e) = b.write_original_blob(&storage_key(&hash), file).await
+        && let Err(e) = bounded(b.write_original_blob(&storage_key(&hash), file), file.size()).await
     {
         // a photo whose bytes aren't stored would be gone after a reload: don't add it
         notice(format!("{name} was not added: browser storage refused it ({e}). Free up space or back up and clear old photos."));
@@ -143,12 +143,13 @@ async fn read_file(originals: Originals, backend: Option<Backend>, file: web_sys
         notice(format!("{} was not added: {e}", file.name()));
         return;
     }
-    match wasm_bindgen_futures::JsFuture::from(file.array_buffer()).await {
+    let read = async { wasm_bindgen_futures::JsFuture::from(file.array_buffer()).await.map_err(|e| format!("can't read the file ({e:?})")) };
+    match bounded(read, file.size()).await {
         Ok(buf) => match crate::store::copy_browser_bytes(&js_sys::Uint8Array::new(&buf)) {
             Ok(bytes) => store_file(originals, backend, &file, bytes, ctx).await,
             Err(e) => notice(format!("{} was not added: {e}", file.name())),
         },
-        Err(e) => notice(format!("{} was not added: can't read the file ({e:?})", file.name())),
+        Err(e) => notice(format!("{} was not added: {e}", file.name())),
     }
 }
 
@@ -164,6 +165,15 @@ async fn sleep_ms(ms: i32) {
         }
     });
     let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+}
+
+/// `work` bounded by [`ORIGINAL_LOAD_TIMEOUT_MS`] plus one second per 10 MB of `bytes` (a large
+/// clip takes a while to write): one browser promise that never settles must not hold the import
+/// queue, or the loads after it, forever.
+async fn bounded<T>(work: impl std::future::Future<Output = Result<T, String>>, bytes: f64) -> Result<T, String> {
+    let extra = if bytes.is_finite() && bytes > 0.0 { (bytes / 10_000.0).min(f64::from(i32::MAX / 2)) as i32 } else { 0 };
+    let ms = ORIGINAL_LOAD_TIMEOUT_MS.saturating_add(extra);
+    crate::store::within(work, sleep_ms(ms)).await.unwrap_or_else(|| Err(format!("the browser did not answer within {} s", ms / 1000)))
 }
 
 /// The error of a storage load that [`ORIGINAL_LOAD_TIMEOUT_MS`] cut short.
@@ -183,7 +193,8 @@ async fn blob_range(blob: &web_sys::Blob, start: u64, length: u64) -> Result<Vec
     }
     let end = start.checked_add(length).ok_or("video offset overflow")?;
     let slice = blob.slice_with_f64_and_f64(start as f64, end as f64).map_err(|e| format!("reading original: {e:?}"))?;
-    let buf = wasm_bindgen_futures::JsFuture::from(slice.array_buffer()).await.map_err(|e| format!("reading original: {e:?}"))?;
+    let read = async { wasm_bindgen_futures::JsFuture::from(slice.array_buffer()).await.map_err(|e| format!("reading original: {e:?}")) };
+    let buf = bounded(read, length as f64).await?;
     let bytes = crate::store::copy_browser_bytes(&js_sys::Uint8Array::new(&buf))?;
     if bytes.len() as u64 != length {
         return Err("original changed or was truncated while reading".into());
@@ -197,13 +208,17 @@ async fn video_blob_metadata(blob: &web_sys::Blob, include_fragments: bool) -> R
         return Err("invalid video file size".into());
     }
     let size = size as u64;
-    let (mut at, mut out) = (0u64, Vec::new());
+    let (mut at, mut out, mut saw_moov) = (0u64, Vec::new(), false);
     for _ in 0..lightcraft_engine::files::MAX_VIDEO_TOP_LEVEL_BOXES {
         if at == size {
             return Ok(out);
         }
         let head = blob_range(blob, at, size.saturating_sub(at).min(32)).await?;
+        if lightcraft_engine::files::is_video_trailer(head.get(..head.len().min(16)).unwrap_or(&head), at, size, saw_moov, include_fragments) {
+            return Ok(out);
+        }
         let (kind, len) = lightcraft_engine::files::video_box_info(&head, at, size)?;
+        saw_moov |= &kind == b"moov";
         let header_len = lightcraft_engine::files::video_box_header_len(&head);
         let extended_type = if &kind == b"uuid" && len >= header_len + 16 { head.get(header_len as usize..header_len as usize + 16) } else { None };
         if lightcraft_engine::files::is_video_metadata_box(&kind, extended_type) || (include_fragments && &kind == b"moof") {
@@ -214,7 +229,8 @@ async fn video_blob_metadata(blob: &web_sys::Blob, include_fragments: bool) -> R
             out.try_reserve_exact(len as usize).map_err(|e| format!("video metadata allocation: {e}"))?;
             let end = at.checked_add(len).ok_or("video offset overflow")?;
             let slice = blob.slice_with_f64_and_f64(at as f64, end as f64).map_err(|e| format!("reading metadata: {e:?}"))?;
-            let buffer = wasm_bindgen_futures::JsFuture::from(slice.array_buffer()).await.map_err(|e| format!("reading metadata: {e:?}"))?;
+            let read = async { wasm_bindgen_futures::JsFuture::from(slice.array_buffer()).await.map_err(|e| format!("reading metadata: {e:?}")) };
+            let buffer = bounded(read, len as f64).await?;
             let bytes = js_sys::Uint8Array::new(&buffer);
             if u64::from(bytes.length()) != len {
                 return Err("original changed or was truncated while reading metadata".into());
@@ -246,7 +262,7 @@ async fn store_video(originals: &Originals, backend: Option<&Backend>, file: &we
     }
     let hash = hash.finish().to_string();
     if let Some(b) = backend {
-        b.write_original_blob(&storage_key(&hash), file).await?;
+        bounded(b.write_original_blob(&storage_key(&hash), file), file.size()).await?;
     }
     probe.content_hash = Some(hash.clone());
     probe.file_size = size;
