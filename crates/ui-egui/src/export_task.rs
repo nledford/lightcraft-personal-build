@@ -382,8 +382,6 @@ fn export_summary(files: &[Value], photos: Option<&Value>, total: usize, cancell
     // (a conflict leaves `skipped` as the taken path; a print or contact sheet reports its
     // skipped photos as an array of {file, warning})
     let skipped = files.iter().filter(|f| f.get("skipped").is_some_and(|v| !v.is_array())).count();
-    let warned = files.iter().filter(|f| f.get("warning").is_some()).count()
-        + files.iter().filter_map(|f| f.get("skipped").and_then(Value::as_array)).map(Vec::len).sum::<usize>();
     let mut m = crate::i18n::tr_format!("Exported {ok} of {total} photo{}", if total == 1 { "" } else { "s" }, ok = ok, total = total);
     if let Some(sheet) = sheet {
         m = crate::i18n::tr_format!("Exported contact sheet: {photos} photos, {pages} pages", photos = sheet["photos"], pages = sheet["pages"]);
@@ -395,9 +393,7 @@ fn export_summary(files: &[Value], photos: Option<&Value>, total: usize, cancell
     if skipped > 0 {
         m += &crate::i18n::tr_format!(" · {skipped} skipped (file exists)", skipped = skipped);
     }
-    if warned > 0 {
-        m += &format!(" · {warned} {}", crate::i18n::tr("not exported"));
-    }
+    m += &not_exported_note(files).unwrap_or_default();
     if let Some(first) = failed.first() {
         m += &crate::i18n::tr_format!(" · {} failed: {}", failed.len(), first["error"].as_str().unwrap_or("error"));
     }
@@ -410,6 +406,14 @@ fn export_summary(files: &[Value], photos: Option<&Value>, total: usize, cancell
         m += &apple_photos_note(photos);
     }
     (m, summary)
+}
+
+/// ` · N not exported` for the files an export left out with a warning (a video has no frame for a render, a print or a
+/// contact sheet): counted from each file's `warning` and from the array of skipped photos a print or contact sheet carries.
+fn not_exported_note(files: &[Value]) -> Option<String> {
+    let warned = files.iter().filter(|f| f.get("warning").is_some()).count()
+        + files.iter().filter_map(|f| f.get("skipped").and_then(Value::as_array)).map(Vec::len).sum::<usize>();
+    (warned > 0).then(|| format!(" · {warned} {}", crate::i18n::tr("not exported")))
 }
 
 /// How an export that ran ended, for the activity stack. Photos taking only some of the files is a warning, and
