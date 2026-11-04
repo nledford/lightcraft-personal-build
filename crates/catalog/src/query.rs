@@ -642,18 +642,16 @@ impl Catalog {
         // one pass: a folder of albums it asks about is gathered once
         crate::gathering(|| {
             // library folders that hold under half of the library: the photos filed at or below them and the
-            // held ones (which may lie elsewhere, where `within` still looks), sorted: not every photo of the library
+            // held ones (which may lie elsewhere, where `within` still looks), put in order: not every photo of the library
             if !prepared.roots.is_empty() && !self.folder_holds_most(&prepared.roots) {
                 let mut ids: Vec<PhotoId> = self.folders_under(&prepared.roots).flatten().copied().collect();
-                if !keep.is_empty() {
-                    ids.extend(keep.iter().copied());
-                    ids.sort_unstable();
-                    ids.dedup();
-                }
+                // (in id order, each once, as `sorted_among` takes them: the folders' sets come in no order)
+                ids.extend(keep.iter().copied());
+                ids.sort_unstable();
+                ids.dedup();
                 self.looked_at(ids.len());
-                let mut v: Vec<&Photo> = ids.iter().filter_map(|id| self.photo(*id)).map(|p| p.as_ref()).filter(|p| wanted(p)).collect();
-                v.sort_by(|a, b| sort.order(a, b));
-                return v.into_iter().map(|p| p.id).collect();
+                let v: Vec<&Photo> = ids.iter().filter_map(|id| self.photo(*id)).map(|p| p.as_ref()).filter(|p| wanted(p)).collect();
+                return self.sorted_among(sort, v);
             }
             self.looked_at(self.photos.len());
             // the whole library is kept in order ([`crate::order`]): what matches is picked out of it, not sorted

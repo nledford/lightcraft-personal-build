@@ -9,6 +9,8 @@
 //!   over the library (not one to find the folder is still there and another to list it).
 //! * Given a library on All Photos, choosing a folder passes over the library once, and each
 //!   folder chosen after it reads only its own photos.
+//! * Given the library's order for the sort is kept (every photo was listed in it), a folder chosen
+//!   is put in order by it, not sorted.
 //! * The folder shows its photos and the folders inside it, nothing else; the saved selection is
 //!   kept, a first photo is picked when none was active, stacks are arranged as ever.
 //! * A folder that is gone, or that holds nothing the library shows, opens on All Photos; one that
@@ -104,6 +106,27 @@ fn choosing_another_folder_does_not_look_through_the_library_again() {
     for (d, n) in looked.iter().enumerate().skip(1) {
         assert!(*n <= 6 * PER_FOLDER, "choosing folder {d} looked at {n} photos of a library of {TOTAL}");
     }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn choosing_a_folder_lists_it_from_the_kept_order_without_sorting() {
+    let dir = saved_library("kept-order", None);
+    let mut s = open(&dir);
+    // every photo listed in a sort makes the library's order for it
+    s.execute("library.sort", &json!({"key": "fileName", "ascending": true})).unwrap();
+    assert_eq!(s.visible().len() as u64, TOTAL);
+    let sorted = s.catalog.full_sorts();
+    for d in [7, 31, 7] {
+        let before = s.catalog.kept_picks();
+        assert_eq!(source_folder(&mut s, &format!("/lib/f{d}"))["count"], PER_FOLDER, "folder {d}");
+        assert!(s.catalog.kept_picks() > before, "folder {d}: not put in order by the kept order");
+        let mut want: Vec<_> = folder_photos(d).into_iter().filter_map(|id| s.catalog.photo(id)).collect();
+        want.sort_by(|a, b| s.sort.order(a, b));
+        let want: Vec<PhotoId> = want.iter().map(|p| p.id).collect();
+        assert_eq!(s.visible().to_vec(), want, "folder {d}");
+    }
+    assert_eq!(s.catalog.full_sorts(), sorted, "no photo was sorted from scratch for a folder");
     let _ = std::fs::remove_dir_all(&dir);
 }
 

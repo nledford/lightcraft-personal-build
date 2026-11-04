@@ -1,5 +1,6 @@
 //! The whole library in each sort order, kept so that a view switch picks what matches out of an order that
-//! is already there instead of sorting every photo again ([`Catalog::query_keeping`]).
+//! is already there instead of sorting every photo again ([`Catalog::query_keeping`]). A view of part of the
+//! library (a folder, from the index of [`crate::index`]) is put in order by it too ([`Catalog::sorted_among`]).
 //!
 //! One list per sort key (ascending: a descending order is that one read backwards, as [`Sort::order`]
 //! reverses a total order), built on first use and never saved. A photo is named by its place in the
@@ -78,8 +79,10 @@ struct Built {
 /// Below this many photos an order is sorted when first asked for (about 50 ms at most): a thread is not worth it.
 const PREBUILD_FROM: usize = 50_000;
 
+/// Counts, for what the kept orders are there to avoid: every photo sorted from scratch, and a part of the library
+/// put in order by a kept order instead of being sorted ([`Catalog::sorted_among`]).
 #[derive(Debug, Default)]
-pub(crate) struct Orders(Mutex<Held>, AtomicUsize);
+pub(crate) struct Orders(Mutex<Held>, AtomicUsize, AtomicUsize);
 
 impl Orders {
     /// Forget every order (the catalog was changed other than by ops).
@@ -152,6 +155,19 @@ fn sorting(n: usize) -> f64 {
     if n < 2.0 { 0.0 } else { n * n.log2() }
 }
 
+/// A query of under this fraction of the library is sorted alone even when an order is kept: placing it by the
+/// order reads the order along, a pass over every photo (about 3 ns each), and sorting a few saves no more than that.
+const ALONE_BELOW: usize = 64;
+
+/// The places of `order` that are marked, as ids, in its order (the reverse of it when not `ascending`).
+fn along(order: &Order, marks: &[bool], ascending: bool) -> Vec<PhotoId> {
+    let pick = |at: &u32| {
+        let at = *at as usize;
+        if *marks.get(at)? { order.ids.get(at).copied() } else { None }
+    };
+    if ascending { order.sorted.iter().filter_map(pick).collect() } else { order.sorted.iter().rev().filter_map(pick).collect() }
+}
+
 impl Catalog {
     /// The photos that are `wanted`, in `sort` order. From the kept order of the whole library when one is kept
     /// or worth making ([`Catalog::order_for`]); else the matches are sorted alone. `None` for a shuffle (never
@@ -171,11 +187,7 @@ impl Catalog {
         if marks.len() != order.ids.len() {
             return None;
         }
-        let pick = |at: &u32| {
-            let at = *at as usize;
-            if *marks.get(at)? { order.ids.get(at).copied() } else { None }
-        };
-        Some(if sort.ascending { order.sorted.iter().filter_map(pick).collect() } else { order.sorted.iter().rev().filter_map(pick).collect() })
+        Some(along(&order, &marks, sort.ascending))
     }
 
     /// The order kept for `sort`'s key, brought up to date now; made when that pays: a query of `matching` of the
@@ -212,6 +224,51 @@ impl Catalog {
         let order = Arc::new(self.sorted_afresh(&sort));
         held.kept.insert(sort.key, Kept { revision: self.revision, order: order.clone() });
         Some(order)
+    }
+
+    /// `photos` (some of the library's, in id order, each once) in `sort` order. When an order is kept for the key
+    /// they are put in it ([`Catalog::pick_among`]), and nothing is compared: comparing is most of what showing a
+    /// folder of a big library takes. An order is never made for this (a query of part of the library is not worth
+    /// sorting every photo: [`Catalog::order_for`]); without one, and for few photos ([`ALONE_BELOW`]), they are
+    /// sorted alone.
+    pub(crate) fn sorted_among(&self, sort: &Sort, photos: Vec<&Photo>) -> Vec<PhotoId> {
+        if let Some(ids) = self.pick_among(sort, &photos) {
+            return ids;
+        }
+        let mut v = photos;
+        v.sort_by(|a, b| sort.order(a, b));
+        v.into_iter().map(|p| p.id).collect()
+    }
+
+    /// `photos` (in id order, each once) in `sort` order, read out of the order kept for the whole library: the
+    /// place of each in it is found after the one before (both lists are in id order), and the order is read along.
+    /// `None` when that is not to be done: a shuffle (never kept), no photo or few, no order kept for the key (one
+    /// that is behind by changes no longer known is dropped, as for any small query), or one that cannot place them.
+    fn pick_among(&self, sort: &Sort, photos: &[&Photo]) -> Option<Vec<PhotoId>> {
+        if sort.key == SortKey::Random || u32::try_from(self.len()).is_err() || photos.is_empty() || photos.len() < self.len() / ALONE_BELOW {
+            return None;
+        }
+        // (no photo wanted, so that an order is only brought up to date: `order_for` makes none for a share of 0)
+        let order = self.order_for(sort, self.len(), 0)?;
+        if order.ids.len() != self.len() {
+            return None;
+        }
+        let mut marks = vec![false; order.ids.len()];
+        let mut from = 0;
+        for p in photos {
+            let at = from + order.ids.get(from..)?.binary_search(&p.id).ok()?;
+            *marks.get_mut(at)? = true;
+            from = at + 1;
+        }
+        self.index.orders.2.fetch_add(1, Ordering::Relaxed);
+        Some(along(&order, &marks, sort.ascending))
+    }
+
+    /// How many times a part of the library was put in order by a kept order, not sorted (a diagnostic, like
+    /// [`Catalog::full_sorts`]).
+    #[doc(hidden)]
+    pub fn kept_picks(&self) -> usize {
+        self.index.orders.2.load(Ordering::Relaxed)
     }
 
     /// How many times every photo was sorted from scratch for this catalog's orders (a diagnostic: what a kept order
