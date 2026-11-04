@@ -325,6 +325,8 @@ pub struct ProbeInfo {
     pub preview_only: Option<String>,
     /// A JPEG cut short that is shown from the data present; see [`lightcraft_catalog::Photo::truncated`].
     pub truncated: bool,
+    /// Video duration in seconds.
+    pub duration: Option<f64>,
 }
 
 pub type FileProbe = Arc<dyn Fn(&str) -> Result<ProbeInfo, String> + Send + Sync>;

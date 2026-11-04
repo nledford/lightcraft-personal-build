@@ -124,6 +124,12 @@ impl Surface {
         }
     }
 
+    /// The height of the marks row along a photo's lower edge: what anything else kept clear of
+    /// it (a clip's running time) stands above.
+    pub(crate) fn bar_height(self) -> f32 {
+        self.metrics().bar
+    }
+
     /// The widget ids of a surface: the grid's keep their names, the filmstrip's start with `film:`.
     fn widget(self, kind: Mark, id: PhotoId) -> String {
         let (grid, film) = match kind {

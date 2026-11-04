@@ -337,6 +337,9 @@ pub struct ImportCandidate {
     /// A JPEG cut short (an interrupted download or copy): it imports from the data present.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub truncated: bool,
+    /// Video duration in seconds.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<f64>,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]

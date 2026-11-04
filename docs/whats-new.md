@@ -748,6 +748,23 @@
 - A folder inside another chosen one is taken in with it, not done twice. Cancel leaves nothing behind under the bell;
   the rows waiting in line name their folder.
 
+### Video exports respect memory and location privacy
+- Original video exports stream to disk without loading the clip into memory or imposing a
+  clip-size limit. Remove location info accepts verified location-free clips, but refuses clips
+  with native QuickTime or XMP GPS, or unverifiable metadata; it does not strip GPS from a video.
+- The browser stores and downloads videos as Blobs, hashes them in chunks and reads only bounded
+  metadata into WASM. Imports run one at a time and appear in the activity stack. Whole-buffer
+  originals and byte-returning APIs are independent of the cache budget: `app.memoryBudget`
+  controls cache retention and scheduling, not file admission. Platform buffer capacity, known
+  physical RAM and allocation failures are checked explicitly instead of imposing a cache-based
+  file-size restriction. The browser cache takes ownership without another full-buffer copy.
+  Image originals also use Blob storage, avoiding IndexedDB's serialized-buffer size ceiling.
+- Native video probing follows the container's contents, not its extension, so a clip named
+  `.jpg` or `.dng` also uses bounded metadata reads. The CLI reports a rendered video as an
+  explicit error without claiming that it wrote an output; Original copies still work.
+- The Videos filter, `kind:video` search and smart album rules also find legacy video records.
+  Direct rendering of a clip reports that it has no frame, rather than saying the photo is missing.
+
 ## 2026-10-24
 
 ### ✕ ends an import or scan at once when a file stops answering
@@ -855,6 +872,15 @@
   once there is room. A new library that can't be created is refused in the same way. A format 10 library in that case
   opens as it is and is upgraded by a later save, which keeps its files first; changes that could not be logged are
   saved in format 10, in one file, so that none is lost.
+
+### Videos join the library
+- MP4, MOV and M4V clips are found by folder import and catalogued like photos: LightCraft reads the container's
+  duration, display size (including a phone's rotation), capture date, camera and GPS from the movie header and
+  QuickTime metadata, and the grid's Videos filter lists them with their length and container. The loupe shows a card
+  naming the clip instead of a broken-photo error, and Info lists its Duration.
+- A clip cannot be played, trimmed or edited yet, and it has no still to render: a JPEG, print, contact sheet or
+  rendered slideshow leaves it out and says so per file (Original format still copies the clip). Edits to a
+  catalogued clip are kept, but nothing decodes its frames until the player lands.
 
 ### A right-click on a text field while you carry photos opens no menu
 - While you drag photos from the grid, a right-click on a text field, such as the search box, opens no Cut, Copy and

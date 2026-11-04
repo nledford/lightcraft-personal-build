@@ -1797,6 +1797,22 @@ pub mod check;
 pub mod date_picker;
 pub mod kbd;
 pub mod menu_item;
+/// A video's running time as the grid badge, the loupe card and Info show it: `MM:SS` under an
+/// hour (`00:15`, `03:42`), `H:MM:SS` from an hour up (`1:15:30`).
+///
+/// The seconds are truncated, not rounded: a player that says `01:24` for an 84.9 s clip is not
+/// promising a second that never plays. A negative, NaN or infinite duration comes back empty
+/// rather than as a wrong time (durations come from a file, so they are hostile input).
+pub fn format_duration(seconds: f64) -> String {
+    if !seconds.is_finite() || seconds < 0.0 {
+        return String::new();
+    }
+    // (a saturating cast: an absurd value must not wrap into a plausible-looking time)
+    let total = seconds.floor().min(u64::MAX as f64) as u64;
+    let (hours, minutes, secs) = (total / 3600, total % 3600 / 60, total % 60);
+    if hours > 0 { format!("{hours}:{minutes:02}:{secs:02}") } else { format!("{minutes:02}:{secs:02}") }
+}
+
 #[cfg(test)]
 #[path = "widgets/tests_numeric_entry.rs"]
 mod numeric_entry_tests;
