@@ -217,7 +217,11 @@ pub(crate) fn read_video_metadata_from_with_fragments(
             out.try_reserve_exact(box_len).map_err(|e| format!("{path}: can't allocate video metadata: {e}"))?;
             out.resize(len, 0);
             let dst = out.get_mut(start..len).ok_or_else(|| format!("{path}: invalid video metadata range"))?;
-            f.read_exact(dst).map_err(|e| format!("{path}: {e}"))?;
+            // a movie header can be 64 MiB: read it in steps, each saying the read goes on, as `read_steps` does
+            for step in dst.chunks_mut(64 * 1024) {
+                f.read_exact(step).map_err(|e| format!("{path}: {e}"))?;
+                crate::import::progressed();
+            }
         }
 
         at = end;
