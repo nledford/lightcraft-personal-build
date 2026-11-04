@@ -168,7 +168,7 @@ pub(crate) struct Prepared {
     only: Option<std::collections::HashSet<PhotoId>>,
     /// The search words ([`Filter::tokens`]).
     tokens: Vec<String>,
-    /// A pass over the library, which makes the text kept for each photo when it isn't ([`Catalog::search_text`]).
+    /// A pass over the library, which starts the text kept for each photo when that isn't started ([`Catalog::search_text`]).
     whole: bool,
     /// [`Filter::rule_set`] with its rules in the order to test them ([`crate::RuleSet::by_cost`]);
     /// `None` tests them as written.
@@ -256,26 +256,26 @@ fn token_matches(p: &Photo, t: &str, hay: &Hay) -> bool {
     hay.contains(unquote(t))
 }
 
-/// A photo's lower-cased text for the free-text search: the one the catalog keeps when `p` is its
-/// own photo and a pass over the library made them ([`Prepared::whole`]), else made when first asked.
+/// A photo's lower-cased text for the free-text search: the one the catalog keeps when `p` is its own photo and the text is made
+/// (a pass over the library, [`Prepared::whole`], starts it), else made from the photo's own fields when first asked.
 struct Hay<'a> {
     p: &'a Photo,
     cat: &'a Catalog,
     whole: bool,
-    kept: std::cell::OnceCell<Option<&'a crate::index::PhotoText>>,
+    kept: std::cell::OnceCell<Option<&'a str>>,
     own: std::cell::OnceCell<crate::index::PhotoText>,
 }
 
 impl Hay<'_> {
-    fn text(&self) -> &crate::index::PhotoText {
+    fn text(&self) -> &str {
         match self.kept.get_or_init(|| self.cat.search_text(self.p, self.whole)) {
             Some(t) => t,
-            None => self.own.get_or_init(|| crate::index::PhotoText::of(self.p)),
+            None => self.own.get_or_init(|| crate::index::PhotoText::of(self.p)).text(),
         }
     }
 
-    /// Whether `t` (lower-cased) is in one field of the photo ([`crate::index::PhotoText::contains`]): a word with NUL
-    /// is read from the fields themselves, for the joined text separates them with NUL.
+    /// Whether `t` (lower-cased) is in the photo's text: a word with NUL is read from the fields themselves
+    /// ([`crate::index::PhotoText::field_contains`]), for the joined text separates them with NUL.
     fn contains(&self, t: &str) -> bool {
         if t.contains('\0') { crate::index::PhotoText::field_contains(self.p, t) } else { self.text().contains(t) }
     }

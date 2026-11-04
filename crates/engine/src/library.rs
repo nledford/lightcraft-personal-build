@@ -943,6 +943,8 @@ impl Session {
         if on_disk {
             crate::cmd::previews::refresh_stale_smart_previews(self);
         }
+        // a big library's search text is made on another thread from here, so the first search finds it made
+        self.catalog.prebuild_search_text();
         self.library_identity = std::sync::Arc::new(());
         Ok(())
     }
