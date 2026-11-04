@@ -15,13 +15,15 @@
 //! date, and the photos with a photo's content touched, by the ops that change a photo's content
 //! as the library sees it, once a rule has built it or while a smart album asks about contents
 //! ([`Catalog::follows_contents`], [`Catalog::content_moved`]). The two texts follow every op that changes
-//! a photo's fields, and the photo moving to another place in memory.
+//! a photo's fields, and the photo moving to another place in memory. The free-text search's text of a big library is
+//! made on a thread of its own, so that the first search doesn't wait for it ([`crate::search_text`]).
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 
 use crate::query::key_within;
+use crate::search_text::KeptText;
 use crate::{AlbumId, Catalog, Photo, PhotoId, Source, StackId};
 
 /// A folder's key, or a file name's, → the photos filed under it.
@@ -41,8 +43,8 @@ pub(crate) struct Indexes {
     contents: OnceLock<HashMap<String, Vec<PhotoId>>>,
     /// Whether a smart album asks whether a photo has the same content as another ([`Catalog::follows_contents`]).
     contents_asked: OnceLock<bool>,
-    /// Photo → its lower-cased searchable text ([`PhotoText`]), for the free-text search.
-    search: OnceLock<ByPhoto<PhotoText>>,
+    /// The lower-cased text the free-text search looks through for every photo ([`PhotoText`]), and the making of it.
+    search: KeptText,
     /// Photo → the lower-cased text a smart album's Text rule looks through ([`crate::rules::rule_text`]).
     rule_text: OnceLock<ByPhoto<RuleText>>,
     /// Every photo in each sort order, see [`crate::order`].
@@ -135,12 +137,7 @@ impl Indexes {
 
     /// Photo `id` is `p` now (`None`: it is gone): the text kept for it is made again.
     pub(crate) fn text_changed(&mut self, id: PhotoId, p: Option<&Photo>) {
-        if let Some(m) = self.search.get_mut() {
-            match p {
-                Some(p) => m.insert(id, PhotoText::of(p)),
-                None => m.remove(&id),
-            };
-        }
+        self.search.changed(id, p);
         if let Some(m) = self.rule_text.get_mut() {
             match p {
                 Some(p) => m.insert(id, RuleText::of(p)),
@@ -152,12 +149,9 @@ impl Indexes {
     /// Photo `id` is about to be changed in place, at `p`: an edit of a photo that others hold
     /// (`Arc::make_mut`) puts it at another address, which its text follows.
     pub(crate) fn text_moved(&mut self, id: PhotoId, p: &Photo) {
-        let at = addr(p);
-        if let Some(t) = self.search.get_mut().and_then(|m| m.get_mut(&id)) {
-            t.at = at;
-        }
+        self.search.moved(id, p);
         if let Some(t) = self.rule_text.get_mut().and_then(|m| m.get_mut(&id)) {
-            t.at = at;
+            t.at = addr(p);
         }
     }
 
@@ -187,7 +181,7 @@ pub(crate) fn content_key(p: &Photo) -> Option<&str> {
 }
 
 /// A map from photos, for a pass over the library that asks about each one in id order.
-type ByPhoto<T> = HashMap<PhotoId, T, std::hash::BuildHasherDefault<IdHasher>>;
+pub(crate) type ByPhoto<T> = HashMap<PhotoId, T, std::hash::BuildHasherDefault<IdHasher>>;
 
 /// Hashes a photo id as itself in the table's low bits, which is where the table looks first, so
 /// ids that follow each other sit next to each other and a pass in id order walks it in order
@@ -220,7 +214,7 @@ impl std::hash::Hasher for IdHasher {
 /// own fields, never from a text kept for the photo with its id. Only ids and addresses are
 /// compared; the address is never turned back into a reference. A catalog read from a snapshot
 /// (and then repaired) or cloned starts with no texts at all: they are made when asked.
-fn addr(p: &Photo) -> usize {
+pub(crate) fn addr(p: &Photo) -> usize {
     std::ptr::from_ref(p).addr()
 }
 
@@ -231,7 +225,7 @@ fn addr(p: &Photo) -> usize {
 /// ([`PhotoText::field_contains`]), so no word runs over a field.
 pub(crate) struct PhotoText {
     /// The address of the photo this was made from ([`addr`]).
-    at: usize,
+    pub(crate) at: usize,
     text: Box<str>,
 }
 
@@ -242,38 +236,20 @@ impl PhotoText {
     }
 
     pub(crate) fn of(p: &Photo) -> PhotoText {
-        let fields = Self::fields(p);
         let people = p.people();
-        // (exact for ASCII, which most text is: the box takes the buffer without copying it)
-        let len = fields
-            .iter()
-            .map(|f| f.len() + 1)
-            .chain(p.meta.keywords.iter().map(|k| k.len() + 1))
-            .chain(people.iter().map(|n| n.len() + 1))
-            .sum::<usize>()
-            .saturating_sub(1);
-        let mut text = String::with_capacity(len);
-        for (i, field) in fields.into_iter().enumerate() {
-            if i > 0 {
-                text.push('\0');
-            }
-            push_lowercase(&mut text, field);
-        }
-        for k in p.meta.keywords.iter().map(String::as_str).chain(people) {
-            text.push('\0');
-            push_lowercase(&mut text, k);
-        }
+        let mut text = String::with_capacity(text_len(p, &people));
+        push_text(&mut text, p, &people);
         PhotoText { at: addr(p), text: text.into_boxed_str() }
     }
 
-    /// Whether the lower-cased word `t` is in the file name, title, caption, camera, lens,
-    /// location, format, a keyword or the name of a person.
-    pub(crate) fn contains(&self, t: &str) -> bool {
-        self.text.contains(t)
+    /// The lower-cased text: the file name, title, caption, camera, lens, location, format, keywords and people, joined by NUL.
+    pub(crate) fn text(&self) -> &str {
+        &self.text
     }
 
-    /// [`PhotoText::contains`] read from `p`'s fields one by one, for a word that holds NUL: the joined text can't tell
-    /// the NUL that separates two fields from one inside a field, and a word never runs over two fields.
+    /// Whether the lower-cased word `t` is in one field of `p`, read from the fields one by one, for a word that holds NUL:
+    /// the joined text can't tell the NUL that separates two fields from one inside a field, and a word never runs over two
+    /// fields.
     pub(crate) fn field_contains(p: &Photo, t: &str) -> bool {
         Self::fields(p)
             .into_iter()
@@ -282,10 +258,32 @@ impl PhotoText {
             .chain(p.people())
             .any(|f| f.to_lowercase().contains(t))
     }
+}
 
-    #[cfg(test)]
-    pub(crate) fn text(&self) -> &str {
-        &self.text
+/// The length of the text of `p`, whose people are `people` ([`Photo::people`]). Exact for ASCII, which most text is: the box
+/// takes the buffer without copying it. [`push_text`] pushes this much.
+pub(crate) fn text_len(p: &Photo, people: &[&str]) -> usize {
+    PhotoText::fields(p)
+        .iter()
+        .map(|f| f.len() + 1)
+        .chain(p.meta.keywords.iter().map(|k| k.len() + 1))
+        .chain(people.iter().map(|n| n.len() + 1))
+        .sum::<usize>()
+        .saturating_sub(1)
+}
+
+/// Push the text of `p`, whose people are `people`, onto `out`: each field lower-cased as `str::to_lowercase` does it alone,
+/// with a NUL between every two.
+pub(crate) fn push_text(out: &mut String, p: &Photo, people: &[&str]) {
+    for (i, field) in PhotoText::fields(p).into_iter().enumerate() {
+        if i > 0 {
+            out.push('\0');
+        }
+        push_lowercase(out, field);
+    }
+    for k in p.meta.keywords.iter().map(String::as_str).chain(people.iter().copied()) {
+        out.push('\0');
+        push_lowercase(out, k);
     }
 }
 
@@ -543,16 +541,45 @@ impl Catalog {
         }
     }
 
-    /// `p`'s lower-cased text for the free-text search, when `p` is this catalog's own photo and the
-    /// text was made. `build`: make it for every photo first when it wasn't (a pass over the whole
-    /// library does; testing one photo shouldn't build it for 300 000).
-    pub(crate) fn search_text(&self, p: &Photo, build: bool) -> Option<&PhotoText> {
-        let m = if build {
-            self.index.search.get_or_init(|| self.photos.values().map(|p| (p.id, PhotoText::of(p))).collect())
-        } else {
-            self.index.search.get()?
-        };
-        m.get(&p.id).filter(|t| t.at == addr(p))
+    /// `p`'s lower-cased text for the free-text search, when `p` is this catalog's own photo and the text is made. `pass`: a
+    /// pass over the whole library asks (testing one photo shouldn't make it for 300 000): it starts the text when it isn't
+    /// started, which a big library has made on another thread ([`crate::search_text`]), and the pass reads each photo's own
+    /// fields until then.
+    pub(crate) fn search_text(&self, p: &Photo, pass: bool) -> Option<&str> {
+        self.index.search.get(&self.photos, pass)?.get(p)
+    }
+
+    /// Starts making the free-text search's text on another thread, when the library is big enough for making it to be felt and
+    /// it isn't made or being made: the first search of a session then finds it made rather than waiting for it. A search that
+    /// comes before it is done reads each photo's own fields.
+    pub fn prebuild_search_text(&self) {
+        self.index.search.start(&self.photos);
+    }
+
+    /// Whether the search's text is made. A diagnostic: asking takes the text from its thread when that is done.
+    #[doc(hidden)]
+    pub fn search_text_ready(&self) -> bool {
+        self.index.search.get(&self.photos, false).is_some()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_search_background_from(&mut self, photos: usize) {
+        self.index.search.set_from(photos);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn hold_search_text(&self, f: impl Fn() + Send + Sync + 'static) {
+        self.index.search.hold(std::sync::Arc::new(f));
+    }
+
+    #[cfg(test)]
+    pub(crate) fn search_text_state(&self) -> &'static str {
+        self.index.search.describe()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn search_text_spawned(&self) -> usize {
+        self.index.search.spawned()
     }
 
     /// [`Catalog::search_text`] for a smart album's Text rule: the lower-cased, trimmed text of

@@ -36,6 +36,7 @@ pub mod query;
 pub mod restore;
 pub mod rules;
 pub mod safe_file;
+mod search_text;
 pub mod segments;
 pub mod shared;
 pub mod stacks;

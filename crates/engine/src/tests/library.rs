@@ -1008,3 +1008,35 @@ fn a_selection_restored_from_view_json_names_each_photo_once() {
     assert_eq!(s.selection.active, Some(ids[1]));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Opening a big library starts making the free-text search's text on another thread, so the first search finds it made.
+#[test]
+fn opening_a_big_library_makes_its_search_text_on_another_thread() {
+    use lightcraft_catalog::{MemStore, Op, Photo, PhotoId, Source};
+    let store = MemStore::new();
+    let open_it = || {
+        let mut s = Session::new();
+        let stores =
+            crate::library::LibraryStores { dir: "big".into(), catalog: Box::new(store.clone()), files: Box::new(MemStore::new()), on_disk: false };
+        s.open_library_in(stores, false).unwrap();
+        s
+    };
+    let mut s = open_it();
+    let ops: Vec<Op> = (0..50_000u64)
+        .map(|i| {
+            let p = Photo::new(PhotoId(i + 1), Source::Demo { scene: 1 }, &format!("IMG_{i:05}.jpg"), "JPEG", 60, 40, "2026-01-01T00:00:00");
+            Op::AddPhoto { photo: Box::new(p) }
+        })
+        .collect();
+    s.commit("Add", Op::Batch { ops }).unwrap();
+    s.persist().unwrap();
+    assert!(!s.catalog.search_text_ready(), "adding photos made no text: no search asked for it");
+    // opened again from what was saved: the text is made without a search asking for it
+    let s = open_it();
+    assert_eq!(s.catalog.len(), 50_000);
+    let by = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    while !s.catalog.search_text_ready() {
+        assert!(std::time::Instant::now() < by, "the search text was not made in 30 s");
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+}
