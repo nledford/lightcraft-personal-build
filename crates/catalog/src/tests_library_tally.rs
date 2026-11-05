@@ -21,13 +21,36 @@ impl Dice {
 }
 
 /// Folders as people's libraries hold them: a disk, a share, a Windows drive, a folder spelled
-/// in two cases, the root itself.
-const FOLDERS: &[&str] =
-    &["/Volumes/nas/Entities/Z", "/Volumes/nas/entities/z", "/Volumes/nas/LG/007", "/Users/me/Pictures", "C:/Photos/2024", "", "/mnt/b"];
-/// Keywords, with case variants of the same keyword, levels shared by two, and spaces and
-/// empty levels that are trimmed away.
-const KEYWORDS: &[&str] =
-    &["Body", "body", "Travel|Italy", "travel|France", "travel|italy|Rome", " Travel | Spain ", "a||b", "People|Ann", "people|ann"];
+/// in two cases, the root itself, names that aren't ASCII.
+const FOLDERS: &[&str] = &[
+    "/Volumes/nas/Entities/Z",
+    "/Volumes/nas/entities/z",
+    "/Volumes/nas/LG/007",
+    "/Users/me/Pictures",
+    "C:/Photos/2024",
+    "",
+    "/mnt/b",
+    "/Volumes/nas/Fotos/Ünïcode/Été",
+    "D:\\Bilder\\Ärger\\日本",
+];
+/// Keywords, with case variants of the same keyword, levels shared by two, spaces and
+/// empty levels that are trimmed away, levels that aren't ASCII and ones four deep.
+const KEYWORDS: &[&str] = &[
+    "Body",
+    "body",
+    "Travel|Italy",
+    "travel|France",
+    "travel|italy|Rome",
+    " Travel | Spain ",
+    "a||b",
+    "People|Ann",
+    "people|ann",
+    "Ünï|Çafé|Été",
+    "ünï|çafé",
+    "日本|東京|渋谷|駅",
+    "|",
+    "Deep|a|b|c|d",
+];
 const DATES: &[&str] = &["2024-03-05T10:00:00", "2024-03-06T10:00:00", "2023-12-31T23:59:59", "2025-01-01", "2024", "ü2024-03-05", ""];
 
 fn photo(c: &mut Catalog, d: &mut Dice) -> Photo {
@@ -218,4 +241,79 @@ fn a_bulk_edit_of_what_no_count_reads_is_followed_however_many_photos_it_changes
     assert_same(&t, &c, 1);
     c.apply(Op::Batch { ops: ids.iter().map(|id| Op::SetFlag { id: *id, flag: Flag::Pick }).collect() }).unwrap();
     assert_eq!(t.follow(&c), None, "a flag on every photo changes the picks: counted whole");
+}
+
+#[test]
+fn a_large_mixed_library_is_tallied_as_every_photo_counts_it_and_stays_so_as_it_empties_and_refills() {
+    let mut d = Dice(0xC0FFEE);
+    let mut c = Catalog::new();
+    let ops: Vec<Op> = (0..3000).map(|_| Op::AddPhoto { photo: Box::new(photo(&mut c, &mut d)) }).collect();
+    c.apply(Op::Batch { ops }).unwrap();
+    let mut t = LibraryTally::of(&c);
+    assert_same(&t, &c, 0);
+    assert!(t.counts().total > 2000 && t.counts().picks > 0 && t.counts().deleted == 0, "{:?}", t.counts());
+    // (the folders, days and keyword lists photos shared go with their last photo, and their numbers are given to the ones that come
+    // after; what is shown must not tell)
+    let ids: Vec<PhotoId> = c.photos().map(|p| p.id).collect();
+    for (i, chunk) in ids.chunks(500).enumerate() {
+        c.apply(Op::Batch { ops: chunk.iter().map(|id| Op::RemovePhoto { id: *id }).collect() }).unwrap();
+        assert!(t.follow(&c).is_some(), "slice {i} of the removals is followed");
+        assert_eq!(t.folder_tree(&c), c.folder_tree(), "slice {i}: folders");
+        assert_eq!(t.date_groups(), c.date_groups(), "slice {i}: dates");
+    }
+    assert_eq!(t.counts(), LibraryCounts::default());
+    assert!(t.folder_tree(&c).is_empty() && t.date_groups().is_empty());
+    assert_eq!(t.keyword_tree(&c), c.keyword_tree(), "no photo is left, so no keyword is, however its first spelling went");
+    for i in 0..6 {
+        let ops: Vec<Op> = (0..500).map(|_| Op::AddPhoto { photo: Box::new(photo(&mut c, &mut d)) }).collect();
+        c.apply(Op::Batch { ops }).unwrap();
+        assert!(t.follow(&c).is_some(), "slice {i} of the additions is followed");
+        let counted = LibraryTally::of(&c);
+        assert_eq!(t.counts(), counted.counts(), "slice {i}: counts");
+        assert_eq!(t.folder_tree(&c), counted.folder_tree(&c), "slice {i}: folders");
+        assert_eq!(t.date_groups(), counted.date_groups(), "slice {i}: dates");
+        assert_same(&counted, &c, i);
+        assert_eq!(levels_counted(&t.keyword_tree(&c)), levels_counted(&counted.keyword_tree(&c)), "slice {i}: photos per keyword level");
+        if t.exact() {
+            assert_eq!(t.keyword_tree(&c), counted.keyword_tree(&c), "slice {i}: keywords");
+        }
+    }
+}
+
+#[test]
+fn a_library_whose_ids_are_far_apart_is_tallied_all_the_same() {
+    let mut d = Dice(0xFA2);
+    let mut c = Catalog::new();
+    let ops: Vec<Op> = (0..300)
+        .map(|_| {
+            let mut p = photo(&mut c, &mut d);
+            p.id = PhotoId(p.id.0 * 1_000_003);
+            Op::AddPhoto { photo: Box::new(p) }
+        })
+        .collect();
+    c.apply(Op::Batch { ops }).unwrap();
+    let mut t = LibraryTally::of(&c);
+    assert_same(&t, &c, 0);
+    let ids: Vec<PhotoId> = c.photos().map(|p| p.id).collect();
+    c.apply(Op::Batch { ops: ids.iter().step_by(2).map(|id| Op::SetFlag { id: *id, flag: Flag::Pick }).collect() }).unwrap();
+    c.apply(Op::Batch { ops: ids.iter().skip(1).step_by(3).map(|id| Op::SetDeleted { id: *id, deleted: true }).collect() }).unwrap();
+    assert!(t.follow(&c).is_some());
+    let counted = LibraryTally::of(&c);
+    assert_eq!(t.counts(), counted.counts());
+    assert_eq!(t.folder_tree(&c), c.folder_tree());
+    assert_eq!(t.date_groups(), c.date_groups());
+}
+
+/// Every level of a keyword tree with its photos, by lower-case path: the tree without how each level is spelled.
+fn levels_counted(nodes: &[crate::KeywordNode]) -> Vec<(String, usize)> {
+    fn walk(nodes: &[crate::KeywordNode], out: &mut Vec<(String, usize)>) {
+        for n in nodes {
+            out.push((n.path.to_lowercase(), n.count));
+            walk(&n.children, out);
+        }
+    }
+    let mut out = Vec::new();
+    walk(nodes, &mut out);
+    out.sort();
+    out
 }
