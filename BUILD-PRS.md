@@ -1,10 +1,10 @@
 # PRs in the `integration` build
 
-The `integration` branch (the build I run) is LightCraft `main` at `07301cbd1e` plus the pull requests below, merged or ported together, plus integration-only fixes where two of them meet (887 commits on top of `main`, merges and fixes included). The PRs were open when they were taken; the State column is their state now. Source: `integration` at `35473bd276` (committed 2026-11-04 12:57 UTC). This list is written by `just build-prs 35473bd276` and replaced whenever a new build is swapped in.
+The `integration` branch (the build I run) is LightCraft `main` at `07301cbd1e` plus the pull requests below, merged or ported together, plus integration-only fixes where two of them meet (902 commits on top of `main`, merges and fixes included). The PRs were open when they were taken; the State column is their state now. Source: `integration` at `74d01a71f4` (committed 2026-11-05 14:41 UTC). This list is written by `just build-prs 74d01a71f4` and replaced whenever a new build is swapped in.
 
 How each PR was found: a commit in the build that merges, ports, applies, refreshes or records it, naming the head it took (the commit is shown); its head being in the build's history ("head in build"); all of its commits being in the build by patch ("same patches in build"); or a later head of a PR already in the build whose new commits reverse cleanly against the build's tree (docs, locale catalogs and the lock file left out) or are each in the build as a commit with the same subject and author ("later commits ported"; the commit shown is the earlier head's). "Taken at" is the head that went into the build; "Head now" says whether GitHub still has that head ("same") or the PR has moved on (the build holds the older head: no commit, diff or port of the newer one was found in it).
 
-186 PRs: 4 closed, 165 open, 17 open (draft); 159 at their current head, 27 moved since.
+187 PRs: 4 closed, 166 open, 17 open (draft); 156 at their current head, 31 moved since.
 
 ## My PRs (185)
 
@@ -49,7 +49,7 @@ How each PR was found: a commit in the build that merges, ports, applies, refres
 | [#2047](https://github.com/storytold/lightcraft/pull/2047) | LRC-LIB-LIBFOLDERS: importing into a large library keeps the window responsive | open | `3d8ca1c08d` | moved to `2a307e0385` | `c51898782f` |
 | [#2078](https://github.com/storytold/lightcraft/pull/2078) | LR-BEHAV-ACCESS: one tick box, radio and toggle button for every choice | open | `fd8ff7a4ee` | same | `2848724773` |
 | [#2079](https://github.com/storytold/lightcraft/pull/2079) | LR-BEHAV-ACCESS: action buttons share one Button component | open | `77487609c8` | same | `2985896201` |
-| [#2080](https://github.com/storytold/lightcraft/pull/2080) | MENU-BAR: one menu row and shortcut component for every menu | open | `50955ad976` | same | `1f030d6335` |
+| [#2080](https://github.com/storytold/lightcraft/pull/2080) | MENU-BAR: one menu row and shortcut component for every menu | open | `50955ad976` | moved to `9b9c31cc9d` | `1f030d6335` |
 | [#2164](https://github.com/storytold/lightcraft/pull/2164) | LR-VIEW-FILMSTRIP: filmstrip and grid thumbnails share one overlay, and it degrades on narrow tiles | open | `b3ab4d98d3` | moved to `8a570634ef` | `8f4b6412c9` |
 | [#2194](https://github.com/storytold/lightcraft/pull/2194) | MENU-BAR: every command has a place in the menus, and View drops from 62 rows to 36 | open | `4d27821f0b` | same | `2419e042c6` |
 | [#2204](https://github.com/storytold/lightcraft/pull/2204) | LR-BEHAV-DRAGDROP: photo drags say what a drop will do, refuse what it can't, and Esc gives them up | open | `10275023d2` | same | `9b170c91be`, later commits ported |
@@ -59,7 +59,7 @@ How each PR was found: a commit in the build that merges, ports, applies, refres
 | [#2414](https://github.com/storytold/lightcraft/pull/2414) | PERF-SELECT: a big selection no longer slows every idle frame | open | `8eec5d37e3` | same | `fb185bebd6` |
 | [#2415](https://github.com/storytold/lightcraft/pull/2415) | PERF-LIB: big views list from a kept sort order instead of sorting every photo | open | `ae3b80ebee` | same | `bf98d6e3b7` |
 | [#2418](https://github.com/storytold/lightcraft/pull/2418) | PERF-SEARCH: typing in the library search keeps up on a large library | open | `ab21a4c809` | same | `1c42da31c5` |
-| [#2419](https://github.com/storytold/lightcraft/pull/2419) | PERF-SIDECARS: imports and moves answer sidecar lookups from the folder listing | open | `27bc794a99` | moved to `417dcf3661` | `94de6c57c9` |
+| [#2419](https://github.com/storytold/lightcraft/pull/2419) | PERF-SIDECARS: imports and moves answer sidecar lookups from the folder listing | open | `27bc794a99` | moved to `2ff17f6541` | `94de6c57c9` |
 | [#2459](https://github.com/storytold/lightcraft/pull/2459) | PERF-WALK: a folder walk on a network share lists up to eight folders at the same time | open | `0d22430798` | moved to `a8d7651d03` | `8bcc533708` |
 | [#2464](https://github.com/storytold/lightcraft/pull/2464) | LRC-LIB-MISSING: one rule for Missing Photos' files, and a folder listing that panics no longer stays running | open | `a895a6a877` | moved to `74e4d0f691` | `3f206eb927` |
 | [#2522](https://github.com/storytold/lightcraft/pull/2522) | LR-PREF-GENERAL: Settings tabs look like tabs, and the keyboard focus shows and moves in one short way | open | `3d7fa853a1` | same | `77ce234475` |
@@ -84,15 +84,15 @@ How each PR was found: a commit in the build that merges, ports, applies, refres
 | [#2757](https://github.com/storytold/lightcraft/pull/2757) | LR-BEHAV-MULTISELECT: several sidebar albums, keywords or folders are deleted, moved or labeled as one undo step (engine) | open | `8bf8557711` | moved to `5ab04d7ee1` | `b9862df062` |
 | [#2768](https://github.com/storytold/lightcraft/pull/2768) | LR-VIEW-FILMSTRIP: a selected photo's ring shows before its thumbnail loads | open | `83c8c10be2` | same | `5920ee097d` |
 | [#2797](https://github.com/storytold/lightcraft/pull/2797) | LR-BEHAV-AUTOSAVE: a change that could only be partly taken back is saved and can be undone | open | `a6e65608b6` | moved to `d3e0f94d6b` | `640d10ef83` |
-| [#2806](https://github.com/storytold/lightcraft/pull/2806) | LR-BEHAV-BG-TASKS: a preview build asked for while another runs can wait in line for it (engine) | open | `67a5f01565` | same | `70ce4b372b` |
+| [#2806](https://github.com/storytold/lightcraft/pull/2806) | LR-BEHAV-BG-TASKS: a preview build asked for while another runs can wait in line for it (engine) | open | `67a5f01565` | moved to `3d75f5d598` | `70ce4b372b` |
 | [#2812](https://github.com/storytold/lightcraft/pull/2812) | PERF-CATALOG: equal develop settings are held once in memory | open | `f9085a1255` | moved to `9af905e836` | `1b1781e848` |
 | [#2818](https://github.com/storytold/lightcraft/pull/2818) | LRC-LIB-SMARTCOLL: a smart album on a loop of albums holds no photos, and says which album it loops through | open | `695c30c2e6` | moved to `7af6e761bf` | `f796caf353` |
 | [#2828](https://github.com/storytold/lightcraft/pull/2828) | LRC-LIB-SMARTCOLL: reorder rules and groups in the smart album editor by drag or arrow keys | open | `a2f64b1222` | moved to `b75e7adf4c` | `34a3665d81` |
 | [#2860](https://github.com/storytold/lightcraft/pull/2860) | LRC-LIB-LIBFOLDERS: the engine can locate a folder that is somewhere else now (engine only) | open | `b6fc1b334b` | moved to `7c3bf8d8b6` | `fa5bf38eea` |
-| [#2867](https://github.com/storytold/lightcraft/pull/2867) | Catalog: an upgrade keeps the files it replaces | open | `f9e8358061` | moved to `5e66b5666b` | `e8f3a88d71` |
+| [#2867](https://github.com/storytold/lightcraft/pull/2867) | Catalog: an upgrade keeps the files it replaces | open | `f9e8358061` | moved to `57c945ff3f` | `e8f3a88d71` |
 | [#2868](https://github.com/storytold/lightcraft/pull/2868) | LRC-LIB-LIBFOLDERS: an import batch changes only the Folders rows it touches (stacked on #2047) | open | `dca1c334a1` | same | `8352b96082` |
 | [#2869](https://github.com/storytold/lightcraft/pull/2869) | LR-BEHAV-BG-TASKS: queue a scanned folder without its review while the library lane is busy (stacked on #1943) | open | `e1f1400601` | same | `b2442ec0bd` |
-| [#2871](https://github.com/storytold/lightcraft/pull/2871) | Catalog: the store can write files that a later write names, list its files and sync folders it can | open | `254e30e4cf` | same | `5639a8b4ed` |
+| [#2871](https://github.com/storytold/lightcraft/pull/2871) | Catalog: the store can write files that a later write names, list its files and sync folders it can | open | `254e30e4cf` | moved to `d89738086c` | `5639a8b4ed` |
 | [#2872](https://github.com/storytold/lightcraft/pull/2872) | LR-BEHAV-BG-TASKS: queued imports and syncs name their folder, the dialogs say when they queue, a refused drop says why, switching libraries asks (stacked on #1943) | open | `c35cb684b9` | same | `493807b02f` |
 | [#2873](https://github.com/storytold/lightcraft/pull/2873) | LR-IMP-FORMATS: a JPEG cut short is marked in the import review, the import message, Info and a smart-album rule (stacked on #2705) | open | `6e91ca04e5` | same | `e7cc5a109d` |
 | [#2874](https://github.com/storytold/lightcraft/pull/2874) | LR-PREF-GENERAL: Settings has a filter that finds a section on whatever tab it is | open | `9547cdcebd` | moved to `b3913f6de7` | `2ac8ab9325` |
@@ -137,7 +137,7 @@ How each PR was found: a commit in the build that merges, ports, applies, refres
 | [#2959](https://github.com/storytold/lightcraft/pull/2959) | LRC-LIB-LIBFOLDERS: every folder menu can copy the folder's path and make a folder on disk (stacked on #2935) | open | `6a4a389b66` | same | `3582ced247` |
 | [#2961](https://github.com/storytold/lightcraft/pull/2961) | LRC-LIB-LIBFOLDERS: a folder's menu can bring photos in (stacked on #2935) | open | `ab9f915f31` | same | `3e28577a51` |
 | [#2968](https://github.com/storytold/lightcraft/pull/2968) | PERF-CATALOG: catalog records state only what was set (catalog format 10) (stacked on #2957) | open (draft) | `2a51d02806` | same | `47b17eeee4` |
-| [#2971](https://github.com/storytold/lightcraft/pull/2971) | LR-IMP-DUPES: a photo browsed in Local is offered by Import and no longer blocks the library's own file | open | `aaeb9505c0` | moved to `35a3d92129` | `7c4ee8b819` |
+| [#2971](https://github.com/storytold/lightcraft/pull/2971) | LR-IMP-DUPES: a photo browsed in Local is offered by Import and no longer blocks the library's own file | open | `aaeb9505c0` | moved to `40d3e6031a` | `7c4ee8b819` |
 | [#2973](https://github.com/storytold/lightcraft/pull/2973) | MENU-BAR: clippy passes on macOS again (Quit, About and Settings share one branch) | closed | `f780d66842` | same | `dfbb3a0637` |
 | [#2978](https://github.com/storytold/lightcraft/pull/2978) | PERF-CATALOG: the segments of a snapshot, with no caller yet (stacked on #2968 and #2871) | open (draft) | `50b6190b13` | same | `d8bcffaadb` |
 | [#2983](https://github.com/storytold/lightcraft/pull/2983) | PERF-CATALOG: the catalog saves its photos in segment files and opens them on several threads (catalog format 11, stacked on #2978) | open (draft) | `038f346360` | same | `913fd670d7` |
@@ -196,10 +196,11 @@ How each PR was found: a commit in the build that merges, ports, applies, refres
 | [#3692](https://github.com/storytold/lightcraft/pull/3692) | KEY-RATING: rating and label keys can be remapped, and French AZERTY digit rows rate without Shift | open | `b4780a7a66` | same | `737ace2280` |
 | [#3716](https://github.com/storytold/lightcraft/pull/3716) | LR-LIB-FLAG: the photo menu's rating and flag rows and P / U with Crop open use the culling path | open | `5f89e2c5dc` | same | `195df62570` |
 
-## Other contributors' PRs (1)
+## Other contributors' PRs (2)
 
 | PR | Title | State | Taken at | Head now | In the build through |
 |---|---|---|---|---|---|
-| [#3018](https://github.com/storytold/lightcraft/pull/3018) | perf(catalog): box Photo::embedded_lens (~240 MB less per 1M photos) | open | `3da201b8c5` | same | `90fed4c68d` |
+| [#2822](https://github.com/storytold/lightcraft/pull/2822) | LR-VID-PLAY: MP4/MOV video import and cataloguing with duration and container badges | open | `2368c54ec9` | same | `3b58acb8da` |
+| [#3018](https://github.com/storytold/lightcraft/pull/3018) | perf(catalog): box Photo::embedded_lens (~240 MB less per 1M photos) | open | `3da201b8c5` | moved to `5721021c5b` | `90fed4c68d` |
 
 Not listed: my integration PRs [#3162](https://github.com/storytold/lightcraft/pull/3162), [#3170](https://github.com/storytold/lightcraft/pull/3170), [#3195](https://github.com/storytold/lightcraft/pull/3195), each a bundle whose members are listed on their own.
