@@ -123,14 +123,29 @@ fn small_square_cells_keep_the_format_and_duration_pills_apart() {
             if let (Some(d), Some(f)) = (duration, rect(&format!("badge:videoFormat:{id}"))) {
                 assert!(!d.intersects(f), "{size}: clip {id}'s pills overlap: {d:?} {f:?}");
             }
-            // The build lays a clip's pills out on its 16:9 picture, inside the cell's margins (10 points at the sides and
-            // bottom, 24 above), and the running time needs a picture 48 points tall to stand above the marks bar: from
-            // about 106 point cells up. Under that the pill is skipped by design.
-            let picture_height = rect(&format!("thumb:{id}")).map_or(0.0, |c| ((c.width() - 20.0) * 9.0 / 16.0).min(c.height() - 34.0));
-            if picture_height >= 48.5 {
-                assert!(duration.is_some(), "{size}: clip {id} shows its running time on a {picture_height} point picture");
-            }
+            assert!(duration.is_some(), "{size}: clip {id} shows its running time");
         }
+    }
+}
+
+/// The running time's room is the cell's, not the picture's: at the smallest size a 16:9 picture (as wide as the cell's margins leave) is
+/// under the 48 points the pill needs above the marks bar, in a cell that is taller, and the clip keeps its running time, on its cell.
+#[test]
+fn a_short_picture_in_the_smallest_cell_keeps_its_running_time() {
+    let mut h = video_app(ViewMode::SquareGrid);
+    h.app.ui.show_filenames = false;
+    h.app.ui.thumb_size = crate::state::THUMB_SIZE_MIN;
+    h.settle(SETTLE);
+    let rect = |name: &str| h.app.widgets.iter().find(|(w, _)| w == name).map(|(_, r)| *r);
+    for id in [1, 3] {
+        let cell = rect(&format!("thumb:{id}")).expect("the clip's cell is drawn");
+        // a square cell keeps 10 points at its sides and bottom and 24 above its picture
+        let picture_height = (cell.width() - 20.0) * 9.0 / 16.0;
+        assert!(picture_height < 48.0, "clip {id}: a {picture_height} point picture is not short: this test needs a smaller cell");
+        let Some(time) = rect(&format!("badge:videoDuration:{id}")) else {
+            panic!("clip {id} shows its running time on a {picture_height} point picture");
+        };
+        assert!(cell.contains_rect(time), "clip {id}: the running time {time:?} stays on its cell {cell:?}");
     }
 }
 

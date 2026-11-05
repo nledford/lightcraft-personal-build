@@ -942,7 +942,7 @@ fn cell(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, r: Rect, view: 
     let (photo_rect, failure) = paint_cell_thumbnail(app, p, &t, id, img_rect, flags);
     // labels and badges
     paint_cell_caption(app, ui, p, &t, &photo, r, CaptionFlags { square, selected });
-    paint_video_badges(app, ui, p, &t, &photo, photo_rect, square);
+    paint_video_badges(app, ui, p, &t, &photo, PillArea { picture: photo_rect, cell: img_rect }, square);
     // Stars on hover: the decision marks (flag, colour label) always show; the stars and the edited
     // mark only while the photo is hovered or selected, so a mostly rated library stays clean.
     let engaged = resp.hovered() || selected;
@@ -1109,27 +1109,35 @@ fn paint_cell_caption(
     }
 }
 
+/// Where a clip's pills are laid out, and how much room the running time has: the pills go against the `picture`, as the rest of the
+/// thumbnail's overlay does, while the room is the `cell`'s (the thumbnail's whole area, which a 16:9 picture does not fill in a square cell).
+#[derive(Clone, Copy)]
+struct PillArea {
+    picture: Rect,
+    cell: Rect,
+}
+
 /// A clip's container (where the square grid's filename line doesn't carry it already) and its
 /// running time, which is what tells one clip from another at a glance. Laid out against the
-/// picture's rectangle (`rect`), as the rest of the thumbnail's overlay is.
+/// picture's rectangle (`area.picture`), as the rest of the thumbnail's overlay is.
 fn paint_video_badges(
     app: &LightcraftApp,
     ui: &egui::Ui,
     p: &egui::Painter,
     t: &Tokens,
     photo: &lightcraft_catalog::Photo,
-    rect: Rect,
+    area: PillArea,
     square: bool,
 ) {
     if !is_clip(photo) {
         return;
     }
     // the running time first: in a short cell it is the pill that stays
-    let duration = photo.duration.and_then(|d| video_duration_badge(ui, p, t, photo.id, d, rect));
+    let duration = photo.duration.and_then(|d| video_duration_badge(ui, p, t, photo.id, d, area));
     if !(square && app.ui.show_filenames) && !photo.format.is_empty() {
         // a virtual copy's tag holds the top right corner: the container sits just below it
         let below = if photo.copy_name.is_some() { COPY_TAG_HEIGHT + 4.0 } else { 0.0 };
-        video_format_badge(ui, p, t, photo.id, &photo.format, rect, below, duration);
+        video_format_badge(ui, p, t, photo.id, &photo.format, area.picture, below, duration);
     }
 }
 
@@ -1153,22 +1161,26 @@ fn video_format_badge(ui: &egui::Ui, p: &egui::Painter, t: &Tokens, id: PhotoId,
     register(ui, format!("badge:videoFormat:{}", id.0), br);
 }
 
-/// A clip's running time (video icon + `MM:SS`) in a dark pill at the thumbnail's lower edge,
-/// above the rating bar so neither hides the other. Its rect, when drawn.
-fn video_duration_badge(ui: &egui::Ui, p: &egui::Painter, t: &Tokens, id: PhotoId, seconds: f64, img_rect: Rect) -> Option<Rect> {
+/// A clip's running time (video icon + `MM:SS`) in a dark pill at the picture's lower edge, above the
+/// marks bar so neither hides the other (on a picture too short for that: 4 points under its top).
+/// Its rect, when drawn.
+fn video_duration_badge(ui: &egui::Ui, p: &egui::Painter, t: &Tokens, id: PhotoId, seconds: f64, area: PillArea) -> Option<Rect> {
     let text = crate::widgets::format_duration(seconds);
     if text.is_empty() {
         return None;
     }
+    let picture = area.picture;
     let g = p.layout_no_wrap(text, t.semibold(10.0), Color32::WHITE);
     let w = g.size().x + 26.0;
-    // A pill wider than the cell's margins would spill over its neighbours, and in a cell under
-    // 48 points it would sit on the badge bar: skip it instead.
-    if w > img_rect.width() - 10.0 || img_rect.height() < 48.0 {
+    // A pill wider than the picture's margins would spill over its neighbours, and in a cell under
+    // 48 points tall it would sit on the badge bar: skip it instead. The room is the cell's, not
+    // the picture's: a 16:9 picture in the smallest square cell is shorter than that, and the pill
+    // kept 4 points under its top is still inside the cell.
+    if w > picture.width() - 10.0 || area.cell.height() < 48.0 {
         return None;
     }
-    let x = (img_rect.right() - 6.0 - w).max(img_rect.left() + 4.0);
-    let y = (img_rect.bottom() - 24.0 - 20.0).max(img_rect.top() + 4.0);
+    let x = (picture.right() - 6.0 - w).max(picture.left() + 4.0);
+    let y = (picture.bottom() - 24.0 - 20.0).max(picture.top() + 4.0);
     let br = Rect::from_min_size(pos2(x, y), vec2(w, 17.0));
     p.rect_filled(br, 8.5, Color32::from_black_alpha(175));
     paint(p, Rect::from_center_size(pos2(br.left() + 11.0, br.center().y), vec2(12.0, 12.0)), Icon::Video, Color32::WHITE);
