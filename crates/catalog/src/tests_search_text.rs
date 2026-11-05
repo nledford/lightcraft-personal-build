@@ -651,8 +651,8 @@ fn photos_that_only_move_while_the_text_is_made_keep_the_text_the_thread_made() 
     assert_eq!(c.search_text_again(), 0);
 }
 
-/// So many photos changed while the thread made the text that bringing it up to date where the search stands would stall the
-/// search as much as making all of it does: the thread's text is left, and made again from the photos as they are.
+/// So many photos changed while the thread made the text that it is not brought up to date photo by photo: the thread's text is
+/// dropped, and made again from the photos as they are. A search of one photo that finds the thread done makes nothing here.
 #[test]
 fn a_text_that_many_photos_changed_under_is_made_again_not_patched() {
     let mut c = many(3000);
@@ -664,6 +664,8 @@ fn a_text_that_many_photos_changed_under_is_made_again_not_patched() {
     retitle(&mut c, 1..=1100);
     gate.open();
     wait_for(&c, "the thread did not end", |c| c.search_text_state() != "making");
+    assert!(!c.search_text_ready(), "the thread's text was taken though many photos changed under it");
+    assert_eq!(c.search_text_state(), "idle");
     assert_eq!(found(&c, "edited"), 1100);
     assert_eq!((c.search_text_state(), c.search_text_spawned(), c.search_text_again()), ("made", 1, 0), "the thread's text was patched");
     assert_current(&c);

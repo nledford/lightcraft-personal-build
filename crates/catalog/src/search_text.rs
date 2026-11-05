@@ -22,7 +22,7 @@ type Photos = BTreeMap<PhotoId, Arc<Photo>>;
 /// Below it, making the text takes about 20 ms or less, which a search makes where it stands.
 pub(crate) const BACKGROUND_FROM: usize = 50_000;
 
-/// A block is never made again for fewer changed photos than this, however few photos it holds ([`SearchText::too_many`]).
+/// A block is never made again for this many changed photos or fewer, however few photos it holds ([`SearchText::too_many`]).
 const STALE_FLOOR: usize = 1024;
 
 /// Where one photo's text is in [`SearchText`].
@@ -106,8 +106,9 @@ impl SearchText {
         Some(i)
     }
 
-    /// Whether `n` photos changed since the block was made are too many to keep beside it: more than an eighth of the photos
-    /// (`STALE_FLOOR` at least). The text is made again then, rather than kept as the old block and a text for each of them.
+    /// Whether `n` photos changed since the block was made are too many to keep beside it: more than an eighth of the photos the
+    /// block holds, and more than `STALE_FLOOR`. The text is made again then, rather than kept as the old block and a text for each
+    /// of them.
     fn too_many(&self, n: usize) -> bool {
         n > (self.entries.len() / 8).max(STALE_FLOOR)
     }
@@ -185,8 +186,10 @@ impl Default for KeptText {
 }
 
 impl KeptText {
-    /// The text, when it is made. `pass`: a pass over the whole library asks, which waits for the thread that is making the text, and
-    /// makes it here when there is none (a search of one photo asks without waiting for or making anything).
+    /// The text, when it is made. `pass`: a pass over the whole library asks, which waits for the thread that is making the text and
+    /// makes it here when there is none. A search of one photo (`pass` false) neither waits for the thread nor makes the text here
+    /// (it waits only for a pass that is already doing that): it takes the thread's text when the thread is done, making again the
+    /// text of the photos edited meanwhile, and is otherwise answered from the photo's own fields.
     pub(crate) fn get(&self, photos: &Photos, pass: bool) -> Option<&SearchText> {
         if let Some(text) = self.made.get() {
             return Some(text);
@@ -206,8 +209,9 @@ impl KeptText {
                 // (a thread that failed has no text: nothing is kept)
                 let Some(mut text) = worker.join().ok().flatten() else { return self.over(&mut work, None) };
                 if text.too_many(edited.len()) {
-                    // (so many photos changed meanwhile that making their text again here would stall the search as much as making
-                    // all of it does: it is made again from the photos as they are, once the old text is freed)
+                    // (so many photos changed meanwhile that the text of each is not made again one by one: the thread's text is
+                    // dropped, and made again from the photos as they are once the old text is freed. An eighth of the photos is a
+                    // judgment, not a measurement)
                     drop(text);
                     if pass {
                         return self.make_here(&mut work, photos);
