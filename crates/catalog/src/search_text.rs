@@ -1,7 +1,8 @@
 //! The text the free-text search looks through, kept for every photo of a big library and made on a thread of its own.
 //!
-//! Making it for 1.7 million photos took 0.6 s on the thread that asks the first search, which stalled the first keystroke of a
-//! session. A library of [`BACKGROUND_FROM`] photos or more has it made on another thread when the library is opened, in one block
+//! On a library of 1.7 million photos the first search of a session took 0.7 s, about 0.4 s longer than a later one: the time of
+//! making this text on the thread that asks, which stalled the first keystroke. A library of [`BACKGROUND_FROM`] photos or more has it
+//! made on another thread when the library is opened, in one block
 //! rather than a box and a table entry for each photo. A search that comes before the thread is done waits for the rest of it,
 //! rather than for all of it. [`crate::index`] says when the text of a photo is used and when it is made again; this says how the
 //! text of all of them is made, and taken.
@@ -19,7 +20,8 @@ type Photos = BTreeMap<PhotoId, Arc<Photo>>;
 
 /// From how many photos the text is made on another thread, started when the library is opened
 /// ([`crate::Catalog::prebuild_search_text`]).
-/// Below it, making the text takes about 20 ms or less, which a search makes where it stands.
+/// Below it a search makes the text where it stands: about 0.4 s at 1.7 million photos is roughly 12 ms at this size (scaled from
+/// that, not measured).
 pub(crate) const BACKGROUND_FROM: usize = 50_000;
 
 /// A block is never made again for this many changed photos or fewer, however few photos it holds ([`SearchText::too_many`]).
