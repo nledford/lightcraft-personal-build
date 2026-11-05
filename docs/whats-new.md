@@ -1767,13 +1767,14 @@
 ### Searching a big library keeps up with your typing
 - Typing in the library search stalls less on a library of hundreds of thousands of photos. The search used to
   lower-case a photo's file name, title, caption, camera, lens, location, format, every keyword and the names of the
-  people on its faces again for each photo and each letter you typed. It now keeps that text, makes it the first time
-  you search, and keeps it up to date as you edit titles, captions, keywords, people and file names. Smart albums with
-  a Text rule keep their own text the same
-  way, made the first time such an album is counted or shown. Which photos match is unchanged. On a test library of
-  312 000 photos, finding the photos for a word took about 50 ms where it took 120 to 160 ms. The first search makes
-  the text, which takes a fraction of a second and about 32 MB of memory at that size; a Text rule's text is another
-  33 MB. Searches with `camera:`, `lens:` or `name:` gain less (about 70 ms became about 60 ms).
+  people on its faces again for each photo and each letter you typed. It now keeps that text and keeps it up to date
+  as you edit titles, captions, keywords, people and file names. A library of 50 000 photos or more has the text made
+  on a thread of its own as soon as the library is opened, so the first search doesn't wait for it, and a search typed
+  before it is ready waits only for the rest of it; a smaller library makes it at the first search. Smart albums with a
+  Text rule keep their own text, made the first time such an album is counted or shown. Which photos match is unchanged.
+  On a test library of 312 000 photos, finding the photos for a word took about 50 ms where it took 120 to 160 ms.
+  The text takes about 24 MB of memory at that size; a Text rule's text is another 33 MB. Searches with `camera:`,
+  `lens:` or `name:` gain less (about 70 ms became about 60 ms).
 
 ### Imports and moves on a network share ask it less
 - Import no longer asks a network share about each photo's `.xmp` sidecar (up to nine names, each a round trip) when
