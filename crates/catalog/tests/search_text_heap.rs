@@ -1,6 +1,6 @@
-//! What the free-text search's kept text costs in memory (dhat's testing mode). A big library's text is one block and a few
-//! tables, not a box and a table entry for each photo: at 1.7 million photos those cost 90 MiB more than the text itself.
-//! One test per binary (dhat's profiler is global).
+//! What the free-text search's kept text costs in memory (dhat's testing mode). A big library's text is one block and a table of
+//! 24 bytes a photo, where a map from each photo to a box of its text was a heap block and 43 bytes a photo besides the text (for
+//! this test's 50 000 photos: 50 001 blocks, 4.8 MB for 2.7 MB of text). One test per binary (dhat's profiler is global).
 
 use lightcraft_catalog::{Catalog, Op, Photo, PhotoId, Source};
 

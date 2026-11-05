@@ -488,6 +488,27 @@ fn held() -> (Catalog, Arc<Gate>) {
     (c, gate)
 }
 
+/// `n` photos, whose text is made on another thread however few they are (and not held).
+fn many(n: u64) -> Catalog {
+    let mut c = Catalog::new();
+    let ops: Vec<Op> = (1..=n).map(|i| Op::AddPhoto { photo: Box::new(photo(i, &format!("IMG_{i:05}.JPG"))) }).collect();
+    c.apply(Op::Batch { ops }).unwrap();
+    c.set_search_background_from(0);
+    c
+}
+
+/// Give the photos `ids` a title of their own, in one batch.
+fn retitle(c: &mut Catalog, ids: std::ops::RangeInclusive<u64>) {
+    let ops: Vec<Op> = ids
+        .map(|i| {
+            let mut meta = c.photo(PhotoId(i)).unwrap().meta.clone();
+            meta.title = format!("Edited {i}");
+            Op::SetMeta { id: PhotoId(i), meta: Box::new(meta) }
+        })
+        .collect();
+    c.apply(Op::Batch { ops }).unwrap();
+}
+
 /// Wait (a minute at most) until `done` says so.
 fn wait_for(c: &Catalog, what: &str, done: impl Fn(&Catalog) -> bool) {
     let by = std::time::Instant::now() + std::time::Duration::from_secs(60);
@@ -502,30 +523,39 @@ fn wait_until_ready(c: &Catalog) {
     wait_for(c, "the text was not made", Catalog::search_text_ready);
 }
 
-/// In a big library the first search starts the text on another thread and doesn't wait for it: until it is ready, each photo
-/// is read from its fields, as the first search read it before the text was kept.
+/// Which photos a search finds when it asks about them one at a time, as a smart album's tally does.
+fn by_one(c: &Catalog, text: &str) -> Vec<u64> {
+    let f = Filter { text: text.into(), ..Default::default() };
+    c.photos().filter(|p| f.matches(p, c)).map(|p| p.id.0).collect()
+}
+
+/// A search over the whole library that comes before the thread has made the text waits for the thread, rather than reading each
+/// photo's own fields; a search of one photo reads the fields and waits for nothing.
 #[test]
-fn a_search_before_the_text_is_ready_reads_the_fields() {
+fn a_search_that_comes_before_the_text_is_ready_waits_for_the_thread() {
     let (c, gate) = held();
+    c.prebuild_search_text();
+    assert_eq!(c.search_text_state(), "making");
     for q in QUERIES.iter().copied() {
-        assert_eq!(shown(&c, q), expected(&c, q), "{q:?}: before the text is ready");
+        assert_eq!(by_one(&c, q), expected(&c, q), "{q:?}, one photo at a time");
     }
-    assert_eq!(c.search_text_state(), "making", "the first search started the text on another thread and did not wait for it");
-    assert_eq!(c.search_text_spawned(), 1, "…once");
+    assert_eq!(c.search_text_state(), "making", "a search of one photo neither waits for the thread nor takes its text");
     assert!(c.photos().all(|p| c.search_text(p, false).is_none()), "nothing is kept yet");
-    // (one photo at a time, as a smart album's tally asks, reads the fields too)
-    for q in QUERIES.iter().copied() {
-        let f = Filter { text: q.into(), ..Default::default() };
-        let got: Vec<u64> = c.photos().filter(|p| f.matches(p, &c)).map(|p| p.id.0).collect();
-        assert_eq!(got, expected(&c, q), "{q:?}, one photo at a time");
-    }
+    // (the search over the whole library is on a thread of its own, so that the test can tell that it has not come back)
+    let (sent, answer) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let ids = shown(&c, "ōsaka");
+        let _ = sent.send((c, ids));
+    });
+    assert!(answer.recv_timeout(std::time::Duration::from_millis(300)).is_err(), "a search over the library did not wait for the text");
     gate.open();
-    wait_until_ready(&c);
+    let (c, ids) = answer.recv_timeout(std::time::Duration::from_secs(60)).expect("the search never came back");
+    assert_eq!(ids, expected(&c, "ōsaka"));
+    assert_eq!((c.search_text_state(), c.search_text_spawned()), ("made", 1));
     assert_current(&c);
     for q in QUERIES.iter().copied() {
         assert_eq!(shown(&c, q), expected(&c, q), "{q:?}: from the text the other thread made");
     }
-    assert_eq!((c.search_text_state(), c.search_text_spawned()), ("made", 1));
 }
 
 /// `prebuild_search_text` starts the text for a library big enough for making it to be felt, once, and for no other.
@@ -537,14 +567,22 @@ fn the_text_of_a_big_library_is_started_once_and_a_small_ones_is_not_started() {
     let (c, gate) = held();
     c.prebuild_search_text();
     c.prebuild_search_text();
-    assert_eq!(c.search_text_state(), "making", "started without a search");
-    assert_eq!(shown(&c, "img"), expected(&c, "img"));
-    c.prebuild_search_text();
-    assert_eq!(c.search_text_spawned(), 1, "one thread for the library");
+    assert_eq!((c.search_text_state(), c.search_text_spawned()), ("making", 1), "one thread for the library");
     gate.open();
     wait_until_ready(&c);
     c.prebuild_search_text();
     assert_eq!((c.search_text_state(), c.search_text_spawned()), ("made", 1), "nothing to start once it is made");
+}
+
+/// A search starts no thread: when none was started for a library, the first search makes the text where it stands, as it did
+/// before the text was made on another thread.
+#[test]
+fn a_search_makes_the_text_where_it_stands_when_no_thread_was_started_for_it() {
+    let mut c = library();
+    c.set_search_background_from(0);
+    assert_eq!(found(&c, "ōsaka"), 1);
+    assert_eq!((c.search_text_state(), c.search_text_spawned()), ("made", 0));
+    assert_current(&c);
 }
 
 /// A photo edited, added or removed while the other thread makes the text is searched as it is now, not as the thread saw it:
@@ -573,7 +611,7 @@ fn edits_made_while_the_text_is_being_made_are_searched_as_they_are_now() {
     c.apply(Op::SetRating { id: PhotoId(2), rating: 5 }).unwrap();
     let early = ["zq0x", "zq1x", "ōsaka", "nara", "kyōto", "abc", "def", "zfresh", "plain", "istanbul", "img"];
     for w in early {
-        assert_eq!(shown(&c, w), expected(&c, w), "{w:?}: while the thread makes the text");
+        assert_eq!(by_one(&c, w), expected(&c, w), "{w:?}: while the thread makes the text");
     }
     assert_eq!(c.search_text_state(), "making");
     // the thread is done but its text is not taken yet, and more edits come
@@ -595,14 +633,77 @@ fn edits_made_while_the_text_is_being_made_are_searched_as_they_are_now() {
     assert_eq!((found(&c, "zq3x"), found(&c, "zq2x"), found(&c, "zq1x"), found(&c, "zfresh")), (1, 0, 0, 0));
 }
 
+/// A photo that only moves in memory while the thread makes the text (a rating set while the thread holds the photo) keeps the
+/// text the thread made for it: nothing makes that text again.
+#[test]
+fn photos_that_only_move_while_the_text_is_made_keep_the_text_the_thread_made() {
+    let (mut c, gate) = held();
+    c.prebuild_search_text();
+    c.apply(Op::SetRating { id: PhotoId(2), rating: 5 }).unwrap();
+    c.apply(Op::SetRating { id: PhotoId(3), rating: 1 }).unwrap();
+    gate.open();
+    wait_until_ready(&c);
+    assert_current(&c);
+    assert_eq!(c.search_text_again(), 0, "the text of a photo whose text did not change was made again");
+    // …and one that moves after that is followed where it is
+    c.apply(Op::SetRating { id: PhotoId(2), rating: 4 }).unwrap();
+    assert_current(&c);
+    assert_eq!(c.search_text_again(), 0);
+}
+
+/// So many photos changed while the thread made the text that bringing it up to date where the search stands would stall the
+/// search as much as making all of it does: the thread's text is left, and made again from the photos as they are.
+#[test]
+fn a_text_that_many_photos_changed_under_is_made_again_not_patched() {
+    let mut c = many(3000);
+    let gate = Gate::new();
+    let at_the_gate = gate.clone();
+    c.hold_search_text(move || at_the_gate.wait());
+    c.prebuild_search_text();
+    assert_eq!(c.search_text_state(), "making");
+    retitle(&mut c, 1..=1100);
+    gate.open();
+    wait_for(&c, "the thread did not end", |c| c.search_text_state() != "making");
+    assert_eq!(found(&c, "edited"), 1100);
+    assert_eq!((c.search_text_state(), c.search_text_spawned(), c.search_text_again()), ("made", 1, 0), "the thread's text was patched");
+    assert_current(&c);
+}
+
+/// Once more photos than an eighth of the library (and a thousand) have changed since the text was made, it is made again
+/// rather than kept as the old block beside a text for each of them.
+#[test]
+fn a_text_kept_beside_the_texts_of_many_edited_photos_is_made_again() {
+    let mut c = many(3000);
+    c.prebuild_search_text();
+    wait_until_ready(&c);
+    retitle(&mut c, 1..=1000);
+    assert_eq!((c.search_text_state(), c.search_text_again()), ("made", 1000), "not yet too many");
+    assert_current(&c);
+    retitle(&mut c, 1001..=1100);
+    assert_eq!(c.search_text_state(), "idle", "the text was dropped when too many photos had changed");
+    assert!(c.photos().all(|p| c.search_text(p, false).is_none()));
+    assert_eq!(found(&c, "edited"), 1100, "the search that follows makes the text again");
+    assert_eq!((c.search_text_state(), c.search_text_spawned(), c.search_text_again()), ("made", 1, 0));
+    assert_current(&c);
+    assert_eq!(found(&c, "edited"), 1100);
+}
+
 /// A thread that fails leaves the search answering from the fields: the catalog is not taken down with it, and no second
 /// thread is started for the same failure.
 #[test]
 fn a_thread_that_fails_leaves_the_search_answering_from_the_fields() {
     let mut c = library();
     c.set_search_background_from(0);
-    c.hold_search_text(|| panic!("the thread that makes the text fails (a test)"));
-    assert_eq!(found(&c, "ōsaka"), 1);
+    // (it fails when the test lets it go)
+    let gate = Gate::new();
+    let at_the_gate = gate.clone();
+    c.hold_search_text(move || {
+        at_the_gate.wait();
+        panic!("the thread that makes the text fails (a test)");
+    });
+    c.prebuild_search_text();
+    assert_eq!(c.search_text_state(), "making");
+    gate.open();
     wait_for(&c, "the thread did not end", |c| c.search_text_state() != "making");
     assert_eq!(c.search_text_state(), "finished");
     for q in QUERIES.iter().copied() {
@@ -615,11 +716,26 @@ fn a_thread_that_fails_leaves_the_search_answering_from_the_fields() {
     assert_eq!((c.search_text_state(), c.search_text_spawned()), ("failed", 1), "no second thread for the same failure");
 }
 
+/// A library that can have no thread (the browser's, or one the system refuses a thread) has the text made where the first
+/// search stands, as a small library's is.
+#[test]
+fn a_library_that_can_have_no_thread_makes_the_text_where_the_search_stands() {
+    let mut c = library();
+    c.set_search_background_from(0);
+    c.refuse_search_threads();
+    c.prebuild_search_text();
+    assert_eq!(c.search_text_state(), "idle", "nothing to wait for: no thread was started");
+    assert_eq!(found(&c, "ōsaka"), 1);
+    assert_eq!(c.search_text_state(), "made");
+    assert_current(&c);
+}
+
 /// A copy starts without the text and makes its own, whatever the catalog it was copied from is doing.
 #[test]
 fn a_clone_of_a_catalog_whose_text_is_being_made_makes_its_own() {
     let (c, gate) = held();
-    assert_eq!(found(&c, "ōsaka"), 1);
+    c.prebuild_search_text();
+    assert_eq!(c.search_text_state(), "making");
     let copy = c.clone();
     assert_eq!((copy.search_text_state(), copy.search_text_spawned()), ("idle", 0));
     gate.open();
@@ -632,7 +748,8 @@ fn a_clone_of_a_catalog_whose_text_is_being_made_makes_its_own() {
 #[test]
 fn a_catalog_dropped_while_its_text_is_being_made_does_not_wait_for_the_thread() {
     let (c, gate) = held();
-    assert_eq!(found(&c, "ōsaka"), 1);
+    c.prebuild_search_text();
+    assert_eq!(c.search_text_state(), "making");
     let (done, dropped) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
         drop(c);
@@ -649,8 +766,9 @@ proptest::proptest! {
     /// and in whatever order the photos are asked for; a copy of a photo is at another place and reads as none.
     #[test]
     fn the_block_reads_as_each_photos_own_text(
-        fields in proptest::collection::vec(proptest::collection::vec("[aAzZ0 ßİΣσǅ|:\\x00]{0,5}", 9), 0..24),
-        step in 1usize..7,
+        fields in proptest::collection::vec(proptest::collection::vec("[aAzZ0 ßİΣσǅ|:\\x00]{0,5}", 9), 0..80),
+        step in 1usize..9,
+        mask in proptest::collection::vec(proptest::bool::ANY, 80),
     ) {
         let photos: Vec<Photo> = fields
             .iter()
@@ -672,7 +790,9 @@ proptest::proptest! {
         let ascending: Vec<usize> = (0..n).collect();
         let descending: Vec<usize> = (0..n).rev().collect();
         let strided: Vec<usize> = (0..step).flat_map(|first| (first..n).step_by(step)).collect();
-        for order in [ascending, descending, strided] {
+        // (a pass that other checks keep from asking about some of the photos)
+        let skipping: Vec<usize> = (0..n).filter(|i| mask[*i]).collect();
+        for order in [ascending, descending, strided, skipping] {
             for i in order {
                 let p = &photos[i];
                 let own = PhotoText::of(p);
