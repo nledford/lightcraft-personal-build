@@ -168,7 +168,7 @@ pub(crate) struct Prepared {
     only: Option<std::collections::HashSet<PhotoId>>,
     /// The search words ([`Filter::tokens`]).
     tokens: Vec<String>,
-    /// A pass over the library, which starts the text kept for each photo when that isn't started ([`Catalog::search_text`]).
+    /// A pass over the library, which waits for the text kept for each photo, or makes it ([`Catalog::search_text`]).
     whole: bool,
     /// [`Filter::rule_set`] with its rules in the order to test them ([`crate::RuleSet::by_cost`]);
     /// `None` tests them as written.
@@ -257,7 +257,7 @@ fn token_matches(p: &Photo, t: &str, hay: &Hay) -> bool {
 }
 
 /// A photo's lower-cased text for the free-text search: the one the catalog keeps when `p` is its own photo and the text is made
-/// (a pass over the library, [`Prepared::whole`], starts it), else made from the photo's own fields when first asked.
+/// (a pass over the library, [`Prepared::whole`], waits for it or makes it), else made from the photo's own fields when first asked.
 struct Hay<'a> {
     p: &'a Photo,
     cat: &'a Catalog,

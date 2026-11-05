@@ -5,8 +5,9 @@
 //! which photos have their file in a folder, which have a file of a given name. A view of one library
 //! folder looks through the photos filed at or below it, not through every photo of the library.
 //!
-//! They are never saved (the on-disk format is unchanged). Each is built on first use from what
-//! the catalog holds, so a catalog read from a snapshot, replayed from the journal or cloned starts
+//! They are never saved (the on-disk format is unchanged). Each is built on first use from what the catalog holds (the free-text
+//! search's text of a big library on a thread of its own, started when the library is opened: [`crate::search_text`]), so a catalog
+//! read from a snapshot, replayed from the journal or cloned starts
 //! without them and builds them when asked. Once built, [`crate::Catalog::apply`] keeps them up to
 //! date: the ops that change stacks or album photos (`AddStack`, `RemoveStack`, `SetStack`,
 //! `AddAlbum`, `RemoveAlbum`, `SetAlbumPhotos`) and those that add, remove or point a photo at
@@ -15,8 +16,7 @@
 //! date, and the photos with a photo's content touched, by the ops that change a photo's content
 //! as the library sees it, once a rule has built it or while a smart album asks about contents
 //! ([`Catalog::follows_contents`], [`Catalog::content_moved`]). The two texts follow every op that changes
-//! a photo's fields, and the photo moving to another place in memory. The free-text search's text of a big library is
-//! made on a thread of its own, so that the first search doesn't wait for it ([`crate::search_text`]).
+//! a photo's fields, and the photo moving to another place in memory.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -542,16 +542,15 @@ impl Catalog {
     }
 
     /// `p`'s lower-cased text for the free-text search, when `p` is this catalog's own photo and the text is made. `pass`: a
-    /// pass over the whole library asks (testing one photo shouldn't make it for 300 000): it starts the text when it isn't
-    /// started, which a big library has made on another thread ([`crate::search_text`]), and the pass reads each photo's own
-    /// fields until then.
+    /// pass over the whole library asks (testing one photo shouldn't make it for 300 000): it waits for the thread that is making
+    /// the text, if one is ([`crate::search_text`]), and makes it here if not.
     pub(crate) fn search_text(&self, p: &Photo, pass: bool) -> Option<&str> {
         self.index.search.get(&self.photos, pass)?.get(p)
     }
 
     /// Starts making the free-text search's text on another thread, when the library is big enough for making it to be felt and
-    /// it isn't made or being made: the first search of a session then finds it made rather than waiting for it. A search that
-    /// comes before it is done reads each photo's own fields.
+    /// it isn't made or being made: the first search of a session then finds it made rather than waiting for all of it. A search
+    /// that comes before it is done waits for the rest.
     pub fn prebuild_search_text(&self) {
         self.index.search.start(&self.photos);
     }
@@ -580,6 +579,16 @@ impl Catalog {
     #[cfg(test)]
     pub(crate) fn search_text_spawned(&self) -> usize {
         self.index.search.spawned()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn search_text_again(&self) -> usize {
+        self.index.search.again_len()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn refuse_search_threads(&mut self) {
+        self.index.search.refuse_threads();
     }
 
     /// [`Catalog::search_text`] for a smart album's Text rule: the lower-cased, trimmed text of
