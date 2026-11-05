@@ -8,12 +8,13 @@
   1.6 million photos that took about 0.6 s for a folder of a hundred photos, 3.6 s for a large one, and about half a
   second of an open. The library is now filed by folder the first time a folder is asked for (one pass, on several
   threads, about 0.1 s for that library), and from then on a folder is read where it is filed: a folder of a few
-  thousand photos opens in milliseconds. A folder of a few percent of the library or more is put in order by the
-  library's order for the sort, which is made in the background within a few seconds of opening, instead of being
-  sorted: in the same library a folder of 18% of it opens in 0.15 s instead of 0.9 s, and two folders shown together
-  that hold 31% and 43% of it in 0.3 s and 0.4 s instead of 1.5 s and 2 s. Until that order is made, a folder is
-  sorted as before. A folder that holds most of the library takes about half a second. What a folder shows is
-  unchanged, and so is which folders are refused for holding other disks.
+  thousand photos opens in milliseconds. Choosing a folder of a few percent of the library or more no longer sorts its
+  photos: they are put in order by the library's order for the sort, which is made in the background after the library
+  opens (about 5 s for the file name order and 1 s for the capture date order, in a library of this size). Choosing a
+  folder of 18% of the library then takes 0.15 s instead of 0.9 s, and choosing two folders together that hold 31% and
+  43% of it 0.3 s and 0.4 s instead of 1.5 s and 2 s. Before that order exists, and when the library opens on such a
+  folder, its photos are sorted as before. A folder that holds most of the library takes about half a second. What a
+  folder shows is unchanged, and so is which folders are refused for holding other disks.
 
 ### Every rating, flag and label change says what it did
 - `Shift+X`, `Shift+Z`, `Shift+U` and `Shift+P` (in the grids) flagged the photo and moved on, and `[` / `]` changed its rating, without a word, so with the photo gone from the screen nothing confirmed it. They now show the same bottom toast as `X`, `U`, `P` and the number keys, naming the photo that changed, not the one you moved on to. The toast now comes from the change itself, so the Photo menu and the rating and flag buttons show it too.

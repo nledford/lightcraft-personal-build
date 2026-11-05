@@ -11,7 +11,7 @@
 //! * Given photos edited, moved, added or removed since the order was made, it is followed first, whatever was
 //!   asked before: the folder lists what a scan says. An order whose changes are no longer remembered is left as
 //!   it is: the folder is sorted alone, and a big view works it out again without sorting every photo.
-//! * Given the order was being made on another thread while the library was looked at, a folder takes it.
+//! * Given the order was made on another thread ([`Catalog::prebuild_order`]) and has finished, a folder takes it.
 //! * The photos a view holds from other folders are put in place with the folder's.
 
 use std::collections::HashSet;
@@ -209,7 +209,7 @@ fn photos_added_since_the_order_was_made_are_put_in_order_too() {
     let mut c = library();
     keep_orders(&c);
     for n in TOTAL..TOTAL + 5 {
-        // (into folders that exist, and one that is new)
+        // (into folders that exist)
         let name = format!("new{n}.jpg");
         let p = Photo::new(PhotoId(n + 1), Source::File { path: format!("/lib/f{}/{name}", n % 8) }, &name, "JPEG", 60, 40, "2026-03-01T00:00:00");
         c.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
