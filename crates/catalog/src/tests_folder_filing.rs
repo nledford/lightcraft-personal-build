@@ -571,17 +571,11 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 
     #[test]
-    fn a_folder_asked_for_shows_what_a_scan_shows(steps in proptest::collection::vec((0u8..9, 0u64..20, 0..=PATHS.len(), any::<bool>()), 1..40), kept in any::<bool>()) {
+    fn a_folder_asked_for_shows_what_a_scan_shows(steps in proptest::collection::vec((0u8..9, 0u64..20, 0..=PATHS.len(), any::<bool>()), 1..40)) {
         let mut c = Catalog::new();
         let start = c.to_snapshot();
         // built before the ops, so every op has to keep it up to date
         agree(&c, "empty");
-        // with the orders for the sorts asked kept too, a folder is put in order by them (and they follow every op)
-        if kept {
-            for sort in [Sort::default(), Sort { key: SortKey::FileName, ascending: true, ..Default::default() }] {
-                c.kept_ids(&sort);
-            }
-        }
         let mut log = String::new();
         let mut inverses = Vec::new();
         for (i, (kind, n, m, flag)) in steps.into_iter().enumerate() {

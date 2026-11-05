@@ -5,7 +5,8 @@
 //! One list per sort key (ascending: a descending order is that one read backwards, as [`Sort::order`]
 //! reverses a total order), built on first use and never saved. A photo is named by its place in the
 //! catalog's id order, so a query marks what matches in one pass over the photos (which come in that order)
-//! and reads the marks along the list, without looking a photo up by id. Each list remembers the revision it
+//! and reads the marks along the list, without looking a photo up by id (the photos of a folder come from the
+//! index, in id order too: their places are found by one merge with the list's ids). Each list remembers the revision it
 //! was right for. When asked again, [`Catalog::photos_changed_since`] names the photos an op added, removed or
 //! changed in what the key's comparison reads (`reads`: its own field, the file name that breaks ties, and
 //! whether the photo is in the catalog), so a rating edit moves a photo only in the rating order. Up to
@@ -79,8 +80,8 @@ struct Built {
 /// Below this many photos an order is sorted when first asked for (about 50 ms at most): a thread is not worth it.
 const PREBUILD_FROM: usize = 50_000;
 
-/// Counts, for what the kept orders are there to avoid: every photo sorted from scratch, and a part of the library
-/// put in order by a kept order instead of being sorted ([`Catalog::sorted_among`]).
+/// The kept orders, and the two counts a test or a benchmark reads: every photo sorted from scratch (`.1`), and a part
+/// of the library put in order by a kept order instead of being sorted (`.2`, [`Catalog::sorted_among`]).
 #[derive(Debug, Default)]
 pub(crate) struct Orders(Mutex<Held>, AtomicUsize, AtomicUsize);
 
@@ -155,8 +156,8 @@ fn sorting(n: usize) -> f64 {
     if n < 2.0 { 0.0 } else { n * n.log2() }
 }
 
-/// A query of under this fraction of the library is sorted alone even when an order is kept: placing it by the
-/// order reads the order along, a pass over every photo (about 3 ns each), and sorting a few saves no more than that.
+/// A query of under 1/this of the library is sorted alone even when an order is kept: placing it by the order reads
+/// the order along, a pass over every photo (about 3 ns each), and sorting a few saves no more than that.
 const ALONE_BELOW: usize = 64;
 
 /// The places of `order` that are marked, as ids, in its order (the reverse of it when not `ascending`).
@@ -193,7 +194,9 @@ impl Catalog {
     /// The order kept for `sort`'s key, brought up to date now; made when that pays: a query of `matching` of the
     /// `n` photos is better sorted alone while an order is not kept, as sorting every photo costs `n·log n` to its
     /// `m·log m`. Under 1/16 of that, never (a folder, a search); under 1/4, the second time the key is asked
-    /// (a view that comes back is worth it); beyond, at once. `None`: sort the matches alone.
+    /// (a view that comes back is worth it); beyond, at once. `None`: sort the matches alone. With `matching` 0 (only
+    /// asking whether an order is kept to be used) none is ever made, and one whose changes are no longer known is
+    /// left as it is, for the next big view to work out again from where it was.
     fn order_for(&self, sort: &Sort, n: usize, matching: usize) -> Option<Arc<Order>> {
         let sort = ascending(sort);
         let mut held = self.index.orders.0.lock().ok()?;
@@ -208,9 +211,12 @@ impl Catalog {
             held.kept.insert(sort.key, Kept { revision, order: Arc::new(order) });
         }
         if let Some(kept) = held.kept.get_mut(&sort.key) {
-            // what changed is no longer known: a small query is not worth making the whole order again
+            // what changed is no longer known: a small query is not worth making the whole order again, and drops it
+            // (not one that wants no photo: see above)
             if share < 1.0 / 16.0 && kept.revision != self.revision && self.photos_changed_since(kept.revision, reads(sort.key)).is_none() {
-                held.kept.remove(&sort.key);
+                if matching > 0 {
+                    held.kept.remove(&sort.key);
+                }
                 return None;
             }
             self.catch_up(&sort, kept);
@@ -242,8 +248,8 @@ impl Catalog {
 
     /// `photos` (in id order, each once) in `sort` order, read out of the order kept for the whole library: the
     /// place of each in it is found after the one before (both lists are in id order), and the order is read along.
-    /// `None` when that is not to be done: a shuffle (never kept), no photo or few, no order kept for the key (one
-    /// that is behind by changes no longer known is dropped, as for any small query), or one that cannot place them.
+    /// `None` when that is not to be done: a shuffle (never kept), no photo or few, no order kept for the key (or one
+    /// that is behind by changes no longer known: it is left for a big view), or one that cannot place them.
     fn pick_among(&self, sort: &Sort, photos: &[&Photo]) -> Option<Vec<PhotoId>> {
         if sort.key == SortKey::Random || u32::try_from(self.len()).is_err() || photos.is_empty() || photos.len() < self.len() / ALONE_BELOW {
             return None;
@@ -260,8 +266,13 @@ impl Catalog {
             *marks.get_mut(at)? = true;
             from = at + 1;
         }
+        let ids = along(&order, &marks, sort.ascending);
+        // (a place of the order that holds no photo would lose one of them)
+        if ids.len() != photos.len() {
+            return None;
+        }
         self.index.orders.2.fetch_add(1, Ordering::Relaxed);
-        Some(along(&order, &marks, sort.ascending))
+        Some(ids)
     }
 
     /// How many times a part of the library was put in order by a kept order, not sorted (a diagnostic, like
