@@ -2685,5 +2685,6 @@
   "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Kuvaa ilman tiedostoa ei voi siirtää. Paikallisen kuvan voi, kun käytät toimintoa Lisää Omiin kuviin.",
   "Notifications": "Ilmoitukset",
   "Notify me when a job finishes while LightCraft is in the background": "Ilmoita minulle, kun työ päättyy LightCraftin ollessa taustalla",
-  "Check for updates at start": "Tarkista päivitykset käynnistyksen yhteydessä"
+  "Check for updates at start": "Tarkista päivitykset käynnistyksen yhteydessä",
+  "Another library was opened since this window appeared: nothing was changed": "Toinen kirjasto avattiin tämän ikkunan ilmestymisen jälkeen: mitään ei muutettu"
 }

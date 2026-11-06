@@ -2737,5 +2737,6 @@
   "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Фото без файлу не можна перемістити. Локальне фото можна після команди Додати до моїх фото.",
   "Notifications": "Сповіщення",
   "Notify me when a job finishes while LightCraft is in the background": "Сповіщати, коли завдання завершиться, поки LightCraft працює у фоні",
-  "Check for updates at start": "Перевіряти оновлення під час запуску"
+  "Check for updates at start": "Перевіряти оновлення під час запуску",
+  "Another library was opened since this window appeared: nothing was changed": "Після появи цього вікна було відкрито іншу бібліотеку: нічого не змінено"
 }

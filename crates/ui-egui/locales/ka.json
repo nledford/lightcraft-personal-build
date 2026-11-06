@@ -3987,5 +3987,6 @@
   "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "ფაილის გარეშე ფოტო ვერ გადაიტანება. ლოკალური ფოტო გადაიტანება, თუ გამოიყენებთ: ჩემს ფოტოებში დამატება.",
   "Notifications": "შეტყობინებები",
   "Notify me when a job finishes while LightCraft is in the background": "შემატყობინე, როცა დავალება სრულდება, სანამ LightCraft ფონზეა",
-  "Check for updates at start": "გაშვებისას განახლებების შემოწმება"
+  "Check for updates at start": "გაშვებისას განახლებების შემოწმება",
+  "Another library was opened since this window appeared: nothing was changed": "ამ ფანჯრის გამოჩენის შემდეგ სხვა ბიბლიოთეკა გაიხსნა: არაფერი შეცვლილა"
 }

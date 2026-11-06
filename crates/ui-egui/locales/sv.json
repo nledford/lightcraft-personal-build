@@ -2789,5 +2789,6 @@
   "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ett foto utan fil kan inte flyttas. Ett lokalt foto kan det, när du har använt Lägg till i Mina foton.",
   "Notifications": "Aviseringar",
   "Notify me when a job finishes while LightCraft is in the background": "Meddela mig när ett jobb är klart medan LightCraft ligger i bakgrunden",
-  "Check for updates at start": "Sök efter uppdateringar vid start"
+  "Check for updates at start": "Sök efter uppdateringar vid start",
+  "Another library was opened since this window appeared: nothing was changed": "Ett annat bibliotek har öppnats sedan det här fönstret visades: ingenting ändrades"
 }

@@ -231,7 +231,7 @@ pub fn confirm_style(dlg: &Dialog) -> ConfirmStyle {
         | Dialog::DeleteEffects { .. }
         | Dialog::RemoveFolder { .. }
         // (every several-rows action deletes or removes)
-        | Dialog::Several(_)
+        | Dialog::Several { .. }
         | Dialog::TrashFiles(_) => ConfirmStyle::Plain,
         _ if only_shows(dlg) => ConfirmStyle::Plain,
         _ => ConfirmStyle::Primary,

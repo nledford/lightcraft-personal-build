@@ -368,7 +368,7 @@ fn dialog_title(app: &LightcraftApp, dlg: &Dialog) -> String {
         Dialog::About => "About LightCraft",
         Dialog::Shortcuts => "Keyboard Shortcuts",
         Dialog::ViewOptions => "View Options",
-        Dialog::Several(s) => crate::panels::side_select::several_title(s),
+        Dialog::Several { rows, .. } => crate::panels::side_select::several_title(rows),
     }
     .to_string()
 }
@@ -497,7 +497,7 @@ fn fixed_ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, queues
         Dialog::KeywordTag { .. } => "Save",
         Dialog::RemoveFolder { .. } => "Remove",
         Dialog::RestoreBackup { .. } => "Restore",
-        Dialog::Several(s) => crate::panels::side_select::several_button(s),
+        Dialog::Several { rows, .. } => crate::panels::side_select::several_button(rows),
         Dialog::TrashFiles(ask) => crate::panels::trash_files::button(ask),
         Dialog::LightroomCatalog { .. } => "Import Lightroom Catalog…",
         d @ Dialog::LightroomDestination { .. } => crate::lightroom_destination::ok_label(d),
@@ -692,7 +692,7 @@ fn confirm_refused(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialo
     }
     // several rows: one that can't be deleted or removed refuses them all; `several_run`
     // already toasted the reason, which says which
-    if matches!(dlg, Dialog::Several(_)) {
+    if matches!(dlg, Dialog::Several { .. }) {
         return true;
     }
     // nothing could go to the Trash: say why (the photos and their files are as they were)
@@ -2175,7 +2175,7 @@ fn dialog_content(
         d @ Dialog::LocateFolder { .. } => crate::relocate::body(ui, d),
         Dialog::LightroomCatalog { .. } => lightroom_catalog_body(app, ui, t, dlg),
         d @ Dialog::LightroomDestination { .. } => crate::lightroom_destination::body(app, ui, d),
-        Dialog::Several(s) => crate::panels::side_select::several_body(ui, s, &app.session.catalog),
+        Dialog::Several { rows, .. } => crate::panels::side_select::several_body(ui, rows, &app.session.catalog),
         Dialog::RemoveFolder { .. } => remove_folder_body(ui, t, dlg),
         Dialog::About => about_body(app, ui, t, dlg),
         Dialog::Shortcuts => crate::panels::keymap::body(app, ui, t),

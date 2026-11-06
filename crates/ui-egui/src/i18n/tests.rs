@@ -139,7 +139,8 @@ fn catalogs_agree_on_placeholders() {
 /// one without a translation shows the English.
 #[test]
 fn the_texts_for_several_chosen_sidebar_rows_are_translated_in_every_language() {
-    const TEXTS: [&str; 15] = [
+    const TEXTS: [&str; 16] = [
+        "Another library was opened since this window appeared: nothing was changed",
         "Choose one album to rename it",
         "Choose one folder to rename it",
         "Choose one keyword to create a keyword inside it",

@@ -184,7 +184,12 @@ pub enum Dialog {
         count: usize,
     },
     /// Delete or remove several sidebar rows at once (albums, keywords, folders), after asking.
-    Several(crate::panels::side_select::Several),
+    Several {
+        rows: crate::panels::side_select::Several,
+        /// The library the question was asked in (`Session::library_generation`): album ids are numbered per library, and a keyword
+        /// of that name or a folder of that path can be another one in a library that opened since, so OK changes nothing there.
+        library: u64,
+    },
     /// Merge keywords into another one on every photo.
     MergeKeywords {
         from: Vec<String>,

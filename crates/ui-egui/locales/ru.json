@@ -2928,5 +2928,6 @@
   "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Фото без файла нельзя переместить. Локальное фото можно переместить после команды Добавить в «Мои фото».",
   "Notifications": "Уведомления",
   "Notify me when a job finishes while LightCraft is in the background": "Уведомлять, когда задача завершится, пока LightCraft работает в фоне",
-  "Check for updates at start": "Проверять обновления при запуске"
+  "Check for updates at start": "Проверять обновления при запуске",
+  "Another library was opened since this window appeared: nothing was changed": "После появления этого окна была открыта другая библиотека: ничего не изменено"
 }

@@ -3799,5 +3799,6 @@
   "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Ein Foto ohne Datei lässt sich nicht verschieben. Ein lokales Foto schon, sobald du Zu „Meine Fotos“ hinzufügen verwendest.",
   "Notifications": "Benachrichtigungen",
   "Notify me when a job finishes while LightCraft is in the background": "Benachrichtige mich, wenn ein Auftrag fertig ist, während LightCraft im Hintergrund läuft",
-  "Check for updates at start": "Beim Start nach Updates suchen"
+  "Check for updates at start": "Beim Start nach Updates suchen",
+  "Another library was opened since this window appeared: nothing was changed": "Seit dem Erscheinen dieses Fensters wurde eine andere Bibliothek geöffnet: Es wurde nichts geändert"
 }

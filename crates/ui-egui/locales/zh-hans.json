@@ -2740,5 +2740,6 @@
   "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "没有文件的照片无法移动。本地照片在使用“添加到我的照片”后即可移动。",
   "Notifications": "通知",
   "Notify me when a job finishes while LightCraft is in the background": "LightCraft 在后台运行时，任务完成后通知我",
-  "Check for updates at start": "启动时检查更新"
+  "Check for updates at start": "启动时检查更新",
+  "Another library was opened since this window appeared: nothing was changed": "此窗口出现后打开了另一个图库：未更改任何内容"
 }
