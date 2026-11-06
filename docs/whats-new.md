@@ -778,9 +778,10 @@
   Edit ▸ Undo takes back, and the rest stay where they were. A toast says how far it got.
 
 ### A library keeps a copy of itself before it is upgraded
-- Opening a library saved by an earlier version upgrades it, and earlier versions can't open it afterwards. The library
-  as it was is now kept beside it (`catalog.snap.v<format>-<seq>`, `catalog.log.v<format>-<seq>`), and LightCraft says
-  where once: to go back, see `docs/catalog-persistence.md`.
+- Opening a library saved in an older catalog format upgrades it, and versions that don't know the new format can't
+  open it afterward. In the desktop app, the library as it was is now kept beside it (`catalog.snap.v<format>-<seq>`,
+  `catalog.log.v<format>-<seq>`), and LightCraft says where once: to go back, see `docs/catalog-persistence.md`. A
+  library that can't be kept is not upgraded. The browser build keeps no copy (it always runs the newest version).
 
 ### Large libraries
 - The catalog on disk is several times smaller: a photo's record states only what was set (no empty fields, no default
