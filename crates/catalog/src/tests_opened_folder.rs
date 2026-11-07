@@ -107,6 +107,42 @@ fn a_store_writes_nothing_into_a_folder_that_replaced_the_one_it_opened() {
     }
 }
 
+/// The files the snapshot is split into are written and removed through the store as well: the same
+/// refusal, and neither folder is touched.
+#[cfg(unix)]
+#[test]
+fn a_segment_is_neither_written_nor_removed_in_a_folder_that_replaced_the_one_it_opened() {
+    let base = scratch("segments");
+    let dir = base.join("lib");
+    let named = |n: &str| format!("{}{n}.json", crate::segments::SEGMENT_PREFIX);
+    let (first, second) = (named("1-1"), named("1-2"));
+    let mut store = FsStore::open(&dir).unwrap();
+    store.write_new_with(&first, &mut |w| w.write_all(b"ours")).unwrap();
+    let away = put_another_folder_at(&dir);
+    let theirs = files_in(&dir);
+
+    let results = [
+        ("write_new_with", store.write_new_with(&second, &mut |w| w.write_all(b"x")).map(|_| ())),
+        ("remove", store.remove(&first)),
+    ];
+    for (what, r) in results {
+        let e = r.expect_err(what);
+        assert!(e.to_string().contains(REFUSED), "{what}: {e}");
+    }
+    assert_eq!(files_in(&dir), theirs, "the folder at the path now is untouched");
+    assert!(!dir.join(crate::segments::SEGMENT_DIR).exists(), "and no segments folder is made in it");
+    assert_eq!(std::fs::read(away.join(&first)).unwrap(), b"ours", "the folder that was opened keeps its segment");
+    assert!(!away.join(&second).exists(), "and gets no other");
+
+    // the folder that was opened is back at the path: both go through
+    std::fs::rename(&dir, base.join("lib.theirs")).unwrap();
+    std::fs::rename(&away, &dir).unwrap();
+    store.write_new_with(&second, &mut |w| w.write_all(b"x")).expect("written again");
+    store.remove(&first).expect("removed again");
+    assert!(dir.join(&second).is_file() && !dir.join(&first).exists());
+    let _ = std::fs::remove_dir_all(&base);
+}
+
 /// A compaction that starts after the folder was replaced writes through a second handle on the
 /// same files: it is bound to the folder the store opened too.
 #[cfg(unix)]

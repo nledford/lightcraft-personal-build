@@ -438,6 +438,7 @@ impl Store for FsStore {
     }
 
     fn write_new_with(&mut self, name: &str, fill: &mut dyn FnMut(&mut dyn io::Write) -> io::Result<()>) -> io::Result<u64> {
+        self.folder.check()?;
         let (tmp, n) = self.stage(name, fill)?;
         commit_new(&tmp, &self.path(name)?)?;
         Ok(n)
@@ -522,6 +523,8 @@ impl Store for FsStore {
     }
 
     fn remove(&mut self, name: &str) -> io::Result<()> {
+        // (a removal is a write like the others: refused, and nothing is removed, in a folder that replaced the opened one)
+        self.folder.check()?;
         // The log's file is held open by its thread, which would go on writing into a file that is gone: what was handed over
         // is written first (a failure is the caller's: nothing is dropped), then the thread goes, and the next append starts one.
         #[cfg(not(target_arch = "wasm32"))]
