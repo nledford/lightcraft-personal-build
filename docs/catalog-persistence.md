@@ -348,6 +348,14 @@ first.
   folder outright: a path with `..` in it is refused, since it can come to mean another folder once part of it is made.
 - **Not while the library is at work.** A restore of the open library is refused while a backup or any other
   background task is running.
+- **Only in the folder the library was opened from.** The restore moves the library's files by path, so it asks the
+  folder the library was opened from, as saving does, before it copies each file of the backup into the library
+  folder, before the library's files are moved, and before a move that was cut short is finished or taken back. If the
+  library's path leads to another folder by then (a share mounted over it, or the folder moved away and another put in
+  its place; noticed where the system gives a folder an identity, which is Unix so far), the restore is refused with
+  the reason and nothing is written into either folder: put the original folder back and restore again. A move that
+  was cut short, and can then be neither finished nor taken back, is the case of the next bullet. What was
+  already copied stays in the folder that was opened, and is cleared away when that library is next opened.
 - **If it can neither go on nor go back** (the disk fails between two moves), the session changes and writes nothing
   more and says so; opening the library again completes the restore.
 - **It takes the space of the catalog twice over**: the copy in the library, and what it replaced.

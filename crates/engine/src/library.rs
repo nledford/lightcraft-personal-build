@@ -176,8 +176,8 @@ pub struct Library {
     /// Changes are refused meanwhile; opening the library again finishes the restore.
     pub(crate) stuck: Option<String>,
     /// The folder the library was opened from (`None`: its stores were given, not opened here). The
-    /// stores hold their own copy; this one is for what is not a store, so far the thumbnail cache
-    /// (issue #3240).
+    /// stores hold their own copy; this one is for what is not a store: the thumbnail cache, and a
+    /// restore, which moves the library's files by path ([`Session::opened_folder`]; issue #3240).
     folder: Option<OpenedFolder>,
     /// Keeps other processes out of this library while it's open (last: released after the
     /// journal's background snapshot has landed).
@@ -1060,6 +1060,12 @@ impl Session {
         let held = lib.log_held.as_ref().map(|(n, why)| (*n, why.as_str()));
         let n = ops.map_or(0, |_| self.pending_log.len()) + held.map_or(0, |(n, _)| n) + usize::from(presets.is_some());
         ops.or(held.map(|(_, why)| why)).or(presets).map(|why| (n, why))
+    }
+
+    /// The folder the open library was opened from, which what moves its files by path asks first (a
+    /// restore; issue #3240). `None`: no library is open, or its stores were given, not opened here.
+    pub(crate) fn opened_folder(&self) -> Option<&OpenedFolder> {
+        self.library.as_ref()?.folder.as_ref()
     }
 
     /// Flush everything and compact the log into a snapshot (on quit). Ends an open interaction

@@ -11,11 +11,16 @@
 //! what the backup holds, what it was is kept in `Replaced` in its folder, and the session goes
 //! on in the restored library. A backup is not opened where it is. With `background` the backup
 //! is copied on a worker thread ([`copy`]) and moved into place between commands ([`settle`]).
+//!
+//! A restore of the open library moves its files by path, so each step of it asks the folder the
+//! library was opened from first ([`OpenedFolder`], issue #3240): when the path leads to another
+//! folder by then, the restore is refused, and nothing is written there.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use lightcraft_catalog::OpenedFolder;
 use lightcraft_catalog::backup::{self, BackupOptions, BackupReport, Own, Watch};
 use lightcraft_catalog::restore::{self, RestoreOptions};
 use serde_json::{Value, json};
@@ -101,6 +106,58 @@ impl Watch for Row<'_> {
     }
     fn cancelled(&self) -> bool {
         self.cancel.load(Ordering::Relaxed)
+    }
+}
+
+/// What a restore of the open library asks first: the folder the library was opened from (issue
+/// #3240). Its files are moved by path, and a path can lead to another folder than it did (a share
+/// mounted over it, or the folder moved away and another put in its place), where nothing is to be
+/// written. `None`: there is no folder to ask.
+fn ask(folder: Option<&OpenedFolder>) -> Result<()> {
+    folder.map_or(Ok(()), |folder| folder.check().map_err(|e| crate::EngineError::Other(e.to_string())))
+}
+
+/// Run `f`, which moves the open library's files by path ([`restore::finish`],
+/// [`restore::take_back`]), only while the library's path leads to the folder it was opened from;
+/// otherwise nothing is moved, and the reason is what comes back.
+pub(crate) fn in_opened_folder<T>(s: &Session, f: impl FnOnce() -> std::result::Result<T, backup::BackupError>) -> std::result::Result<T, String> {
+    ask(s.opened_folder()).map_err(|e| e.to_string())?;
+    f().map_err(|e| e.to_string())
+}
+
+/// Asks the folder the library was opened from before each file of a backup is copied into the
+/// library folder ([`ask`]), and stops the copy, with nothing more written, when the path leads to
+/// another folder by then: `restore::stage` writes by path, for as long as the backup is big. What
+/// `inner` stops (a ✕, a restore given up) is stopped as before.
+struct InOpenedFolder<'a> {
+    inner: &'a dyn Watch,
+    folder: Option<&'a OpenedFolder>,
+    /// Why the folder stopped the copy, once it did.
+    refused: std::sync::Mutex<Option<String>>,
+}
+
+impl<'a> InOpenedFolder<'a> {
+    fn new(inner: &'a dyn Watch, folder: Option<&'a OpenedFolder>) -> Self {
+        Self { inner, folder, refused: std::sync::Mutex::new(None) }
+    }
+
+    /// Why the copy was stopped, when the folder stopped it.
+    fn refusal(&self) -> Option<String> {
+        self.refused.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone()
+    }
+}
+
+impl Watch for InOpenedFolder<'_> {
+    fn progress(&self, name: &str, done: u64, total: u64) {
+        self.inner.progress(name, done, total);
+    }
+    fn cancelled(&self) -> bool {
+        if self.inner.cancelled() {
+            return true;
+        }
+        let Some(Err(e)) = self.folder.map(OpenedFolder::check) else { return false };
+        *self.refused.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(e.to_string());
+        true
     }
 }
 
@@ -735,6 +792,8 @@ fn restore_library(s: &mut Session, p: &Value) -> Result<Value> {
         if let Some(task) = s.activity.list().first() {
             return Err(bad(C, format!("background work is under way ({}); restore once it is done, or stop it first", task.label)));
         }
+        // (the library's files are moved by path: only in the folder it was opened from)
+        ask(s.opened_folder())?;
     }
     let background = flag(C, p, "background")?;
     let aside = free_name(&target.join(restore::REPLACED), &(s.clock)());
@@ -756,7 +815,14 @@ fn restore_library(s: &mut Session, p: &Value) -> Result<Value> {
     if in_place && background {
         // the backup is copied and checked on a worker while the library stays in use; its files
         // are moved into place by `settle`, between commands
-        let job = Arc::new(RestoreJob { library: target, from, aside, alive: AtomicBool::new(true), ..Default::default() });
+        let job = Arc::new(RestoreJob {
+            library: target,
+            from,
+            aside,
+            folder: s.opened_folder().cloned(),
+            alive: AtomicBool::new(true),
+            ..Default::default()
+        });
         s.restore = Some(job.clone());
         let task = s.activity.start("restore", "Restoring the library", Cancel::Flag(job.cancel.clone()));
         task.set_unit(Unit::Bytes);
@@ -782,9 +848,13 @@ fn restore_library(s: &mut Session, p: &Value) -> Result<Value> {
     if !in_place {
         return restore_into(s, &from, &target, &row);
     }
-    // the backup is copied into the library folder and checked while the library is as it is
-    let staged =
-        restore::stage(&from, &target, &RestoreOptions { also: ALSO, aside: &aside }, &row).map_err(|e| crate::EngineError::Other(e.to_string()))?;
+    // the backup is copied into the library folder and checked while the library is as it is; the
+    // folder it was opened from is asked before each file, and a refusal is the reason it gives
+    let staged = {
+        let watch = InOpenedFolder::new(&row, s.opened_folder());
+        restore::stage(&from, &target, &RestoreOptions { also: ALSO, aside: &aside }, &watch)
+            .map_err(|e| crate::EngineError::Other(watch.refusal().unwrap_or_else(|| e.to_string())))?
+    };
     task.detail("catalog.snap");
     place(s, staged, &from, &target, &aside)
 }
@@ -798,6 +868,9 @@ pub struct RestoreJob {
     pub from: PathBuf,
     /// The folder in `Replaced` for what it replaces.
     aside: String,
+    /// The folder the library was opened from, which its worker asks before each file it copies into
+    /// the library folder ([`InOpenedFolder`]): the library's path may lead elsewhere by then.
+    folder: Option<OpenedFolder>,
     /// Shared with the restore's row in the activity stack (its ✕ sets it).
     pub cancel: Arc<AtomicBool>,
     /// The backup's files, copied into the library folder and checked: waiting to be moved into
@@ -896,7 +969,13 @@ fn copy(job: &Arc<RestoreJob>, task: TaskGuard) {
         }
     }
     let mut over = Over(job, false);
-    let staged = restore::stage(&job.from, &job.library, &RestoreOptions { also: ALSO, aside: &job.aside }, &Copying { task: &task, job });
+    // (the folder the library was opened from is asked before each file: its path may lead elsewhere by now)
+    let (staged, refusal) = {
+        let watch = Copying { task: &task, job };
+        let gate = InOpenedFolder::new(&watch, job.folder.as_ref());
+        let staged = restore::stage(&job.from, &job.library, &RestoreOptions { also: ALSO, aside: &job.aside }, &gate);
+        (staged, gate.refusal())
+    };
     match staged {
         Ok(staged) => {
             // all of it is copied; what is left waits for the library to be at rest
@@ -909,7 +988,8 @@ fn copy(job: &Arc<RestoreJob>, task: TaskGuard) {
                 job.staged.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take();
             }
         }
-        Err(backup::BackupError::Cancelled) => job.end(Err(STOPPED.into())),
+        // (stopped by the folder: that is the reason, not a stop somebody asked for)
+        Err(backup::BackupError::Cancelled) => job.end(Err(refusal.unwrap_or_else(|| STOPPED.into()))),
         Err(e) => {
             log::warn!("library: restore: {e}");
             job.end(Err(e.to_string()));
@@ -1027,9 +1107,11 @@ fn place(s: &mut Session, staged: restore::Staged, from: &Path, target: &Path, a
         }
         crate::EngineError::Other(why)
     };
+    // (closing the library can take a while: its path is asked again right before its files move)
+    ask(s.opened_folder())?;
     let made = match staged.replace() {
         Ok(made) => made,
-        Err(e) => match restore::finish(target) {
+        Err(e) => match in_opened_folder(s, || restore::finish(target)) {
             Ok(Some(made)) => made,
             Ok(None) => {
                 let e = e.to_string();
@@ -1051,7 +1133,7 @@ fn place(s: &mut Session, staged: restore::Staged, from: &Path, target: &Path, a
         // (the session still has it, and its files are the same ones once they are back)
         let e = e.to_string();
         let not_opened = format!("{aside}{NOT_OPENED}");
-        return Err(match restore::take_back(&made, &not_opened) {
+        return Err(match in_opened_folder(s, || restore::take_back(&made, &not_opened)) {
             Ok(_) => {
                 (s.presets, s.profile_favorites, s.profile_recent, s.media.smart_dir) = kept;
                 crate::EngineError::Other(format!(
@@ -1401,7 +1483,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Restore Library from Backup…",
             ["File"],
             None,
-            "{dir: a backup's folder (absolute path), to?: absolute folder path, background?: bool} — put a backup back (in the app, without `dir`: the library's backups are listed to choose from, `library.backups`; `choose: true` asks for the folder with a folder dialog, and lists the backups in it when it is a folder of backups, not one; `to` needs `dir`). Without `to` (or with `to` naming the open library): the open library becomes what the backup holds (catalog, log, presets, view and preferences; not the photos, and the folder its backups go to stays), and the session goes on in it: undo history is gone, as after opening a library. What the library held is kept, also changes not yet saved, in Replaced/<the time (UTC)> in its folder, which is a library folder itself. Refused while a backup or other background work is under way. With another `to`: the backup is restored into that folder (one that isn't there or is empty, or a library nothing has open, which is replaced the same way; not a folder in the backup or in the open library) and nothing is opened. The backup is checked against its marker first and is only read; one that was edited or damaged, or whose catalog or log a newer LightCraft wrote, is refused with the library untouched. A restored catalog that then doesn't open is taken back (the library is as it was; the backup's files are in Replaced/<the time> (not opened)); with `to` it is tried without opening it for work, and taken back the same way (from a folder that held nothing, what the restore put there is removed again, and nothing else). `to` is named outright, without `..`. Has a row in the activity stack (kind `restore`). The command returns when it is done; with `background` (a restore of the open library only) it returns at once with what `library.restoreStatus` reports: the backup is copied and checked while the library stays in use (the row's ✕ stops it then), and its files are moved into place once the library is at rest (no slider held, no other background work), which the app sees to between frames and `library.restoreStatus` when asked; so `background` is for a session that goes on (the app, MCP, the control channel), not for a program that ends when the command returns (`lightcraft-cli run` waits for it before it ends). Opening a library (another, or this one again) before that gives the restore up, with nothing changed. A backup can't be opened as a library where it is → {restored: {backup, library, aside | null, seq, photos, files, bytes, skipped, placed, replaced}, opened}",
+            "{dir: a backup's folder (absolute path), to?: absolute folder path, background?: bool} — put a backup back (in the app, without `dir`: the library's backups are listed to choose from, `library.backups`; `choose: true` asks for the folder with a folder dialog, and lists the backups in it when it is a folder of backups, not one; `to` needs `dir`). Without `to` (or with `to` naming the open library): the open library becomes what the backup holds (catalog, log, presets, view and preferences; not the photos, and the folder its backups go to stays), and the session goes on in it: undo history is gone, as after opening a library. What the library held is kept, also changes not yet saved, in Replaced/<the time (UTC)> in its folder, which is a library folder itself. Refused while a backup or other background work is under way. Refused too, with nothing written, while the library's path leads to another folder than the one it was opened from (a share mounted over it, or the folder moved away and another put in its place): put the original folder back. With another `to`: the backup is restored into that folder (one that isn't there or is empty, or a library nothing has open, which is replaced the same way; not a folder in the backup or in the open library) and nothing is opened. The backup is checked against its marker first and is only read; one that was edited or damaged, or whose catalog or log a newer LightCraft wrote, is refused with the library untouched. A restored catalog that then doesn't open is taken back (the library is as it was; the backup's files are in Replaced/<the time> (not opened)); with `to` it is tried without opening it for work, and taken back the same way (from a folder that held nothing, what the restore put there is removed again, and nothing else). `to` is named outright, without `..`. Has a row in the activity stack (kind `restore`). The command returns when it is done; with `background` (a restore of the open library only) it returns at once with what `library.restoreStatus` reports: the backup is copied and checked while the library stays in use (the row's ✕ stops it then), and its files are moved into place once the library is at rest (no slider held, no other background work), which the app sees to between frames and `library.restoreStatus` when asked; so `background` is for a session that goes on (the app, MCP, the control channel), not for a program that ends when the command returns (`lightcraft-cli run` waits for it before it ends). Opening a library (another, or this one again) before that gives the restore up, with nothing changed. A backup can't be opened as a library where it is → {restored: {backup, library, aside | null, seq, photos, files, bytes, skipped, placed, replaced}, opened}",
             can_restore,
             restore_library
         ),

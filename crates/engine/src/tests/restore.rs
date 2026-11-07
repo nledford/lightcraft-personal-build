@@ -1083,3 +1083,235 @@ fn a_restore_into_a_folder_whose_given_up_worker_still_runs_is_refused() {
         let _ = std::fs::remove_dir_all(&d);
     }
 }
+
+/// Issue #3240: a restore of the open library moves its files by path, so it asks the folder the
+/// library was opened from first. When the path leads to another folder than that (a share mounted
+/// over it, or the folder moved away and another put in its place), the restore is refused with the
+/// reason, and nothing of it is written into either folder. A folder's identity is its device and
+/// inode number, so these run on Unix.
+#[cfg(unix)]
+mod opened_folder {
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::Ordering;
+
+    use lightcraft_catalog::backup::BackupError;
+    use serde_json::json;
+
+    use super::{copied, open, pump, temp_dir};
+    use crate::Session;
+    use crate::cmd::backup::in_opened_folder;
+
+    /// What the reason for a refused restore says.
+    const REFUSED: &str = "is no longer the folder this library was opened from";
+
+    fn scratch(tag: &str) -> PathBuf {
+        let base = temp_dir(tag);
+        std::fs::create_dir_all(&base).unwrap();
+        base
+    }
+
+    /// What `dir` holds, by name: a file's bytes (a folder is listed, empty).
+    fn files_in(dir: &Path) -> Vec<(String, Vec<u8>)> {
+        let mut files: Vec<_> = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|e| {
+                let e = e.unwrap();
+                let bytes = if e.path().is_dir() { Vec::new() } else { std::fs::read(e.path()).unwrap() };
+                (e.file_name().to_string_lossy().into_owned(), bytes)
+            })
+            .collect();
+        files.sort();
+        files
+    }
+
+    /// Another library's folder where `lib` was, as a share mounted over it would look: the folder
+    /// that was opened is moved to the path returned, out of the path's reach.
+    fn put_another_library_at(lib: &Path) -> PathBuf {
+        let away = lib.with_extension("away");
+        std::fs::rename(lib, &away).unwrap();
+        std::fs::create_dir(lib).unwrap();
+        let theirs: [(&str, &[u8]); 4] =
+            [("catalog.snap", b"their snapshot"), ("catalog.log", b"their log\n"), ("catalog.lock.owner", b"their note"), ("presets.json", b"{}")];
+        for (name, bytes) in theirs {
+            std::fs::write(lib.join(name), bytes).unwrap();
+        }
+        away
+    }
+
+    /// The folder that was opened (`away`), back where it was: the folder that took its place is
+    /// moved out of the way.
+    fn put_back(lib: &Path, away: &Path) {
+        std::fs::rename(lib, lib.with_extension("theirs")).unwrap();
+        std::fs::rename(away, lib).unwrap();
+    }
+
+    /// A backup of the open library in a folder beside it: one in the library's own folder (where
+    /// backups go unless said) would move away with it.
+    fn back_up_beside(s: &mut Session, lib: &Path) -> PathBuf {
+        let dest = lib.with_file_name("Backups");
+        let r = s.execute("library.backup", &json!({"dir": dest.to_string_lossy()})).unwrap();
+        PathBuf::from(r["report"]["dir"].as_str().unwrap())
+    }
+
+    /// Wait until the worker of a restore in the background is done with the backup: it ended the
+    /// restore (it was stopped, or failed), or the backup is copied and waits to be moved in. The
+    /// library is not asked meanwhile (`settle` is what moves it in).
+    fn worker_is_done(s: &Session) {
+        let job = s.restore.clone().expect("a restore was started");
+        let t0 = std::time::Instant::now();
+        while t0.elapsed() < std::time::Duration::from_secs(20) {
+            if job.json()["running"] == json!(false) || s.activity.list().iter().any(|t| t.kind == "restore" && t.detail == "copied") {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+        panic!("the worker is never done with the backup");
+    }
+
+    /// Given a library whose path leads to another folder than the one it was opened from, when it is
+    /// restored from a backup (here and now, or in the background as the app asks), then the restore
+    /// is refused with the reason and nothing of it is written into either folder; and with the
+    /// folder that was opened back, the restore is made.
+    fn is_refused_while_the_folder_is_replaced(background: bool) {
+        let base = scratch(if background { "refused-in-the-background" } else { "refused" });
+        let lib = base.join("Lib");
+        let mut s = open(&lib);
+        let made = back_up_beside(&mut s, &lib);
+        let then = s.catalog.to_snapshot();
+
+        let away = put_another_library_at(&lib);
+        let (theirs, ours) = (files_in(&lib), files_in(&away));
+        let asked = json!({"dir": made.to_string_lossy(), "background": background});
+        let e = s.execute("library.restore", &asked).expect_err("the library's files are not moved into another folder").to_string();
+        assert!(e.contains(REFUSED) && e.contains(lib.to_string_lossy().as_ref()), "{e}");
+        // nothing was written, into either folder, and nothing is under way
+        assert_eq!(files_in(&lib), theirs, "the folder at the path now is as it was");
+        assert_eq!(files_in(&away), ours, "and so is the folder that was opened");
+        assert!(s.restore.is_none() && s.activity.list().is_empty());
+
+        // the refusal is not for good: with the folder that was opened back, the restore is made
+        put_back(&lib, &away);
+        let r = s.execute("library.restore", &asked).unwrap();
+        if background {
+            let done = pump(&mut s).expect("the restore ends");
+            assert!(done["error"].is_null(), "{done}");
+        } else {
+            assert_eq!(r["opened"], json!(true));
+        }
+        assert_eq!(s.catalog.to_snapshot(), then);
+        assert!(lib.join("Replaced").is_dir());
+        drop(s);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_restore_is_refused_while_the_librarys_path_leads_to_another_folder() {
+        is_refused_while_the_folder_is_replaced(false);
+    }
+
+    #[test]
+    fn a_restore_in_the_background_is_refused_while_the_librarys_path_leads_to_another_folder() {
+        is_refused_while_the_folder_is_replaced(true);
+    }
+
+    /// Given a restore in the background whose worker has not begun to copy, when the library's
+    /// folder is replaced, then the worker copies nothing into the folder that is there now, and
+    /// the restore ends with the reason (not as a stop that somebody asked for).
+    #[test]
+    fn the_worker_of_a_restore_copies_nothing_into_another_folder() {
+        let base = scratch("worker");
+        let lib = base.join("Lib");
+        let mut s = open(&lib);
+        let made = back_up_beside(&mut s, &lib);
+        s.restore_hold.store(true, Ordering::SeqCst);
+        s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+
+        let away = put_another_library_at(&lib);
+        let (theirs, ours) = (files_in(&lib), files_in(&away));
+        s.restore_hold.store(false, Ordering::SeqCst);
+        worker_is_done(&s);
+        assert_eq!(files_in(&lib), theirs, "the backup is not copied into the folder at the path now");
+        assert_eq!(files_in(&away), ours);
+        let done = pump(&mut s).expect("the restore ends");
+        assert!(done["restored"].is_null() && done["error"].as_str().is_some_and(|e| e.contains(REFUSED)), "{done}");
+        assert_eq!(done["cancelled"], json!(false), "{done}");
+        assert!(s.activity.list().is_empty());
+        assert_eq!(files_in(&lib), theirs);
+        assert_eq!(files_in(&away), ours);
+        drop(s);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// Given a backup copied for a restore in the background, when the library's folder is replaced
+    /// before its files are moved in, then they are not moved into the folder that is there now:
+    /// the restore ends with the reason. The copy stays in the folder that was opened, out of the
+    /// path's reach (it is cleared away when that library is opened again).
+    #[test]
+    fn a_copied_backup_is_not_moved_into_another_folder() {
+        let base = scratch("copied");
+        let lib = base.join("Lib");
+        let mut s = open(&lib);
+        let made = back_up_beside(&mut s, &lib);
+        s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "background": true})).unwrap();
+        copied(&s);
+        assert!(lib.join("restore.partial").join("catalog.snap").is_file());
+
+        let away = put_another_library_at(&lib);
+        let (theirs, ours) = (files_in(&lib), files_in(&away));
+        let done = pump(&mut s).expect("the restore ends");
+        assert!(done["restored"].is_null() && done["error"].as_str().is_some_and(|e| e.contains(REFUSED)), "{done}");
+        assert_eq!(files_in(&lib), theirs, "nothing of the backup was moved into the folder at the path now");
+        assert_eq!(files_in(&away), ours, "and nothing of the folder that was opened was moved away");
+        assert!(s.activity.list().is_empty());
+        drop(s);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// A restore into another folder (`to`) is not the library's own files moved by path: it is
+    /// made while the library's path leads to another folder, and writes only into `to`.
+    #[test]
+    fn a_restore_into_another_folder_does_not_ask_the_folder_the_library_was_opened_from() {
+        let base = scratch("elsewhere");
+        let lib = base.join("Lib");
+        let mut s = open(&lib);
+        let made = back_up_beside(&mut s, &lib);
+        let away = put_another_library_at(&lib);
+        let (theirs, ours) = (files_in(&lib), files_in(&away));
+
+        let to = base.join("Looked at");
+        s.execute("library.restore", &json!({"dir": made.to_string_lossy(), "to": to.to_string_lossy()})).unwrap();
+        assert!(to.join("catalog.snap").is_file());
+        assert_eq!(files_in(&lib), theirs);
+        assert_eq!(files_in(&away), ours);
+        drop(s);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// What finishes a restore that was cut short, or takes one back, moves the library's files by
+    /// path too: it is not run at all while the library's path leads to another folder, and is run
+    /// once the folder that was opened is back.
+    #[test]
+    fn what_finishes_or_takes_back_a_restore_is_not_run_in_another_folder() {
+        let base = scratch("finishing");
+        let lib = base.join("Lib");
+        let s = open(&lib);
+        let ran = std::cell::Cell::new(0);
+        let moves_files = || {
+            ran.set(ran.get() + 1);
+            Ok::<_, BackupError>(7)
+        };
+        assert_eq!(in_opened_folder(&s, moves_files), Ok(7));
+        assert_eq!(ran.get(), 1);
+
+        let away = put_another_library_at(&lib);
+        let e = in_opened_folder(&s, moves_files).unwrap_err();
+        assert!(e.contains(REFUSED) && e.contains(lib.to_string_lossy().as_ref()), "{e}");
+        assert_eq!(ran.get(), 1, "nothing was moved in the folder at the path now");
+
+        put_back(&lib, &away);
+        assert_eq!(in_opened_folder(&s, moves_files), Ok(7));
+        assert_eq!(ran.get(), 2);
+        drop(s);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+}
