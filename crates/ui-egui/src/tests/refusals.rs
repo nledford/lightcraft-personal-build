@@ -166,6 +166,15 @@ fn a_reason_is_capitalised_only_when_it_starts_with_a_word() {
     }
 }
 
+/// Georgian has no case: a translated reason (a backup's) keeps its first letter, which sentence
+/// case would turn into Mtavruli, the all-caps script.
+#[test]
+fn a_georgian_reason_keeps_its_first_letter() {
+    for reason in ["ფოტო არ არის არჩეული", "ა"] {
+        assert_eq!(crate::sentence(reason), reason);
+    }
+}
+
 /// With a dialog open the keys are the dialog's and reach no command behind it, so nothing is said
 /// about a refusal there; once the dialog is gone, the same key says why.
 #[test]
@@ -263,7 +272,9 @@ fn key(h: &mut Headless, key: &str, cmd: bool) {
 }
 
 /// Edit ▸ Auto on a photo whose original is missing: nothing changed, and the toast used to read
-/// "Auto settings applied" (the success was said whatever the command answered).
+/// "Auto settings applied" (the success was said whatever the command answered). Auto decodes in
+/// the background now (#3808): the command answers at once, the failure arrives as the task's toast,
+/// and that is what stays on screen.
 #[test]
 fn the_auto_button_doesnt_claim_success_when_refused() {
     let mut h = headless(missing_originals(), json!({"view": "detail", "right": "edit"}));
@@ -271,7 +282,7 @@ fn the_auto_button_doesnt_claim_success_when_refused() {
     click(&mut h, "button:auto");
     let said = toast(&h.app).expect("a toast").to_string();
     assert!(!said.contains("Auto settings applied"), "{said}");
-    assert!(h.app.ui.status.contains("develop.auto"), "the refusal it is about: {}", h.app.ui.status);
+    assert!(said.contains("lightcraft-refusals/1.jpg"), "the reason it is about: {said}");
     assert_eq!(h.app.session.develop_of(lightcraft_catalog::PhotoId(1)), before, "nothing changed");
 }
 

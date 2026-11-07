@@ -161,7 +161,7 @@ fn sentence(why: &str) -> String {
     let first_word = why.split_whitespace().next().unwrap_or_default().trim_end_matches([',', ':', ';']);
     let mut letters = why.chars();
     match letters.next() {
-        Some(first) if first_word.chars().all(char::is_alphabetic) && first.to_uppercase().count() == 1 => {
+        Some(first) if first_word.chars().all(char::is_alphabetic) && first.to_uppercase().count() == 1 && crate::i18n::capitalizes(first) => {
             first.to_uppercase().chain(letters).collect()
         }
         _ => why.to_string(),
