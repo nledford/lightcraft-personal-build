@@ -1,0 +1,4 @@
+{"seq":1,"crc":3837241258,"op":{"op":"batch","ops":[{"op":"setRating","id":21,"rating":4}]}}
+{"seq":2,"crc":971020944,"op":{"op":"batch","ops":[{"op":"setFlag","id":21,"flag":"pick"}]}}
+{"seq":3,"crc":1144981346,"op":{"op":"batch","ops":[{"op":"setDevelop","id":21,"settings":{"light":{"exposure":0.5},"process":2},"label":"Exposure","edited":"2026-09-30T12:00:00"},{"op":"pushHistory","id":21,"step":{"label":"Exposure","settings":{"light":{"exposure":0.5},"process":2}}}]}}
+{"seq":4,"crc":4080412235,"op":{"op":"batch","ops":[{"op":"setDevelop","id":21,"settings":{"light":{"exposure":0.5},"process":2,"wb":{"mode":"custom","scale":"kelvin","temp":6100.0}},"label":"Temp","edited":"2026-09-30T12:00:00"},{"op":"pushHistory","id":21,"step":{"label":"Temp","settings":{"light":{"exposure":0.5},"process":2,"wb":{"mode":"custom","scale":"kelvin","temp":6100.0}}}}]}}

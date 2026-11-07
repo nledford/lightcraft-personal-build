@@ -1604,6 +1604,8 @@ mod tests_album_loops;
 #[cfg(test)]
 mod tests_album_order;
 #[cfg(test)]
+mod tests_b7248_library;
+#[cfg(test)]
 mod tests_background;
 #[cfg(test)]
 mod tests_folder_records;
