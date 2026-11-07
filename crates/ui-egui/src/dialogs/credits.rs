@@ -257,10 +257,8 @@ pub fn contributors_ui(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             }
         });
         crate::widgets::name_combo(&sort.response, crate::i18n::tr("Sort"));
-        let reverse =
-            crate::widgets::arrow_button(ui, "", if v.ascending { crate::icons::Icon::ChevronUp } else { crate::icons::Icon::ChevronDown }, false);
-        reverse.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), crate::i18n::tr("Reverse the order")));
-        if reverse.on_hover_text(crate::i18n::tr("Reverse the order")).clicked() {
+        let direction = if v.ascending { crate::icons::Icon::ChevronUp } else { crate::icons::Icon::ChevronDown };
+        if crate::button::Button::icon_only(direction, "Reverse the order").ghost().small().show(ui).clicked() {
             v.ascending = !v.ascending;
         }
         ui.separator();

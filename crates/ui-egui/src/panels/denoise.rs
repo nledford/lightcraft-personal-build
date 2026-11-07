@@ -14,6 +14,7 @@ use serde_json::{Value, json};
 
 use super::settings::{choices, heading, hint};
 use crate::LightcraftApp;
+use crate::button::Button;
 use crate::theme::Tokens;
 use crate::widgets::register;
 
@@ -197,8 +198,7 @@ pub fn detail_status(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, am
                 egui::Frame::NONE.inner_margin(pad).show(ui, |ui| {
                     note(ui, "Its denoised picture is not made yet, and pictures are not made on their own (Settings, AI Denoise).", t.text_dim);
                     ui.add_space(2.0);
-                    let r = ui.small_button(crate::i18n::tr("Make it now"));
-                    register(ui, "denoise:make", r.rect);
+                    let r = Button::new("Make it now").small().widget("denoise:make").show(ui);
                     if r.clicked() {
                         let _ = app.run("denoise.queue", json!({"ids": [id.0]}));
                     }
@@ -225,8 +225,7 @@ pub fn detail_status(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, am
                 let color = if unsupported { t.text_dim } else { t.caution };
                 note(ui, &sentence(&why), color);
                 if !unsupported {
-                    let r = ui.small_button(crate::i18n::tr("Try again"));
-                    register(ui, "denoise:retry", r.rect);
+                    let r = Button::new("Try again").small().widget("denoise:retry").show(ui);
                     if r.clicked() {
                         let _ = app.run("denoise.queue", json!({"ids": [id.0], "retry": true}));
                     }
@@ -337,8 +336,7 @@ fn speed_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, list: &
     );
     hint(ui, t, &device_line(&status["device"], run_on));
     if run_on != "cpu" && status["device"]["retry"] == true {
-        let r = ui.small_button(crate::i18n::tr("Try the graphics card again"));
-        register(ui, "denoise:retryGpu", r.rect);
+        let r = Button::new("Try the graphics card again").small().widget("denoise:retryGpu").show(ui);
         if r.clicked() {
             // choosing where it runs, even the same again, forgets the failed set-up
             let _ = app.run("denoise.settings", json!({"runOn": run_on}));
@@ -359,14 +357,12 @@ fn photos_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, list: 
     let (running, queued) = (app.caches.denoise.running, app.caches.denoise.queued);
     progress_line(app, ui, t, status, running, queued);
     ui.horizontal(|ui| {
-        let r = ui.button(tr("Denoise all photos with an Amount"));
-        register(ui, "denoise:queueAll", r.rect);
+        let r = Button::new("Denoise all photos with an Amount").widget("denoise:queueAll").show(ui);
         if r.clicked() {
             let _ = app.run("denoise.queue", json!({"scope": "withAmount"}));
         }
         if running.is_some() || queued > 0 {
-            let r = ui.button(tr("Stop"));
-            register(ui, "denoise:stop", r.rect);
+            let r = Button::new("Stop").widget("denoise:stop").show(ui);
             if r.clicked() {
                 let _ = app.run("denoise.cancel", json!({}));
             }
@@ -428,8 +424,7 @@ fn cache_section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, list: &
             let _ = app.run("denoise.settings", json!({"cacheGb": choice}));
             app.caches.denoise.epoch += 1;
         }
-        let r = ui.button(tr("Clear cache"));
-        register(ui, "denoise:clear", r.rect);
+        let r = Button::new("Clear cache").widget("denoise:clear").show(ui);
         if r.clicked() {
             let _ = app.run("denoise.clear", json!({}));
         }
@@ -512,22 +507,19 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
             });
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if installed {
-                    let r = ui.button(tr("Remove"));
-                    register(ui, format!("denoise:remove:{id}"), r.rect);
+                    let r = Button::new("Remove").widget(format!("denoise:remove:{id}")).show(ui);
                     if r.clicked() {
                         let _ = app.run("denoise.models.remove", json!({"id": id}));
                         app.caches.denoise.epoch += 1;
                     }
                     if selected {
-                        let r = ui.button(tr("Stop using"));
-                        register(ui, format!("denoise:off:{id}"), r.rect);
+                        let r = Button::new("Stop using").widget(format!("denoise:off:{id}")).show(ui);
                         if r.clicked() {
                             let _ = app.run("denoise.models.select", json!({"id": null}));
                             app.caches.denoise.epoch += 1;
                         }
                     } else {
-                        let r = ui.button(tr("Use"));
-                        register(ui, format!("denoise:use:{id}"), r.rect);
+                        let r = Button::new("Use").widget(format!("denoise:use:{id}")).show(ui);
                         if r.clicked() {
                             let _ = app.run("denoise.models.select", json!({"id": id}));
                             app.caches.denoise.epoch += 1;
@@ -536,8 +528,7 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                 } else {
                     match dl_state {
                         Some("running") => {
-                            let r = ui.button(tr("Cancel"));
-                            register(ui, format!("denoise:cancelDownload:{id}"), r.rect);
+                            let r = Button::new("Cancel").widget(format!("denoise:cancelDownload:{id}")).show(ui);
                             if r.clicked() {
                                 let _ = app.run("denoise.models.downloadCancel", json!({"id": id}));
                                 app.caches.denoise.dl_watch.retain(|w| w != &id);
@@ -547,10 +538,10 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                         Some("done" | "installing") => {}
                         _ => {
                             if let Some(url) = m["source"].as_str() {
-                                let r = ui
-                                    .button(tr("Open page"))
-                                    .on_hover_text(tr("Opens the model's own page in your browser, to read about it or get the file yourself."));
-                                register(ui, format!("denoise:get:{id}"), r.rect);
+                                let r = Button::new("Open page")
+                                    .tooltip("Opens the model's own page in your browser, to read about it or get the file yourself.")
+                                    .widget(format!("denoise:get:{id}"))
+                                    .show(ui);
                                 if r.clicked() {
                                     open_page(app, url);
                                 }
@@ -562,8 +553,7 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                                     mb(m["sizeBytes"].as_u64()),
                                     host = host
                                 );
-                                let r = ui.button(tr(label)).on_hover_text(tip);
-                                register(ui, format!("denoise:download:{id}"), r.rect);
+                                let r = Button::new(label).tooltip(&tip).widget(format!("denoise:download:{id}")).show(ui);
                                 if r.clicked() {
                                     open_download_dialog(app, m);
                                 }
