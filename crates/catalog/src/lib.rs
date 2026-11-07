@@ -13,6 +13,8 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+#[cfg(not(target_arch = "wasm32"))]
+pub mod convert;
 pub mod dates;
 #[cfg(not(target_arch = "wasm32"))]
 #[doc(hidden)]
@@ -1607,6 +1609,8 @@ mod tests_album_order;
 mod tests_b7248_library;
 #[cfg(test)]
 mod tests_background;
+#[cfg(test)]
+mod tests_convert;
 #[cfg(test)]
 mod tests_folder_records;
 #[cfg(test)]

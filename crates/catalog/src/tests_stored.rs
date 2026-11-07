@@ -21,7 +21,7 @@ pub(crate) fn base() -> DevelopSettings {
     serde_json::from_str("{}").unwrap()
 }
 
-fn plain(id: u64) -> Photo {
+pub(crate) fn plain(id: u64) -> Photo {
     let mut p = Photo::new(
         PhotoId(id),
         Source::File { path: format!("/pictures/2019/trip/IMG_{id:04}.jpg") },
@@ -105,7 +105,7 @@ pub(crate) fn rich() -> DevelopSettings {
 
 /// A photo with every field set to something other than what [`plain`] has, but for the few that
 /// formats after 6 added (the focus point, the History cursor, the preview-only recheck).
-fn full() -> Photo {
+pub(crate) fn full() -> Photo {
     let look = edited(|s| s.light.contrast = 20.0);
     let now = Arc::new(DevelopSettings { light: lightcraft_develop::Light { exposure: 0.3, ..Default::default() }, ..rich() });
     let mut p = plain(7);
@@ -209,7 +209,7 @@ fn fixture_ops(version: u32) -> Vec<Op> {
 
 // ---- end of fixtures
 
-fn catalog_of(photos: impl IntoIterator<Item = Photo>) -> Catalog {
+pub(crate) fn catalog_of(photos: impl IntoIterator<Item = Photo>) -> Catalog {
     let mut c = Catalog::new();
     for p in photos {
         c.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
