@@ -216,7 +216,8 @@ the other).
   to the folder its backups go to, whoever made it (`lastBackup`, the session clock's time, kept in the library's
   preferences); a backup by itself that fails, or can't be started, says so and is tried again an hour later. Backed up
   "there" is meant: when backups go to another folder the library has not been backed up, and when the folder they
-  were in is gone, the next look finds that out, forgets the last backup and makes one.
+  were in is gone, the next look finds that out, forgets the last backup and makes one (not while the library's path
+  leads to another folder than the one it was opened from: what that folder holds says nothing about this library).
   When LightCraft quits, it asks first or backs up at once (a backup that runs already is the one it waits for), and
   quits when the backup is made; one that fails asks whether to quit anyway. A restore keeps the schedule, like the
   folder: both are the library's choices now, not the backup's from then. Only the app a
@@ -295,12 +296,13 @@ the other).
 - **Only in the folder the library was opened from.** A backup reads the library's files by path and files them in the
   folder it goes to (`Backups` in the library folder, unless another is set), and the removal of old backups and of
   what restores replaced (after a backup, and `library.pruneBackups` with `remove: true`) works in the library folder
-  and the folder backups go to. Each asks the folder the library was opened from first, as saving does: a backup is
-  refused before it is made, stops before each file it reads, and notes no `lastBackup`, and nothing is removed, once
-  the library's path leads to another folder (a share mounted over it, or the folder moved away and another put in
-  its place; noticed where the system gives a folder an identity, which is Unix so far). The reason is the backup's
-  `error`, or what `notRemoved` says for a removal. The check is not a lock: a folder put at the path between a check
-  and the write or removal it guards is not noticed.
+  and the folder backups go to. Each asks the folder the library was opened from first, as saving does: once the
+  library's path leads to another folder (a share mounted over it, or the folder moved away and another put in its
+  place; noticed where the system gives a folder an identity, which is Unix so far), a backup is refused before it is
+  made and stops before each segment it reads, no `lastBackup` is noted, and nothing is removed. The reason is the
+  backup's `error`; `library.pruneBackups` with `remove: true` is refused with it, and a removal that began before
+  the folder was replaced says it in `notRemoved` (`replaced.notRemoved` for what restores replaced). The check is not
+  a lock: a folder put at the path between a check and the write or removal it guards is not noticed.
 - **Nothing half-made counts.** A backup is written as `<name>.partial` and renamed when whole; one that fails or is
   stopped (its row in the activity stack) removes it. One cut short by the program ending stays as `<name>.partial`,
   is never taken for a backup, and is removed by a later backup to the same folder once it is an hour old.

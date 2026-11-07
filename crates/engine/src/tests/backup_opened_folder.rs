@@ -6,6 +6,7 @@
 //! time of the backup is not noted, and the reason is the refusal's. A folder's identity is its device
 //! and inode number, so these run on Unix.
 
+use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
@@ -15,7 +16,7 @@ use lightcraft_catalog::restore;
 use serde_json::json;
 
 use crate::Session;
-use crate::cmd::backup::{InOpenedFolder, note_finished, remove_outdated, remove_replaced};
+use crate::cmd::backup::{InOpenedFolder, back_up_if_due, note_finished, remove_outdated, remove_replaced};
 
 /// What the reason for a refusal says.
 const REFUSED: &str = "is no longer the folder this library was opened from";
@@ -283,6 +284,83 @@ fn what_removes_old_backups_asks_before_each_folder() {
     assert_eq!((removed.len(), not_removed.len()), (2, 0), "{removed:?} {not_removed:?}");
     let (removed, not_removed) = remove_outdated(&shared, own, now, 30, None, s.opened_folder(), &|| false);
     assert_eq!((removed.len(), not_removed.len()), (2, 0), "{removed:?} {not_removed:?}");
+    drop(s);
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+/// A long removal asks before each folder it removes, not once at its start: with the library's folder
+/// replaced after the first folder went (at the time the removal asks whether to stop, before its second
+/// one), the second is refused with the reason, and the other folder's is not removed. Both removals.
+#[test]
+fn a_removal_that_began_in_the_right_folder_stops_when_the_folder_is_replaced() {
+    let base = scratch("between");
+    let (lib, theirs, shared) = (base.join("Lib"), base.join("Theirs"), base.join("Shared"));
+    let times = ["2026-01-10T09:00:00", "2026-01-11T09:00:00", "2026-01-12T09:00:00", "2026-01-13T09:00:00", "2026-01-14T09:00:00"];
+    library_restored_at(&lib, &times);
+    library_restored_at(&theirs, &times);
+    let (mut s, now) = open(&lib);
+    s.execute("library.backupPreferences", &json!({"dir": shared.to_string_lossy()})).unwrap();
+    for time in times {
+        *now.lock().unwrap() = time.to_string();
+        s.execute("library.backup", &json!({})).unwrap();
+    }
+    let id = s.library_id.clone().unwrap();
+    let own = Own { library: &lib, id: &id };
+    let old: Vec<restore::Replaced> = restore::replaced(&lib, &crate::library::SETTINGS_FILES).into_iter().take(2).collect();
+    assert_eq!(old.len(), 2);
+
+    // the folder is replaced when the removal asks whether to stop before its second folder
+    let other = RefCell::new(theirs);
+    let (calls, away) = (Cell::new(0), RefCell::new(PathBuf::new()));
+    let theirs_before = RefCell::new(Vec::new());
+    let stop = || {
+        calls.set(calls.get() + 1);
+        if calls.get() == 2 {
+            *theirs_before.borrow_mut() = tree(&other.borrow());
+            *away.borrow_mut() = put_in_its_place(&lib, &other.borrow());
+        }
+        false
+    };
+    let (removed, not_removed) = remove_replaced(&lib, &old, 30, s.opened_folder(), &stop, &|_| {});
+    assert_eq!(removed, [old[0].name.clone()], "the first went, with the folder as it was");
+    assert!(not_removed.len() == 1 && not_removed[0].contains(REFUSED), "{not_removed:?}");
+    assert_eq!(tree(&lib), *theirs_before.borrow(), "what the other folder's restores replaced is untouched");
+
+    // and the same for the backups of the folder they go to
+    put_back(&lib, &away.borrow());
+    *other.borrow_mut() = lib.with_extension("theirs");
+    calls.set(0);
+    let (removed, not_removed) = remove_outdated(&shared, own, "2027-01-01T09:00:00", 30, None, s.opened_folder(), &stop);
+    assert_eq!(removed.len(), 1, "the first went: {removed:?} {not_removed:?}");
+    assert!(not_removed.len() == 1 && not_removed[0].contains(REFUSED), "{removed:?} {not_removed:?}");
+    assert_eq!(tree(&lib), *theirs_before.borrow());
+    assert_eq!(std::fs::read_dir(&shared).unwrap().count(), 4, "one of the five backups was removed from the folder, and no more");
+    drop(s);
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+/// Given a library that is not due for a backup by the time of its last one, when what is at its path
+/// is another folder that has no `Backups` in it, then the schedule's look at where its backups are does
+/// not take that for the library's backups being gone: it forgets no last backup (the folder is not this
+/// library's to say). The refusal of the backup that follows a forgetting would not tell the person so.
+#[test]
+fn the_schedule_does_not_forget_the_last_backup_for_another_folder() {
+    let base = scratch("schedule");
+    let (lib, theirs) = (base.join("Lib"), base.join("Theirs"));
+    library_restored_at(&lib, &[]);
+    another_library(&theirs);
+    let (mut s, now) = open(&lib);
+    s.execute("library.backupPreferences", &json!({"every": "week"})).unwrap();
+    *now.lock().unwrap() = "2026-01-06T09:00:00".to_string();
+    let last = s.last_backup.clone();
+    assert!(last.is_some());
+
+    let away = put_in_its_place(&lib, &theirs);
+    let (theirs, ours) = (tree(&lib), tree(&away));
+    assert_eq!(back_up_if_due(&mut s), Ok(false), "not due by the time of the last backup");
+    assert_eq!(s.last_backup, last, "and not forgotten for another folder's having no backups");
+    assert_eq!(tree(&lib), theirs);
+    assert_eq!(tree(&away), ours);
     drop(s);
     let _ = std::fs::remove_dir_all(&base);
 }
