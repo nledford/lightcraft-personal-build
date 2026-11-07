@@ -63,6 +63,12 @@ impl Store for Gated {
         self.files.write_atomic(name, &buf)?;
         Ok(buf.len() as u64)
     }
+    fn write_new_with(&mut self, name: &str, fill: &mut dyn FnMut(&mut dyn std::io::Write) -> std::io::Result<()>) -> std::io::Result<u64> {
+        self.files.write_new_with(name, fill)
+    }
+    fn sync(&mut self) -> std::io::Result<()> {
+        self.files.sync()
+    }
     fn append(&mut self, name: &str, data: &[u8]) -> std::io::Result<()> {
         self.files.append(name, data)
     }
@@ -71,6 +77,16 @@ impl Store for Gated {
     }
     fn describe(&self) -> String {
         "gated".into()
+    }
+    // (a folder's layout: the photos in segments)
+    fn remove(&mut self, name: &str) -> std::io::Result<()> {
+        self.files.remove(name)
+    }
+    fn list(&mut self) -> std::io::Result<Vec<String>> {
+        self.files.list()
+    }
+    fn segmented(&self) -> bool {
+        true
     }
     fn background_writer(&self) -> Option<Box<dyn Store>> {
         Some(Box::new(self.clone()))
