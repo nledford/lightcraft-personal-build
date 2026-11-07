@@ -120,16 +120,16 @@ of it.
   with `app.act(id, params)`: a refusal shows its reason in a toast. It returns `None` then: say a success of your own
   only on `Some`, or it writes over the reason. `app.quiet(…)` is for the few calls where a refusal is expected (say
   why at the call); `app.run(…)` hands the `Result` back for code that deals with it (and for agents). Never
-  `let _ = app.run(…)`, nor `let _ = app.session.execute(…)` round it. A dropped `session.execute` that is meant
-  (not a person's action, or already inside `run`) says so on its line or the one above:
-  `// refusal expected: <reason>`. Better still, don't offer what would be refused.
+  `let _ = app.run(…)`, nor `let _ = app.session.execute(…)` round it: `cargo xtask refusals` (in `ci`) fails on
+  both. A dropped `session.execute` that is meant (not a person's action, or already inside `run`) says so on its line
+  or the one above: `// refusal expected: <reason>`. Better still, don't offer what would be refused.
 - **Long-running work shows in the activity stack** ([`docs/background-tasks.md`](docs/background-tasks.md)): anything
   that runs off the UI thread and can take more than a moment holds a `TaskGuard` from `session.activity.start(kind,
   label, cancel)` for its whole run. It adopts the cancel flag the job already checks (`Cancel::Flag`), or uses
   `Cancel::No` when the job can't stop. No progress window, panel or progress toast of its own; its tests assert the row.
 - **Resolution independence:** settings use normalized image coordinates and relative radii; previews and exports must match.
-- **Quality gates** before every commit: `cargo xtask ci` (fmt, clippy -D warnings, tests, layers, assets, roots, wasm).
-  For iteration, `cargo xtask ci --quick` runs fmt, clippy, changed packages' tests, layers, assets, roots,
+- **Quality gates** before every commit: `cargo xtask ci` (fmt, clippy -D warnings, tests, layers, refusals, assets, roots, wasm).
+  For iteration, `cargo xtask ci --quick` runs fmt, clippy, changed packages' tests, layers, refusals, assets, roots,
   and heif / parity / wasm when touched; it does not replace the full gate before merging branches.
   One `ci` runs at a time per machine; others wait their turn (`xtask/src/ci_lock.rs`).
 - **Commits:** one task id per commit (`M2.3: local Laplacian highlights/shadows`). Only green states.
@@ -210,7 +210,7 @@ of it.
 ## Map of the code
 `geom`, `color`, `raster`, `tiff` (L0) → `raw`, `codecs`, `meta`, `develop` (L1) → `pipeline` → `catalog` → `engine`
 → `ui-egui`, `mcp` (L5) → apps `lightcraft` (desktop), `lightcraft-cli` (render/commands/MCP). `scenes` generates demo
-photos. `xtask` = tooling (`ci`, `layers`, `assets`, `parity`, `wasm`, `corpus`, `stats`); `testkit` = test helpers
+photos. `xtask` = tooling (`ci`, `layers`, `refusals`, `assets`, `parity`, `wasm`, `corpus`, `stats`); `testkit` = test helpers
 (dev-dependency only). `flake.nix` +
 `nix/package.nix` = the Nix package (`nix build` builds both binaries with the craft-fonts input, installs the
 desktop file/icons/AppStream metadata and runs `cargo test --workspace`; `nix develop` = dev shell). Community-maintained; CI only
