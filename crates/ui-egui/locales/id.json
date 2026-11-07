@@ -2397,5 +2397,10 @@
   "Top bar": "Bilah atas",
   "Tool strip": "Bilah alat",
   "Bottom bar": "Bilah bawah",
-  "Stopped at the scan limit: there may be more photos": "Berhenti pada batas pemindaian: mungkin masih ada foto"
+  "Stopped at the scan limit: there may be more photos": "Berhenti pada batas pemindaian: mungkin masih ada foto",
+  "Back Up Library": "Cadangkan pustaka",
+  "Backing up the library": "Mencadangkan pustaka",
+  "Backup Status": "Status cadangan",
+  "Check Backup": "Periksa cadangan",
+  "Backup Preferences": "Preferensi pencadangan"
 }

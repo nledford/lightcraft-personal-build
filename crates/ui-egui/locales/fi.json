@@ -2383,5 +2383,10 @@
   "Top bar": "Yläpalkki",
   "Tool strip": "Työkalupalkki",
   "Bottom bar": "Alapalkki",
-  "Stopped at the scan limit: there may be more photos": "Skannauksen raja saavutettiin: valokuvia voi olla lisää"
+  "Stopped at the scan limit: there may be more photos": "Skannauksen raja saavutettiin: valokuvia voi olla lisää",
+  "Back Up Library": "Varmuuskopioi kirjasto",
+  "Backing up the library": "Kirjastoa varmuuskopioidaan",
+  "Backup Status": "Varmuuskopion tila",
+  "Check Backup": "Tarkista varmuuskopio",
+  "Backup Preferences": "Varmuuskopioinnin asetukset"
 }

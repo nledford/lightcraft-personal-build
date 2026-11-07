@@ -8,6 +8,7 @@ mod album_order;
 mod album_remove;
 mod albums_local;
 mod autosync_wb;
+mod backup;
 mod color;
 mod constrain_crop;
 mod crop_angle;

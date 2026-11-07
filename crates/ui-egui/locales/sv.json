@@ -2486,5 +2486,10 @@
   "Top bar": "Övre fältet",
   "Tool strip": "Verktygsfält",
   "Bottom bar": "Nedre fältet",
-  "Stopped at the scan limit: there may be more photos": "Stoppade vid skanningsgränsen: det kan finnas fler foton"
+  "Stopped at the scan limit: there may be more photos": "Stoppade vid skanningsgränsen: det kan finnas fler foton",
+  "Back Up Library": "Säkerhetskopiera bibliotek",
+  "Backing up the library": "Säkerhetskopierar biblioteket",
+  "Backup Status": "Säkerhetskopians status",
+  "Check Backup": "Kontrollera säkerhetskopian",
+  "Backup Preferences": "Inställningar för säkerhetskopiering"
 }

@@ -2711,5 +2711,10 @@
   "Top bar": "Thanh trên cùng",
   "Tool strip": "Thanh công cụ",
   "Bottom bar": "Thanh dưới cùng",
-  "Stopped at the scan limit: there may be more photos": "Đã dừng ở giới hạn quét: có thể còn ảnh khác"
+  "Stopped at the scan limit: there may be more photos": "Đã dừng ở giới hạn quét: có thể còn ảnh khác",
+  "Back Up Library": "Sao lưu thư viện",
+  "Backing up the library": "Đang sao lưu thư viện",
+  "Backup Status": "Trạng thái sao lưu",
+  "Check Backup": "Kiểm tra bản sao lưu",
+  "Backup Preferences": "Tùy chọn sao lưu"
 }

@@ -322,5 +322,7 @@
   "View › Detail View ({keys}).": "Xem › Chế độ xem chi tiết ({keys}).",
   "File › Export… · File › Print… ({keys}).": "Tệp › Xuất… · Tệp › In… ({keys}).",
   "{n} folder{} could not be read": "Thư mục không đọc được: {n}{:.0}",
-  "{n} file{} skipped (not a supported photo type)": "Đã bỏ qua tệp (không phải loại ảnh được hỗ trợ): {n}{:.0}"
+  "{n} file{} skipped (not a supported photo type)": "Đã bỏ qua tệp (không phải loại ảnh được hỗ trợ): {n}{:.0}",
+  "Backed up the library to {}": "Đã sao lưu thư viện vào {}",
+  "The library was not backed up: {}": "Thư viện chưa được sao lưu: {}"
 }

@@ -2590,5 +2590,10 @@
   "Welcome": "Benvenuto",
   "Next": "Avanti",
   "Get Started": "Inizia",
-  "Stopped at the scan limit: there may be more photos": "Fermati al limite di scansione: potrebbero esserci altre foto"
+  "Stopped at the scan limit: there may be more photos": "Fermati al limite di scansione: potrebbero esserci altre foto",
+  "Back Up Library": "Esegui backup della libreria",
+  "Backing up the library": "Backup della libreria in corso",
+  "Backup Status": "Stato del backup",
+  "Check Backup": "Verifica backup",
+  "Backup Preferences": "Preferenze di backup"
 }
