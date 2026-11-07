@@ -152,13 +152,11 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
     app.pending_picks = waiting;
     for (p, paths) in answered {
         let params = with_answer(&p.params, p.key, p.kind, &paths);
-        match app.run(&p.command, params) {
-            Ok(r) => {
-                if let Some(text) = answered_message(&p.command, &r) {
-                    app.toast(ctx, text);
-                }
-            }
-            Err(e) => app.toast_error(ctx, crate::i18n::refusal_text(&e)),
+        // a refused command says why (in the interface's language: `Refusal` turns the reason into it)
+        if let Some(r) = app.act(&p.command, params)
+            && let Some(text) = answered_message(&p.command, &r)
+        {
+            app.toast(ctx, text);
         }
     }
 }
@@ -281,6 +279,19 @@ mod tests {
         assert_eq!(p, json!({"group": "Mine", "path": "/tmp/Mine.lcpreset"}));
         assert_eq!(with_answer(&Value::Null, "paths", PickKind::Files, &["a".to_string(), "b".to_string()]), json!({"paths": ["a", "b"]}));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A command run after a host dialog is refused like any other the person started: the toast
+    /// says the reason, not the command's id (it used to be `run` plus the whole error).
+    #[test]
+    fn a_command_refused_after_its_dialog_says_why() {
+        let (mut h, asked) = app_with_picker();
+        h.app.run("file.exportPresets", json!({"group": "No such group"})).unwrap();
+        asked.lock().unwrap()[0].1.send(vec!["/tmp/lc-pick-refused.lcpreset".to_string()]).unwrap();
+        h.step_until(SETTLE, |h| h.app.ui.toast.is_some());
+        let said = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+        assert!(said.contains("no presets to export") || said.contains("No presets to export"), "{said}");
+        assert!(!said.contains("preset.export"), "the reason, without the command's id: {said}");
     }
 
     #[test]
