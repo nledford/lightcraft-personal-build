@@ -16,6 +16,11 @@
 //! library was opened from first ([`OpenedFolder`], issue #3240): when the path leads to another
 //! folder by then, the restore is refused, and writes nothing more there. (An ask is not a lock: a
 //! folder put at the path between the ask and the write it guards is not noticed.)
+//!
+//! So do a backup of it (the folder it goes to, `Backups` in the library unless said, and the
+//! library's files it reads are by path) and the removal of old backups and of what earlier
+//! restores replaced (`library.pruneBackups`, and the worker's after a backup): with another
+//! folder at the path nothing more is written or removed there, and `last_backup` is not noted.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -61,6 +66,9 @@ pub struct BackupJob {
     /// The backups that were removed after it, by name, and the ones that could not be.
     pub removed: std::sync::Mutex<Vec<String>>,
     pub not_removed: std::sync::Mutex<Vec<String>>,
+    /// The folder the library was opened from, which the backup asks before it writes and before it
+    /// removes what is old ([`ask`]): the library's path may lead elsewhere by then (issue #3240).
+    folder: Option<OpenedFolder>,
     /// What earlier restores replaced (folders of the library's `Replaced`) that was removed
     /// with them, by name, and what could not be.
     pub replaced_removed: std::sync::Mutex<Vec<String>>,
@@ -110,10 +118,11 @@ impl Watch for Row<'_> {
     }
 }
 
-/// What a restore of the open library asks first: the folder the library was opened from (issue
-/// #3240). Its files are moved by path, and a path can lead to another folder than it did (a share
-/// mounted over it, or the folder moved away and another put in its place), where nothing is to be
-/// written. `None`: there is no folder to ask.
+/// What a restore, a backup or the removal of old backups of the open library asks first: the
+/// folder the library was opened from (issue #3240). Its files are moved, read and removed by path,
+/// and a path can lead to another folder than it did (a share mounted over it, or the folder moved
+/// away and another put in its place), where nothing is to be written or removed. `None`: there is
+/// no folder to ask.
 fn ask(folder: Option<&OpenedFolder>) -> Result<()> {
     folder.map_or(Ok(()), |folder| folder.check().map_err(|e| crate::EngineError::Other(e.to_string())))
 }
@@ -127,10 +136,11 @@ pub(crate) fn in_opened_folder<T>(s: &Session, f: impl FnOnce() -> std::result::
 }
 
 /// Asks the folder the library was opened from before each file of a backup is copied into the
-/// library folder ([`ask`]), and stops the copy, with nothing more written, when the path leads to
-/// another folder by then: `restore::stage` writes by path, for as long as the backup is big. What
-/// `inner` stops (a ✕, a restore given up) is stopped as before.
-struct InOpenedFolder<'a> {
+/// library folder ([`ask`]) or read from it to be backed up, and stops the copy, with nothing more
+/// written, when the path leads to another folder by then: `restore::stage` and `backup::back_up`
+/// work by path, for as long as the backup is big. What `inner` stops (a ✕, a restore given up) is
+/// stopped as before.
+pub(crate) struct InOpenedFolder<'a> {
     inner: &'a dyn Watch,
     folder: Option<&'a OpenedFolder>,
     /// Why the folder stopped the copy, once it did.
@@ -138,12 +148,12 @@ struct InOpenedFolder<'a> {
 }
 
 impl<'a> InOpenedFolder<'a> {
-    fn new(inner: &'a dyn Watch, folder: Option<&'a OpenedFolder>) -> Self {
+    pub(crate) fn new(inner: &'a dyn Watch, folder: Option<&'a OpenedFolder>) -> Self {
         Self { inner, folder, refused: std::sync::Mutex::new(None) }
     }
 
     /// Why the copy was stopped, when the folder stopped it.
-    fn refusal(&self) -> Option<String> {
+    pub(crate) fn refusal(&self) -> Option<String> {
         self.refused.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone()
     }
 }
@@ -213,7 +223,13 @@ fn run(name: String, job: &BackupJob, task: &TaskGuard, hold: &AtomicBool) {
         made: Some(job.started.as_str()).filter(|at| !at.trim().is_empty()),
         library_id: job.library_id.as_deref(),
     };
-    let made = backup::back_up(&job.library, &job.dest, &options, &Row { task, cancel: &job.cancel });
+    // (the folder the library was opened from is asked before the first file and before each one: the
+    // path may lead elsewhere by now, and the backup reads it and files what it reads in `dest`)
+    let row = Row { task, cancel: &job.cancel };
+    let gate = InOpenedFolder::new(&row, job.folder.as_ref());
+    let made = ask(job.folder.as_ref())
+        .map_err(|e| e.to_string())
+        .and_then(|()| backup::back_up(&job.library, &job.dest, &options, &gate).map_err(|e| gate.refusal().unwrap_or_else(|| e.to_string())));
     match &made {
         Ok(r) => log::info!("library: backed up to {} ({} files, {} shared with the backup before)", r.dir.display(), r.files, r.linked),
         Err(e) => log::warn!("library: backup: {e}"),
@@ -224,7 +240,7 @@ fn run(name: String, job: &BackupJob, task: &TaskGuard, hold: &AtomicBool) {
         let own = Own { library: &job.library, id };
         // (the backup is made, whatever becomes of this: a fault here is not the backup's)
         let (removed, not_removed) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            remove_outdated(&job.dest, own, &job.started, days, Some(&new.dir), &|| job.cancel.load(Ordering::Relaxed))
+            remove_outdated(&job.dest, own, &job.started, days, Some(&new.dir), job.folder.as_ref(), &|| job.cancel.load(Ordering::Relaxed))
         }))
         .unwrap_or_else(|_| (Vec::new(), vec!["older backups: stopped on an internal error".to_string()]));
         *job.removed.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = removed;
@@ -235,13 +251,13 @@ fn run(name: String, job: &BackupJob, task: &TaskGuard, hold: &AtomicBool) {
     if let (Ok(_), Some(days)) = (&made, job.keep_days) {
         let (removed, not_removed) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let old = outdated_replaced(&job.library, &job.started, days).goes;
-            remove_replaced(&job.library, &old, days, &|| job.cancel.load(Ordering::Relaxed), &|_| {})
+            remove_replaced(&job.library, &old, days, job.folder.as_ref(), &|| job.cancel.load(Ordering::Relaxed), &|_| {})
         }))
         .unwrap_or_else(|_| (Vec::new(), vec!["what restores replaced: stopped on an internal error".to_string()]));
         *job.replaced_removed.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = removed;
         *job.replaced_not_removed.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = not_removed;
     }
-    *job.outcome.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(made.map_err(|e| e.to_string()));
+    *job.outcome.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(made);
 }
 
 /// The time `days` before `now` (ISO 8601): backups made before it are older than a library
@@ -262,10 +278,29 @@ fn name_of(b: &BackupReport) -> String {
     b.dir.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
 }
 
+/// Whether what is removed under the library's folders may be removed now: the folder the library
+/// was opened from is asked ([`ask`]), and when its path leads elsewhere, the reason is what
+/// `name` could not be removed for.
+fn removal_refused(folder: Option<&OpenedFolder>, name: &str, not_removed: &mut Vec<String>) -> bool {
+    let Err(e) = ask(folder) else { return false };
+    log::warn!("library: {e}");
+    not_removed.push(format!("{name}: {e}"));
+    true
+}
+
 /// Remove the library's backups that are older than it keeps them ([`outdated`]), oldest first,
 /// until told to stop, and never `spare` (the backup just made): the names of the ones removed,
-/// and of the ones that could not be (each with why).
-fn remove_outdated(dest: &Path, own: Own<'_>, now: &str, days: u32, spare: Option<&Path>, stop: &dyn Fn() -> bool) -> (Vec<String>, Vec<String>) {
+/// and of the ones that could not be (each with why). Nothing is removed while the library's path
+/// leads to another folder than the one it was opened from (`folder`).
+pub(crate) fn remove_outdated(
+    dest: &Path,
+    own: Own<'_>,
+    now: &str,
+    days: u32,
+    spare: Option<&Path>,
+    folder: Option<&OpenedFolder>,
+    stop: &dyn Fn() -> bool,
+) -> (Vec<String>, Vec<String>) {
     let (mut removed, mut not_removed) = (Vec::new(), Vec::new());
     for old in outdated(dest, own, now, days) {
         if stop() {
@@ -273,6 +308,9 @@ fn remove_outdated(dest: &Path, own: Own<'_>, now: &str, days: u32, spare: Optio
         }
         if spare.is_some_and(|new| same_folder(new, &old.dir)) {
             continue;
+        }
+        if removal_refused(folder, &name_of(&old), &mut not_removed) {
+            break;
         }
         match backup::remove(&old.dir) {
             Ok(()) => {
@@ -364,17 +402,23 @@ fn outdated_replaced(library: &Path, now: &str, days: u32) -> OldReplaced {
 }
 
 /// Remove `old` of the library's `Replaced` ([`outdated_replaced`]), until told to stop: the
-/// names of the ones removed, and of the ones that could not be (each with why).
-fn remove_replaced(
+/// names of the ones removed, and of the ones that could not be (each with why). Nothing is
+/// removed while the library's path leads to another folder than the one it was opened from
+/// (`folder`).
+pub(crate) fn remove_replaced(
     library: &Path,
     old: &[restore::Replaced],
     days: u32,
+    folder: Option<&OpenedFolder>,
     stop: &dyn Fn() -> bool,
     done: &dyn Fn(usize),
 ) -> (Vec<String>, Vec<String>) {
     let (mut removed, mut not_removed) = (Vec::new(), Vec::new());
     for (i, r) in old.iter().enumerate() {
         if stop() {
+            break;
+        }
+        if removal_refused(folder, &r.name, &mut not_removed) {
             break;
         }
         match restore::remove_replaced(library, &r.name, ALSO) {
@@ -514,11 +558,18 @@ fn prune(s: &mut Session, p: &Value) -> Result<Value> {
     let (mut replaced_removed, mut replaced_not_removed) = (Vec::new(), Vec::new());
     let all = (old.len() + old_replaced.len()) as u64;
     if remove && all > 0 {
+        // (nothing is removed from what the path leads to now, if that is another folder than the
+        // one the library was opened from: asked here, and before each one that goes)
+        let folder = s.opened_folder().cloned();
+        ask(folder.as_ref())?;
         let task = s.activity.start("backup", "Removing old backups", Cancel::No);
         task.progress(0, all);
         // (the ones that were just listed, one by one: each must still be a backup that holds
         // nothing but its own files when it goes)
         for (done, b) in old.iter().enumerate() {
+            if removal_refused(folder.as_ref(), &name_of(b), &mut not_removed) {
+                break;
+            }
             match backup::remove(&b.dir) {
                 Ok(()) => {
                     log::info!("library: removed the backup {} (older than {days} days)", b.dir.display());
@@ -532,7 +583,7 @@ fn prune(s: &mut Session, p: &Value) -> Result<Value> {
             task.progress(done as u64 + 1, all);
         }
         (replaced_removed, replaced_not_removed) =
-            remove_replaced(&library, &old_replaced, days, &|| false, &|done| task.progress((old.len() + done) as u64, all));
+            remove_replaced(&library, &old_replaced, days, folder.as_ref(), &|| false, &|done| task.progress((old.len() + done) as u64, all));
     }
     Ok(json!({
         "dir": dest.to_string_lossy(),
@@ -568,6 +619,9 @@ fn back_up(s: &mut Session, p: &Value) -> Result<Value> {
     let Some(library) = s.library.as_ref().filter(|l| l.on_disk).map(|l| l.dir.clone()) else {
         return Err(bad(C, "this library is not a folder on disk; there is nothing to back up to a folder"));
     };
+    // (the backup reads the library's files by path and files them in `dest`, which may be the
+    // library's own folder: only while the path leads to the folder it was opened from)
+    ask(s.opened_folder())?;
     if status(s).is_some_and(|b| !b.finished.load(Ordering::Relaxed)) {
         return Err(bad(C, "a backup of this library is already running"));
     }
@@ -594,7 +648,8 @@ fn back_up(s: &mut Session, p: &Value) -> Result<Value> {
     let own = backup_folder(s).is_some_and(|(folder, _)| folder == dest);
     // (old backups are removed from the library's own folder only, by a backup made there)
     let keep_days = s.backup_keep_days.filter(|_| own);
-    let job = Arc::new(BackupJob { library, dest, started, own, keep_days, library_id, ..Default::default() });
+    let folder = s.opened_folder().cloned();
+    let job = Arc::new(BackupJob { library, dest, started, own, keep_days, library_id, folder, ..Default::default() });
     s.backup = Some(job.clone());
     let task = s.activity.start("backup", "Backing up the library", Cancel::Flag(job.cancel.clone()));
     task.set_unit(Unit::Bytes);
@@ -1201,6 +1256,11 @@ pub fn note_finished(s: &mut Session) {
         return;
     }
     if job.own && backup_folder(s).is_some_and(|(folder, _)| folder == job.dest) && job.outcome().is_some_and(|o| o.is_ok()) {
+        // (the preferences it is noted in are the library's: not those of another folder at its path)
+        if let Err(e) = ask(s.opened_folder()) {
+            log::warn!("library: the time of the backup was not noted: {e}");
+            return;
+        }
         s.last_backup = Some(job.started.clone());
         if let Err(e) = s.save_prefs() {
             log::warn!("library: the time of the backup was not saved: {e}");
@@ -1438,7 +1498,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Back Up Library",
             ["File"],
             None,
-            "{dir?: absolute folder path (not inside the library folder other than Backups, nor inside a backup), background?: bool} — back up the library's catalog (not the photos) to a folder named after the time (UTC) in `dir`, else in the library's backup folder (`library.backupPreferences`), else in Backups in the library folder. The backup holds a whole library (`library.restore` puts it back; it is not opened where it is); files that didn't change since the backup before are shared with it (hard links, each read and checked first), so it copies what changed. When the library keeps its backups for a time (`keepDays` in `library.backupPreferences`) and this one goes to its own folder, its older backups are removed afterwards (`removed`, `notRemoved`), and so is what earlier restores replaced (`replacedRemoved`, `replacedNotRemoved`; see `library.pruneBackups`). Has a row in the activity stack (kind `backup`) that can stop it. Returns when the backup is made, or with `background` at once (then see `library.backupStatus`) → {running, cancelled, library, dest, report: {dir, seq, photos, segments, files, copied, linked, bytes, copiedBytes, made, library, libraryId, contents: {file: {bytes, crc}}} | null, error, removed: [older backups removed after it], notRemoved, replacedRemoved, replacedNotRemoved}",
+            "{dir?: absolute folder path (not inside the library folder other than Backups, nor inside a backup), background?: bool} — back up the library's catalog (not the photos) to a folder named after the time (UTC) in `dir`, else in the library's backup folder (`library.backupPreferences`), else in Backups in the library folder. The backup holds a whole library (`library.restore` puts it back; it is not opened where it is); files that didn't change since the backup before are shared with it (hard links, each read and checked first), so it copies what changed. When the library keeps its backups for a time (`keepDays` in `library.backupPreferences`) and this one goes to its own folder, its older backups are removed afterwards (`removed`, `notRemoved`), and so is what earlier restores replaced (`replacedRemoved`, `replacedNotRemoved`; see `library.pruneBackups`). It reads the library by path, so it is refused, and stops with nothing more written or removed, when the library's path leads to another folder than the one the library was opened from (a share mounted over it, or the folder moved away and another put in its place). Has a row in the activity stack (kind `backup`) that can stop it. Returns when the backup is made, or with `background` at once (then see `library.backupStatus`) → {running, cancelled, library, dest, report: {dir, seq, photos, segments, files, copied, linked, bytes, copiedBytes, made, library, libraryId, contents: {file: {bytes, crc}}} | null, error, removed: [older backups removed after it], notRemoved, replacedRemoved, replacedNotRemoved}",
             can_back_up,
             back_up
         ),
@@ -1505,7 +1565,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Remove Old Backups",
             [],
             None,
-            "{keepDays?: whole days, remove?: bool} — the library's own backups (in the folder its backups go to) that are older than it keeps them, or than `keepDays` given for this once: never one of its newest three, never another library's (a backup says which library it is of, by folder and id), never one that was renamed, never one whose time is missing or yet to come. Says which; removes them, each as a whole, only with `remove: true`. Not while the library is being restored. By the same rule, what earlier restores replaced (folders of `Replaced` in the library folder, as old as their names say, as the restore left them: not renamed, nothing put in, not opened as a library since) → {dir, keepDays, before, keptAtLeast, outdated: [{name, dir, made, bytes}], removed: [name], notRemoved: [name: why], replaced: {outdated: [{name, dir, at, bytes}], kept: [{name, why}] (as old, but touched since: they stay), removed, notRemoved}}",
+            "{keepDays?: whole days, remove?: bool} — the library's own backups (in the folder its backups go to) that are older than it keeps them, or than `keepDays` given for this once: never one of its newest three, never another library's (a backup says which library it is of, by folder and id), never one that was renamed, never one whose time is missing or yet to come. Says which; removes them, each as a whole, only with `remove: true`, and only while the library's path leads to the folder the library was opened from (else it is refused, or stops with the reason in `notRemoved`). Not while the library is being restored. By the same rule, what earlier restores replaced (folders of `Replaced` in the library folder, as old as their names say, as the restore left them: not renamed, nothing put in, not opened as a library since) → {dir, keepDays, before, keptAtLeast, outdated: [{name, dir, made, bytes}], removed: [name], notRemoved: [name: why], replaced: {outdated: [{name, dir, at, bytes}], kept: [{name, why}] (as old, but touched since: they stay), removed, notRemoved}}",
             can_back_up,
             prune
         ),

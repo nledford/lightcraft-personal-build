@@ -11,6 +11,8 @@ mod albums_local;
 mod autosync_wb;
 mod backup;
 mod backup_list;
+#[cfg(unix)]
+mod backup_opened_folder;
 mod backup_prune;
 mod backup_schedule;
 mod color;
