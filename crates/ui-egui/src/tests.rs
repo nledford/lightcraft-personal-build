@@ -27,6 +27,7 @@ mod dialog_fit;
 mod dialog_primary;
 mod dialog_settings;
 mod dialog_settings_filter;
+mod dialog_settings_filter_words;
 mod dialog_settings_groups;
 mod dialog_settings_text;
 mod dialog_tab;
