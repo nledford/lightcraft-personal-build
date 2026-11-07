@@ -325,3 +325,39 @@ fn a_tree_cannot_be_patched_from_another_counting() {
     assert!(b.follow(&c).is_some());
     assert!(b.patch_folder_tree(&c, tree, &mut upkeep).is_none());
 }
+
+fn find<'a>(nodes: &'a [FolderNode], path: &str) -> Option<&'a FolderNode> {
+    nodes.iter().find_map(|n| if n.path == path { Some(n) } else { find(&n.children, path) })
+}
+
+#[test]
+fn a_folder_made_in_lightcraft_stays_a_row_when_its_photos_leave() {
+    let mut c = Catalog::new();
+    for dir in ["/Users/me/a", "/Users/me/trip", "/Users/me/new"] {
+        let op = add_op(&mut c, dir);
+        c.apply(op).unwrap();
+    }
+    // `new` was made in LightCraft before it held a photo; so was `day9`, in a folder with photos of its own
+    for made in ["/Users/me/new", "/Users/me/trip/day9"] {
+        let op = c.folder_made_op(made);
+        c.apply(op).unwrap();
+    }
+    let mut kept = Kept::new(&c);
+    let photo_in = |c: &Catalog, dir: &str| c.photos().find(|p| matches!(&p.source, Source::File { path } if path.starts_with(&format!("{dir}/IMG_")))).unwrap().id;
+    // a folder nothing made leaves the tree when its last photo goes, patched, as before
+    let id = photo_in(&c, "/Users/me/a");
+    assert!(step(&mut c, &mut kept, Op::RemovePhoto { id }));
+    assert!(find(&kept.tree, "/Users/me/a").is_none());
+    // a made folder stays a row with no photos, and so does the folder it is made in
+    let id = photo_in(&c, "/Users/me/new");
+    step(&mut c, &mut kept, Op::RemovePhoto { id });
+    assert_eq!(find(&kept.tree, "/Users/me/new").map(|n| n.count), Some(0));
+    let id = photo_in(&c, "/Users/me/trip");
+    step(&mut c, &mut kept, Op::RemovePhoto { id });
+    assert_eq!(find(&kept.tree, "/Users/me/trip").map(|n| (n.count, n.children.len())), Some((0, 1)));
+    assert_eq!(find(&kept.tree, "/Users/me/trip/day9").map(|n| n.count), Some(0));
+    // and a photo coming back into one of them is patched into the row it has
+    let op = add_op(&mut c, "/Users/me/new");
+    assert!(step(&mut c, &mut kept, op));
+    assert_eq!(find(&kept.tree, "/Users/me/new").map(|n| n.count), Some(1));
+}

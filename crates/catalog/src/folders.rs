@@ -387,8 +387,9 @@ impl Catalog {
     /// negative, lost) instead of building it again: only the rows on the way to a folder that
     /// changed are touched. The tree is exactly the one building it again gives, or `None` when
     /// that is not so cheap to promise: a disk came or went, a folder's spelling is not the one
-    /// its row has, a folder left whose row's spelling might come from it, two rows would be
-    /// named alike, or a count would go below nothing. Folder labels are as the records were
+    /// its row has, a folder left whose row's spelling might come from it, a row would go that a
+    /// folder made in LightCraft holds up (it stays, with no photos), two rows would be named
+    /// alike, or a count would go below nothing. Folder labels are as the records were
     /// when `tree` was built: the caller builds again when they changed.
     pub(crate) fn patch_folder_tree_of(
         &self,
@@ -507,6 +508,11 @@ fn patch_level(nodes: &mut Vec<FolderNode>, chain: &[Lvl], delta: isize, top: bo
     node.count = count;
     if count == 0 {
         if top {
+            return None;
+        }
+        // a folder made in LightCraft stays a row with no photos, and so do the rows on the way to
+        // it; which spelling names the row then (its photos' or the made one) is for a rebuild to say
+        if at.records.values().any(|r| r.made.as_deref().is_some_and(|spelled| folder_within(spelled, &lvl.path))) {
             return None;
         }
         mixed.remove(&lvl.key);
