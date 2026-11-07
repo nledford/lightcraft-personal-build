@@ -75,13 +75,22 @@ fn put_a_copy_at(lib: &Path) -> PathBuf {
     swap_in(lib, &copy_of(lib))
 }
 
-/// What a crash now would leave: the catalog files at `lib`, copied and opened elsewhere.
+/// What a crash now would leave: the catalog files at `lib` (the snapshot, the segments it lists and
+/// the log), copied and opened elsewhere.
 fn after_a_crash(lib: &Path) -> Session {
+    use lightcraft_catalog::journal::SEGMENT_DIR;
     let crashed = lib.with_extension("crashed");
     std::fs::create_dir_all(&crashed).unwrap();
     for name in ["catalog.snap", "catalog.log"] {
         if lib.join(name).exists() {
             std::fs::copy(lib.join(name), crashed.join(name)).unwrap();
+        }
+    }
+    if let Ok(segments) = std::fs::read_dir(lib.join(SEGMENT_DIR)) {
+        std::fs::create_dir_all(crashed.join(SEGMENT_DIR)).unwrap();
+        for segment in segments {
+            let segment = segment.unwrap();
+            std::fs::copy(segment.path(), crashed.join(SEGMENT_DIR).join(segment.file_name())).unwrap();
         }
     }
     let mut s = Session::new();
