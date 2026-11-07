@@ -68,6 +68,7 @@ crc32fast = "1"
 siphasher = "1"
 libm = "0.2" # pure-Rust maths for lightcraft-film (target-independent results)
 libc = "0.2" # dev-only: process CPU time in benches
+rustix = { version = "1", default-features = false, features = ["std", "fs", "process"] } # safe geteuid and no-follow opens (the engine forbids unsafe)
 dhat = "0.3" # opt-in heap profiling (lightcraft-cli --features dhat-heap) and heap tests; never in product builds
 
 # formats
