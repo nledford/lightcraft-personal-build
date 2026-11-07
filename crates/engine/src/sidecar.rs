@@ -704,6 +704,7 @@ fn packet(p: &Photo, cat: &lightcraft_catalog::Catalog, remove_location: bool, l
     }
     if left.keywords {
         meta.keywords.clear();
+        meta.hierarchical_keywords.clear();
     }
     if left.ratings {
         (meta.rating, meta.label) = (None, None);
@@ -764,7 +765,7 @@ pub const OWNED_IF_STATED: &[&str] = &["exif:DateTimeOriginal", "photoshop:DateC
 const OWN: &[&str] = &["lc:settings", "lc:flag", "lc:location"];
 
 /// The properties of each kind that can be left in a photo's file.
-const KEYWORDS: &[&str] = &["dc:subject"];
+const KEYWORDS: &[&str] = &["dc:subject", "lr:hierarchicalSubject"];
 const RATINGS: &[&str] = &["xmp:Rating", "xmp:Label", "lc:flag"];
 const DESCRIPTIONS: &[&str] = &[
     "dc:title",

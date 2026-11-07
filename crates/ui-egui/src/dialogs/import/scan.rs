@@ -384,13 +384,13 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
     (d.scan_limited, d.unreadable, d.unsupported) = (out.truncated, out.unreadable, out.unsupported);
     d.read = app.session.import_defaults.read;
     let trashed = d
-    .candidates
-    .iter()
-    .map(|c| {
-        c.duplicate.is_some()
-            && c.existing.is_some_and(|id| app.session.catalog.photo(lightcraft_catalog::PhotoId(id)).is_some_and(|p| p.deleted))
-    })
-    .collect();
+        .candidates
+        .iter()
+        .map(|c| {
+            c.duplicate.is_some()
+                && c.existing.is_some_and(|id| app.session.catalog.photo(lightcraft_catalog::PhotoId(id)).is_some_and(|p| p.deleted))
+        })
+        .collect();
     d.set_trashed(trashed);
     d.copy = task.copy;
     // only an album the review offers (it may have been deleted while the scan ran)

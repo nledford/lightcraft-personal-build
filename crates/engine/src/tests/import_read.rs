@@ -280,6 +280,37 @@ fn a_sidecar_written_later_keeps_what_was_left_in_it() {
     let _ = std::fs::remove_dir_all(dir);
 }
 
+/// Given a Lightroom sidecar that holds keywords by name (`dc:subject`) and by path
+/// (`lr:hierarchicalSubject`), imported with Keywords left in the file, when the photo is edited
+/// and its sidecar written, then both properties are still in it: the library has nothing to
+/// say of keywords, so neither is replaced or removed.
+#[test]
+fn a_sidecar_written_later_keeps_the_keyword_paths_that_were_left_in_it() {
+    let dir = temp_dir("keptpaths");
+    a_photo_with_metadata(&dir, "one", 1);
+    let sidecar = dir.join("one.xmp");
+    let with_paths = std::fs::read_to_string(&sidecar)
+        .unwrap()
+        .replace(r#"xmlns:dc="http://purl.org/dc/elements/1.1/""#, r#"xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:lr="http://ns.adobe.com/lightroom/1.0/""#)
+        .replace("</rdf:Description>", "<lr:hierarchicalSubject><rdf:Bag><rdf:li>Places|Lisbon</rdf:li></rdf:Bag></lr:hierarchicalSubject>\n</rdf:Description>");
+    std::fs::write(&sidecar, with_paths).unwrap();
+    let mut s = Session::new().with_fs();
+    s.execute("library.xmpPreferences", &json!({"autoWrite": true})).unwrap();
+    import(&mut s, &dir, Some(json!({"keywords": false})));
+    let id = s.catalog.photos().next().unwrap().id.0;
+    s.execute("library.select", &json!({"ids": [id], "active": id})).unwrap();
+
+    s.execute("develop.set", &json!({"control": "light.contrast", "value": 20})).unwrap();
+    let (text, meta) = in_the_sidecar(&dir);
+    assert_eq!(meta.keywords, ["fjord"], "{text}");
+    assert_eq!(meta.hierarchical_keywords, ["Places|Lisbon"], "{text}");
+
+    s.execute("photo.saveMetadataToFile", &json!({})).unwrap();
+    let (text, meta) = in_the_sidecar(&dir);
+    assert_eq!((meta.keywords.clone(), meta.hierarchical_keywords.clone()), (vec!["fjord".to_string()], vec!["Places|Lisbon".to_string()]), "{text}");
+    let _ = std::fs::remove_dir_all(dir);
+}
+
 /// What a photo is given in the library of a kind that was left in its file stays in the
 /// library: the sidecar keeps the file's own (its rating, its keywords, its title), whatever is
 /// done here, also when that is undone again. A kind that was read is written as ever.

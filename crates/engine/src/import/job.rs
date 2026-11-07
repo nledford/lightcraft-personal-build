@@ -383,9 +383,11 @@ impl ImportJob {
             let raw = info.kind == MediaKind::Raw;
             // (found by the batch's lookups above)
             let sidecar_file = found_sidecar;
-            let file_packet = sidecar_file.as_ref().and_then(|f| std::fs::read_to_string(f).ok());
+            // (a duplicate whose capture time is known needs no sidecar: nothing is read)
+            let skip_packet = duplicate_of.is_some() && info.captured.is_some();
+            let file_packet = sidecar_file.as_ref().filter(|_| !skip_packet).and_then(|f| std::fs::read_to_string(f).ok());
             let from_file = file_packet.is_some();
-            let packet = if duplicate_of.is_some() && info.captured.is_some() {
+            let packet = if skip_packet {
                 None
             } else {
                 file_packet.or_else(|| info.xmp.clone().filter(|_| raw))

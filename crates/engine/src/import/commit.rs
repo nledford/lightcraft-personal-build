@@ -323,7 +323,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 );
                 // (only the kinds this import reads: the others stay in the file and its sidecar)
                 let sidecar =
-                sidecar.map(|sc| read.of_the_sidecar(sc).resolve_label(&s.catalog)).filter(|sc| *sc != crate::sidecar::SidecarData::default());
+                    sidecar.map(|sc| read.of_the_sidecar(sc).resolve_label(&s.catalog)).filter(|sc| *sc != crate::sidecar::SidecarData::default());
                 // the photo is upright as the file's own orientation turns it, when the file states one
                 let sidecar = sidecar.map(|sc| crate::sidecar::SidecarData { orientation: info.orientation.or(sc.orientation), ..sc });
                 // a copy is catalogued under its new name
