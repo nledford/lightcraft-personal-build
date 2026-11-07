@@ -701,6 +701,19 @@ pub(crate) fn writing_full() -> WritingFull {
     WritingFull(WRITING_FULL.try_with(|w| w.replace(true)).unwrap_or(false))
 }
 
+thread_local! {
+    /// The last difference from the defaults worked out for some settings, kept for the next settings equal to them
+    /// ([`StoredSettings`]).
+    static LAST: std::cell::RefCell<Option<(DevelopSettings, Value)>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Forget the difference kept for the next settings. What was worked out while the masks of a snapshot being written
+/// referred to its table of shared grids is not what a record written elsewhere holds, nor the other way round: the
+/// writer of such a snapshot forgets it before and after ([`crate::journal`]).
+pub(crate) fn forget_last_difference() {
+    let _ = LAST.try_with(|last| last.try_borrow_mut().map(|mut last| *last = None));
+}
+
 /// Develop settings in their stored form.
 struct StoredSettings<'a>(&'a DevelopSettings);
 
@@ -723,9 +736,6 @@ impl Serialize for StoredSettings<'_> {
         }
         // Photos that were never edited often share their settings (a camera's import defaults):
         // the last difference worked out is kept for the next settings equal to those.
-        thread_local! {
-            static LAST: std::cell::RefCell<Option<(DevelopSettings, Value)>> = const { std::cell::RefCell::new(None) };
-        }
         // (a serializer can only be used once: it goes in and out of the closure in a cell)
         let s = std::cell::Cell::new(Some(s));
         let stored = LAST.try_with(|last| {

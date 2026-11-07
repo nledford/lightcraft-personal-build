@@ -403,6 +403,13 @@ fn resolve_grids(settings: &mut Arc<DevelopSettings>, grids: &[String], dangling
     dangling
 }
 
+/// Whether a settings holder has a mask that refers to a snapshot's grid table (see [`resolve_grids`]).
+fn refers_to_grids(settings: &DevelopSettings) -> bool {
+    let mut any = false;
+    settings.visit_seg_masks(&mut |m| any |= m.grid.is_some());
+    any
+}
+
 /// A short memory of what the latest ops changed, so that what is derived from the catalog (the grid's list) can
 /// follow a small edit without being worked out again from every photo.
 #[derive(Clone, Debug, Default)]
@@ -1296,6 +1303,11 @@ impl Catalog {
         let grids = std::mem::take(&mut self.grids);
         let mut dangling = 0usize;
         for p in self.photos.values_mut() {
+            // (only a photo that refers to the table: `Arc::make_mut` copies a photo that is shared, as the photos of a
+            // library in segments are with the journal's record of what is on disk)
+            if !p.settings_holders().any(|s| refers_to_grids(s)) {
+                continue;
+            }
             let photo = Arc::make_mut(p);
             for settings in photo.settings_holders_mut() {
                 dangling = resolve_grids(settings, &grids, dangling);

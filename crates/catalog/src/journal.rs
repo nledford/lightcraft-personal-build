@@ -622,7 +622,12 @@ fn write_with_shared_grids(w: &mut impl std::io::Write, mut snapshot: Catalog) -
         }
     }
     snapshot.grids = pool;
-    match lightcraft_develop::with_grid_interner(index, || serde_json::to_writer(&mut *w, &snapshot)) {
+    // (what was worked out for the last settings is kept for the next equal ones: not across this write, where a mask may
+    // be a reference into the table that is only this snapshot's)
+    crate::stored::forget_last_difference();
+    let written = lightcraft_develop::with_grid_interner(index, || serde_json::to_writer(&mut *w, &snapshot));
+    crate::stored::forget_last_difference();
+    match written {
         Some(Ok(())) => Ok(()),
         Some(Err(e)) => Err(std::io::Error::other(e)),
         // no interner can be active here (snapshot writes don't nest), so `None` is a bug:

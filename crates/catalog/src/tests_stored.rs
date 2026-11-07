@@ -523,6 +523,14 @@ pub(crate) fn fixture_library(version: u32) -> Catalog {
     for op in fixture_ops(version) {
         library.apply(op).unwrap();
     }
+    // (the fixtures were written before a mask could stay on the photo, `Mask.on_photo` of main's format 10: their masks
+    // read as drawn on the corrected image, which is not how the masks built here are)
+    let mut library = Catalog::from_snapshot(&library.to_snapshot().replace("\"on_photo\":true", "\"on_photo\":false")).unwrap();
+    // (photo nine's baseline is the fingerprint of its settings as the builds that wrote the fixtures worked it out: this
+    // build gets another number for the same settings, since main's develop code changed after them)
+    if let Some(p) = library.photos.get_mut(&PhotoId(9)) {
+        Arc::make_mut(p).local_baseline = Some(5_167_973_575_965_256_545);
+    }
     library
 }
 
