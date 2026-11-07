@@ -13,6 +13,7 @@ mod cull;
 mod export;
 mod frame;
 mod rename;
+mod restore_backup;
 mod sam_model;
 
 pub(crate) use confirm::album_entries;
@@ -30,6 +31,7 @@ use frame::{
 };
 pub(crate) use rename::rename_preview;
 use rename::{RENAME_PREVIEW_ROWS, person_rename_plan};
+use restore_backup::{choose_backup_folder, refresh_backups, restore_backup_body};
 pub(crate) use sam_model::show_model_folder;
 use sam_model::{sam_by_hand, sam_model_body};
 use slideshow_export::slideshow_export_body;
@@ -249,6 +251,8 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
     });
     let mut close = false;
     let mut confirm = false;
+    // (Restore Library from Backup: its Choose Folder… was pressed)
+    let mut choose_folder = false;
     // Return presses OK in a dialog without a text field of its own (Lightroom's default button);
     // a widget that has the keyboard focus (a text field, a button or checkbox reached with Tab)
     // takes Return itself. Consumed before the dialog is drawn, so nothing else sees it too.
@@ -319,7 +323,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
             }
             ui.spacing_mut().item_spacing.y = 8.0;
             body_h = dialog_body(ui, (!import && !print).then_some(title.as_str()), body_max, |ui| {
-                dialog_content(app, ui, &t, body_max, &mut confirm, &mut close, &mut dlg)
+                dialog_content(app, ui, &t, body_max, &mut confirm, &mut close, &mut choose_folder, &mut dlg)
             });
             ui.add_space(4.0);
             // the confirm on the right with Cancel to its left (macOS and GNOME's order), filled with
@@ -377,6 +381,9 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
     // the dialog, such as a date picker's calendar, takes it to close itself)
     if !raw_blocked && ctx.input(|i| i.key_pressed(egui::Key::Escape)) && !crate::widgets::escape_taken(ctx) {
         close = true;
+    }
+    if !raw_blocked && choose_folder {
+        close |= choose_backup_folder(app, ctx);
     }
     if !raw_blocked && confirm {
         close |= confirmed(app, ctx, &mut dlg);
@@ -460,6 +467,7 @@ fn dialog_title(app: &LightcraftApp, dlg: &Dialog) -> String {
         Dialog::FaceModel { .. } => "Add Face Model",
         Dialog::WhatsNew => "What's New",
         Dialog::Welcome { .. } => WELCOME_TITLE,
+        Dialog::RestoreBackup { .. } => "Restore Library from Backup",
         Dialog::Cull { .. } => "Assisted Culling",
         Dialog::SmartRules { id: None, .. } => "New Smart Album",
         Dialog::SmartRules { .. } => "Edit Smart Album",
@@ -602,6 +610,7 @@ fn fixed_ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool) -> &'s
         Dialog::KeywordTag { editing: None, .. } => "Create",
         Dialog::KeywordTag { .. } => "Save",
         Dialog::RemoveFolder { .. } => "Remove",
+        Dialog::RestoreBackup { .. } => "Restore",
         Dialog::LightroomCatalog { .. } => "Import Lightroom Catalog…",
         d @ Dialog::LightroomDestination { .. } => crate::lightroom_destination::ok_label(d),
         Dialog::Welcome { .. } => "",
@@ -647,7 +656,11 @@ fn can_confirm(app: &LightcraftApp, dlg: &Dialog, informational: bool) -> bool {
     };
     let waiting = matches!(
         dlg,
-        Dialog::DenoiseModel { accepted: false, .. } | Dialog::FaceModel { accepted: false, .. } | Dialog::SynchronizeFolder { counts: None, .. }
+        Dialog::DenoiseModel { accepted: false, .. }
+            | Dialog::FaceModel { accepted: false, .. }
+            | Dialog::SynchronizeFolder { counts: None, .. }
+            // (a backup is chosen before it is restored)
+            | Dialog::RestoreBackup { selected: None, .. }
     );
     let bad_rules =
         matches!(dlg, Dialog::SmartRules { id, rules, .. } if !rules.check_for(&app.session.catalog, id.map(lightcraft_catalog::AlbumId)).is_empty());
@@ -735,6 +748,11 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
                     | Dialog::LensDatabase { .. }
             ) =>
         {
+            app.toast(ctx, e)
+        }
+        // the list of backups stays too, as the folder now is (the backup may be gone since)
+        Err(e) if matches!(dlg, Dialog::RestoreBackup { .. }) => {
+            refresh_backups(app, dlg);
             app.toast(ctx, e)
         }
         // the SAM 3 dialog stays open to show the download (or why it can't start)
@@ -2076,12 +2094,23 @@ fn about_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut 
 
 /// The body of the open dialog: what each kind of dialog shows between its title and its buttons. `confirm` is set
 /// by a dialog that is confirmed from its body (a text field's Return).
-fn dialog_content(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, body_max: f32, confirm: &mut bool, close: &mut bool, dlg: &mut Dialog) {
+#[allow(clippy::too_many_arguments)]
+fn dialog_content(
+    app: &mut LightcraftApp,
+    ui: &mut egui::Ui,
+    t: &Tokens,
+    body_max: f32,
+    confirm: &mut bool,
+    close: &mut bool,
+    choose_folder: &mut bool,
+    dlg: &mut Dialog,
+) {
     match dlg {
         Dialog::AutoStack { .. } => auto_stack_body(app, ui, t, dlg),
         Dialog::Cull { .. } => cull_body(app, ui, t, dlg),
         Dialog::WhatsNew => whats_new_body(ui, t, dlg),
         Dialog::Welcome { page } => welcome_body(app, ui, t, page, close),
+        Dialog::RestoreBackup { dir, backups, selected } => *choose_folder = restore_backup_body(app, ui, t, dir, backups, selected),
         Dialog::DenoiseModel { info, accepted } => crate::panels::denoise::model_dialog(app, ui, t, info, accepted),
         Dialog::FaceModel { info, accepted, .. } => crate::panels::faces::model_dialog(app, ui, t, info, accepted),
         Dialog::LightroomResult { .. } => lightroom_result_body(ui, dlg),
