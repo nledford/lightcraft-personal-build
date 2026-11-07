@@ -124,10 +124,11 @@ pub struct SyncReady {
 }
 
 impl SyncReady {
-    /// How many changes there are to look at.
+    /// How many changes there are to look at (files the library has elsewhere count when the box
+    /// under Import new photos brings them in).
     pub fn changes(&self) -> usize {
         let c = &self.counts;
-        c.new + c.moved + c.missing + c.metadata
+        c.new + if self.choice.import_duplicates { c.copies } else { 0 } + c.moved + c.missing + c.metadata
     }
 }
 
@@ -241,7 +242,7 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
     };
     if background {
         let ready = SyncReady { path: task.path.clone(), name: task.name.clone(), disk: task.disk, counts: c, choice: task.choice };
-        if !ready.counts.offline && ready.changes() == 0 {
+        if ready.counts.nothing_to_do(true, ready.choice.import_duplicates) {
             // nothing to look at: said and done
             app.toast(ctx, format!("{}: {}", ready.name, crate::i18n::tr("The library is up to date with this folder.")));
             return;

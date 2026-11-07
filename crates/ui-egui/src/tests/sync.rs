@@ -782,6 +782,45 @@ fn a_background_scan_that_found_nothing_only_says_so() {
     assert!(h.app.session.folder_changes.is_none());
 }
 
+/// A library that is up to date but for a file whose content a photo already has, elsewhere or under
+/// another name, then a scan continued in the background with the library's choice about such files.
+fn background_scan_with_only_a_copy(name: &str, import_duplicates: bool) -> Headless {
+    let dir = Scratch::new(name);
+    let mut h = changed_folder(&dir);
+    open_and_scan(&mut h, &dir.path("trip"));
+    tick_remove_missing(&mut h);
+    synchronize(&mut h);
+    h.settle(SETTLE);
+    std::fs::copy(dir.path("trip/a.png"), dir.path("trip/a again.png")).unwrap();
+    h.app.session.import_defaults.import_duplicates = import_duplicates;
+
+    crate::sync::open(&mut h.app, &dir.path("trip"), "trip", false).unwrap();
+    let dlg = h.app.ui.dialog.take().expect("the dialog is open");
+    let r = crate::panels::dialogs::confirm_dialog(&mut h.app, &dlg);
+    assert!(r.is_ok(), "{r:?}");
+    assert!(h.step_until(T, |h| h.app.sync.is_none()), "the scan ends");
+    h
+}
+
+/// The box under Import new photos is unticked: the copy would come in, so it is a change to look at.
+#[test]
+fn a_background_scan_that_found_only_copies_keeps_its_notice_while_they_come_in() {
+    let h = background_scan_with_only_a_copy("background-copies-in", true);
+    let ready = h.app.sync_ready.as_ref().expect("the notice stays: the copy would be imported");
+    assert_eq!((ready.counts.new, ready.counts.copies, ready.changes()), (0, 1, 1), "{ready:?}");
+    assert!(h.app.session.folder_changes.is_some(), "what the scan found is kept for the dialog");
+}
+
+/// The box is ticked (the default): the copy is left out, so there is nothing to look at.
+#[test]
+fn a_background_scan_that_found_only_copies_says_up_to_date_while_they_stay_out() {
+    let h = background_scan_with_only_a_copy("background-copies-out", false);
+    assert!(h.app.sync_ready.is_none(), "no notice: the copy stays out");
+    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    assert!(toast.contains("up to date"), "{toast:?}");
+    assert!(h.app.session.folder_changes.is_none());
+}
+
 #[test]
 fn the_cross_on_its_row_stops_a_background_scan_without_a_notice() {
     let dir = Scratch::new("background-stop");
