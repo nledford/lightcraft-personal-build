@@ -31,6 +31,25 @@ fn ids(s: &Session) -> Vec<PhotoId> {
     v
 }
 
+/// The files of the library in `dir` copied to `copy`, as the next start reads them: the snapshot,
+/// the segments it lists and the log.
+fn copy_files(dir: &std::path::Path, copy: &std::path::Path) {
+    use lightcraft_catalog::journal::{LOG, SEGMENT_DIR, SNAPSHOT};
+    std::fs::create_dir_all(copy).unwrap();
+    for f in [SNAPSHOT, LOG] {
+        if dir.join(f).exists() {
+            std::fs::copy(dir.join(f), copy.join(f)).unwrap();
+        }
+    }
+    if let Ok(segments) = std::fs::read_dir(dir.join(SEGMENT_DIR)) {
+        std::fs::create_dir_all(copy.join(SEGMENT_DIR)).unwrap();
+        for segment in segments {
+            let segment = segment.unwrap();
+            std::fs::copy(segment.path(), copy.join(SEGMENT_DIR).join(segment.file_name())).unwrap();
+        }
+    }
+}
+
 /// Every sync of the log in `dir` takes `sync` (a busy disk: Windows makes a write wait for a sync
 /// of the same file in flight); `fail` makes every write fail while it is set.
 fn slow_drive(dir: &std::path::Path, sync: Duration, fail: Arc<AtomicBool>) {
@@ -123,12 +142,7 @@ fn every_change_made_during_a_slow_save_is_on_disk() {
                 s.library.as_mut().unwrap().journal_mut().flush().unwrap();
                 // a copy of the files taken now (the next crash) holds everything
                 let copy = temp_dir("kept-copy");
-                std::fs::create_dir_all(&copy).unwrap();
-                for f in [lightcraft_catalog::journal::SNAPSHOT, lightcraft_catalog::journal::LOG] {
-                    if dir.join(f).exists() {
-                        std::fs::copy(dir.join(f), copy.join(f)).unwrap();
-                    }
-                }
+                copy_files(&dir, &copy);
                 let (_, c, _) = lightcraft_catalog::Journal::open(Box::new(lightcraft_catalog::store::FsStore::open(&copy).unwrap())).unwrap();
                 assert_eq!(c.to_snapshot(), expect, "{how}");
                 let _ = std::fs::remove_dir_all(&copy);
@@ -195,12 +209,7 @@ fn a_failed_write_is_reported_and_retried_never_dropped() {
     // a crash now: the files alone hold everything, and the log has no gap (no damage on load)
     s.library.as_mut().unwrap().journal_mut().flush().unwrap();
     let copy = temp_dir("fail-copy");
-    std::fs::create_dir_all(&copy).unwrap();
-    for f in [lightcraft_catalog::journal::SNAPSHOT, lightcraft_catalog::journal::LOG] {
-        if dir.join(f).exists() {
-            std::fs::copy(dir.join(f), copy.join(f)).unwrap();
-        }
-    }
+    copy_files(&dir, &copy);
     let (_, c, report) = lightcraft_catalog::Journal::open(Box::new(lightcraft_catalog::store::FsStore::open(&copy).unwrap())).unwrap();
     assert!(report.damaged.is_none(), "{report:?}");
     assert_eq!(c.to_snapshot(), expect);

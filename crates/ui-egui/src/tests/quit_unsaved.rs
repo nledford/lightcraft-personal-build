@@ -165,6 +165,25 @@ fn damaged_settings_file_is_shown() {
     assert!(!has(&h, "button:noticeOk"));
 }
 
+/// The files of the library in `dir` copied to `copy`, as the next start reads them: the snapshot,
+/// the segments it lists and the log.
+fn copy_files(dir: &std::path::Path, copy: &std::path::Path) {
+    use lightcraft_catalog::journal::{LOG, SEGMENT_DIR, SNAPSHOT};
+    std::fs::create_dir_all(copy).unwrap();
+    for f in [SNAPSHOT, LOG] {
+        if dir.join(f).exists() {
+            std::fs::copy(dir.join(f), copy.join(f)).unwrap();
+        }
+    }
+    if let Ok(segments) = std::fs::read_dir(dir.join(SEGMENT_DIR)) {
+        std::fs::create_dir_all(copy.join(SEGMENT_DIR)).unwrap();
+        for segment in segments {
+            let segment = segment.unwrap();
+            std::fs::copy(segment.path(), copy.join(SEGMENT_DIR).join(segment.file_name())).unwrap();
+        }
+    }
+}
+
 /// A change the catalog log's thread accepted but hadn't written yet (a drive that takes a moment,
 /// then fails) is not taken for saved: the quit check waits for the thread, finds the failure and
 /// saves everything with the closing snapshot before the window may close (review of #3557). It
@@ -197,12 +216,7 @@ fn quitting_waits_for_what_the_log_thread_has_not_written_yet() {
     // the files alone, as the next start reads them, hold the change
     let copy = dir.with_extension("copy");
     let _ = std::fs::remove_dir_all(&copy);
-    std::fs::create_dir_all(&copy).unwrap();
-    for f in [lightcraft_catalog::journal::SNAPSHOT, lightcraft_catalog::journal::LOG] {
-        if dir.join(f).exists() {
-            std::fs::copy(dir.join(f), copy.join(f)).unwrap();
-        }
-    }
+    copy_files(&dir, &copy);
     let (_, c, _) = lightcraft_catalog::Journal::open(Box::new(lightcraft_catalog::store::FsStore::open(&copy).unwrap())).unwrap();
     let saved = c.photo(id).map(|p| p.flag);
     fault::remove(&dir);
