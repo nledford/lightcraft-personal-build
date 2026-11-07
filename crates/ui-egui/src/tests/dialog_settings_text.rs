@@ -107,8 +107,8 @@ fn text_typed_in_copyright_is_saved_when_another_tab_is_opened() {
 #[test]
 fn esc_in_an_external_editing_box_leaves_settings_open_too() {
     let mut h = demo();
-    show(&mut h, "general");
-    // (External Editing is far down the General page: scroll it into view)
+    show(&mut h, "files");
+    // (External Editing is far down the Files page: scroll it into view)
     assert_eq!(h.request("ui.hoverWidget", json!({"id": "settings:pageRoom"}), T)["ok"], true);
     h.request("ui.scroll", json!({"dy": -3000.0}), T);
     steps(&mut h);
@@ -118,7 +118,7 @@ fn esc_in_an_external_editing_box_leaves_settings_open_too() {
     steps(&mut h);
     key(&mut h, "Escape");
     assert_eq!(h.app.ui.settings.external_editor, before, "Esc gives the text back");
-    assert!(settings_open(&h, "general"), "and Settings stays open: {:?}", h.app.ui.dialog);
+    assert!(settings_open(&h, "files"), "and Settings stays open: {:?}", h.app.ui.dialog);
 }
 
 #[test]

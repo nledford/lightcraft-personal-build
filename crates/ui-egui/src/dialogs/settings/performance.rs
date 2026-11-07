@@ -1,3 +1,4 @@
+use super::general::in_memory_note;
 use super::widgets::{choices, heading, hint, row};
 #[cfg(not(target_arch = "wasm32"))]
 use super::widgets::{label_width, path_label};
@@ -9,7 +10,7 @@ use crate::check::check;
 
 pub(super) fn performance_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     use lightcraft_engine::gpu;
-    heading(ui, t, crate::i18n::tr("Rendering"));
+    heading(ui, t, "Rendering");
     #[cfg(target_os = "windows")]
     check(ui, "settings.composeWindow", &mut app.ui.settings.compose_window, "Prevent G-SYNC/FreeSync flicker (applies at next launch)");
     check(ui, "settings.gpu", &mut app.ui.settings.gpu, "Use the GPU for rendering");
@@ -66,7 +67,7 @@ pub(super) fn performance_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &To
             "Remove Hot Pixels (Detail) leaves a raw unchanged when more than this share of its photosites would be replaced: such a photo doesn't look like hot pixels on a sensor.",
         ),
     );
-    heading(ui, t, crate::i18n::tr("Preview cache"));
+    heading(ui, t, "Preview cache");
     let cur = app.session.cache_mb;
     row(ui, t, crate::i18n::tr("Size limit"), |ui| {
         let gb = lightcraft_engine::media::default_disk_cache_bytes(app.session.catalog.len()).div_ceil(1 << 30);
@@ -102,7 +103,13 @@ pub(super) fn performance_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &To
         }
     });
     background_prep(app, ui, t);
-    heading(ui, t, crate::i18n::tr("Local folders"));
+    // The size limit is saved with the library (`library.preferences`): the note follows it.
+    in_memory_note(app, ui, t);
+}
+
+/// Local folders: when photos only seen in Local, never added or changed, leave the catalog.
+pub(super) fn local_folders(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
+    heading(ui, t, "Local folders");
     row(ui, t, crate::i18n::tr("Forget unchanged photos"), |ui| {
         let opts = [(0u32, "Never"), (7, "After 7 days"), (30, "After 30 days"), (90, "After 90 days"), (365, "After a year")];
         let mut v = app.session.forget_local_days;
@@ -117,15 +124,13 @@ pub(super) fn performance_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &To
             "Photos seen in Local but never added or changed leave the catalog when their folder hasn't been browsed for this long (checked when the library opens). Files stay on disk; browsing the folder shows them again.",
         ),
     );
-    #[cfg(not(target_arch = "wasm32"))]
-    smart_previews(app, ui, t);
 }
 
 /// Settings ▸ Performance ▸ Prepare photos in the background (notes 47 and 48): per mode, what
 /// is made ready before the user gets to it (`prefs.backgroundPrep`), app-wide or for this library.
 fn background_prep(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     use lightcraft_engine::prep::{Mode, Scope};
-    heading(ui, t, crate::i18n::tr("Prepare photos in the background"));
+    heading(ui, t, "Prepare photos in the background");
     hint(
         ui,
         t,
@@ -210,7 +215,7 @@ fn background_prep(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 /// Where this library keeps its smart previews (the offline-editing proxies, which can be large):
 /// the effective folder, what is in it, and choosing another one.
 #[cfg(not(target_arch = "wasm32"))]
-fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
+pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     // listing a big folder every frame would be slow: refresh every 2 s and after a change
     let cache = egui::Id::unique("smart-location");
     let now = ui.input(|i| i.time);
@@ -225,7 +230,7 @@ fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     if loc.is_null() {
         return;
     }
-    heading(ui, t, crate::i18n::tr("Smart previews"));
+    heading(ui, t, "Smart previews");
     let path = loc["path"].as_str().unwrap_or_default().to_string();
     let available = loc["available"].as_bool().unwrap_or(true);
     let custom = loc["custom"].as_bool().unwrap_or(false);
