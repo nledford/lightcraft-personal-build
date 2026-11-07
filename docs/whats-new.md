@@ -414,7 +414,6 @@
   reads them back as the same keywords. A sidecar written by an earlier version is put right the next time it is
   saved.
 
-
 ### Relative-date filters and smart albums follow the clock
 - A current view or source count using “in the last” rules now refreshes when the session clock moves into a new
   minute, even when no catalog edit occurred. This fixes stale photos remaining in the grid and stale counts for
