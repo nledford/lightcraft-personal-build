@@ -76,7 +76,7 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
             {
                 // the new folder has its row in Folders at once: bring it into view. It is not
                 // chosen: that would empty the grid and drop the photos selected to move into it.
-                let tree = app.caches.folder_tree(&app.session.catalog);
+                let tree = app.caches.folder_tree(&app.session.catalog, app.session.library_generation());
                 if let Some(row) = crate::panels::left::folder_row_of(&tree, path) {
                     app.ui.left_panel = true;
                     app.ui.reveal_folder = Some(row.path.clone());

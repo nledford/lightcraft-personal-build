@@ -479,7 +479,7 @@ fn row_counts(h: &mut Headless, dir: &Path) -> Vec<usize> {
             count(&n.children, dir, out);
         }
     }
-    let rows = h.app.caches.folder_tree(&h.app.session.catalog);
+    let rows = h.app.caches.folder_tree(&h.app.session.catalog, h.app.session.library_generation());
     let mut counts = Vec::new();
     count(&rows, &folder_key(dir), &mut counts);
     counts

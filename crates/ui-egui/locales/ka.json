@@ -3755,5 +3755,6 @@
   "Bottom bar": "ქვედა ზოლი",
   "Prevent G-SYNC/FreeSync flicker (applies at next launch)": "G-SYNC/FreeSync-ის ციმციმის თავიდან აცილება (ამოქმედდება შემდეგი გაშვებისას)",
   "Stopped at the scan limit: there may be more photos": "სკანირების ლიმიტზე გაჩერდა: შესაძლოა სხვა ფოტოებიც არის",
-  "Same Content as Another Photo": "იგივე შიგთავსი, რაც სხვა ფოტოს"
+  "Same Content as Another Photo": "იგივე შიგთავსი, რაც სხვა ფოტოს",
+  "Counting library": "ბიბლიოთეკის დათვლა"
 }
