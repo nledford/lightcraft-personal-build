@@ -1,5 +1,5 @@
-use super::widgets::{check, choices, field, heading, hint, path_label, row};
-use super::{LightcraftApp, RichText, StartupView, Tokens, json, register};
+use super::widgets::{choices, field, heading, hint, path_label, row};
+use super::{LightcraftApp, RichText, StartupView, Tokens, check, json, register};
 
 // ------------------------------------------------------------------------------------- General
 
@@ -144,7 +144,7 @@ fn lens_profiles(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         }
     });
     let mut offer = app.ui.settings.lens_database != Offer::Declined;
-    if check(ui, "settings.lensDatabaseOffer", &mut offer, "Offer the lens database download when LightCraft starts") {
+    if check(ui, "settings.lensDatabaseOffer", &mut offer, "Offer the lens database download when LightCraft starts").changed() {
         app.ui.settings.lens_database = if offer { Offer::Ask } else { Offer::Declined };
     }
     hint(

@@ -1,9 +1,10 @@
-use super::widgets::{check, choices, heading, hint, row};
+use super::widgets::{choices, heading, hint, row};
 #[cfg(not(target_arch = "wasm32"))]
 use super::widgets::{label_width, path_label};
 use super::{
     CACHE_SIZES, HOT_PIXEL_LIMIT_DEFAULT, HOT_PIXEL_LIMITS, LABEL_W, LightcraftApp, PREVIEW_LIMITS, RichText, Tokens, Value, json, register,
 };
+use crate::check::check;
 
 // --------------------------------------------------------------------------------- Performance
 
@@ -138,7 +139,7 @@ fn background_prep(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
     let lib_open = app.session.library.is_some();
     if lib_open {
         let mut v = own;
-        if check(ui, "settings.prepOwn", &mut v, "Use different settings for this library") {
+        if check(ui, "settings.prepOwn", &mut v, "Use different settings for this library").changed() {
             let r = if v {
                 let cur = app.session.prep_settings();
                 app.run("prefs.setBackgroundPrep", json!({"library": true, "settings": cur}))
@@ -160,7 +161,7 @@ fn background_prep(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         ui.label(RichText::new(crate::i18n::tr(title)).font(t.semibold(12.0)).color(t.text));
         let mut previews = m.previews;
         row(ui, t, crate::i18n::tr("Previews"), |ui| {
-            if check(ui, &format!("settings.prep.{key}.previews"), &mut previews, "Build previews for every photo in view") {
+            if check(ui, &format!("settings.prep.{key}.previews"), &mut previews, "Build previews for every photo in view").changed() {
                 patch = Some(json!({key: {"previews": previews}}));
             }
         });
