@@ -290,6 +290,7 @@
   "Backups in {}": "{} 中的備份",
   "Folders of what restores replaced, removed: {}": "已移除的還原時被取代內容的資料夾：{}",
   "Folders of what restores replaced that could not be removed: {}": "未能移除的還原時被取代內容的資料夾：{}",
+  "Not available right now: {}": "目前無法使用：{}",
   "{count} more warnings.": "另有 {count} 則警告。",
   "{in_trash} catalog photos are in this library's Recently Deleted and stay there; restore them from Recently Deleted to see them.": "目錄中有 {in_trash} 張照片位於此圖庫的「最近刪除」中，並會保留在那裡；如需檢視，請從「最近刪除」中復原。",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "有 {skipped} 張影像未匯入，因為它們在目錄中的記錄不完整。",

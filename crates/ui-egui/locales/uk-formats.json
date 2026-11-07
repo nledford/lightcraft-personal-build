@@ -286,6 +286,7 @@
   "Backups in {}": "Резервні копії в {}",
   "Folders of what restores replaced, removed: {}": "Видалено тек із тим, що було замінено під час відновлень: {}",
   "Folders of what restores replaced that could not be removed: {}": "Не вдалося видалити тек із тим, що було замінено під час відновлень: {}",
+  "Not available right now: {}": "Зараз недоступно: {}",
   "{count} more warnings.": "Інших попереджень: {count}.",
   "{in_trash} catalog photos are in this library's Recently Deleted and stay there; restore them from Recently Deleted to see them.": "Фото каталогу в нещодавно видалених цієї бібліотеки: {in_trash}. Вони залишаються там; щоб побачити їх, відновіть їх із нещодавно видалених.",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "Не імпортовано зображення каталогу: {skipped}. Їхні записи в каталозі неповні.",
