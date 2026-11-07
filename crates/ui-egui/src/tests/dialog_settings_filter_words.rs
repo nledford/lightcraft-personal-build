@@ -520,7 +520,7 @@ fn the_filter_is_ready_to_type_in_when_settings_opens() {
     // When Settings is opened and something is typed, without a click
     show(&mut h, "general");
     assert_eq!(h.view.ctx.memory(|m| m.focused()), Some(crate::text_field::id("field:settingsFilter")));
-    h.request("ui.text", json!({"text": "culling"}), T);
+    h.request("ui.text", json!({"text": "trash"}), T);
     steps(&mut h);
     // Then it went into the filter
     assert_eq!(found(&h), ["general:Culling"]);
@@ -544,7 +544,7 @@ fn the_filter_is_ready_to_type_in_when_settings_opens() {
 fn a_prompt_over_settings_does_not_empty_the_filter_or_take_its_focus() {
     let mut h = demo([1200.0, 1000.0]);
     show(&mut h, "general");
-    filter(&mut h, "culling");
+    filter(&mut h, "trash");
     assert_eq!(found(&h), ["general:Culling"]);
     h.app.quit_prompt = Some(crate::QuitPrompt::Tasks("1 task is still running: Import. Quitting stops it.".into()));
     steps(&mut h);
