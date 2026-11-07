@@ -327,5 +327,7 @@
   "{n} folder{} could not be read": "Folder yang tidak bisa dibaca: {n}{:.0}",
   "{n} file{} skipped (not a supported photo type)": "File yang dilewati (bukan jenis foto yang didukung): {n}{:.0}",
   "Backed up the library to {}": "Pustaka dicadangkan ke {}",
-  "The library was not backed up: {}": "Pustaka tidak dicadangkan: {}"
+  "The library was not backed up: {}": "Pustaka tidak dicadangkan: {}",
+  "Restored the library. What it held before is in {}": "Pustaka dipulihkan. Isinya sebelumnya ada di {}",
+  "The library was not restored: {}": "Pustaka tidak dipulihkan: {}"
 }

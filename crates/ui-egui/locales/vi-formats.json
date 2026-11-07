@@ -324,5 +324,7 @@
   "{n} folder{} could not be read": "Thư mục không đọc được: {n}{:.0}",
   "{n} file{} skipped (not a supported photo type)": "Đã bỏ qua tệp (không phải loại ảnh được hỗ trợ): {n}{:.0}",
   "Backed up the library to {}": "Đã sao lưu thư viện vào {}",
-  "The library was not backed up: {}": "Thư viện chưa được sao lưu: {}"
+  "The library was not backed up: {}": "Thư viện chưa được sao lưu: {}",
+  "Restored the library. What it held before is in {}": "Đã khôi phục thư viện. Nội dung trước đó nằm trong {}",
+  "The library was not restored: {}": "Thư viện chưa được khôi phục: {}"
 }

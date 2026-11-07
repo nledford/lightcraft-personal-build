@@ -283,6 +283,8 @@
   "· {in_source} identical copies": "· {in_source} 个相同副本",
   "Backed up the library to {}": "已将图库备份到 {}",
   "The library was not backed up: {}": "未能备份图库：{}",
+  "Restored the library. What it held before is in {}": "已恢复图库。之前的内容位于 {}",
+  "The library was not restored: {}": "未能恢复图库：{}",
   "{count} more warnings.": "另有 {count} 条警告。",
   "{in_trash} catalog photos are in this library's Recently Deleted and stay there; restore them from Recently Deleted to see them.": "目录中有 {in_trash} 张照片位于此图库的“最近删除”中，并将保留在那里；如需查看，请从“最近删除”中恢复。",
   "{skipped} catalog images were not imported because their records in the catalog are incomplete.": "有 {skipped} 张图像未导入，因为它们在目录中的记录不完整。",

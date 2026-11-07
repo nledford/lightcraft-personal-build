@@ -327,5 +327,7 @@
   "{n} folder{} could not be read": "Mappar som inte gick att läsa: {n}{:.0}",
   "{n} file{} skipped (not a supported photo type)": "Hoppade över filer (fotoformat som inte stöds): {n}{:.0}",
   "Backed up the library to {}": "Biblioteket säkerhetskopierades till {}",
-  "The library was not backed up: {}": "Biblioteket säkerhetskopierades inte: {}"
+  "The library was not backed up: {}": "Biblioteket säkerhetskopierades inte: {}",
+  "Restored the library. What it held before is in {}": "Biblioteket återställdes. Det som fanns i det tidigare finns i {}",
+  "The library was not restored: {}": "Biblioteket återställdes inte: {}"
 }
