@@ -88,7 +88,7 @@ fn hint(h: &Headless) -> Option<String> {
 }
 
 fn toast(h: &Headless) -> String {
-    h.app.ui.toast.clone().map(|t| t.0).unwrap_or_default()
+    h.app.ui.toast.clone().map(|t| t.text).unwrap_or_default()
 }
 
 fn select(h: &mut Headless, ids: &[u64]) {

@@ -120,7 +120,7 @@ fn scan_empty_folder(h: &mut Headless, dir: &Scratch) -> String {
     let r = h.request("engine.execute", json!({"command": "file.addFolder", "params": {"path": dir.0.to_string_lossy()}}), T);
     assert_eq!(r["ok"], true, "{r}");
     assert!(h.step_until(SETTLE, |h| h.app.ui.toast.is_some()), "no message: {:?}", h.app.ui.toast);
-    h.app.ui.toast.as_ref().map(|t| t.0.clone()).unwrap_or_default()
+    h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default()
 }
 
 /// XMP sidecars beside the pictures are read with them, so they are not "skipped": no note for

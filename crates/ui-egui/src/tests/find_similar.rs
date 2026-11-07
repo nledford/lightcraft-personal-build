@@ -123,7 +123,7 @@ fn a_search_from_the_menu_reads_off_the_ui_thread_and_the_window_goes_on() {
     let shown = h.app.session.filter.only.len();
     assert_eq!(shown, PHOTOS as usize / 2, "the photos alike are shown");
     assert_eq!(h.app.ui.view, ViewMode::PhotoGrid);
-    let toast = h.app.ui.toast.as_ref().map(|t| t.0.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.starts_with(&format!("{shown} similar photos")), "{toast}");
 }
 
@@ -204,7 +204,7 @@ fn a_photo_that_cannot_be_read_says_so() {
     h.app.session.media.file_loader = Some(Arc::new(|path: &str, _, _| Err(format!("{path}: gone"))));
     h.app.run("library.findSimilar", json!({"id": 1})).unwrap();
     until_done(&mut h);
-    let toast = h.app.ui.toast.as_ref().map(|t| t.0.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("can't read the photo"), "{toast}");
     assert_eq!(h.app.session.filter, Default::default());
 }

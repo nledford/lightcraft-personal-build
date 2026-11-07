@@ -105,6 +105,7 @@ mod temp_slider;
 mod text_prompt;
 mod thumb;
 mod titlebar;
+mod toast_timing;
 mod tool_overlay;
 mod unsaved;
 mod view_cost;

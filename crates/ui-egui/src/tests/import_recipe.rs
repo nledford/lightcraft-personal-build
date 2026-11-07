@@ -80,7 +80,7 @@ fn click(h: &mut Headless, id: &str) {
 }
 
 fn toast(h: &Headless) -> String {
-    h.app.ui.toast.clone().map(|t| t.0).unwrap_or_default()
+    h.app.ui.toast.clone().map(|t| t.text).unwrap_or_default()
 }
 
 /// Wait for the import the review started to finish.

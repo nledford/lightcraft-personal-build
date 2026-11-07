@@ -25,7 +25,7 @@ fn kept(h: &Headless) -> bool {
 }
 
 fn failed_toast(h: &Headless) -> bool {
-    h.app.ui.toast.as_ref().is_some_and(|t| t.0.contains("Scan failed"))
+    h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("Scan failed"))
 }
 
 fn cancel_scan(h: &mut Headless) {

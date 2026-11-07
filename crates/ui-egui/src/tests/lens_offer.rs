@@ -130,7 +130,7 @@ fn a_download_that_cannot_start_keeps_the_offer_open_and_says_why() {
     h.settle(std::time::Duration::from_secs(10));
     let r = h.request("ui.clickWidget", serde_json::json!({"id": "button:dialogOk"}), t);
     assert_eq!(r["ok"], true, "{r}");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.0.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("no download location"), "Download says why it didn't start: {toast:?}");
     assert!(offer_open(&h), "the offer stays open: {:?}", h.app.ui.dialog);
     assert_eq!(h.app.session.lensfun.state(), lensfun_download::State::Idle);

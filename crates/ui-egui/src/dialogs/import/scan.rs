@@ -319,7 +319,7 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
             let cancelled = task.guard.is_cancelled() || task.progress.cancel.load(Ordering::Relaxed);
             app.scan = None;
             if !cancelled {
-                app.toast(ctx, crate::i18n::tr("Scan failed"));
+                app.toast_error(ctx, crate::i18n::tr("Scan failed"));
             }
             return;
         }

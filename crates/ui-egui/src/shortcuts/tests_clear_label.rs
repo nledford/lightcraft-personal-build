@@ -77,7 +77,7 @@ fn the_key_clears_the_selected_photos_label_in_grid_and_loupe() {
         press(&mut app, &ctx);
         assert_eq!(labels(&app), [Some(ColorLabel::Green), None, Some(ColorLabel::Green)], "{view:?}");
         assert_eq!(app.session.undo.len(), 1);
-        assert_eq!(app.ui.toast.as_ref().map(|t| t.0.as_str()), Some("Color label cleared"));
+        assert_eq!(app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Color label cleared"));
         app.session.execute("edit.undo", &json!({})).unwrap();
         assert_eq!(labels(&app)[1], Some(ColorLabel::Green));
     }
@@ -118,7 +118,7 @@ fn a_label_given_to_clear_color_label_is_ignored_by_the_toast_too() {
     app.run("photo.clearLabel", json!({"label": "red"})).unwrap();
     assert_eq!(labels(&app)[1], None, "the photo's label is cleared, whatever label was passed");
     let toast = app.ui.toast.as_ref().expect("a toast");
-    assert_eq!((toast.0.as_str(), toast.2), ("Color label cleared", None), "not \"Red Label\"");
+    assert_eq!((toast.text.as_str(), toast.label), ("Color label cleared", None), "not \"Red Label\"");
 }
 
 fn find<'a>(nodes: &'a [MenuNode], id: &str) -> Option<&'a MenuNode> {
