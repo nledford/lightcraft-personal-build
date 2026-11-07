@@ -750,6 +750,24 @@ fn a_made_folder_can_be_chosen_empty_and_undoing_its_creation_leaves_the_choice(
     assert_eq!((s.source, s.library_folder.as_deref()), (LibrarySource::All, None), "the folder is gone");
 }
 
+#[test]
+fn an_empty_made_folder_shown_beside_another_folder_stays_shown() {
+    let dir = Scratch::new("made-beside");
+    let mut s = Session::new();
+    s.execute("folder.create", &json!({"parent": dir.path(""), "name": "f"})).unwrap();
+    s.execute("folder.create", &json!({"parent": dir.path(""), "name": "made"})).unwrap();
+    let photo = add_file(&mut s, &dir.path("f/x.jpg"), "X");
+    let both = json!({"kind": "libraryFolder", "paths": [dir.path("f"), dir.path("made")]});
+    s.execute("library.source", &both).unwrap();
+    assert_eq!(s.visible_cloned(), vec![photo]);
+    assert_eq!(s.source_library_folders().len(), 2, "the made folder, empty, is still one of those shown");
+    // (the other order: the made folder is the one single-folder actions take)
+    let both = json!({"kind": "libraryFolder", "paths": [dir.path("made"), dir.path("f")]});
+    s.execute("library.source", &both).unwrap();
+    assert_eq!(s.visible_cloned(), vec![photo]);
+    assert_eq!(s.source_library_folders().len(), 2);
+}
+
 /// Every row of `library.folders` for `path` (a folder spelled any way), at any depth, as
 /// `(count, own, parent path)`.
 fn rows_for(s: &mut Session, path: &str) -> Vec<(u64, u64, Option<String>)> {

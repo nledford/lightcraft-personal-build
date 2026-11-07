@@ -1093,8 +1093,9 @@ pub fn specs() -> Vec<CommandSpec> {
                 // any other way it goes (`Session::reconcile_view`)
                 let was_shown = s.source_albums().iter().any(|a| removed.contains(a));
                 s.commit(if folder { "Delete Folder" } else { "Delete Album" }, Op::Batch { ops })?;
-                // (the commit's `reconcile_view` has already taken the deleted albums out of the filter and the
-                // source: another album shown takes the source's place, or All Photos does)
+                // (`Session::commit` does not reconcile the view: the `visible()` that `keep_active_in_view` calls
+                // does, through `reconcile_view`, or the end of `run_command`; it takes the deleted albums out of the
+                // filter and the source: another album shown takes the source's place, or All Photos does)
                 // one put aside by Enable Filters must not name a deleted album either
                 let shelved_before = s.shelved_filter.clone();
                 if let Some(f) = s.shelved_filter.as_mut() {

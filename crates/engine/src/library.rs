@@ -802,9 +802,9 @@ impl Session {
         self.active_spot = None;
         self.before.clear();
         if report.created && seed_demo {
-        crate::demo::load(self);
-        journal.snapshot(&self.catalog)?;
-    }
+            crate::demo::load(self);
+            journal.snapshot(&self.catalog)?;
+        }
         let mut settings = SettingsLoad::default();
         // preferences
         let prefs = settings.read::<PrefsFile>(files.as_mut(), PREFS).unwrap_or_default();
