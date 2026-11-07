@@ -354,7 +354,14 @@ fn new_album_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             parent: None,
         });
     }
-    if MenuItem::new(crate::i18n::tr("Create Smart Album from Filter…")).show(ui).clicked() {
+    // (a view that can't be saved as rules greys this out, and says why)
+    let why_not = app.session.view_save_refusal();
+    let from_filter = MenuItem::new(crate::i18n::tr("Create Smart Album from Filter…")).enabled(why_not.is_none());
+    let from_filter = match why_not.as_deref() {
+        Some(why) => from_filter.disabled_reason(why),
+        None => from_filter,
+    };
+    if from_filter.show(ui).clicked() {
         app.ui.dialog = Some(crate::state::Dialog::NewSmartAlbum { name: String::new(), parent: None });
     }
     if MenuItem::new(crate::i18n::tr("Create Folder…")).show(ui).clicked() {

@@ -50,6 +50,7 @@ mod merge;
 mod move_to_share;
 #[cfg(unix)]
 mod opened_folder;
+mod multi_source;
 mod organize;
 mod persist;
 mod prefs;

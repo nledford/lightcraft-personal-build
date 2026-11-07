@@ -255,7 +255,14 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     // save / clear
     ui.add_space(14.0);
     let filtering = app.session.filter != Default::default();
-    let save = crate::button::Button::new("Save as Smart Album…").small().enabled(filtering).widget("button:filterSave").show(ui);
+    // (a view that can't be saved as rules greys this out, and says why on hover)
+    let why_not = app.session.view_save_refusal();
+    let save = crate::button::Button::new("Save as Smart Album…").small().enabled(filtering && why_not.is_none()).widget("button:filterSave");
+    let save = match why_not.as_deref() {
+        Some(why) => save.tooltip(why),
+        None => save,
+    };
+    let save = save.show(ui);
     if save.clicked() {
         app.act("dialog.newSmartAlbum", json!({}));
     }
