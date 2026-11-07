@@ -85,8 +85,8 @@ fn typing_lists_the_sections_that_match_on_whatever_tab() {
     // When "sidecar names" is typed into the filter
     filter(&mut h, "sidecar names");
     // Then the section about them is listed with the tab it is on, and the page of General is not shown
-    assert_eq!(found(&h), ["import:XMP sidecars"]);
-    assert!(says(&h, "Import") && says(&h, "XMP sidecars"));
+    assert_eq!(found(&h), ["files:XMP sidecars"]);
+    assert!(says(&h, "Files") && says(&h, "XMP sidecars"));
     assert!(headings(&h).is_empty(), "the tab's own page gives way to what was found: {:?}", headings(&h));
     // And the tab that was open is still the one open
     assert_eq!(h.app.ui.dialog, Some(Dialog::Settings { tab: "general".into() }));
@@ -98,15 +98,15 @@ fn a_word_from_a_row_a_hint_or_a_button_finds_its_section() {
     show(&mut h, "general");
     // (a row's label)
     filter(&mut h, "Forget unchanged");
-    assert_eq!(found(&h), ["performance:Local folders"]);
+    assert_eq!(found(&h), ["library:Local folders"]);
     // (a button)
     filter(&mut h, "Clear Cache");
-    assert_eq!(found(&h), ["performance:Thumbnail cache"]);
+    assert_eq!(found(&h), ["performance:Preview cache"]);
     // (a hint, in other letter case)
     filter(&mut h, "CHOOSES THE LINES");
     assert_eq!(found(&h), ["interface:Detail View"]);
     // (a tab's own name finds everything on it)
-    filter(&mut h, "Interface");
+    filter(&mut h, "Appearance");
     let on_the_tab = found(&h);
     assert!(on_the_tab.len() >= 4 && on_the_tab.iter().all(|id| id.starts_with("interface:")), "{on_the_tab:?}");
     assert!(on_the_tab.contains(&"interface:Filmstrip".to_string()), "a section that does not say the word itself: {on_the_tab:?}");
@@ -118,13 +118,13 @@ fn every_word_typed_has_to_be_there() {
     show(&mut h, "general");
     filter(&mut h, "cache");
     let cache = found(&h);
-    assert!(cache.len() > 1 && cache.contains(&"performance:Thumbnail cache".to_string()), "{cache:?}");
+    assert!(cache.len() > 1 && cache.contains(&"performance:Preview cache".to_string()), "{cache:?}");
     // When a second word narrows it
-    filter(&mut h, "cache limit");
-    assert_eq!(found(&h), ["performance:Thumbnail cache"]);
+    filter(&mut h, "cache disk");
+    assert_eq!(found(&h), ["performance:Preview cache"]);
     // And the words can come in any order
-    filter(&mut h, "limit cache");
-    assert_eq!(found(&h), ["performance:Thumbnail cache"]);
+    filter(&mut h, "disk cache");
+    assert_eq!(found(&h), ["performance:Preview cache"]);
 }
 
 #[test]
@@ -146,7 +146,7 @@ fn typing_in_the_filter_starts_no_slide_preview_render() {
     assert!(h.app.session.active().is_some(), "a photo is active, so the preview would have one to render");
     assert_eq!(h.app.renderer.wanted(crate::render::Slot::SlidePreview), None, "none before");
     filter(&mut h, "sidecar names");
-    assert_eq!(found(&h), ["import:XMP sidecars"]);
+    assert_eq!(found(&h), ["files:XMP sidecars"]);
     h.settle(T);
     assert_eq!(h.app.renderer.wanted(crate::render::Slot::SlidePreview), None, "the filter asked for no render of the slide preview");
 }
@@ -175,7 +175,7 @@ fn choosing_a_result_opens_its_tab_at_that_section() {
 
 #[test]
 fn choosing_what_starts_a_tab_shows_the_top_of_its_page() {
-    let mut h = demo([900.0, 560.0]);
+    let mut h = demo([900.0, 380.0]);
     // Given General scrolled down, so that its first heading is out of view
     show(&mut h, "general");
     let room = rect(&h, "settings:pageRoom").unwrap();
@@ -184,7 +184,7 @@ fn choosing_what_starts_a_tab_shows_the_top_of_its_page() {
     for _ in 0..60 {
         h.step();
     }
-    assert!(rect(&h, "heading:Library").unwrap().top() < room.top(), "General is scrolled down");
+    assert!(rect(&h, "heading:Startup").unwrap().top() < room.top(), "General is scrolled down");
     // When what is above its first heading (the language) is found and chosen
     filter(&mut h, "language");
     assert!(found(&h).contains(&"general:".to_string()), "{:?}", found(&h));
@@ -194,7 +194,7 @@ fn choosing_what_starts_a_tab_shows_the_top_of_its_page() {
         h.step();
     }
     // Then the page is at its top again
-    assert!(rect(&h, "heading:Library").unwrap().top() >= room.top() - 0.5, "the top of General is in view");
+    assert!(rect(&h, "heading:Startup").unwrap().top() >= room.top() - 0.5, "the top of General is in view");
 }
 
 #[test]
@@ -205,7 +205,7 @@ fn return_opens_the_first_result() {
     key(&mut h, "Enter");
     h.settle(T);
     steps(&mut h);
-    assert_eq!(h.app.ui.dialog, Some(Dialog::Settings { tab: "import".into() }));
+    assert_eq!(h.app.ui.dialog, Some(Dialog::Settings { tab: "files".into() }));
     assert!(headings(&h).contains(&"XMP sidecars".to_string()));
     assert!(found(&h).is_empty());
 }
@@ -301,8 +301,8 @@ fn what_a_page_shows_now_is_what_is_found() {
 fn the_arrow_goes_from_the_filter_to_what_was_found_and_return_opens_it() {
     let mut h = demo([1200.0, 1000.0]);
     show(&mut h, "general");
-    filter(&mut h, "cache limit");
-    assert_eq!(found(&h), ["performance:Thumbnail cache"]);
+    filter(&mut h, "cache disk");
+    assert_eq!(found(&h), ["performance:Preview cache"]);
     // When ↓ is pressed in the filter (the focus goes to the first result), then Return
     key(&mut h, "ArrowDown");
     assert!(on_a_result(&h), "↓ leaves the filter for what was found");
