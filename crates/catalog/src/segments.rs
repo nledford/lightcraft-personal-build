@@ -1,11 +1,11 @@
-//! The snapshot's photos in segment files (catalog format 11).
+//! The snapshot's photos in segment files (catalog format 15).
 //!
 //! `catalog.snap` holds everything about the catalog but its photos, and lists the **segments**
 //! that hold those: files `segments/<first id>-<seq>.json` in the library folder, each a run of
 //! photos in id order,
 //!
 //! ```text
-//! {"format":"lightcraft-catalog-segment","version":11,"photos":{"<id>":{…},…}}
+//! {"format":"lightcraft-catalog-segment","version":15,"photos":{"<id>":{…},…}}
 //! ```
 //!
 //! with its size and CRC-32 in the list. A compaction writes only the segments whose photos
@@ -35,7 +35,7 @@
 //! with an error naming the file, and nothing is modified.
 //!
 //! **Stores without segments** ([`Store::segmented`] is false: the browser's) keep the photos in
-//! `catalog.snap` itself, as formats up to 10 did. Either layout is read wherever it is found.
+//! `catalog.snap` itself, as formats up to 14 did. Either layout is read wherever it is found.
 
 use std::collections::BTreeMap;
 use std::ops::Bound;
@@ -620,7 +620,7 @@ mod tests {
 
     /// Write `photos` over the segments and baseline given, as the snapshot of op `seq`.
     fn write_over(store: &mut MemStore, photos: &Photos, segments: &[Segment], baseline: &Photos, seq: u64, per: usize) -> Written {
-        let on_disk = OnDisk { version: 11, seq, segments, baseline, size: size(per), verify: true };
+        let on_disk = OnDisk { version: 15, seq, segments, baseline, size: size(per), verify: true };
         write(store, photos, &on_disk).unwrap()
     }
 
@@ -869,7 +869,7 @@ mod tests {
         }
         // segments 1 and 9 are written again, as `1-2` and `9-2`: the second one fails
         let mut store = FailsAt { files: mem.clone(), name: "segments/9-2.json", parallel: false };
-        let on_disk = OnDisk { version: 11, seq: 2, segments: &first.segments, baseline: &baseline, size: size(4), verify: false };
+        let on_disk = OnDisk { version: 15, seq: 2, segments: &first.segments, baseline: &baseline, size: size(4), verify: false };
         let e = write(&mut store, &held, &on_disk).err().expect("the write fails");
         assert!(e.to_string().contains("disk full"), "{e}");
         assert_eq!(mem.files.lock().unwrap().keys().cloned().collect::<BTreeSet<_>>(), before);
@@ -920,7 +920,7 @@ mod tests {
             .collect();
         let mut store = FailsAt { files: mem.clone(), name: "segments/29-2.json", parallel: true };
         assert!(readers(&store, 15).len() >= 2);
-        let on_disk = OnDisk { version: 11, seq: 2, segments: &first.segments, baseline: &baseline, size: size(4), verify: false };
+        let on_disk = OnDisk { version: 15, seq: 2, segments: &first.segments, baseline: &baseline, size: size(4), verify: false };
         let e = write(&mut store, &held, &on_disk).err().expect("the write fails");
         assert!(e.to_string().contains("disk full"), "{e}");
         assert_eq!(mem.files.lock().unwrap().keys().cloned().collect::<BTreeSet<_>>(), before);

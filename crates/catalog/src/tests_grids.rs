@@ -2,6 +2,8 @@
 //! masks of the develop settings, versions, history steps and import look refer to it by index,
 //! so an unchanged mask no longer repeats with every history step. In-memory catalogs and log
 //! records always hold the grids inline; older catalogs (inline everywhere) load and are upgraded.
+//! A store holds the photos in `catalog.snap` only where it has no segments (`single_file`); the segments hold their
+//! grids inline, so these tests keep one file.
 
 use std::sync::Arc;
 
@@ -91,7 +93,7 @@ fn masked_catalog(steps: usize) -> (Catalog, Vec<Op>, PhotoId, String) {
 #[test]
 fn snapshot_deduplicates_shared_grid() {
     let (live, ops, id, blob) = masked_catalog(20);
-    let m = MemStore::new();
+    let m = MemStore { single_file: true, ..Default::default() };
     let (mut j, _, report) = open(&m);
     assert!(report.created);
     j.append(&ops).unwrap();
@@ -123,7 +125,7 @@ fn v9_catalog_with_inline_grids_loads_and_is_upgraded() {
     let (live, _, _, blob) = masked_catalog(3);
     let body = live.to_snapshot();
     assert!(body.contains(&blob), "a live catalog stores its grids inline");
-    let m = MemStore::new();
+    let m = MemStore { single_file: true, ..Default::default() };
     m.set(SNAPSHOT, format!("{{\"format\":\"lightcraft-catalog\",\"version\":9,\"seq\":2,\"catalog\":{body}}}\n").into_bytes());
     let (_, loaded, report) = open(&m);
     assert_eq!((report.replayed, report.upgraded_from), (0, Some(9)));
@@ -141,7 +143,7 @@ fn v9_catalog_with_inline_grids_loads_and_is_upgraded() {
 #[test]
 fn log_records_keep_their_grids_inline() {
     let (live, ops, _, blob) = masked_catalog(2);
-    let m = MemStore::new();
+    let m = MemStore { single_file: true, ..Default::default() };
     let (mut j, _, _) = open(&m);
     j.append(&ops).unwrap();
     drop(j); // no snapshot: the log holds the whole state
@@ -162,7 +164,7 @@ fn shared_grid_references_resolve_or_are_repaired() {
 
     // a damaged snapshot: the develop mask refers past the one-entry table
     let body = inline.replacen(&format!("\"data\":\"{blob}\""), "\"grid\":7", 1);
-    let m = MemStore::new();
+    let m = MemStore { single_file: true, ..Default::default() };
     m.set(
         SNAPSHOT,
         format!(
@@ -184,7 +186,7 @@ fn shared_grid_references_resolve_or_are_repaired() {
     // a good reference resolves (the normal way a snapshot in this format reads, so it is not
     // reported as a repair): the mask reads exactly as it was written
     let body = inline.replacen(&format!("\"data\":\"{blob}\""), "\"grid\":0", 1);
-    let m = MemStore::new();
+    let m = MemStore { single_file: true, ..Default::default() };
     m.set(
         SNAPSHOT,
         format!(
@@ -202,7 +204,7 @@ fn shared_grid_references_resolve_or_are_repaired() {
 #[test]
 fn background_snapshot_deduplicates_shared_grid() {
     let (live, ops, _, blob) = masked_catalog(5);
-    let mut m = MemStore::new();
+    let mut m = MemStore { single_file: true, ..Default::default() };
     m.background = true;
     let (mut j, _, _) = open(&m);
     j.append(&ops).unwrap();
@@ -232,7 +234,7 @@ fn versions_share_the_grid_too() {
     for op in [&add, &versions, &history] {
         live.apply(op.clone()).unwrap();
     }
-    let m = MemStore::new();
+    let m = MemStore { single_file: true, ..Default::default() };
     let (mut j, _, _) = open(&m);
     j.append(&[add, versions, history]).unwrap();
     j.snapshot(&live).unwrap();
@@ -269,7 +271,7 @@ fn import_look_masks_share_the_table_and_resolve_on_load() {
     let mut live = Catalog::new();
     live.apply(add.clone()).unwrap();
 
-    let m = MemStore::new();
+    let m = MemStore { single_file: true, ..Default::default() };
     let (mut j, _, _) = open(&m);
     j.append(&[add]).unwrap();
     j.snapshot(&live).unwrap();
@@ -319,7 +321,7 @@ fn stray_grid_from_a_document_is_not_written_as_a_reference() {
         live.apply(op.clone()).unwrap();
     }
 
-    let m = MemStore::new();
+    let m = MemStore { single_file: true, ..Default::default() };
     let (mut j, _, _) = open(&m);
     j.append(&ops).unwrap();
     j.snapshot(&live).unwrap();
@@ -342,7 +344,7 @@ fn empty_shared_grid_table_clears_dangling_references() {
 
     // a damaged snapshot: an empty table, but the develop mask still refers to entry 0
     let body = inline.replacen(&format!("\"data\":\"{blob}\""), "\"grid\":0", 1);
-    let m = MemStore::new();
+    let m = MemStore { single_file: true, ..Default::default() };
     m.set(
         SNAPSHOT,
         format!(
@@ -373,7 +375,7 @@ fn omitted_shared_grid_table_clears_dangling_references() {
 
     // a damaged snapshot: no table at all, but the develop mask still refers to entry 0
     let body = inline.replacen(&format!("\"data\":\"{blob}\""), "\"grid\":0", 1);
-    let m = MemStore::new();
+    let m = MemStore { single_file: true, ..Default::default() };
     m.set(
         SNAPSHOT,
         format!("{{\"format\":\"lightcraft-catalog\",\"version\":{VERSION},\"seq\":2,\"catalog\":{{{} }} }}\n", &body[1..body.len() - 1])

@@ -63,7 +63,7 @@
 //!
 //! The snapshot's `version` is the catalog format, and it covers the log beside it: the log has
 //! no header of its own, and is only ever appended to under a snapshot that states the defaults
-//! its records leave out (this build's format, or one from 10 on with this build's defaults).
+//! its records leave out (this build's format, or one from 14 on with this build's defaults).
 //!
 //! Every format, what it adds and which build wrote it first is one row of [`FORMATS`]: the
 //! newest row is [`VERSION`], what this build writes.
@@ -99,10 +99,10 @@
 //!   Nothing removes them afterwards: they are the user's to delete. (Not where the store says
 //!   there is no going back, [`Store::keeps_replaced_formats`].)
 //! - **A library that can't be upgraded is not opened**, where appending to it as it is would
-//!   not be safe: one in a format before 10, or one that states other defaults than this build's
+//!   not be safe: one in a format before 14, or one that states other defaults than this build's
 //!   ([`crate::stored`]). A record written by this build leaves out what equals this build's
-//!   defaults, which a build of a format before 10 reads as its own. It is left as it was, and the
-//!   error says why. (A library in format 10 or later, which writes records so and states its
+//!   defaults, which a build of a format before 14 reads as its own. It is left as it was, and the
+//!   error says why. (A library in format 14 or later, which writes records so and states its
 //!   defaults, may go on as it is when it can't be upgraded now: a later snapshot, compaction or
 //!   closing, upgrades it, first keeps the files as they were at open (the snapshot, and the log
 //!   up to where it ended then) and is not written when it can't be (a change that could not be
@@ -168,8 +168,8 @@ pub const FORMATS: &[Format] = &[
     format(11, "lens database profiles named in the Optics panel", FIELDS, "`EmbeddedLens.source`"),
     format(12, "history steps and versions share segmentation grids (#2154)", FIELDS, "`Catalog.grids`, `SegMask.grid`"),
     format(13, "folders made in LightCraft keep their row", FIELDS, "`FolderRecord.made`"),
-    format(10, "compact records", FIELDS, "the stored form (`crate::stored`): unset fields and default develop settings are left out"),
-    format(11, "the snapshot in segments", FIELDS, "`catalog.snap` lists segment files that hold the photos (`crate::segments`)"),
+    format(14, "compact records", FIELDS, "the stored form (`crate::stored`): unset fields and default develop settings are left out"),
+    format(15, "the snapshot in segments", FIELDS, "`catalog.snap` lists segment files that hold the photos (`crate::segments`)"),
 ];
 
 /// The catalog format this build writes (and the newest it reads): the newest of [`FORMATS`]
@@ -177,7 +177,7 @@ pub const FORMATS: &[Format] = &[
 pub const VERSION: u32 = newest(FORMATS);
 
 /// The first format whose records leave out what equals this build's defaults ([`crate::stored`]).
-const COMPACT_RECORDS: u32 = 10;
+const COMPACT_RECORDS: u32 = 14;
 
 const fn newest(formats: &[Format]) -> u32 {
     match formats.split_last() {
@@ -401,7 +401,7 @@ pub struct Journal {
     /// The segments `catalog.snap` lists, and the photos they hold (see [`crate::segments`]).
     segments: Vec<Segment>,
     baseline: Photos,
-    /// `catalog.snap` itself holds photos: a one-file library (formats up to 10, or written
+    /// `catalog.snap` itself holds photos: a one-file library (formats up to 14, or written
     /// where there are no segments).
     inline_photos: bool,
     /// The snapshot read when the library was opened listed segments (see
@@ -731,7 +731,7 @@ fn snapshot_head_in(version: u32, seq: u64) -> String {
 }
 
 /// Write the snapshot of the state after op `seq` as one file in the older format `version`
-/// (10: the photos in `catalog.snap`, no segments), as a build of that format wrote it. Used
+/// (14: the photos in `catalog.snap`, no segments), as a build of that format wrote it. Used
 /// where the upgrade can't be done (the files of that format can't be kept, or the new snapshot
 /// can't be written), so that the library is not upgraded, and what is only in memory is still
 /// saved. An error leaves the snapshot before this one as it was.
@@ -758,7 +758,7 @@ fn write_one_file_snapshot(store: &mut dyn Store, seq: u64, version: u32, catalo
 struct SnapHeader {
     format: String,
     version: u32,
-    /// What a record's missing develop settings read as (from format 10 on).
+    /// What a record's missing develop settings read as (from format 14 on).
     #[serde(default)]
     defaults: Option<serde_json::Value>,
 }
@@ -771,7 +771,7 @@ struct SnapFile {
     /// The segments that hold the catalog's photos (none: `catalog` holds them itself).
     #[serde(default)]
     segments: Vec<Segment>,
-    /// How many photos the catalog has (format 11 on): a list of segments that doesn't add up to
+    /// How many photos the catalog has (format 15 on): a list of segments that doesn't add up to
     /// this is not the one that was written.
     #[serde(default)]
     photos: Option<u64>,
@@ -838,7 +838,7 @@ impl Journal {
         // (dropped once the snapshot, its segments and the log are read: their records are read
         // over the library's own defaults where those are not this build's)
         let mut reading = None;
-        // (the snapshot says what its records' missing develop settings read as: from format 10)
+        // (the snapshot says what its records' missing develop settings read as: from format 14)
         let mut states_defaults = false;
         let (mut catalog, snapshot_seq, snapshot_version) = match &snap {
             Some(bytes) => {

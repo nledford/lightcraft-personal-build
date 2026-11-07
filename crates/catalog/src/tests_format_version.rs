@@ -265,8 +265,8 @@ fn op_variants_are_versioned() {
             Op::SetHistoryCursor { .. } => 8,
         }
     }
-    // (formats 9 to 11 added no op: 9 added fields, 10 changed how records are stored,
-    // `crate::stored`, and 11 where, `crate::segments`)
+    // (formats 9 to 15 added no op: 9 to 13 added fields, 14 changed how records are stored,
+    // `crate::stored`, and 15 where, `crate::segments`)
     let newest = since(&Op::SetHistoryCursor { id: PhotoId(1), cursor: None });
     // the newest format in this build that adds an op is the newest op's, and says so
     let adds_an_op = crate::journal::newest_op_format(FORMATS).expect("a format adds an op");
@@ -304,6 +304,12 @@ fn a_format_number_means_one_format() {
     assert_eq!(here, (1..=VERSION).collect::<Vec<_>>(), "this build has every format up to the one it writes, and none after");
 }
 
+/// The formats this build has that carry no fixture: 10 to 13 came with main, from builds whose libraries are not kept
+/// here (a fixture is what that build wrote, so none is made up). The fixtures of 14 and 15 were written by the builds
+/// of the chain that took 10 and 11 there: their snapshot headers say the numbers the formats have in this build, and
+/// nothing else was changed (a segment's own header is as it was written).
+const WITHOUT_FIXTURE: [u32; 4] = [10, 11, 12, 13];
+
 /// The library a format's fixture holds (`fixtures/v<N>-…`, written by the build of format `N`):
 /// its files, by their names in the library.
 fn fixture(version: u32) -> Option<Vec<(&'static str, &'static str)>> {
@@ -312,12 +318,12 @@ fn fixture(version: u32) -> Option<Vec<(&'static str, &'static str)>> {
         7 => Some(vec![(SNAPSHOT, include_str!("fixtures/v7-catalog.snap.json")), (LOG, include_str!("fixtures/v7-catalog.log.jsonl"))]),
         8 => Some(vec![(SNAPSHOT, include_str!("fixtures/v8-catalog.snap.json")), (LOG, include_str!("fixtures/v8-catalog.log.jsonl"))]),
         9 => Some(vec![(SNAPSHOT, include_str!("fixtures/v9-catalog.snap.json")), (LOG, include_str!("fixtures/v9-catalog.log.jsonl"))]),
-        10 => Some(vec![(SNAPSHOT, include_str!("fixtures/v10-catalog.snap.json")), (LOG, include_str!("fixtures/v10-catalog.log.jsonl"))]),
-        // (in segments, which is what format 11 adds)
-        11 => Some(vec![
-            (SNAPSHOT, include_str!("fixtures/v11-catalog.snap.json")),
-            (LOG, include_str!("fixtures/v11-catalog.log.jsonl")),
-            ("segments/7-3.json", include_str!("fixtures/v11-segments-7-3.json")),
+        14 => Some(vec![(SNAPSHOT, include_str!("fixtures/v14-catalog.snap.json")), (LOG, include_str!("fixtures/v14-catalog.log.jsonl"))]),
+        // (in segments, which is what format 15 adds)
+        15 => Some(vec![
+            (SNAPSHOT, include_str!("fixtures/v15-catalog.snap.json")),
+            (LOG, include_str!("fixtures/v15-catalog.log.jsonl")),
+            ("segments/7-3.json", include_str!("fixtures/v15-segments-7-3.json")),
         ]),
         _ => None,
     }
@@ -334,13 +340,17 @@ fn store_of(files: &[(&'static str, &'static str)]) -> MemStore {
 
 /// Given a library written by the build of each format from 6 on (its fixture), when this build
 /// opens it, then it reads as that library and is left in this build's format. A format whose
-/// change is not in this build yet has no fixture here; every other one must have its own.
+/// change is not in this build yet has no fixture here, nor do the ones in [`WITHOUT_FIXTURE`]; every other one must have its own.
 #[test]
 fn every_format_has_a_fixture_that_opens_as_it_was() {
     for f in FORMATS.iter().filter(|f| f.version >= 6) {
         let expected = crate::tests_stored::fixture_library(f.version);
         let Some(files) = fixture(f.version) else {
-            assert!(!f.here, "format {} has no fixture (tests_stored::write_this_formats_fixture writes it)", f.version);
+            assert!(
+                !f.here || WITHOUT_FIXTURE.contains(&f.version),
+                "format {} has no fixture (tests_stored::write_this_formats_fixture writes it)",
+                f.version
+            );
             continue;
         };
         assert!(f.here, "format {} has a fixture: it is in this build", f.version);
@@ -354,8 +364,11 @@ fn every_format_has_a_fixture_that_opens_as_it_was() {
         assert_eq!(snapshot_version(&m), u64::from(VERSION), "v{}", f.version);
     }
     // the format that put the photos in segments has a fixture that is in segments
-    let v11 = fixture(11).unwrap();
-    assert!(v11.iter().any(|(name, _)| name.starts_with(crate::journal::SEGMENT_PREFIX)) && v11[0].1.contains("\"photos\":{}"));
+    let v15 = fixture(15).unwrap();
+    assert!(v15.iter().any(|(name, _)| name.starts_with(crate::journal::SEGMENT_PREFIX)) && v15[0].1.contains("\"photos\":{}"));
+    for version in WITHOUT_FIXTURE {
+        assert!(fixture(version).is_none(), "format {version} is listed as having no fixture");
+    }
 }
 
 // ---- an upgrade keeps what it replaces

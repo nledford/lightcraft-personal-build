@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 use crate::tests_stored::{base, edited, rich};
 use crate::{HistoryStep, Version, stored};
 
-/// What a record holds of develop settings, stored the way format 10 records are.
+/// What a record holds of develop settings, stored the way format 14 records are.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 struct Record {
     #[serde(serialize_with = "stored::settings", deserialize_with = "stored::read_settings")]

@@ -228,7 +228,7 @@
   of the creation removes the folder and its row, Redo brings both back. Renaming or moving the folder in
   LightCraft takes the row along. A folder you rename or delete outside LightCraft keeps its row, empty, like a folder
   whose photos are missing.
-  The catalog format is now version 13 (`FolderRecord.made`). Once this version has opened a library, older versions
+  The catalog format is now version 15 (`FolderRecord.made` came with 13). Once this version has opened a library, older versions
   refuse it, as with every format change.
 
 ### The Edit menu groups Select Only Active Photo and Paste Settings from Previous with their kin
@@ -398,13 +398,13 @@
 - Segment files that a crash left beside a library are removed the next time it is opened, and a library folder that has
   segment files but no `catalog.snap` (a folder copied in part, or a `catalog.snap` that was removed) is no longer
   opened as a new, empty library: LightCraft says that the snapshot is missing and changes nothing.
-- Libraries are upgraded when first opened (catalog format 11) and can't be opened by earlier versions afterwards.
+- Libraries are upgraded when first opened (catalog format 15) and can't be opened by earlier versions afterwards.
   The photos of a library in a folder on disk are split into segments only once the segments written read back the
-  same. A library from before format 10 whose upgrade can't be written (a full disk, a folder that can't be written
+  same. A library from before format 14 whose upgrade can't be written (a full disk, a folder that can't be written
   to) or whose files can't be kept is not opened: LightCraft says why and leaves its catalog as it was, and it opens
-  once there is room. A new library that can't be created is refused in the same way. A format 10 library in that case
+  once there is room. A new library that can't be created is refused in the same way. A format 14 library in that case
   opens as it is and is upgraded by a later save, which keeps its files first; changes that could not be logged are
-  saved in format 10, in one file, so that none is lost.
+  saved in format 14, in one file, so that none is lost.
 
 ### A right-click on a text field while you carry photos opens no menu
 - While you drag photos from the grid, a right-click on a text field, such as the search box, opens no Cut, Copy and

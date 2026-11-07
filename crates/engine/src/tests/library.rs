@@ -952,13 +952,13 @@ fn the_hold_of_the_view_is_kept_with_the_library_and_holds_nothing_over_from_ano
 fn closing_a_library_whose_upgrade_is_put_off_succeeds_when_everything_is_logged() {
     let dir = temp_dir("put-off-close");
     std::fs::create_dir_all(&dir).unwrap();
-    std::fs::write(dir.join("catalog.snap"), include_str!("../../../catalog/src/fixtures/v10-catalog.snap.json")).unwrap();
-    std::fs::write(dir.join("catalog.log"), include_str!("../../../catalog/src/fixtures/v10-catalog.log.jsonl")).unwrap();
+    std::fs::write(dir.join("catalog.snap"), include_str!("../../../catalog/src/fixtures/v14-catalog.snap.json")).unwrap();
+    std::fs::write(dir.join("catalog.log"), include_str!("../../../catalog/src/fixtures/v14-catalog.log.jsonl")).unwrap();
     // (the names the kept files would have, for the change the library is at when it is opened
     // (10) and when it is closed, after an edit)
     for seq in 10..=14 {
         for kept in ["catalog.snap", "catalog.log"] {
-            std::fs::create_dir(dir.join(format!("{kept}.v10-{seq}"))).unwrap();
+            std::fs::create_dir(dir.join(format!("{kept}.v14-{seq}"))).unwrap();
         }
     }
     let mut s = open(&dir, false);

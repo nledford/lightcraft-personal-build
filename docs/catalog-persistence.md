@@ -9,8 +9,8 @@ The catalog is saved in the library folder by `crates/catalog/src/journal.rs`:
   name say which photos it starts at and at which change it was written; what tells LightCraft which photos a segment
   holds is the list in `catalog.snap`.
 
-This page covers when the log is compacted and what it costs, catalog formats 10 (what a record states, and what a
-record's missing values read as) and 11 (the photos in segments), and what happens to a library's files when a newer
+This page covers when the log is compacted and what it costs, catalog formats 14 (what a record states, and what a
+record's missing values read as) and 15 (the photos in segments), and what happens to a library's files when a newer
 version opens it.
 
 ## When the log is compacted
@@ -65,8 +65,8 @@ A photo's record states only what was set (`crates/catalog/src/stored.rs`):
 - develop settings (the photo's, and those of its history steps, versions and import look) are stored as their
   difference from the defaults: `{}` for a photo nobody edited.
 
-Reading did not change: a missing field reads as its default, so libraries of formats 1 to 9 load as they are and are
-rewritten in format 10 when first opened. Builds before format 10 refuse a format 10 library. A new library whose
+Reading did not change: a missing field reads as its default, so libraries of formats 1 to 13 load as they are and are
+rewritten in format 14 when first opened. Builds before format 14 refuse a format 14 library. A new library whose
 `catalog.snap` can't be written (a full disk, a read-only volume) is not opened either, since what was added to its log
 would leave out defaults that nothing states.
 
@@ -85,7 +85,7 @@ Three rules keep what is left out safe:
 - **The library says what a missing value reads as.** `catalog.snap` states it (`"defaults"`: the settings of a
   record with nothing stated, about 2.8 kB once per library), and that covers the log beside it. Every setting is
   stated, also the few whose own JSON is left out at their default (the white balance scale, the HDR section, the
-  camera's local tone, Denoise on or off); only the rendering process is not, since a record without one is on the
+  camera's local tone, Denoise on or off, Remove Hot Pixels); only the rendering process is not, since a record without one is on the
   first process in every build. So what a photo's record means does not depend on the defaults of the LightCraft that
   reads it:
   - a build with the same defaults reads the records as they are, at no cost;
@@ -93,7 +93,7 @@ Three rules keep what is left out safe:
     over), and one that has settings the library never heard of reads them as its own default, then rewrites the
     library to state them before a record that leaves them out is added (`LoadReport::defaults_added`). If that rewrite
     can't be written (a full disk, a read-only volume) the library still opens, and its records state develop settings
-    whole, as formats before 10 did, until a snapshot (a compaction, or closing) succeeds; then compact records start.
+    whole, as formats before 14 did, until a snapshot (a compaction, or closing) succeeds; then compact records start.
     A crash at any point leaves the old files whole, or a header that states every setting before any compact record;
   - a build whose defaults differ reads every record over the library's own, then rewrites the library with its own
     before anything is added to it (`LoadReport::other_defaults`). If that rewrite can't be written, the library is
@@ -119,12 +119,12 @@ one-way step, the upgrade first keeps the files the library was, byte for byte, 
   after it takes them away. The files a later snapshot keeps (below) stay too, even if that snapshot then fails and
   the library is still in its old format.
 - A library that can't be kept, or whose upgrade can't be written (a full disk, a folder that can't be written to),
-  is not opened where working in it as it is would not be safe: one in a format before 10 (builds of those formats
+  is not opened where working in it as it is would not be safe: one in a format before 14 (builds of those formats
   read a setting a record leaves out as their own default), or one that states other defaults than this version's.
   The error says why, and the catalog is not changed (a torn last record of its log is still cut off, as on any
   open). If what is on disk after a failed write can't be read back to say whether the upgrade was written, the
   library is refused too (its way back stays).
-  A library in format 10 or later, which states its defaults, opens as it is (if it lacks a setting this version has,
+  A library in format 14 or later, which states its defaults, opens as it is (if it lacks a setting this version has,
   records are written whole until the snapshot that upgrades it, which keeps its files first): a later snapshot, during
   the session or when it is closed, upgrades it, keeps the files first and is not written when they can't be kept (a
   change that could not be appended to the log is still saved when the upgrade can't be done, whether the files can't
@@ -158,10 +158,10 @@ either); changes made since, in the newer version,
 are in what was moved away and are not carried back. The `segments` folder goes with them because it holds the newer library's photos: left in place
 it only takes room.
 
-Only a library in one file (formats up to 10) is kept this way. One already in segments would need its segments kept
+Only a library in one file (formats up to 14) is kept this way. One already in segments would need its segments kept
 too; no upgrade from such a format exists yet, and a backup is the way back from a future one.
 
-## Segments (format 11)
+## Segments (format 15)
 
 A compaction used to rewrite the whole catalog. A library in a folder on disk keeps its photos in segment files
 (`crates/catalog/src/segments.rs`), and a compaction writes only the segments whose photos changed, so its cost follows
@@ -190,16 +190,16 @@ what changed, and opening a library reads its segments on several threads.
   be what `catalog.snap` states. A damaged or missing segment fails the open with an error naming the file, and
   nothing is modified. Segment files without a `catalog.snap` are refused, not opened as a new library, unless the
   log holds every change from the first (a library whose first snapshot never finished).
-- **Upgrade.** A one-file library (formats up to 10) is split when first opened: the segments are written, read back
+- **Upgrade.** A one-file library (formats up to 14) is split when first opened: the segments are written, read back
   and compared with the photos that were loaded, and only then does the new `catalog.snap` replace the old one. If
-  they don't read back the same, the one file stays: a format 10 library opens from it as before (and the next open,
+  they don't read back the same, the one file stays: a format 14 library opens from it as before (and the next open,
   a later compaction and quitting try again, keeping the files first (once, until changes are saved in the old format), see "Going back to an older
   version"),
   an older one is not opened.
 - **Stores without segments.** The browser build keeps the photos in `catalog.snap` itself (its storage holds a fixed
   set of files). Either layout is read wherever it is found; a desktop library folder is not a browser library.
 
-## Measurements: only the changed segments are written (format 11)
+## Measurements: only the changed segments are written (format 15)
 
 `cargo run --release -p lightcraft-catalog --example persist_bench -- <scratch dir> 300000`, one run of each on an
 Apple M1 Max (internal SSD) on 2026-10-25, with other builds running on the machine (a load average of 15 to 40), so read

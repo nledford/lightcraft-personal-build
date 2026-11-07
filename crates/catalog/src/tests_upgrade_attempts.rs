@@ -2,7 +2,7 @@
 //! it was at open, kept once however many attempts fail, and told once the one that works is
 //! written. A child of `journal` because it sets the private `behind` (a library whose upgrade
 //! was put off at open) by hand, so each failure of the attempts can be made at will. The store
-//! here is a one-file store (it doesn't take the segments of format 11).
+//! here is a one-file store (it doesn't take the segments of format 15).
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

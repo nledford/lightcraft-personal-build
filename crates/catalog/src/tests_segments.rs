@@ -586,11 +586,11 @@ fn segments_beside_a_one_file_snapshot_are_left_alone() {
     drop(j);
     let newer = segment_files(&m);
     let newer_bytes: Vec<Vec<u8>> = newer.iter().map(|n| m.get(n).unwrap()).collect();
-    let old = include_str!("fixtures/v10-catalog.snap.json");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
     m.set(SNAPSHOT, old.as_bytes().to_vec());
     m.set(LOG, Vec::new());
     let (mut j, back, r) = Journal::open(Box::new(m.clone())).unwrap();
-    assert_eq!((back.len(), r.upgraded_from), (3, Some(10)));
+    assert_eq!((back.len(), r.upgraded_from), (3, Some(14)));
     j.remove_unlisted_segments();
     for (name, bytes) in newer.iter().zip(&newer_bytes) {
         assert_eq!(m.get(name).as_ref(), Some(bytes), "{name}");
@@ -861,15 +861,15 @@ fn only_segment_files_are_ever_read_or_removed() {
     }
 }
 
-/// Given a library saved in one file (format 10: `fixtures/v10-catalog.*`, written by that build,
+/// Given a library saved in one file (format 14: `fixtures/v14-catalog.*`, written by that build,
 /// with a log of later changes), when it is opened, then it reads as it was and is rewritten in
 /// segments.
 #[test]
-fn a_v10_library_loads_and_is_split_into_segments() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
-    assert!(old.starts_with(r#"{"format":"lightcraft-catalog","version":10,"#));
-    // what the format 10 build reads from these files: the single-file loader, unchanged
+fn a_v14_library_loads_and_is_split_into_segments() {
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
+    assert!(old.starts_with(r#"{"format":"lightcraft-catalog","version":14,"#));
+    // what the format 14 build reads from these files: the single-file loader, unchanged
     let v: Value = serde_json::from_str(old).unwrap();
     let mut expected = Catalog::from_snapshot(&v["catalog"].to_string()).unwrap();
     expected.replay(&log.lines().map(|l| serde_json::from_str::<Value>(l).unwrap()["op"].to_string() + "\n").collect::<String>()).unwrap();
@@ -879,7 +879,7 @@ fn a_v10_library_loads_and_is_split_into_segments() {
     m.set(SNAPSHOT, old.as_bytes().to_vec());
     m.set(LOG, log.as_bytes().to_vec());
     let (j, loaded, r) = Journal::open(Box::new(m.clone())).unwrap();
-    assert_eq!((r.replayed, r.failed, r.upgraded_from), (log.lines().count(), 0, Some(10)));
+    assert_eq!((r.replayed, r.failed, r.upgraded_from), (log.lines().count(), 0, Some(14)));
     assert_same(&loaded, &expected);
     assert_eq!(manifest(&m)["version"].as_u64(), Some(u64::from(VERSION)));
     assert_eq!(manifest(&m)["catalog"]["photos"], serde_json::json!({}));
@@ -972,8 +972,8 @@ impl Store for Garbling {
 /// nothing of the failed attempt is left, and the split is tried again at the next open.
 #[test]
 fn a_split_that_does_not_read_back_keeps_the_one_file() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
     let store = Garbling::default();
     store.files.set(SNAPSHOT, old.as_bytes().to_vec());
     store.files.set(LOG, log.as_bytes().to_vec());
@@ -995,7 +995,7 @@ fn a_split_that_does_not_read_back_keeps_the_one_file() {
     assert!(segment_files(&store.files).is_empty());
     *store.garble.lock().unwrap() = false;
     let (_, again, r) = Journal::open(Box::new(store.clone())).unwrap();
-    assert_eq!(r.upgraded_from, Some(10));
+    assert_eq!(r.upgraded_from, Some(14));
     assert_same(&again, &loaded);
     assert_eq!(segment_files(&store.files), listed(&store.files));
 }
@@ -1004,8 +1004,8 @@ fn a_split_that_does_not_read_back_keeps_the_one_file() {
 /// and the files it was are kept (no upgrade without a way back), and it is no longer put off.
 #[test]
 fn a_compaction_by_hand_of_a_library_put_off_keeps_the_old_files() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
     let store = Garbling::default();
     store.files.set(SNAPSHOT, old.as_bytes().to_vec());
     store.files.set(LOG, log.as_bytes().to_vec());
@@ -1015,8 +1015,8 @@ fn a_compaction_by_hand_of_a_library_put_off_keeps_the_old_files() {
     *store.garble.lock().unwrap() = false;
     let seq = j.seq();
     j.snapshot(&loaded).unwrap();
-    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v10-{seq}")).as_deref(), Some(old.as_bytes()));
-    assert_eq!(store.files.get(&format!("{LOG}.v10-{seq}")).as_deref(), Some(log.as_bytes()));
+    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v14-{seq}")).as_deref(), Some(old.as_bytes()));
+    assert_eq!(store.files.get(&format!("{LOG}.v14-{seq}")).as_deref(), Some(log.as_bytes()));
     // the upgrade has happened: it is no longer put off
     assert!(!j.upgrade_put_off(), "still put off after the compaction by hand");
     let mut loaded = loaded;
@@ -1034,8 +1034,8 @@ fn a_compaction_by_hand_of_a_library_put_off_keeps_the_old_files() {
 /// and opens again with its changes replayed from the log.
 #[test]
 fn closing_a_library_put_off_upgrades_it_only_with_the_old_files_kept() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
     let store = Garbling::default();
     store.files.set(SNAPSHOT, old.as_bytes().to_vec());
     store.files.set(LOG, log.as_bytes().to_vec());
@@ -1058,8 +1058,8 @@ fn closing_a_library_put_off_upgrades_it_only_with_the_old_files_kept() {
 /// snapshot (changes included) and upgrades.
 #[test]
 fn unlogged_changes_are_saved_in_the_old_format_where_the_old_files_cannot_be_kept() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
     let store = Garbling::default();
     store.files.set(SNAPSHOT, old.as_bytes().to_vec());
     store.files.set(LOG, log.as_bytes().to_vec());
@@ -1072,7 +1072,7 @@ fn unlogged_changes_are_saved_in_the_old_format_where_the_old_files_cannot_be_ke
     loaded.apply(op).unwrap();
     j.snapshot_with_unlogged(&loaded, 1).unwrap();
     assert_eq!(j.seq(), before + 1, "the change is in the snapshot");
-    assert_eq!(manifest(&store.files)["version"], 10, "still the format on disk");
+    assert_eq!(manifest(&store.files)["version"], 14, "still the format on disk");
     assert!(manifest(&store.files).get("segments").is_none(), "one file, as that format is written");
     assert!(segment_files(&store.files).is_empty() && store.files.get(LOG).is_some_and(|l| l.is_empty()));
     assert!(j.upgrade_put_off(), "the upgrade is still to be done");
@@ -1088,7 +1088,7 @@ fn unlogged_changes_are_saved_in_the_old_format_where_the_old_files_cannot_be_ke
     let seq = j.seq();
     j.snapshot(&again).unwrap();
     assert_eq!(manifest(&store.files)["version"], u64::from(VERSION));
-    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v10-{seq}")), Some(saved));
+    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v14-{seq}")), Some(saved));
     assert_same(&reopen(&store.files), &loaded);
 }
 
@@ -1098,8 +1098,8 @@ fn unlogged_changes_are_saved_in_the_old_format_where_the_old_files_cannot_be_ke
 /// prefix of the log as it has grown since (which would cut a record).
 #[test]
 fn the_upgrade_after_a_save_in_the_old_format_keeps_that_snapshot_in_the_same_session() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
     let store = Garbling::default();
     store.files.set(SNAPSHOT, old.as_bytes().to_vec());
     store.files.set(LOG, log.as_bytes().to_vec());
@@ -1115,11 +1115,11 @@ fn the_upgrade_after_a_save_in_the_old_format_keeps_that_snapshot_in_the_same_se
     assert!(store.files.get(LOG).is_some_and(|l| !l.is_empty()), "the log has grown since the save");
     *store.refuse_kept.lock().unwrap() = false;
     j.snapshot(&loaded).unwrap();
-    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v10-{seq}")), Some(saved));
-    assert!(store.files.get(&format!("{LOG}.v10-{seq}")).is_none_or(|l| l.is_empty()), "the log as it was when that snapshot was written");
+    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v14-{seq}")), Some(saved));
+    assert!(store.files.get(&format!("{LOG}.v14-{seq}")).is_none_or(|l| l.is_empty()), "the log as it was when that snapshot was written");
     let mut told = j.take_kept();
     told.sort();
-    let on_disk: Vec<String> = store.files.files.lock().unwrap().keys().filter(|k| k.contains(".v10-")).cloned().collect();
+    let on_disk: Vec<String> = store.files.files.lock().unwrap().keys().filter(|k| k.contains(".v14-")).cloned().collect();
     assert_eq!(told, on_disk, "told what is kept, once written");
     drop(j);
     assert_same(&reopen(&store.files), &loaded);
@@ -1131,8 +1131,8 @@ fn the_upgrade_after_a_save_in_the_old_format_keeps_that_snapshot_in_the_same_se
 /// gone again (nothing was upgraded).
 #[test]
 fn unlogged_changes_are_saved_in_the_old_format_where_the_upgrade_cannot_be_written() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
     let store = Garbling::default();
     store.files.set(SNAPSHOT, old.as_bytes().to_vec());
     store.files.set(LOG, log.as_bytes().to_vec());
@@ -1140,9 +1140,9 @@ fn unlogged_changes_are_saved_in_the_old_format_where_the_upgrade_cannot_be_writ
     let (mut j, mut loaded, _) = Journal::open(Box::new(store.clone())).unwrap();
     loaded.apply(Op::SetRating { id: PhotoId(8), rating: 4 }).unwrap();
     j.snapshot_with_unlogged(&loaded, 1).unwrap();
-    assert_eq!(manifest(&store.files)["version"], 10);
+    assert_eq!(manifest(&store.files)["version"], 14);
     assert!(segment_files(&store.files).is_empty());
-    assert!(store.files.files.lock().unwrap().keys().all(|k| !k.contains(".v10-")), "no copy of a try that upgraded nothing");
+    assert!(store.files.files.lock().unwrap().keys().all(|k| !k.contains(".v14-")), "no copy of a try that upgraded nothing");
     drop(j);
     assert_same(&reopen(&store.files), &loaded);
 }
@@ -1152,8 +1152,8 @@ fn unlogged_changes_are_saved_in_the_old_format_where_the_upgrade_cannot_be_writ
 /// but the old format can't be written either, it fails with the keeping error and changes nothing.
 #[test]
 fn nothing_is_written_where_neither_the_upgrade_nor_the_old_format_can_be() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
     let store = Garbling::default();
     store.files.set(SNAPSHOT, old.as_bytes().to_vec());
     store.files.set(LOG, log.as_bytes().to_vec());
@@ -1176,8 +1176,8 @@ fn nothing_is_written_where_neither_the_upgrade_nor_the_old_format_can_be() {
 /// been upgraded would drop its segments.
 #[test]
 fn nothing_is_saved_in_the_old_format_over_a_disk_that_cannot_be_read() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
     let store = Garbling::default();
     store.files.set(SNAPSHOT, old.as_bytes().to_vec());
     store.files.set(LOG, log.as_bytes().to_vec());
@@ -1194,8 +1194,8 @@ fn nothing_is_saved_in_the_old_format_over_a_disk_that_cannot_be_read() {
 /// again): the wait is counted from that snapshot, not from the log it emptied.
 #[test]
 fn the_upgrade_is_tried_again_a_compactions_worth_after_the_old_format_save() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
     let store = Garbling::default();
     store.files.set(SNAPSHOT, old.as_bytes().to_vec());
     store.files.set(LOG, log.as_bytes().to_vec());
@@ -1213,8 +1213,8 @@ fn the_upgrade_is_tried_again_a_compactions_worth_after_the_old_format_save() {
 /// (the rename took effect), then the files it was are kept, not removed as if nothing happened.
 #[test]
 fn a_compaction_that_failed_after_its_commit_keeps_the_old_files() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
     let store = Garbling::default();
     store.files.set(SNAPSHOT, old.as_bytes().to_vec());
     store.files.set(LOG, log.as_bytes().to_vec());
@@ -1224,21 +1224,21 @@ fn a_compaction_that_failed_after_its_commit_keeps_the_old_files() {
     *store.fail_after_snap.lock().unwrap() = true;
     let kept_seq = j.seq();
     assert!(j.snapshot_with_unlogged(&loaded, 2).is_err());
-    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v10-{kept_seq}")).as_deref(), Some(old.as_bytes()), "the way back stays");
+    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v14-{kept_seq}")).as_deref(), Some(old.as_bytes()), "the way back stays");
     assert!(!j.upgrade_put_off(), "the upgrade is done all the same");
-    assert_eq!(j.take_kept(), [format!("{SNAPSHOT}.v10-{kept_seq}"), format!("{LOG}.v10-{kept_seq}")], "and the files kept are told");
+    assert_eq!(j.take_kept(), [format!("{SNAPSHOT}.v14-{kept_seq}"), format!("{LOG}.v14-{kept_seq}")], "and the files kept are told");
     // and a later compaction (the one on quit) does not keep the new format's head over them
     *store.fail_after_snap.lock().unwrap() = false;
     j.snapshot(&loaded).unwrap();
-    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v10-{kept_seq}")).as_deref(), Some(old.as_bytes()), "still the way back");
+    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v14-{kept_seq}")).as_deref(), Some(old.as_bytes()), "still the way back");
 }
 
 /// The same where the compaction is written by the background worker: the failure that comes
 /// after the commit is the upgrade done, and the files kept are told.
 #[test]
 fn a_background_compaction_that_failed_after_its_commit_is_the_upgrade_done() {
-    let old = include_str!("fixtures/v10-catalog.snap.json");
-    let log = include_str!("fixtures/v10-catalog.log.jsonl");
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
     let store = Garbling::default();
     store.files.set(SNAPSHOT, old.as_bytes().to_vec());
     store.files.set(LOG, log.as_bytes().to_vec());
@@ -1252,8 +1252,8 @@ fn a_background_compaction_that_failed_after_its_commit_is_the_upgrade_done() {
     assert!(j.wait().is_err(), "the worker's write took effect and was said to have failed");
     assert_eq!(manifest(&store.files)["version"], u64::from(VERSION));
     assert!(!j.upgrade_put_off(), "the upgrade is done all the same");
-    assert_eq!(j.take_kept(), [format!("{SNAPSHOT}.v10-{kept_seq}"), format!("{LOG}.v10-{kept_seq}")], "and the files kept are told");
-    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v10-{kept_seq}")).as_deref(), Some(old.as_bytes()), "the way back stays");
+    assert_eq!(j.take_kept(), [format!("{SNAPSHOT}.v14-{kept_seq}"), format!("{LOG}.v14-{kept_seq}")], "and the files kept are told");
+    assert_eq!(store.files.get(&format!("{SNAPSHOT}.v14-{kept_seq}")).as_deref(), Some(old.as_bytes()), "the way back stays");
 }
 
 /// A store without segments (the browser's): the photos stay in `catalog.snap`, and the

@@ -306,15 +306,15 @@ fn an_upgraded_library_says_where_what_it_was_is_kept() {
 fn library_that_could_not_keep_its_files(name: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(format!("lightcraft-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(dir.join("catalog.snap.v10-10")).unwrap();
-    std::fs::write(dir.join("catalog.snap.v10-10").join("in the way"), b"x").unwrap();
-    std::fs::write(dir.join("catalog.snap"), include_str!("../../../catalog/src/fixtures/v10-catalog.snap.json")).unwrap();
-    std::fs::write(dir.join("catalog.log"), include_str!("../../../catalog/src/fixtures/v10-catalog.log.jsonl")).unwrap();
+    std::fs::create_dir_all(dir.join("catalog.snap.v14-10")).unwrap();
+    std::fs::write(dir.join("catalog.snap.v14-10").join("in the way"), b"x").unwrap();
+    std::fs::write(dir.join("catalog.snap"), include_str!("../../../catalog/src/fixtures/v14-catalog.snap.json")).unwrap();
+    std::fs::write(dir.join("catalog.log"), include_str!("../../../catalog/src/fixtures/v14-catalog.log.jsonl")).unwrap();
     dir
 }
 
-/// The names of the files kept for format 10 in `dir`.
-fn kept_for_v10(dir: &std::path::Path, prefix: &str) -> Vec<String> {
+/// The names of the files kept for format 14 in `dir`.
+fn kept_for_v14(dir: &std::path::Path, prefix: &str) -> Vec<String> {
     let mut names: Vec<String> = std::fs::read_dir(dir)
         .unwrap()
         .map(|e| e.unwrap())
@@ -336,9 +336,9 @@ fn a_later_upgrade_says_where_what_it_was_is_kept() {
     s.open_library(&dir, false).unwrap();
     assert!(s.take_library_warnings().iter().all(|w| !w.contains("upgraded")), "not upgraded at open");
     assert!(s.compact_library().is_err(), "its files can't be kept yet");
-    std::fs::remove_dir_all(dir.join("catalog.snap.v10-10")).unwrap();
+    std::fs::remove_dir_all(dir.join("catalog.snap.v14-10")).unwrap();
     s.compact_library().unwrap();
-    let (snap, log) = (kept_for_v10(&dir, "catalog.snap.v10-"), kept_for_v10(&dir, "catalog.log.v10-"));
+    let (snap, log) = (kept_for_v14(&dir, "catalog.snap.v14-"), kept_for_v14(&dir, "catalog.log.v14-"));
     assert_eq!((snap.len(), log.len()), (1, 1), "the files as they were are kept");
     let told = s.take_library_warnings();
     assert!(told.iter().any(|w| w.contains(&snap[0]) && w.contains(&log[0]) && w.contains("delete")), "{told:?}");
@@ -358,7 +358,7 @@ fn a_background_upgrade_says_where_what_it_was_is_kept() {
     let mut s = Session::new();
     s.open_library(&dir, false).unwrap();
     let _ = s.take_library_warnings();
-    std::fs::remove_dir_all(dir.join("catalog.snap.v10-10")).unwrap();
+    std::fs::remove_dir_all(dir.join("catalog.snap.v14-10")).unwrap();
     s.compact_soon();
     let started = std::time::Instant::now();
     let mut told = Vec::new();
@@ -367,7 +367,7 @@ fn a_background_upgrade_says_where_what_it_was_is_kept() {
         s.persist().unwrap();
         told = s.take_library_warnings();
     }
-    let (snap, log) = (kept_for_v10(&dir, "catalog.snap.v10-"), kept_for_v10(&dir, "catalog.log.v10-"));
+    let (snap, log) = (kept_for_v14(&dir, "catalog.snap.v14-"), kept_for_v14(&dir, "catalog.log.v14-"));
     assert_eq!((snap.len(), log.len()), (1, 1));
     assert!(told.iter().any(|w| w.contains(&snap[0]) && w.contains(&log[0])), "{told:?}");
     s.persist().unwrap();
