@@ -254,7 +254,6 @@
   `folder.rename` and `folder.move` commands now refuse the home folder and its Pictures, Desktop and Downloads too,
   so a script or an agent can't do it either.
 
-
 ## 2026-10-27
 
 ### A folder made with New Folder on Disk… appears in Folders at once
@@ -365,7 +364,6 @@
   declared totals agree, and every APP2 segment is complete. Reordered valid chunks still work. An invalid
   sequence uses the existing unsupported-profile sRGB fallback, including when the JPEG is a raw preview.
 
-
 ## 2026-10-25
 
 ### `>=` and `<=` work in the search box
@@ -394,7 +392,6 @@
   about 18 ms to about 10 ms between a frame being handed to macOS and macOS compositing it, with the same 120 frames
   a second. On a Mac the window also holds one drawable less: its width × height × 4 bytes, 15–22 MB for a
   1200–1500-point-wide window on a Retina display.
-
 
 ## 2026-10-24
 
@@ -510,6 +507,20 @@
   once there is room. A new library that can't be created is refused in the same way. A format 14 library in that case
   opens as it is and is upgraded by a later save, which keeps its files first; changes that could not be logged are
   saved in format 14, in one file, so that none is lost.
+
+### Menus look the same everywhere
+- Every menu row, in the menu bar, in right-click menus and in the dropdowns of the panels, now has one height, one
+  hover look and one check mark column. Where a menu lists shortcuts (the menu bar, the bottom bar's dropdowns and the
+  text-field right-click menu) a row shows its shortcut at the right edge as the menu bar does; the photo right-click
+  menu lists none. Choices that are on show a check mark that screen readers announce as checked, and a disabled
+  row can't be chosen. (The list of
+  effects in a mask's Effect menu keeps its own rows: its current effect has a check mark that screen readers don't
+  announce.)
+- Help ▸ Keyboard Shortcuts shows the fixed keys on keycaps.
+- The tooltips of the tool strip, the bottom bar's view buttons, the top bar's right-side action icons and the mask
+  overlay buttons name the key their command has now, so a key you remapped shows as remapped (the filter and
+  appearance buttons keep their plain tooltips). The tool strip's History & Activity button no longer shows a Y it
+  never had.
 
 ### A right-click on a text field while you carry photos opens no menu
 - While you drag photos from the grid, a right-click on a text field, such as the search box, opens no Cut, Copy and
@@ -744,7 +755,6 @@
   import adds some, others are removed, moved to Recently Deleted or relinked), the answer leaves out the photos that
   no longer apply, a photo added meanwhile is not part of that check, and the answer is not kept for a later request.
 
-
 ### Choose where a Lightroom catalog goes
 - File ▸ Import Lightroom Catalog… now asks first: merge the catalog's photos, collections and edits into the
   library open now, or create a new library for them, named after the catalog and placed next to the open library
@@ -804,7 +814,6 @@
   English before. So did "The download failed", shown under a denoise or face recognition model's download when the
   download gives no reason.
 
-
 ## 2026-10-22
 
 ### Exports don't create a photo's sidecar
@@ -817,7 +826,6 @@
   the brush stroke you are painting is no longer drawn in the overlay colour while you hold the button, so the photo
   stays visible as you dodge and burn (issue #2549). The stroke's effect still appears when you let go. With the
   overlay shown, the stroke is tinted as before; a colour overlay at opacity 0 leaves it untinted too.
-
 
 ### Reliability
 - Opening a library no longer writes through a link left at the lock's owner note (`catalog.lock.owner`): the link
