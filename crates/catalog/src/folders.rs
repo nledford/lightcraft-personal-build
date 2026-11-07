@@ -6,8 +6,10 @@
 //! Date counts its months. The folders made through LightCraft are listed too, empty or not, with
 //! the folders above them (see below); no other folder that holds nothing of the library is.
 //!
-//! Every folder is a row of its own, the ones above the imported photos included
-//! (`/Users` → `me` → `Pictures`), so a row is exactly the folder it names. A folder spelled two
+//! Every folder is a node of its own, the ones above the imported photos included
+//! (`/Users` → `me` → `Pictures`), so a node is exactly the folder it names. (The sidebar leaves
+//! out the rows of folders that only lead from a disk to the library's first folder there; that
+//! is its choice of what to draw, not this tree's.) A folder spelled two
 //! ways (`/` or `\`, repeated or trailing separators, `.`) is one folder (see
 //! [`crate::query::folder_key`]).
 //!
