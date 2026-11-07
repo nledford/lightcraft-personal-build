@@ -33,6 +33,7 @@ pub mod restore;
 pub mod rules;
 pub mod safe_file;
 pub mod segments;
+pub mod shared;
 pub mod stacks;
 pub mod store;
 mod stored;
@@ -875,6 +876,7 @@ impl Catalog {
                 photo.trim_history();
                 let id = photo.id;
                 self.next_photo = self.next_photo.max(id.0.saturating_add(1));
+                shared::photo(&mut photo);
                 self.photos.insert(id, Arc::new(*photo));
                 Op::RemovePhoto { id }
             }
@@ -901,7 +903,7 @@ impl Catalog {
             }
             Op::SetDevelop { id, settings, label, edited } => {
                 let p = self.photo_mut(id)?;
-                let old = std::mem::replace(&mut p.develop, settings);
+                let old = std::mem::replace(&mut p.develop, shared::settings(settings));
                 let old_edit = std::mem::replace(&mut p.edited, edited);
                 Op::SetDevelop { id, settings: old, label, edited: old_edit }
             }
@@ -917,12 +919,15 @@ impl Catalog {
                 let p = self.photo_mut(id)?;
                 Op::SetLocal { id, local: std::mem::replace(&mut p.local, local) }
             }
-            Op::SetVersions { id, versions } => {
+            Op::SetVersions { id, mut versions } => {
                 let p = self.photo_mut(id)?;
+                shared::Anchor::new(p.develop.clone()).versions(&mut versions);
                 Op::SetVersions { id, versions: std::mem::replace(&mut p.versions, versions) }
             }
-            Op::SetHistory { id, history } => {
+            Op::SetHistory { id, mut history } => {
                 let p = self.photo_mut(id)?;
+                let own = shared::Anchor::new(p.develop.clone());
+                history.iter_mut().for_each(|s| own.step(s));
                 let old = std::mem::replace(&mut p.history, history);
                 let old_cursor = p.history_cursor;
                 p.trim_history();
@@ -932,8 +937,9 @@ impl Catalog {
                     Op::Batch { ops: vec![Op::SetHistory { id, history: old }, Op::SetHistoryCursor { id, cursor: old_cursor }] }
                 }
             }
-            Op::PushHistory { id, step } => {
+            Op::PushHistory { id, mut step } => {
                 let p = self.photo_mut(id)?;
+                shared::Anchor::new(p.develop.clone()).step(&mut step);
                 let old = p.history.clone();
                 let old_cursor = p.history_cursor.take();
                 // a new edit made from an earlier step drops the steps after it
@@ -1649,6 +1655,8 @@ mod tests_segments;
 mod tests_stored;
 #[cfg(test)]
 mod tests_stored_settings;
+#[cfg(test)]
+mod tests_shared;
 #[cfg(test)]
 mod tests_tally;
 #[cfg(test)]
