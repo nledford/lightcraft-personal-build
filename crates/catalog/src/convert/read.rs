@@ -342,6 +342,10 @@ fn walk<'a>(skip_settings: bool, file: &'a Value, written: &Value, defaults: Opt
     match (file, written) {
         (Value::Object(f), Value::Object(h)) => {
             for (key, value) in f {
+                // a mask that refers to the snapshot's shared grids: this build resolves the index when it reads, and a mask is never written back with one
+                if key == "grid" && f.contains_key("side") {
+                    continue;
+                }
                 let settings = SETTINGS.contains(&key.as_str());
                 if settings && skip_settings {
                     continue;

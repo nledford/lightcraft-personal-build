@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::SystemTime;
 
-use lightcraft_develop::{DevelopSettings, EmbeddedLens, LensSource, Mask, Process};
+use lightcraft_develop::{DevelopSettings, EmbeddedLens, LensSource, Mask, MaskComponent, MaskOp, MaskShape, Process, SegMask};
 use serde_json::{Value, json};
 
 use crate::convert::strip::{clear, found_in};
@@ -693,6 +693,27 @@ fn the_official_copy_shares_the_grids_as_main_does() {
     let text = serde_json::to_string(&doc["catalog"]["photos"]).unwrap();
     assert!(!text.contains("eJxjYAAAAAEAAQ=="), "the grid is in the pool and not in the records");
     assert!(text.contains(r#""grid":0"#));
+}
+
+/// A one-file snapshot refers to each distinct segmentation grid by its index in the table, and the first index is 0: masks with three
+/// grids state `grid` 0, 1 and 2, and the ones above 0 are no field this build lacks.
+#[test]
+fn masks_that_refer_to_several_shared_grids_are_no_loss() {
+    let masked = |n: u32| {
+        let seg = SegMask { side: 4, data: format!("grid-{n}"), rect: None, grid: None };
+        let shape = MaskShape::Prompt { text: "sky".into(), seg: Some(seg), detail: Vec::new(), edge: 0.0 };
+        let component = MaskComponent { name: None, op: MaskOp::default(), invert: false, shape };
+        edited(|s| s.masks = vec![Mask { id: 1, name: "Sky".into(), components: vec![component], on_photo: false, ..Mask::default() }])
+    };
+    let ops: Vec<Op> = (1..=3u32).map(|n| Op::AddPhoto { photo: Box::new(photo(u64::from(n), |p| p.develop = masked(n))) }).collect();
+    let scratch = Scratch::new("grids3");
+    let library = scratch.join("library");
+    put_store(&library, &saved(&ops, &[], true, 4));
+    assert!(fs::read_to_string(library.join(SNAPSHOT)).unwrap().contains(r#""grid":2"#), "the library refers to its third grid by index");
+    for target in [Target::Official, Target::Build7248] {
+        let report = run(&library, &scratch.join(&format!("copy-{target:?}")), target).unwrap();
+        assert!(report.losses.is_empty(), "{target:?}: {:?}", loss_ids(&report));
+    }
 }
 
 /// A copy for build 7248 is that build's layout: format 11, the header stating the defaults of its develop settings (the real
