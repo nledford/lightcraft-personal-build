@@ -932,6 +932,10 @@
   in Recently Deleted apart, since they are restored and their files stay where they are: "Move 2 Photos · Restore 1
   Photo".
 
+### Synchronize Folder can bring in files already in the library elsewhere
+- Synchronize Folder has a "Don't import files already in the library" box under Import new photos, ticked as before; unticked, files whose content a photo of another folder already has come in as photos of their own, and the library remembers the choice for next time.
+- A copy of a photo in Recently Deleted stays out either way.
+- For scripts and agents: `folder.scanChanges` now returns `duplicates` as a list of those files, each with the photo it matches (`existing`), where it used to return a count; `library.importPreview` still returns a number under `duplicates`, and `folder.synchronize` takes `importDuplicates`.
 
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a

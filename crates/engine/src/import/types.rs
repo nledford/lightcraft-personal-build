@@ -77,6 +77,10 @@ pub struct ImportOptions {
     /// one skipped as a duplicate, restored from Recently Deleted, or joined from a browsed
     /// folder (Local) is never touched, as the preset and keywords never are.
     pub recipe: Vec<(String, f64)>,
+    /// Import files whose content the library already has as new photos (Lightroom's "Don't
+    /// Import Suspected Duplicates" unchecked). A file at a path the library already lists, or one
+    /// in Recently Deleted, is still handled as a duplicate.
+    pub import_duplicates: bool,
 }
 
 /// How copies are filed in the destination. The date is the capture time, else the time of the
