@@ -1,4 +1,4 @@
-//! Settings ▸ General ▸ Backups: where the library's backups go is shown, chosen and put back to
+//! Settings ▸ Library ▸ Backups: where the library's backups go is shown, chosen and put back to
 //! the usual place there (`library.backupPreferences`), for a library that is a folder on disk.
 
 use std::path::{Path, PathBuf};
@@ -59,7 +59,7 @@ fn backup_dir(h: &mut Headless) -> Value {
     h.app.run("library.backupPreferences", json!({})).unwrap()["dir"].clone()
 }
 
-/// Given a library on disk whose backups go to the usual place, when Settings ▸ General is
+/// Given a library on disk whose backups go to the usual place, when Settings ▸ Library is
 /// open, then Backups shows that place (Backups in the library folder) and there is nothing to
 /// put back.
 #[test]

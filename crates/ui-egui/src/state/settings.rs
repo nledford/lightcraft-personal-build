@@ -203,7 +203,7 @@ pub struct AppSettings {
     /// gets a new one, or always merge (issue #2672; the window's "Don't ask again" picks that).
     #[serde(deserialize_with = "lenient")]
     pub lightroom_import: LightroomImport,
-    /// The answer to the first-launch offer of the lens database (Download / Not Now; Settings ▸ General ▸ Lens
+    /// The answer to the first-launch offer of the lens database (Download / Not Now; Settings ▸ Files ▸ Lens
     /// profiles changes it). A value this version doesn't read asks again.
     #[serde(deserialize_with = "lenient")]
     pub lens_database: lightcraft_engine::lensfun_download::Offer,

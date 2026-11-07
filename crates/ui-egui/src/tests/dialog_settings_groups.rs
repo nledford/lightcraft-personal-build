@@ -156,7 +156,13 @@ fn what_is_saved_with_a_library_in_memory_says_it_will_not_last() {
                 h.step();
             }
         }
-        assert!(h.painted_text().iter().any(|text| text == note), "{tab} says so");
+        let texts = h.painted_text();
+        assert!(texts.iter().any(|text| text == note), "{tab} says so");
+        // (on Performance it ends the page, below the preparation settings the library keeps with it)
+        if tab == "performance" {
+            let at = |what: &str| texts.iter().position(|text| text == what).unwrap_or_else(|| panic!("{what} is painted"));
+            assert!(at("Prepare photos in the background") < at(note), "the note ends the page");
+        }
     }
     // On Files it ends the tab, below the XMP setting it is about and not between it and the
     // editors, which are saved with the interface settings and last

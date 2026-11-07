@@ -1,5 +1,5 @@
 //! The lens database on request: the first launch offers lensfun's database once (its size, Download / Not Now,
-//! [`offer`]), Settings ▸ General can download it any time ([`download_default`]), and nothing is fetched without
+//! [`offer`]), Settings ▸ Files ▸ Lens profiles can download it any time ([`download_default`]), and nothing is fetched without
 //! that click (`lightcraft_engine::lensfun_download::fetch_on_start` decides; an activity row while it runs).
 //! Whenever the database in use changes
 //! (it arrived, a newer pin replaced it) or Enable Lens Corrections is ticked on a photo without a profile, the

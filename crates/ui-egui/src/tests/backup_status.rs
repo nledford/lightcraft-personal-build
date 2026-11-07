@@ -1,4 +1,4 @@
-//! Settings ▸ General ▸ Backups says where the library stands and lets a backup be made from
+//! Settings ▸ Library ▸ Backups says where the library stands and lets a backup be made from
 //! there: a line that says it comes first, with a sign and Back Up Now beside it, a caution when the folder holds no backup of the library
 //! and nothing is set to make one, a note or caution when the backups' folder is on the library's
 //! own drive, and a caution when a folder that was chosen is not there.

@@ -1,4 +1,4 @@
-//! The backup schedule in the app: chosen in Settings ▸ General ▸ Backups, a backup that is due
+//! The backup schedule in the app: chosen in Settings ▸ Library ▸ Backups, a backup that is due
 //! is made by itself while the library is open, and quitting backs the library up first where
 //! that was chosen (asking or not), then quits.
 
@@ -85,7 +85,7 @@ fn backups(dir: &Path) -> usize {
         .unwrap_or(0)
 }
 
-/// Given Settings ▸ General ▸ Backups, when "Once a week" and "Ask" are clicked, then the
+/// Given Settings ▸ Library ▸ Backups, when "Once a week" and "Ask" are clicked, then the
 /// library is to be backed up by itself once a week and asks when LightCraft quits; "Never"
 /// turns each off again.
 #[test]
@@ -392,7 +392,7 @@ fn a_key_bound_to_back_up_library_backs_up_in_the_background() {
     assert!(h.step_until(T, |_| backups(&dir) == 1));
 }
 
-/// Given Settings ▸ General ▸ Backups, when "3 months" is clicked under Keep backups, then the
+/// Given Settings ▸ Library ▸ Backups, when "3 months" is clicked under Keep backups, then the
 /// library keeps its backups for ninety days; "Forever" keeps them all again.
 #[test]
 fn how_long_backups_are_kept_is_chosen_in_settings() {

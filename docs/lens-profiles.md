@@ -10,7 +10,7 @@ run time, never bundled and never committed. Adobe LCP profiles are never used.
 1. Nothing is downloaded without the user's click. On the first launch the desktop app asks once: "Download lens
    profiles? LightCraft can correct distortion and vignetting for many lenses using the open lens database
    (lensfun, about N MB)", with **Download** and **Not Now** (N is the pinned files' sizes added up). Not Now (or
-   Esc) downloads nothing and the app doesn't ask again; Settings ▸ General ▸ Lens profiles has **Download Lens
+   Esc) downloads nothing and the app doesn't ask again; Settings ▸ Files ▸ Lens profiles has **Download Lens
    Database** and a switch that turns the offer back on. The answer is kept with the app's settings (`ui.json`,
    `lensDatabase`: `ask` / `accepted` / `declined`; a value it can't read asks again), and
    `lensfun_download::fetch_on_start` is the one place that decides. After a yes, a start that finds the database

@@ -204,14 +204,14 @@ what changed, and opening a library reads its segments on several threads.
 File ▸ Back Up Library (`library.backup`) makes a folder named after the time (UTC) that holds `catalog.snap`, the
 segments it lists, `catalog.log` and the presets, view and preferences files: the catalog, not the photos or the
 caches (`crates/catalog/src/backup.rs`). It goes to `Backups` in the library folder, to the folder set for the library
-(Settings ▸ General ▸ Backups, or `library.backupPreferences`), or to the one given with the command. A folder
+(Settings ▸ Library ▸ Backups, or `library.backupPreferences`), or to the one given with the command. A folder
 given for backups may not be one of the library's own (inside the library folder only `Backups` is for backups: the
 others are the catalog's, and a restore moves them as such), nor a backup or a folder inside one. The app makes it in the background and says in a
 toast where it went or why there is none; the command itself returns when the backup is made (`background: true` for
 the other).
 
 - **A library can be backed up without being asked.** Two choices of their own, saved with the library and off
-  until made (`library.backupPreferences`: `every`, `onClose`; Settings ▸ General ▸ Backups). While it is open, the
+  until made (`library.backupPreferences`: `every`, `onClose`; Settings ▸ Library ▸ Backups). While it is open, the
   app backs it up in the background once a day, a week or a month (thirty days), counted from the last backup made
   to the folder its backups go to, whoever made it (`lastBackup`, the session clock's time, kept in the library's
   preferences); a backup by itself that fails, or can't be started, says so and is tried again an hour later. Backed up
@@ -222,7 +222,7 @@ the other).
   folder: both are the library's choices now, not the backup's from then. Only the app a
   person has open does either: headless sessions (snapshots, agents, the command line) back up when they are told to.
 - **A library keeps its backups forever, unless told for how long** (`library.backupPreferences`, `keepDays`;
-  Settings ▸ General ▸ Backups ▸ Keep backups: 1, 3, 6 months or a year, a month being thirty days). After a backup is
+  Settings ▸ Library ▸ Backups ▸ Keep backups: 1, 3, 6 months or a year, a month being thirty days). After a backup is
   made to the folder the library's backups go to, its backups older than that are removed, each as a whole folder:
   - only after a backup that was made, never that backup, and never one of the library's newest three, however old
     they are. Age is told by clocks, and one backup made while the clock was wrong must not cost the others: a
