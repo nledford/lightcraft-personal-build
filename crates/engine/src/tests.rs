@@ -68,6 +68,7 @@ mod slow_drive;
 mod spots;
 mod sync;
 mod view_follow;
+mod view_reconcile;
 pub(super) mod xmp;
 
 fn demo() -> Session {
