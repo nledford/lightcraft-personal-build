@@ -226,7 +226,7 @@ pub fn start(app: &mut LightcraftApp, d: &ImportDialog) -> Result<Value, String>
         (true, false) => "copy",
         (true, true) => "move",
     };
-    let mut params = json!({"mode": mode, "keywords": d.keywords()});
+    let mut params = json!({"mode": mode, "keywords": d.keywords(), "read": d.read});
     if !d.recipe.is_empty() {
         params["recipe"] = recipe_items(&d.recipe);
     }

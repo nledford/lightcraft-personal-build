@@ -65,7 +65,7 @@ pub use scan::{
 use scan::{library_files, library_hashes};
 pub use types::{
     Duplicate, FileFacts, ImportCandidate, ImportMode, ImportOptions, ImportReport, ImportUprightMode, ImportWarning, ImportWarningCode, Kept, Moved,
-    OnDeleted, Organize,
+    OnDeleted, Organize, ReadChoice, ReadFromPhotos,
 };
 
 mod listed_folders;

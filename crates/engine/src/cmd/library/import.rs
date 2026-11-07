@@ -84,6 +84,10 @@ pub fn import_params(s: &Session, p: &Value) -> Result<ImportRequest> {
         local: bool_or(p, "local", false),
         recipe: crate::cmd::recipe_param(p, "library.import")?,
         import_duplicates: bool_or(p, "importDuplicates", false),
+        read: match p.get("read") {
+            None | Some(Value::Null) => Default::default(),
+            Some(read) => crate::import::ReadChoice::parse(read).map_err(|e| bad("library.import", e))?,
+        },
     };
     let album_name = str_param(p, "albumName").map(str::trim).filter(|n| !n.is_empty()).map(str::to_string);
     Ok(ImportRequest { paths, opts, album, album_name })
