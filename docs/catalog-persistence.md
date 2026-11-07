@@ -350,12 +350,14 @@ first.
   background task is running.
 - **Only in the folder the library was opened from.** The restore moves the library's files by path, so it asks the
   folder the library was opened from, as saving does, before it copies each file of the backup into the library
-  folder, before the library's files are moved, and before a move that was cut short is finished or taken back. If the
-  library's path leads to another folder by then (a share mounted over it, or the folder moved away and another put in
-  its place; noticed where the system gives a folder an identity, which is Unix so far), the restore is refused with
-  the reason and nothing is written into either folder: put the original folder back and restore again. A move that
-  was cut short, and can then be neither finished nor taken back, is the case of the next bullet. What was
-  already copied stays in the folder that was opened, and is cleared away when that library is next opened.
+  folder, before the library's files are moved, and before a move that was cut short is finished or a restored catalog
+  that doesn't open is taken back. If the library's path leads to another folder by then (a share mounted over it, or
+  the folder moved away and another put in its place; noticed where the system gives a folder an identity, which is
+  Unix so far), the restore is refused or stopped with the reason and writes nothing more into that other folder: put
+  the original folder back and restore again. The check is not a lock: a folder put at the path between a check and
+  the write it guards is not noticed, as with saving. What was already copied stays in the folder that was opened, and
+  is cleared away when that library is next opened. A move that was cut short, and can then be neither finished nor
+  taken back, is the case of the next bullet.
 - **If it can neither go on nor go back** (the disk fails between two moves), the session changes and writes nothing
   more and says so; opening the library again completes the restore.
 - **It takes the space of the catalog twice over**: the copy in the library, and what it replaced.

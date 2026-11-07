@@ -1104,8 +1104,10 @@ mod opened_folder {
     /// What the reason for a refused restore says.
     const REFUSED: &str = "is no longer the folder this library was opened from";
 
+    /// A folder of its own: the tag is prefixed, for the tests above name theirs with tags of their own
+    /// (`refused` is one), and tests that run together must not share a folder.
     fn scratch(tag: &str) -> PathBuf {
-        let base = temp_dir(tag);
+        let base = temp_dir(&format!("opened-folder-{tag}"));
         std::fs::create_dir_all(&base).unwrap();
         base
     }
@@ -1242,10 +1244,49 @@ mod opened_folder {
         let _ = std::fs::remove_dir_all(&base);
     }
 
+    /// Given a restore here and now that began while the library's path was fine, when the folder is
+    /// replaced before its first file is copied, then nothing is copied into the folder that is there
+    /// now, and a copy that a restore left in it is not cleared away (a restore clears the one it
+    /// finds in the folder it works in): it ends with the reason. Asking when it starts is not enough.
+    #[test]
+    fn a_restore_here_and_now_copies_nothing_into_a_folder_that_replaced_the_one_it_began_in() {
+        let base = scratch("foreground");
+        let lib = base.join("Lib");
+        let mut s = open(&lib);
+        let made = back_up_beside(&mut s, &lib);
+        // held where its row is up, the library asked; the folder is replaced meanwhile
+        s.restore_hold.store(true, Ordering::SeqCst);
+        let (activity, hold, path) = (s.activity.clone(), s.restore_hold.clone(), lib.clone());
+        let replacer = std::thread::spawn(move || {
+            let t0 = std::time::Instant::now();
+            while activity.list().is_empty() && t0.elapsed() < std::time::Duration::from_secs(20) {
+                std::thread::sleep(std::time::Duration::from_millis(2));
+            }
+            let away = put_another_library_at(&path);
+            let theirs = path.join("restore.partial");
+            std::fs::create_dir(&theirs).unwrap();
+            std::fs::write(theirs.join("catalog.snap"), b"their copy").unwrap();
+            let before = (files_in(&path), files_in(&away));
+            hold.store(false, Ordering::SeqCst);
+            (before, away)
+        });
+        let asked = json!({"dir": made.to_string_lossy()});
+        let e = s.execute("library.restore", &asked).expect_err("nothing is copied into another folder").to_string();
+        let ((theirs, ours), away) = replacer.join().unwrap();
+        assert!(e.contains(REFUSED) && e.contains(lib.to_string_lossy().as_ref()), "{e}");
+        assert_eq!(files_in(&lib), theirs, "the folder at the path now is as it was");
+        assert_eq!(std::fs::read(lib.join("restore.partial").join("catalog.snap")).unwrap(), b"their copy", "its copy is not cleared away");
+        assert_eq!(files_in(&away), ours);
+        assert!(s.activity.list().is_empty());
+        drop(s);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
     /// Given a backup copied for a restore in the background, when the library's folder is replaced
     /// before its files are moved in, then they are not moved into the folder that is there now:
-    /// the restore ends with the reason. The copy stays in the folder that was opened, out of the
-    /// path's reach (it is cleared away when that library is opened again).
+    /// the restore ends with the reason, as one refused before it began (the library is not left
+    /// stuck, as it is by a restore that stopped part-way). The copy stays in the folder that was
+    /// opened, out of the path's reach (it is cleared away when that library is opened again).
     #[test]
     fn a_copied_backup_is_not_moved_into_another_folder() {
         let base = scratch("copied");
@@ -1263,6 +1304,7 @@ mod opened_folder {
         assert_eq!(files_in(&lib), theirs, "nothing of the backup was moved into the folder at the path now");
         assert_eq!(files_in(&away), ours, "and nothing of the folder that was opened was moved away");
         assert!(s.activity.list().is_empty());
+        assert!(s.library.as_ref().is_some_and(|l| l.stuck.is_none()), "refused before it moved a file: the library is not stuck");
         drop(s);
         let _ = std::fs::remove_dir_all(&base);
     }
