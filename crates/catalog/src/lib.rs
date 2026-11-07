@@ -28,6 +28,7 @@ pub mod lock;
 mod log_writer;
 pub mod model;
 pub mod query;
+pub mod restore;
 pub mod rules;
 pub mod safe_file;
 pub mod segments;
@@ -1634,6 +1635,8 @@ mod tests_policy;
 mod tests_repair;
 #[cfg(test)]
 mod tests_rule_order;
+#[cfg(test)]
+mod tests_restore;
 #[cfg(test)]
 mod tests_scale;
 #[cfg(test)]
