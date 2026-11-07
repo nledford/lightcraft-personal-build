@@ -41,6 +41,12 @@ pub struct BackupJob {
     pub finished: AtomicBool,
     /// How it ended.
     pub outcome: std::sync::Mutex<Option<std::result::Result<BackupReport, String>>>,
+    /// When it was started (the session clock's time).
+    pub started: String,
+    /// It goes to the folder the library's backups go to (not to one given for once).
+    pub own: bool,
+    /// The session has taken note of how it ended (see [`note_finished`]).
+    noted: AtomicBool,
 }
 
 impl BackupJob {
@@ -149,6 +155,17 @@ fn flag(cmd: &str, p: &Value, key: &str) -> Result<bool> {
     }
 }
 
+/// One of a few choices given by its id (`None`: not given).
+fn choice<T>(cmd: &str, p: &Value, key: &str, from_id: fn(&str) -> Option<T>, ids: &[&str]) -> Result<Option<T>> {
+    match p.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(v) => match v.as_str().and_then(from_id) {
+            Some(choice) => Ok(Some(choice)),
+            None => Err(bad(cmd, format!("`{key}` is one of {}, not {v}", ids.join(", ")))),
+        },
+    }
+}
+
 /// The backup of the open library that is under way, or the last one made of it.
 pub fn status(s: &Session) -> Option<&Arc<BackupJob>> {
     let library = s.library.as_ref().map(|l| &l.dir)?;
@@ -179,14 +196,17 @@ fn back_up(s: &mut Session, p: &Value) -> Result<Value> {
     };
     // everything changed so far is in the log before it is read
     s.persist()?;
-    let name = free_name(&dest, &(s.clock)());
-    let job = Arc::new(BackupJob { library, dest, ..Default::default() });
+    let started = (s.clock)();
+    let name = free_name(&dest, &started);
+    let own = backup_folder(s).is_some_and(|(folder, _)| folder == dest);
+    let job = Arc::new(BackupJob { library, dest, started, own, ..Default::default() });
     s.backup = Some(job.clone());
     let task = s.activity.start("backup", "Backing up the library", Cancel::Flag(job.cancel.clone()));
     task.set_unit(Unit::Bytes);
     let hold = s.backup_hold.clone();
     if !background || cfg!(target_arch = "wasm32") {
         run(name, &job, &task, &hold);
+        note_finished(s);
         return Ok(job.json());
     }
     #[cfg(not(target_arch = "wasm32"))]
@@ -482,6 +502,7 @@ pub fn restore_status(s: &Session) -> Option<&Arc<RestoreJob>> {
 /// loop, `library.restoreStatus`); cheap when there is nothing to do. A restore of a library that
 /// is no longer the open one is given up.
 pub fn settle(s: &mut Session) {
+    note_finished(s);
     let Some(job) = s.restore.clone() else { return };
     if !job.running() {
         return;
@@ -566,7 +587,7 @@ fn can_restore(s: &Session) -> std::result::Result<(), String> {
 fn place(s: &mut Session, staged: restore::Staged, from: &Path, target: &Path, aside: &str) -> Result<Value> {
     // what of the session is the library's (it is put back if the restore is taken back), and
     // what stays: the folder backups go to is the library's choice now, not the backup's from then
-    let (backups, active) = (s.backup_dir.clone(), s.active());
+    let (backups, active) = ((s.backup_dir.clone(), s.backup_schedule, s.last_backup.clone()), s.active());
     let kept = (s.presets.clone(), s.profile_favorites.clone(), s.profile_recent.clone(), s.media.smart_dir.clone());
     // everything this session changed is on disk, and nothing of it writes any more
     s.close_library()?;
@@ -615,8 +636,9 @@ fn place(s: &mut Session, staged: restore::Staged, from: &Path, target: &Path, a
         });
     }
     log::info!("library: restored from {}; what it held is in {}", from.display(), made.aside.as_deref().unwrap_or(Path::new("")).display());
-    if s.backup_dir != backups {
-        s.backup_dir = backups;
+    // (and so is when it is backed up by itself, and when it last was)
+    if (s.backup_dir.clone(), s.backup_schedule, s.last_backup.clone()) != backups {
+        (s.backup_dir, s.backup_schedule, s.last_backup) = backups;
         if let Err(e) = s.save_prefs() {
             log::warn!("library: {e}");
         }
@@ -641,6 +663,65 @@ fn backups(s: &mut Session, p: &Value) -> Result<Value> {
         Some(dir) => folder(C, "dir", dir)?,
     };
     Ok(json!({"dir": dir.to_string_lossy(), "backups": backup::list(&dir)}))
+}
+
+/// Take note of a backup of the open library that has ended: one that was made, in the folder
+/// the library's backups go to now, is when the library was last backed up (saved with it). One
+/// that was made in the folder they went to before it was changed meanwhile is not, for the
+/// library has no backup in the folder they go to now. Once per backup; between commands (see
+/// [`settle`]).
+pub fn note_finished(s: &mut Session) {
+    let Some(job) = status(s).cloned() else { return };
+    if !job.finished.load(Ordering::Relaxed) || job.noted.swap(true, Ordering::Relaxed) {
+        return;
+    }
+    if job.own && backup_folder(s).is_some_and(|(folder, _)| folder == job.dest) && job.outcome().is_some_and(|o| o.is_ok()) {
+        s.last_backup = Some(job.started.clone());
+        if let Err(e) = s.save_prefs() {
+            log::warn!("library: the time of the backup was not saved: {e}");
+        }
+    }
+}
+
+/// Back the open library up by itself if its schedule says it is due
+/// ([`crate::backup_schedule::due`]): in the background, to the folder its backups go to, like
+/// `library.backup`. Whether one was started; a backup that is due and can't be started is the
+/// error, to tell the person (it is not tried again for an hour either). For the app to call
+/// now and then while a library is open.
+pub fn back_up_if_due(s: &mut Session) -> std::result::Result<bool, String> {
+    use crate::backup_schedule::due;
+    if s.backup_schedule.every == crate::backup_schedule::BackupEvery::Never || can_back_up(s).is_err() {
+        return Ok(false);
+    }
+    // (a restore under way puts another library here: its backup is the restored library's)
+    if s.restore.as_ref().is_some_and(|r| r.running()) {
+        return Ok(false);
+    }
+    let now = (s.clock)();
+    if !due(s.backup_schedule.every, None, s.backup_tried.as_deref(), &now) {
+        // (tried within the hour)
+        return Ok(false);
+    }
+    if !due(s.backup_schedule.every, s.last_backup.as_deref(), None, &now) {
+        // Not due by the time of the last backup. Backups that are no longer there are no
+        // backup, though: their folder was removed, or its drive wiped. (Looked at only here,
+        // where everything else says "not due": a slow drive is not asked on every look.)
+        if backup_folder(s).is_some_and(|(folder, _)| folder.is_dir()) {
+            return Ok(false);
+        }
+        s.last_backup = None;
+        if let Err(e) = s.save_prefs() {
+            log::warn!("library: {e}");
+        }
+    }
+    s.backup_tried = Some(now);
+    match back_up(s, &json!({"background": true})) {
+        Ok(_) => Ok(true),
+        Err(e) => {
+            log::warn!("library: the backup that was due was not made: {e}");
+            Err(e.to_string())
+        }
+    }
 }
 
 /// Where the open library's backups go, and whether that folder was chosen for it (else it is
@@ -700,6 +781,11 @@ fn destination(s: &Session, cmd: &str, key: &str, value: &Value) -> Result<PathB
 fn preferences(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "library.backupPreferences";
     let choose = flag(C, p, "choose")?;
+    // (both read before either is set: a call that is refused changes nothing)
+    let every = choice(C, p, "every", crate::backup_schedule::BackupEvery::from_id, &crate::backup_schedule::BackupEvery::ALL.map(|e| e.id()))?;
+    let on_close =
+        choice(C, p, "onClose", crate::backup_schedule::BackupOnClose::from_id, &crate::backup_schedule::BackupOnClose::ALL.map(|c| c.id()))?;
+    let before = (s.backup_dir.clone(), s.backup_schedule, s.last_backup.clone(), s.backup_tried.clone());
     if let Some(dir) = p.get("dir") {
         let before = s.backup_dir.clone();
         s.backup_dir = match dir {
@@ -712,19 +798,38 @@ fn preferences(s: &mut Session, p: &Value) -> Result<Value> {
                 (!usual).then_some(dir)
             }
         };
-        // (a choice that was not saved is not made: Settings and the next backup would use a folder the
-        // next session does not know)
-        if let Err(e) = s.save_prefs() {
-            s.backup_dir = before;
-            return Err(e);
+        if s.backup_dir != before {
+            // (when the library was last backed up is when it was backed up *there*)
+            s.last_backup = None;
+            s.backup_tried = None;
         }
     } else if choose {
         // (the app asks with a folder dialog before the command gets here)
         return Err(bad(C, "there is no folder dialog here to `choose` with: give the folder as `dir`"));
     }
+    if let Some(every) = every {
+        s.backup_schedule.every = every;
+    }
+    if let Some(on_close) = on_close {
+        s.backup_schedule.on_close = on_close;
+    }
+    if p.get("dir").is_some() || every.is_some() || on_close.is_some() {
+        // (a choice that was not saved is not made: Settings and the next backup would use what the
+        // next session does not know)
+        if let Err(e) = s.save_prefs() {
+            (s.backup_dir, s.backup_schedule, s.last_backup, s.backup_tried) = before;
+            return Err(e);
+        }
+    }
     // `dir`: what was chosen (null: nothing was). `folder`: where backups go, chosen or not.
     let folder = backup_folder(s).map(|(folder, _)| folder);
-    Ok(json!({"dir": s.backup_dir.as_ref().map(|d| d.to_string_lossy()), "folder": folder.as_ref().map(|d| d.to_string_lossy())}))
+    Ok(json!({
+        "dir": s.backup_dir.as_ref().map(|d| d.to_string_lossy()),
+        "folder": folder.as_ref().map(|d| d.to_string_lossy()),
+        "every": s.backup_schedule.every.id(),
+        "onClose": s.backup_schedule.on_close.id(),
+        "lastBackup": s.last_backup,
+    }))
 }
 
 fn on_disk(s: &Session) -> std::result::Result<(), String> {
@@ -755,7 +860,11 @@ pub fn specs() -> Vec<CommandSpec> {
             None,
             "{} → the backup of the open library that is under way, or the last one made of it in this session, as `library.backup` returns it | null",
             always,
-            |s, _| Ok(status(s).map_or(Value::Null, |b| b.json()))
+            |s, _| {
+                // (a backup that ended is noted when anybody looks, not only when a frame loop calls `settle`)
+                note_finished(s);
+                Ok(status(s).map_or(Value::Null, |b| b.json()))
+            }
         ),
         cmd!(query
             "library.checkBackup",
@@ -807,7 +916,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Backup Preferences",
             [],
             None,
-            "{dir?: absolute folder path | null, choose?: bool} — the folder the library's backups go to (saved with the library); null: Backups in the library folder; not a folder inside the library folder (other than Backups) or inside a backup; `choose: true` (in the app only, without `dir`): ask for it with a folder dialog, and the answer is null while the dialog is open → {dir: what was chosen | null, folder: where backups go}",
+            "{dir?: absolute folder path | null, choose?: bool, every?: never | day | week | month, onClose?: never | ask | always} — the folder the library's backups go to (saved with the library); null: Backups in the library folder; not a folder inside the library folder (other than Backups) or inside a backup; `choose: true` (in the app only, without `dir`): ask for it with a folder dialog, and the answer is null while the dialog is open `every`: back the library up by itself while it is open, when the last backup is that old (the app does; a month is thirty days); `onClose`: back it up when it is closed, asking first or not → {dir: what was chosen | null, folder: where backups go, every, onClose, lastBackup: when it was last backed up there | null}",
             on_disk,
             preferences
         ),
