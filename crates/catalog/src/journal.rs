@@ -167,6 +167,7 @@ pub const FORMATS: &[Format] = &[
     format(10, "masks stay on the photo under lens corrections, Upright and Transform", FIELDS, "`Mask.on_photo` (develop settings)"),
     format(11, "lens database profiles named in the Optics panel", FIELDS, "`EmbeddedLens.source`"),
     format(12, "history steps and versions share segmentation grids (#2154)", FIELDS, "`Catalog.grids`, `SegMask.grid`"),
+    format(13, "folders made in LightCraft keep their row", FIELDS, "`FolderRecord.made`"),
     format(10, "compact records", FIELDS, "the stored form (`crate::stored`): unset fields and default develop settings are left out"),
     format(11, "the snapshot in segments", FIELDS, "`catalog.snap` lists segment files that hold the photos (`crate::segments`)"),
 ];
