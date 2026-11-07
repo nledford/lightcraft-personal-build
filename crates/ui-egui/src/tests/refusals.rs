@@ -26,8 +26,8 @@
 //!   then the toast keeps what the command said and adds the reason after it.
 //!
 //! Real widgets, driven headlessly:
-//! - Given a photo whose original is missing, when Edit ▸ Auto is clicked, then the toast is the
-//!   reason and not "Auto settings applied"; on a photo that is there, it still says so.
+//! - Given a photo whose original is missing, when Edit ▸ Auto is clicked, then no frame says "Auto
+//!   settings applied" and the toast that stays is the reason; on a photo that is there, the task's own toast says so.
 //! - Given nothing selected, when a preset row is clicked, then the toast is the reason and not
 //!   "Preset: <name>"; with a photo selected, it still says so.
 //! - Given a slider, when it is dragged, then nothing is said; when the change is refused, on
@@ -271,27 +271,55 @@ fn key(h: &mut Headless, key: &str, cmd: bool) {
     assert_eq!(r["ok"], true, "{r}");
 }
 
+fn note_toast(said: &mut Vec<String>, h: &Headless) {
+    if let Some(t) = toast(&h.app)
+        && said.last().map(String::as_str) != Some(t)
+    {
+        said.push(t.to_string());
+    }
+}
+
+/// Click Edit ▸ Auto and run frames until its background task is done (#3808: the command answers
+/// at once, the work and its outcome follow). Every toast any frame showed from the click on, in
+/// order: a success said too early would be among them even if the outcome replaced it.
+fn click_auto(h: &mut Headless) -> Vec<String> {
+    let mut said = Vec::new();
+    click(h, "button:auto");
+    note_toast(&mut said, h);
+    let t0 = std::time::Instant::now();
+    while !h.app.tasks.is_empty() {
+        assert!(t0.elapsed() < SETTLE, "Auto never finished; toasts so far: {said:?}");
+        h.step();
+        note_toast(&mut said, h);
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    h.step();
+    note_toast(&mut said, h);
+    said
+}
+
 /// Edit ▸ Auto on a photo whose original is missing: nothing changed, and the toast used to read
 /// "Auto settings applied" (the success was said whatever the command answered). Auto decodes in
-/// the background now (#3808): the command answers at once, the failure arrives as the task's toast,
-/// and that is what stays on screen.
+/// the background now (#3808): the command answers `pending` at once, so there is nothing to
+/// celebrate at the click; the failure arrives as the task's toast, and that is what stays on screen.
 #[test]
 fn the_auto_button_doesnt_claim_success_when_refused() {
     let mut h = headless(missing_originals(), json!({"view": "detail", "right": "edit"}));
     let before = h.app.session.develop_of(lightcraft_catalog::PhotoId(1));
-    click(&mut h, "button:auto");
-    let said = toast(&h.app).expect("a toast").to_string();
-    assert!(!said.contains("Auto settings applied"), "{said}");
-    assert!(said.contains("lightcraft-refusals/1.jpg"), "the reason it is about: {said}");
+    let said = click_auto(&mut h);
+    assert!(said.iter().all(|t| !t.contains("Auto settings applied")), "no frame claims success: {said:?}");
+    let last = said.last().expect("a toast");
+    assert!(last.contains("lightcraft-refusals/1.jpg"), "the reason it is about: {last}");
     assert_eq!(h.app.session.develop_of(lightcraft_catalog::PhotoId(1)), before, "nothing changed");
 }
 
-/// And where Auto goes through, it still says so.
+/// And where Auto goes through, the task's own toast says so, when it has: not at the click.
 #[test]
 fn the_auto_button_says_so_when_it_went_through() {
     let mut h = headless(lightcraft_engine::Session::with_demo(), json!({"view": "detail", "right": "edit"}));
-    click(&mut h, "button:auto");
-    assert_eq!(toast(&h.app), Some("Auto settings applied"));
+    let said = click_auto(&mut h);
+    assert!(said.iter().all(|t| !t.contains("Auto settings applied")), "the click claims nothing yet: {said:?}");
+    assert_eq!(said.last().map(String::as_str), Some("Auto Settings"), "the task's completion: {said:?}");
 }
 
 /// A preset row clicked with nothing selected: the toast used to read "Preset: <name>".

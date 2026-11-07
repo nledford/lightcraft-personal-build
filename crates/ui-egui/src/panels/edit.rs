@@ -71,8 +71,13 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
     egui::Frame::NONE.inner_margin(egui::Margin { left: 24, right: 22, top: 8, bottom: 14 }).show(ui, |ui| {
         let tip = reset_tip(&app.ui.settings.keymap, ui.ctx().os() == egui::os::OperatingSystem::Mac);
         let clicks = header_buttons(ui, crate::is_bw(&d), d.hdr.enabled, &tip);
-        if clicks.auto && app.act("develop.auto", json!({})).is_some() {
-            // only when it went through: refused (the original is missing…), `act` said why
+        if clicks.auto
+            && let Some(reply) = app.act("develop.auto", json!({}))
+            && reply["pending"] != true
+        {
+            // only when it went through: refused (the original is missing…), `act` said why; a
+            // `pending` answer (#3808: the work runs in the background) has no outcome yet, and
+            // the task's own toast is the completion message
             app.toast(ui.ctx(), crate::i18n::tr("Auto settings applied"));
         }
         if clicks.bw {
