@@ -207,6 +207,10 @@ pub struct AppSettings {
     /// profiles changes it). A value this version doesn't read asks again.
     #[serde(deserialize_with = "lenient")]
     pub lens_database: lightcraft_engine::lensfun_download::Offer,
+    /// Settings ▸ Interface ▸ Reduce motion: things that move or turn stand still; fades stay
+    /// (`view.reduceMotion`; see [`crate::motion`]). `None`: follow the system's Reduce Motion until
+    /// the user chooses.
+    pub reduce_motion: Option<bool>,
 }
 
 /// Where File ▸ Import Lightroom Catalog… puts a catalog (Settings ▸ General ▸ Library). Saved as
@@ -260,6 +264,7 @@ impl Default for AppSettings {
             loupe_info: LoupeInfo::default(),
             lightroom_import: LightroomImport::Ask,
             lens_database: Default::default(),
+            reduce_motion: None,
         }
     }
 }
