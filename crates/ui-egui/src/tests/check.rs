@@ -325,6 +325,7 @@ fn the_synchronize_choices_announce_their_count() {
         remove_missing: false,
         read_metadata: false,
         import_duplicates: false,
+        read: Default::default(),
     };
     crate::i18n::set_language(crate::i18n::Locale::De);
     let (_, nodes) = rig.frame(Vec::new(), |ui| crate::sync::body(&app, ui, &mut dlg));
