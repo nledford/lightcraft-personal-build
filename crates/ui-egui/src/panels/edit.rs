@@ -315,7 +315,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
             egui::Frame::NONE.inner_margin(egui::Margin { left: 24, right: 22, top: 4, bottom: 0 }).show(ui, |ui| {
                 let mut on = d.detail.nr_outliers;
                 if check(ui, "detail.nrOutliers", &mut on, "Remove Hot Pixels").changed() {
-                    let _ = app.run("develop.merge", json!({"settings": {"detail": {"nr_outliers": on}}, "label": "Remove Hot Pixels"}));
+                    app.act("develop.merge", json!({"settings": {"detail": {"nr_outliers": on}}, "label": "Remove Hot Pixels"}));
                 }
             });
         }

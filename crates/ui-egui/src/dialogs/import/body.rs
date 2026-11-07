@@ -50,7 +50,7 @@ fn thumb_size_slider(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     };
     let out = crate::widgets::slider(ui, &SIZE, f64::from(thumb_size(app.ui.import_thumb_size)), true, None);
     if let Some(size) = out.value {
-        let _ = app.run("view.importThumbSize", json!({"size": SIZE.clamp(size)}));
+        app.act("view.importThumbSize", json!({"size": SIZE.clamp(size)}));
     }
 }
 

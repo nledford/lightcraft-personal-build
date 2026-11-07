@@ -1289,7 +1289,7 @@ fn context_menu_rate(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         let label = crate::i18n::tr_format!("Add Keyword “{keywords}”", keywords = names);
         let add = MenuItem::new(&label).widget("button:contextAddKeywordShortcut").show(ui);
         if add.clicked() {
-            let _ = app.run("photo.setMeta", json!({"addKeywords": keywords}));
+            app.act("photo.setMeta", json!({"addKeywords": keywords}));
         }
     }
 }

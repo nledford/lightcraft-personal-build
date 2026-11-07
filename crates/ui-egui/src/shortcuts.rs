@@ -405,7 +405,7 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
         && !app.ui.fullscreen
         && crate::docking::exposed(app, crate::docking::Panel::Tools)
     {
-        let _ = app.run("view.maskPins", json!({}));
+        app.act("view.maskPins", json!({}));
         fire.retain(|f| f != "panel.remove");
     }
     let rotate_fires = fire.iter().any(|f| f == "crop.rotateAspect");

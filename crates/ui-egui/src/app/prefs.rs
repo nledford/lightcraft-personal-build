@@ -76,7 +76,7 @@ impl LightcraftApp {
         let limit = self.ui.settings.hot_pixel_limit;
         if self.hot_pixels_applied != Some(limit) {
             self.hot_pixels_applied = Some(limit);
-            // (a value the engine refuses, from a hand-edited file, leaves its limit as it was)
+            // refusal expected: a saved setting applied at start-up; a value the engine refuses (a hand-edited file) leaves its limit as it was
             let _ = self.session.execute("app.hotPixelLimit", &serde_json::json!({"percent": limit}));
         }
         // the monitor profile (Settings ▸ Monitor): previews follow it from the next frame
