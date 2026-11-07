@@ -27,6 +27,7 @@ pub mod lock;
 #[cfg(not(target_arch = "wasm32"))]
 mod log_writer;
 pub mod model;
+pub mod opened_folder;
 pub mod query;
 pub mod restore;
 pub mod rules;
@@ -48,6 +49,7 @@ use lightcraft_develop::DevelopSettings;
 pub use local::{DEFAULT_FORGET_DAYS, ForgetPlan, LocalRecords, folder_of};
 pub use lock::{LibraryLock, LockError, LockOwner};
 pub use model::*;
+pub use opened_folder::OpenedFolder;
 pub use query::{DateGroup, Filter, Person, RatingOp, Sort, SortKey, mix64};
 pub use rules::{Match, Rule, RuleSet};
 pub use segments::Segment;
@@ -1631,6 +1633,8 @@ mod tests_lock;
 mod tests_log_thread;
 #[cfg(test)]
 mod tests_policy;
+#[cfg(test)]
+mod tests_opened_folder;
 #[cfg(test)]
 mod tests_repair;
 #[cfg(test)]

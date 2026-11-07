@@ -2,12 +2,15 @@
 //!
 //! [`FsStore`] is the native implementation (a library directory); [`MemStore`] keeps files in
 //! memory (tests, ephemeral sessions) and lets tests simulate crashes by editing the bytes. A web
-//! host can implement [`Store`] over OPFS.
+//! host can implement [`Store`] over OPFS. [`FsStore`] writes only while its directory still leads
+//! to the folder it opened ([`crate::OpenedFolder`], issue #3240).
 
 use std::collections::BTreeMap;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+
+use crate::opened_folder::OpenedFolder;
 
 /// A flat namespace of named files with the few operations the journal needs.
 pub trait Store: Send {
@@ -119,6 +122,9 @@ pub(crate) fn check_regular_directory_entry(path: &Path) -> io::Result<()> {
 /// Files in a directory.
 pub struct FsStore {
     dir: PathBuf,
+    /// The folder `dir` named when the store was opened. Every write asks it first and is refused
+    /// when `dir` leads somewhere else now (issue #3240); so does the log's thread.
+    folder: OpenedFolder,
     /// Open append handle (kept between appends; dropped on rewrite/truncate). Used when no thread
     /// writes the log (the browser build, or one that couldn't start).
     appender: Option<(String, std::fs::File)>,
@@ -129,15 +135,26 @@ pub struct FsStore {
 }
 
 impl FsStore {
-    /// Use `dir` (created if missing).
+    /// Use `dir` (created if missing). The store writes to the folder `dir` names now, and only
+    /// while it still does.
     pub fn open(dir: impl AsRef<Path>) -> io::Result<FsStore> {
         std::fs::create_dir_all(dir.as_ref())?;
-        Ok(FsStore {
-            dir: dir.as_ref().to_path_buf(),
+        Ok(FsStore::in_folder(OpenedFolder::at(dir.as_ref())?))
+    }
+    /// A store in a folder that was recorded already, so that the stores, the lock and the caches
+    /// of one library ask about the same folder.
+    pub fn in_folder(folder: OpenedFolder) -> FsStore {
+        FsStore {
+            dir: folder.path().to_path_buf(),
+            folder,
             appender: None,
             #[cfg(not(target_arch = "wasm32"))]
             log: None,
-        })
+        }
+    }
+    /// The folder the store opened.
+    pub fn folder(&self) -> &OpenedFolder {
+        &self.folder
     }
     pub fn dir(&self) -> &Path {
         &self.dir
@@ -366,6 +383,7 @@ impl Store for FsStore {
             self.sync_dir();
             return Ok(());
         }
+        self.folder.check()?;
         if self.appender.as_ref().is_some_and(|(n, _)| n == name) {
             self.appender = None;
         }
@@ -398,6 +416,7 @@ impl Store for FsStore {
             self.sync_dir();
             return Ok(buf.len() as u64);
         }
+        self.folder.check()?;
         let (tmp, n) = self.stage(name, fill)?;
         if let Err(e) = std::fs::rename(&tmp, self.path(name)?) {
             let _ = std::fs::remove_file(&tmp);
@@ -430,6 +449,7 @@ impl Store for FsStore {
         {
             // (not a segment: that is appended to through the handle below, which checks its folder on every append)
             if self.log.is_none() && !name.starts_with(crate::segments::SEGMENT_PREFIX) && !crate::fault::on_caller(&self.dir) {
+                self.folder.check()?;
                 let path = self.path(name)?;
                 check_regular_directory_entry(&path)?;
                 if !path.exists() {
@@ -438,13 +458,14 @@ impl Store for FsStore {
                     self.sync_dir();
                 }
                 self.appender = None;
-                self.log = crate::log_writer::LogWriter::start(self.dir.clone(), name);
+                self.log = crate::log_writer::LogWriter::start(self.folder.clone(), name);
             }
             // (another name than the log's is written here, as without a thread)
             if let Some(w) = self.log_for(name) {
                 return w.append(data);
             }
         }
+        self.folder.check()?;
         if self.appender.as_ref().is_none_or(|(n, _)| n != name) {
             // (a file in a folder of the library's own: the segments folder is made by a write, not here)
             if self.existing_folder_of(name)?.is_none() {
@@ -481,6 +502,7 @@ impl Store for FsStore {
         if let Some(w) = self.log_for(name) {
             return w.truncate(len);
         }
+        self.folder.check()?;
         if self.appender.as_ref().is_some_and(|(n, _)| n == name) {
             self.appender = None;
         }
@@ -570,7 +592,7 @@ impl Store for FsStore {
 
     #[cfg(not(target_arch = "wasm32"))]
     fn background_writer(&self) -> Option<Box<dyn Store>> {
-        Some(Box::new(FsStore { dir: self.dir.clone(), appender: None, log: None }))
+        Some(Box::new(FsStore { dir: self.dir.clone(), folder: self.folder.clone(), appender: None, log: None }))
     }
 
     fn flush(&mut self) -> io::Result<()> {
