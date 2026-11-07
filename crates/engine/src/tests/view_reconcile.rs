@@ -120,14 +120,19 @@ fn an_album_that_comes_back_is_not_shown_again_by_itself() {
     photos(&mut s, 3);
     let id = run(&mut s, "album.create", json!({"name": "First"}))["id"].as_u64().unwrap();
     show(&mut s, id);
-    run(&mut s, "library.filter", json!({"album": id}));
-    // the filter is no undo step: this undoes the album
+    // this undoes the album
     run(&mut s, "edit.undo", json!({}));
     assert!(s.catalog.album(AlbumId(id)).is_none(), "the album's creation was undone");
     assert_eq!((s.source, s.filter.album), (LibrarySource::All, None));
     run(&mut s, "edit.redo", json!({}));
     assert!(s.catalog.album(AlbumId(id)).is_some(), "and redone");
     shows_all(&mut s, "the album came back");
+    // (an album source beside a filter naming an album is refused, so the filter is tried from All Photos)
+    run(&mut s, "library.filter", json!({"album": id}));
+    // the filter is no undo step: this undoes the album
+    run(&mut s, "edit.undo", json!({}));
+    assert_eq!((s.source, s.filter.album), (LibrarySource::All, None));
+    run(&mut s, "edit.redo", json!({}));
     assert_eq!(s.filter.album, None);
     // nor does the next album made take its place
     run(&mut s, "edit.undo", json!({}));
