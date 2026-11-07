@@ -366,3 +366,62 @@ fn adding_or_removing_an_album_forgets_whether_the_rules_may_be_reordered() {
     assert_eq!(c.clone().keeps_written_order(), c.keeps_written_order());
     assert_eq!(ask(&c), before);
 }
+
+/// `smarts` smart albums in a chain, each testing the folder the next one is in: S1 tests F1, which
+/// holds S2, which tests F2 … With `park`, the last one is left at the top instead of in its folder
+/// (the chain is one shorter until it is moved in). Returns the last album and the folder it belongs
+/// in.
+fn chain_through_folders(c: &mut Catalog, smarts: usize, park: bool) -> (AlbumId, AlbumId) {
+    let album = |id: AlbumId| json!({"field": "album", "op": "is", "value": id.0});
+    let folders: Vec<AlbumId> = (1..smarts).map(|_| c.alloc_album_id()).collect();
+    for (i, f) in folders.iter().enumerate() {
+        c.apply(Op::AddAlbum { album: Album { folder: true, ..Album::new(*f, &format!("F{}", i + 1)) } }).unwrap();
+    }
+    let mut last = None;
+    for i in 1..=smarts {
+        let id = c.alloc_album_id();
+        let rules = folders.get(i - 1).map_or_else(|| json!({"match": "all", "rules": []}), |next| json!({"match": "all", "rules": [album(*next)]}));
+        let parent = if i == 1 || (park && i == smarts) { None } else { folders.get(i - 2).copied() };
+        c.apply(Op::AddAlbum { album: Album { parent, smart: Some(Box::new(filter(rules))), ..Album::new(id, &format!("S{i}")) } }).unwrap();
+        last = Some(id);
+    }
+    (last.unwrap(), folders[smarts - 2])
+}
+
+/// A chain of smart albums that test folders holding the next smart album is as long as one that
+/// tests the albums themselves: 31 are under the limit, 32 reach it (the written order from then on).
+#[test]
+fn a_chain_through_folders_counts_towards_the_depth_limit() {
+    let mut under = Catalog::new();
+    chain_through_folders(&mut under, 31, false);
+    assert!(!under.keeps_written_order(), "31 albums in a chain, through folders, are under the limit");
+    let mut at = Catalog::new();
+    chain_through_folders(&mut at, 32, false);
+    assert!(at.keeps_written_order(), "a 32nd album, through the folder the 31st tests, reaches the limit");
+    assert_eq!(at.clone().keeps_written_order(), at.keeps_written_order(), "as a catalog that worked it out afresh");
+}
+
+/// Moving an album into a folder changes what the albums testing that folder lead to: what was
+/// worked out (whether the rules may be reordered) is worked out again, for a chain made long by
+/// the move and for a smart album that ends up inside the folder it tests.
+#[test]
+fn moving_an_album_forgets_whether_the_rules_may_be_reordered() {
+    let mut c = Catalog::new();
+    let (last, folder) = chain_through_folders(&mut c, 32, true);
+    assert!(!c.keeps_written_order(), "the 32nd album is not in its folder yet (worked out, and remembered)");
+    c.apply(Op::MoveAlbum { id: last, parent: Some(folder) }).unwrap();
+    assert!(c.keeps_written_order(), "moved in, the chain reaches the limit");
+    assert_eq!(c.clone().keeps_written_order(), c.keeps_written_order(), "as a catalog that worked it out afresh");
+    c.apply(Op::MoveAlbum { id: last, parent: None }).unwrap();
+    assert!(!c.keeps_written_order(), "moved out again, it is under the limit");
+
+    let mut c = Catalog::new();
+    let (folder, smart) = (c.alloc_album_id(), c.alloc_album_id());
+    c.apply(Op::AddAlbum { album: Album { folder: true, ..Album::new(folder, "F") } }).unwrap();
+    let rules = filter(json!({"match": "all", "rules": [{"field": "album", "op": "is", "value": folder.0}]}));
+    c.apply(Op::AddAlbum { album: Album { smart: Some(Box::new(rules)), ..Album::new(smart, "S") } }).unwrap();
+    assert!(!c.keeps_written_order(), "S tests an empty folder (worked out, and remembered)");
+    c.apply(Op::MoveAlbum { id: smart, parent: Some(folder) }).unwrap();
+    assert!(c.keeps_written_order(), "moved into the folder it tests, S includes itself");
+    assert_eq!(c.clone().keeps_written_order(), c.keeps_written_order());
+}

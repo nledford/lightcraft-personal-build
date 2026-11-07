@@ -568,9 +568,10 @@ impl Catalog {
     /// The most smart albums one smart album leads through, itself included, by the smart albums
     /// its rules and album filter test. Only asked of albums that lead back to none.
     fn longest_chain(&self) -> usize {
+        // (a folder tested stands for the albums inside it, as the tallies take it: a chain through folders is as long)
         let tests = |id: &AlbumId| -> Vec<AlbumId> {
             let tested = self.albums.get(id).and_then(|a| a.smart.as_deref()).map(Filter::albums_tested).unwrap_or_default();
-            tested.into_iter().filter(|t| self.albums.get(t).is_some_and(|a| a.smart.is_some())).collect()
+            tested.into_iter().flat_map(|t| self.album_members(t)).filter(|t| self.albums.get(t).is_some_and(|a| a.smart.is_some())).collect()
         };
         let mut chain: std::collections::HashMap<AlbumId, usize> = std::collections::HashMap::new();
         for root in self.albums.values().filter(|a| a.smart.is_some()).map(|a| a.id) {
@@ -1169,6 +1170,8 @@ impl Catalog {
                 // its place belonged to the old neighbours: the undo gives it back with the folder
                 let old_order = a.order.take();
                 let old_parent = std::mem::replace(&mut a.parent, parent);
+                // (which smart albums a folder tested leads to has changed: the plans and the guard are worked out afresh)
+                self.plans = PlansMemo::default();
                 match old_order {
                     Some(_) => Op::Batch { ops: vec![Op::MoveAlbum { id, parent: old_parent }, Op::SetAlbumOrder { id, order: old_order }] },
                     None => Op::MoveAlbum { id, parent: old_parent },
