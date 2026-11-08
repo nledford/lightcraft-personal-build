@@ -30,6 +30,14 @@ catalog.albums.*.smart.merged
 catalog.albums.*.smart.person
 catalog.albums.*.smart.rating
 catalog.albums.*.smart.ratingOp
+catalog.albums.*.smart.ruleSet.match
+catalog.albums.*.smart.ruleSet.rules[].field
+catalog.albums.*.smart.ruleSet.rules[].group.match
+catalog.albums.*.smart.ruleSet.rules[].group.rules[].field
+catalog.albums.*.smart.ruleSet.rules[].group.rules[].op
+catalog.albums.*.smart.ruleSet.rules[].group.rules[].value
+catalog.albums.*.smart.ruleSet.rules[].op
+catalog.albums.*.smart.ruleSet.rules[].value
 catalog.albums.*.smart.subfolders
 catalog.albums.*.smart.text
 catalog.browsed.*
@@ -145,6 +153,7 @@ photo.imported
 photo.kind
 photo.label
 photo.left_in_file.descriptions
+photo.left_in_file.develop
 photo.left_in_file.keywords
 photo.left_in_file.location
 photo.left_in_file.ratings

@@ -12,6 +12,7 @@ use std::sync::Arc;
 use lightcraft_develop::{LensSource, Process};
 
 use super::{Loss, Target};
+use crate::rules::{FIELDS, Rule, RuleSet};
 use crate::{Album, AlbumId, Catalog, Filter, FolderRecord, LeftInFile, Photo};
 
 /// The newest rendering process build 7248 has (it keeps a number it doesn't know, and renders it as its newest).
@@ -19,13 +20,19 @@ const NEWEST_PROCESS_7248: Process = Process::V2;
 
 /// Who can't hold a kind of data.
 #[derive(Clone, Copy)]
-enum Lost {
+pub(crate) enum Lost {
     /// Official LightCraft and build 7248 both lack it.
     Both,
     /// Only official LightCraft lacks it (build 7248 has it).
     Official,
     /// Only build 7248 lacks it (official LightCraft has it).
     Build7248,
+}
+
+impl Lost {
+    fn on(self, target: Target) -> bool {
+        matches!((self, target), (Lost::Both, _) | (Lost::Official, Target::Official) | (Lost::Build7248, Target::Build7248))
+    }
 }
 
 /// A kind of data a target can't hold.
@@ -38,7 +45,7 @@ struct Drop {
 
 impl Drop {
     fn lost_on(&self, target: Target) -> bool {
-        matches!((self.on, target), (Lost::Both, _) | (Lost::Official, Target::Official) | (Lost::Build7248, Target::Build7248))
+        self.on.on(target)
     }
 }
 
@@ -155,6 +162,32 @@ const DROPS: &[Drop] = &[
     },
 ];
 
+/// The id of the loss of a smart album's rules on a field the target lacks, followed by the field's name.
+const RULE_FIELD: &str = "album.rules.field:";
+
+/// The rule fields this build's smart albums have that a target lacks (`rules::FIELDS` against what main's reader knows: it
+/// reports any other as `Issue::UnknownField`, and nothing else reads such a rule). The test `rule_fields_are_classified`
+/// compares this build's field and operator tables with a copy of main's, so a new one fails there until it is named here.
+pub(crate) const RULE_FIELDS: &[(&str, Lost)] = &[("sameContent", Lost::Official), ("truncated", Lost::Official)];
+
+/// Whether `target` can't hold a rule on field `field`.
+fn rule_field_lost_on(field: &str, target: Target) -> bool {
+    RULE_FIELDS.iter().any(|(name, on)| *name == field && on.on(target))
+}
+
+/// The loss of `count` rules on `field`.
+fn rule_field_loss(field: &str, count: u64) -> Loss {
+    let label = FIELDS.iter().find(|f| f.0 == field).map_or(field, |f| f.1);
+    Loss {
+        id: format!("{RULE_FIELD}{field}"),
+        what: format!("the smart album rules on the field `{field}` (\"{label}\"), each one counted"),
+        records: count,
+        effect: "official LightCraft has no such field, so its reader would flag the rule as unknown: the copy leaves the rule out (and a group it leaves \
+                 empty), and the smart album keeps its other rules and matches other photos than it did (more under all, fewer under any)"
+            .to_string(),
+    }
+}
+
 /// The catalog a target is written from, and what was cleared to make it.
 pub(crate) struct Stripped {
     pub catalog: Catalog,
@@ -169,9 +202,8 @@ pub(crate) fn for_target(source: &Catalog, target: Target) -> Stripped {
     let mut tally: BTreeMap<&'static str, u64> = BTreeMap::new();
     let mut warnings = Vec::new();
     catalog.folder_records = folder_records(&source.folder_records, &mut tally);
-    if target == Target::Official {
-        catalog.albums = album_rules(&source.albums, &mut tally);
-    }
+    let mut rule_fields: BTreeMap<String, u64> = BTreeMap::new();
+    album_rules(&mut catalog.albums, target, &mut tally, &mut rule_fields);
     let mut newer_process = 0u64;
     for (id, photo) in &source.photos {
         if target == Target::Build7248 {
@@ -194,13 +226,15 @@ pub(crate) fn for_target(source: &Catalog, target: Target) -> Stripped {
              so sharpening, Contrast and Blacks, color noise reduction and highlight roll-off look different there; nothing is dropped"
         ));
     }
-    let losses = tally
+    let mut losses: Vec<Loss> = tally
         .into_iter()
         .filter_map(|(id, records)| {
             let d = DROPS.iter().find(|d| d.id == id && d.lost_on(target))?;
             Some(Loss { id: d.id.to_string(), what: d.what.to_string(), records, effect: d.effect.to_string() })
         })
+        .chain(rule_fields.into_iter().map(|(field, records)| rule_field_loss(&field, records)))
         .collect();
+    losses.sort_by(|a, b| a.id.cmp(&b.id));
     Stripped { catalog, losses, warnings }
 }
 
@@ -220,11 +254,16 @@ fn folder_records(records: &BTreeMap<String, FolderRecord>, tally: &mut BTreeMap
     kept
 }
 
-/// The smart albums of a target that has no place for the rule fields this build added: each one found is counted and cleared
-/// (the album then matches more photos than it did).
-fn album_rules(albums: &BTreeMap<AlbumId, Album>, tally: &mut BTreeMap<&'static str, u64>) -> BTreeMap<AlbumId, Album> {
-    let mut kept = albums.clone();
-    for album in kept.values_mut() {
+/// The smart albums of `albums` for a target that has no place for the rule fields this build added: each one found is counted
+/// (the lists in `tally`, the rules of a field in `rule_fields`) and cleared (the album then matches other photos than it did).
+/// A target that holds them gets the albums as they are.
+pub(crate) fn album_rules(
+    albums: &mut BTreeMap<AlbumId, Album>,
+    target: Target,
+    tally: &mut BTreeMap<&'static str, u64>,
+    rule_fields: &mut BTreeMap<String, u64>,
+) {
+    for album in albums.values_mut() {
         let Some(rules) = album.smart.as_mut() else { continue };
         // (every field by name: a new one doesn't compile until it is classified here and in the field list)
         let Filter {
@@ -258,24 +297,61 @@ fn album_rules(albums: &BTreeMap<AlbumId, Album>, tally: &mut BTreeMap<&'static 
             merged: _,
             folder: _,
             subfolders: _,
-            rule_set: _,
+            rule_set,
         } = rules.as_mut();
-        for (set, id) in [
+        for (list_set, id) in [
             (!albums.is_empty(), RULE_ALBUMS),
             (!dates.is_empty(), RULE_DATES),
             (!library_folders.is_empty(), RULE_LIBRARY_FOLDERS),
             (!keywords.is_empty(), RULE_KEYWORDS),
         ] {
-            if set {
+            if list_set && drops(id, target) {
                 *tally.entry(id).or_default() += 1;
             }
         }
-        albums.clear();
-        dates.clear();
-        library_folders.clear();
-        keywords.clear();
+        if drops(RULE_ALBUMS, target) {
+            albums.clear();
+        }
+        if drops(RULE_DATES, target) {
+            dates.clear();
+        }
+        if drops(RULE_LIBRARY_FOLDERS, target) {
+            library_folders.clear();
+        }
+        if drops(RULE_KEYWORDS, target) {
+            keywords.clear();
+        }
+        if let Some(set) = rule_set {
+            leave_out_rules(set, target, rule_fields);
+        }
     }
-    kept
+}
+
+/// Whether `target` can't hold the kind of data [`DROPS`] names `id`.
+fn drops(id: &str, target: Target) -> bool {
+    DROPS.iter().any(|d| d.id == id && d.lost_on(target))
+}
+
+/// `set` without the rules (groups included) on a field `target` lacks, each one counted under its field in `counts`; a group
+/// that this empties goes too, and the rules of one that was empty already stay. Returns how many rules it took out.
+fn leave_out_rules(set: &mut RuleSet, target: Target, counts: &mut BTreeMap<String, u64>) -> u64 {
+    let mut taken = 0;
+    set.rules.retain_mut(|rule| match rule {
+        Rule::Field { field, .. } => {
+            let lost = rule_field_lost_on(field, target);
+            if lost {
+                *counts.entry(field.clone()).or_default() += 1;
+                taken += 1;
+            }
+            !lost
+        }
+        Rule::Group { group } => {
+            let inside = leave_out_rules(group, target, counts);
+            taken += inside;
+            inside == 0 || !group.rules.is_empty()
+        }
+    });
+    taken
 }
 
 /// What `target` can't hold of `p`, by [`DROPS`] id.

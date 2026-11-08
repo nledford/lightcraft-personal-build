@@ -12,11 +12,12 @@ use std::time::SystemTime;
 use lightcraft_develop::{DevelopSettings, EmbeddedLens, LensSource, Mask, MaskComponent, MaskOp, MaskShape, Process, SegMask};
 use serde_json::{Value, json};
 
-use crate::convert::strip::{clear, found_in};
+use crate::convert::strip::{self, clear, found_in};
 use crate::convert::{self, ConvertError, Options, Report, Target};
 use crate::journal::{LOG, SNAPSHOT};
 use crate::keywords::KeywordInfo;
 use crate::lock::LibraryLock;
+use crate::rules::{self, FIELDS, Kind};
 use crate::tests_stored::{edited, fixture_library, full, plain};
 use crate::{
     Album, AlbumId, Catalog, ColorLabel, Filter, Flag, FolderRecord, HistoryStep, Journal, LeftInFile, LoadReport, MemStore, Meta, Op, Photo, PhotoId,
@@ -374,6 +375,18 @@ pub(crate) fn personal_ops() -> Vec<Op> {
                     albums: vec![AlbumId(1)],
                     dates: vec!["2019-05".into()],
                     library_folders: vec!["/pictures/2019".into()],
+                    rule_set: Some(
+                        serde_json::from_value(json!({"match": "all", "rules": [
+                            {"field": "rating", "op": "gte", "value": 3},
+                            {"field": "sameContent", "op": "is", "value": true},
+                            {"group": {"match": "any", "rules": [
+                                {"field": "truncated", "op": "is", "value": true},
+                                {"field": "keywords", "op": "contains", "value": "boats"}
+                            ]}},
+                            {"group": {"match": "none", "rules": [{"field": "sameContent", "op": "is", "value": false}]}}
+                        ]}))
+                        .unwrap(),
+                    ),
                     ..Filter::default()
                 })),
                 ..Album::new(AlbumId(3), "Boats")
@@ -536,6 +549,8 @@ fn a_personal_library_converts_to_official_in_every_layout() {
             [
                 "album.rules.albums",
                 "album.rules.dates",
+                "album.rules.field:sameContent",
+                "album.rules.field:truncated",
                 "album.rules.keywords",
                 "album.rules.library_folders",
                 "folder.made",
@@ -546,9 +561,18 @@ fn a_personal_library_converts_to_official_in_every_layout() {
         );
         let records = |id: &str| report.losses.iter().find(|l| l.id == id).map(|l| l.records);
         assert_eq!(records("folder.made"), Some(2), "{name}: the records with a `made`");
-        for id in ["album.rules.albums", "album.rules.dates", "album.rules.keywords", "album.rules.library_folders", "photo.left_in_file", "photo.truncated"] {
+        for id in [
+            "album.rules.albums",
+            "album.rules.dates",
+            "album.rules.keywords",
+            "album.rules.library_folders",
+            "photo.left_in_file",
+            "photo.truncated",
+        ] {
             assert_eq!(records(id), Some(1), "{name}: {id}");
         }
+        assert_eq!(records("album.rules.field:sameContent"), Some(2), "{name}: the rules on a field official LightCraft lacks, in a group too");
+        assert_eq!(records("album.rules.field:truncated"), Some(1), "{name}");
         assert_only_declared(
             &diffs_between(&library, &scratch.join("copy")),
             &[
@@ -560,6 +584,7 @@ fn a_personal_library_converts_to_official_in_every_layout() {
                 "catalog.albums.*.smart.dates",
                 "catalog.albums.*.smart.libraryFolders",
                 "catalog.albums.*.smart.keywords",
+                "catalog.albums.*.smart.ruleSet.rules[]",
             ],
         );
     }
@@ -833,7 +858,7 @@ fn a_loss_is_refused_without_allow_loss_and_nothing_is_written() {
     let library = scratch.join("library");
     personal_library(&library, false, 4, true);
     let before = tree(&library);
-    for (target, ids) in [(Target::Official, 7), (Target::Build7248, 9)] {
+    for (target, ids) in [(Target::Official, 9), (Target::Build7248, 9)] {
         let out = scratch.join("copy");
         match run(&library, &out, target) {
             Err(ConvertError::Losses(report)) => {
@@ -872,6 +897,7 @@ fn a_library_without_a_loss_needs_no_allow_loss() {
             Op::AddAlbum { mut album } => {
                 if let Some(rules) = album.smart.as_mut() {
                     (rules.albums, rules.dates, rules.library_folders, rules.keywords) = Default::default();
+                    rules.rule_set = None;
                 }
                 Op::AddAlbum { album }
             }
@@ -979,6 +1005,125 @@ fn what_only_official_lacks_is_found_and_cleared_for_official_only() {
         clear(&mut cleared, Target::Official);
         assert!(found_in(&cleared, Target::Official).is_empty(), "{id} is still there after it is cleared");
         assert_eq!(found_in(&p, Target::Official), [*id], "{id}: clearing the copy changed the photo it was made from");
+    }
+}
+
+// ---- the fields of smart-album rules
+
+/// A smart album holding only `rules`.
+fn smart_album(id: u64, rules: Value) -> Album {
+    Album {
+        smart: Some(Box::new(Filter { rule_set: Some(serde_json::from_value(rules).unwrap()), ..Filter::default() })),
+        ..Album::new(AlbumId(id), "Smart")
+    }
+}
+
+/// A rule on a field official LightCraft lacks is left out of its copy, in a group too (an emptied group with it, one that was
+/// empty already stays), counted by field; build 7248 has both fields, so its copy keeps every rule.
+#[test]
+fn rules_on_fields_official_lacks_are_left_out_of_its_copy_and_counted_by_field() {
+    let rule = |field: &str, op: &str, value: Value| json!({"field": field, "op": op, "value": value});
+    let group = |mode: &str, rules: Vec<Value>| json!({"group": {"match": mode, "rules": rules}});
+    let same = |value: bool| rule("sameContent", "is", json!(value));
+    let damaged = |value: bool| rule("truncated", "is", json!(value));
+    let before = json!({"match": "any", "rules": [
+        same(true),
+        group("all", vec![damaged(true), same(false)]),
+        group("all", vec![rule("rating", "gte", json!(4)), group("any", vec![damaged(false)])]),
+        group("all", vec![]),
+        rule("iso", "gt", json!(800)),
+    ]});
+    let after = json!({"match": "any", "rules": [
+        group("all", vec![rule("rating", "gte", json!(4))]),
+        group("all", vec![]),
+        rule("iso", "gt", json!(800)),
+    ]});
+    let mut c = Catalog::new();
+    c.albums.insert(AlbumId(1), smart_album(1, before));
+
+    let official = strip::for_target(&c, Target::Official);
+    let kept = official.catalog.albums[&AlbumId(1)].smart.as_ref().unwrap().rule_set.clone().unwrap();
+    assert_eq!(kept, serde_json::from_value::<crate::RuleSet>(after).unwrap());
+    let losses: Vec<(&str, u64)> = official.losses.iter().map(|l| (l.id.as_str(), l.records)).collect();
+    assert_eq!(losses, [("album.rules.field:sameContent", 2), ("album.rules.field:truncated", 2)]);
+    assert!(official.losses.iter().all(|l| l.effect.contains("unknown")), "the effect says why");
+
+    let old = strip::for_target(&c, Target::Build7248);
+    assert!(old.losses.is_empty(), "{:?}", old.losses.iter().map(|l| &l.id).collect::<Vec<_>>());
+    assert_eq!(old.catalog.albums, c.albums);
+}
+
+/// What build 7248 holds is never cleared: its copy keeps the four lists and the rule set as they are, and counts nothing.
+#[test]
+fn the_album_rules_of_a_7248_copy_are_left_alone() {
+    let mut albums = BTreeMap::new();
+    let mut album = smart_album(1, json!({"match": "all", "rules": [{"field": "sameContent", "op": "is", "value": true}]}));
+    let rules = album.smart.as_mut().unwrap();
+    rules.albums = vec![AlbumId(2)];
+    rules.dates = vec!["2019-05".into()];
+    rules.library_folders = vec!["/pictures/2019".into()];
+    rules.keywords = vec!["sea".into()];
+    albums.insert(AlbumId(1), album);
+    let before = albums.clone();
+    let (mut tally, mut fields) = (BTreeMap::new(), BTreeMap::new());
+    strip::album_rules(&mut albums, Target::Build7248, &mut tally, &mut fields);
+    assert_eq!(albums, before);
+    assert!(tally.is_empty() && fields.is_empty(), "{tally:?} {fields:?}");
+
+    // (and for official LightCraft all of it goes, each counted once)
+    strip::album_rules(&mut albums, Target::Official, &mut tally, &mut fields);
+    let rules = albums[&AlbumId(1)].smart.as_ref().unwrap();
+    assert!(rules.albums.is_empty() && rules.dates.is_empty() && rules.library_folders.is_empty() && rules.keywords.is_empty());
+    assert!(rules.rule_set.as_ref().unwrap().rules.is_empty());
+    assert_eq!(tally.values().copied().collect::<Vec<_>>(), [1, 1, 1, 1]);
+    assert_eq!(fields, BTreeMap::from([("sameContent".to_string(), 1)]));
+}
+
+/// The kind of a rule field as `fixtures/main-rule-table.txt` writes it: the name, and the ids of a choice.
+fn kind_text(kind: Kind) -> String {
+    match kind {
+        Kind::Text => "text".into(),
+        Kind::Keywords => "keywords".into(),
+        Kind::Number => "number".into(),
+        Kind::Date => "date".into(),
+        Kind::Album => "album".into(),
+        Kind::Bool => "bool".into(),
+        Kind::Choice(choices) => format!("choice:{}", choices.iter().map(|c| c.0).collect::<Vec<_>>().join(",")),
+    }
+}
+
+/// The rule fields and operators of main (`fixtures/main-rule-table.txt`: `field <id> <kind>[:<choices>]` and `ops <kind>
+/// <ids>`, copied from main's `rules.rs`) against this build's. A field main lacks must be named in `RULE_FIELDS` (so the
+/// converter leaves its rules out of the official copy); a field of main this build lacks, a kind or choice that differs, and any
+/// operator that differs would silently change what official LightCraft reads, so each fails here until it is classified.
+#[test]
+fn rule_fields_are_classified() {
+    let table = include_str!("fixtures/main-rule-table.txt");
+    let line = |what: &'static str| table.lines().filter_map(move |l| l.strip_prefix(what)).filter_map(|l| l.split_once(' '));
+    let main_fields: BTreeMap<&str, &str> = line("field ").collect();
+    let main_ops: BTreeMap<&str, &str> = line("ops ").collect();
+    let ours: BTreeMap<&str, String> = FIELDS.iter().map(|f| (f.0, kind_text(f.2))).collect();
+
+    let only_here: Vec<&str> = ours.keys().copied().filter(|f| !main_fields.contains_key(f)).collect();
+    let mut classified: Vec<&str> = strip::RULE_FIELDS.iter().map(|f| f.0).collect();
+    classified.sort_unstable();
+    assert_eq!(only_here, classified, "a rule field main lacks: name it in RULE_FIELDS (convert/strip.rs), or one in it is gone");
+    let only_main: Vec<&str> = main_fields.keys().copied().filter(|f| !ours.contains_key(f)).collect();
+    assert!(only_main.is_empty(), "a rule field of main this build lacks: {only_main:?}");
+    for (field, kind) in &ours {
+        if let Some(theirs) = main_fields.get(field) {
+            assert_eq!(kind, theirs, "the field `{field}` is another kind (or has other choices) in main");
+        }
+    }
+
+    let kinds = [Kind::Text, Kind::Keywords, Kind::Number, Kind::Date, Kind::Choice(&[]), Kind::Album, Kind::Bool];
+    assert_eq!(main_ops.len(), kinds.len(), "main's table lists every kind once");
+    for kind in kinds {
+        let ours: Vec<&str> = rules::ops_for(kind).iter().map(|o| o.0).collect();
+        let name = kind_text(kind);
+        let name = name.split(':').next().unwrap();
+        let theirs: Vec<&str> = main_ops[name].split(',').collect();
+        assert_eq!(ours, theirs, "the operators of a `{name}` field differ from main's: a rule would read differently there");
     }
 }
 
@@ -1430,11 +1575,18 @@ fn a_copy_that_fails_leaves_nothing() {
 
 // ---- no field is dropped without a name
 
-/// The leaf key paths of `v`: object keys by name, array elements as `[]`; the keys in `skip` are not followed.
+/// The paths of a photo that hold develop settings, which `every_field_is_classified` compares on their own: not followed.
+/// (By path: a key of the same name elsewhere, `left_in_file.develop`, is a field of its own.)
+const SETTINGS_PATHS: &[&str] = &["photo.develop", "photo.import_look", "photo.versions[].settings", "photo.history[].settings"];
+
+/// The leaf key paths of `v`: object keys by name, array elements as `[]`; the paths in `skip` are not followed.
 fn leaves(v: &Value, path: &str, skip: &[&str], out: &mut BTreeSet<String>) {
+    if skip.contains(&path) {
+        return;
+    }
     match v {
         Value::Object(m) if !m.is_empty() => {
-            for (key, child) in m.iter().filter(|(k, _)| !skip.contains(&k.as_str())) {
+            for (key, child) in m {
                 leaves(child, &format!("{path}.{key}"), skip, out);
             }
         }
@@ -1473,7 +1625,7 @@ fn field_paths() -> BTreeSet<String> {
     }
     for p in c.photos() {
         let v = serde_json::to_value(p.as_ref()).unwrap();
-        leaves(&v, "photo", &["develop", "settings", "import_look"], &mut paths);
+        leaves(&v, "photo", SETTINGS_PATHS, &mut paths);
         // (the settings: only the lists of records inside them, which are not in the defaults)
         leaves(&v["develop"]["masks"], "photo.develop.masks", &[], &mut paths);
     }
@@ -1532,6 +1684,8 @@ fn every_field_is_classified() {
         "catalog.albums.*.smart.dates[]",
         "catalog.albums.*.smart.libraryFolders[]",
         "catalog.albums.*.smart.keywords[]",
+        "catalog.albums.*.smart.ruleSet.rules[].field",
+        "catalog.albums.*.smart.ruleSet.rules[].group.rules[].field",
         "catalog.folder_records.*.made",
     ] {
         assert!(now.contains(dropped), "{dropped}");
