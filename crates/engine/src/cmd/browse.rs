@@ -18,7 +18,7 @@ use serde_json::{Value, json};
 
 use super::{CommandSpec, always, bad, bool_or, cmd, str_param};
 use crate::import::{ImportMode, ImportOptions, import_with, is_supported};
-use crate::{Browse, EngineError, LibrarySource, Result, Session};
+use crate::{Browse, LibrarySource, Result, Session};
 
 fn browse(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "library.browse";

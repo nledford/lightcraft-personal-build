@@ -306,8 +306,10 @@ impl ImportJob {
                 continue;
             }
             if let Source::File { path } = &p.source {
-                self.by_path.insert(path.clone(), (p.id, p.local, p.content_hash.clone()));
-                if p.local {
+                // (a browsed record in Recently Deleted is the path's own, as the scan has it, but is not promoted)
+                let browsed = p.local && !p.deleted;
+                self.by_path.insert(path.clone(), (p.id, browsed, p.content_hash.clone()));
+                if browsed {
                     self.local_sizes.insert(path.clone(), p.file_size);
                 }
             }
@@ -352,6 +354,13 @@ impl ImportJob {
                     match verdict {
                         // ✕ before its size was looked at: nothing is decided about it, so it isn't promoted
                         Some(BrowsedFile::Unchecked) => continue,
+                        // looking at it was given up: the person is told, as for a file whose read was
+                        Some(BrowsedFile::Failed(why)) => {
+                            log::warn!("import {f}: {why}");
+                            out.items.push(PreparedItem::Failed(f, why));
+                            self.done.fetch_add(1, Relaxed);
+                            continue;
+                        }
                         Some(BrowsedFile::Changed) => {
                             changed.insert(f.clone(), id);
                             todo.push(f);

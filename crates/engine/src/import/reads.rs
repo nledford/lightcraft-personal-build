@@ -223,7 +223,7 @@ impl ReadWatch {
         )
     }
 
-    fn end(&self, why: String) {
+    pub(super) fn end(&self, why: String) {
         lock(&self.ended).get_or_insert(why);
     }
 }

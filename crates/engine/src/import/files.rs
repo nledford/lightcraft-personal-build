@@ -595,22 +595,38 @@ pub(super) fn read_files(
 }
 
 /// What looking at the file of a browsed (Local) record found ([`browsed_files_changed`]).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum BrowsedFile {
     /// As it was browsed, or not to be told: a record without a size, and a file that can't be read (one that is
-    /// gone is the record's own business) count as unchanged.
+    /// gone is the record's own business) count as unchanged, and so does one the ended run never got to
+    /// (nothing is learned about it, and promoting a record reads no disk).
     Unchanged,
     /// Its size on disk is not the recorded one: another application replaced it since it was browsed (the check the
     /// probes kept from a scan go by).
     Changed,
     /// Not looked at: `cancel` was set first.
     Unchecked,
+    /// Looking at it was given up (skipped: the drive stopped answering), and why. An import fails the file, so the
+    /// person is told; a scan reads it again, like a file that was not reached.
+    Failed(String),
+}
+
+/// What the pool made of the look at one browsed file: only ✕ leaves a file unchecked; a run that ended on its own
+/// (the drive stopped answering) leaves it unchanged, as a record with no size is.
+#[cfg(not(target_arch = "wasm32"))]
+fn browsed_verdict(seen: Option<Pooled<BrowsedFile>>, cancel: &std::sync::atomic::AtomicBool) -> BrowsedFile {
+    match seen {
+        Some(Pooled::Done(found)) => found,
+        Some(Pooled::Failed(why)) => BrowsedFile::Failed(why),
+        Some(Pooled::Unreached) | None if cancel.load(std::sync::atomic::Ordering::Relaxed) => BrowsedFile::Unchecked,
+        Some(Pooled::Unreached) | None => BrowsedFile::Unchanged,
+    }
 }
 
 /// Look at the file of each of `files` (path, the size its browsed record has), several at once on the readers' pool
 /// ([`pooled`]: one at a time, each is a round trip to a network share, and thousands of browsed photos waited minutes
 /// for them; a file that stops answering is reported and skipped like any other read). The answers come in the order
-/// of `files`; a record with no size is not asked about, and one whose reader was skipped counts as unchanged.
+/// of `files`; a record with no size is not asked about, and one whose look was skipped is [`BrowsedFile::Failed`].
 pub(super) fn browsed_files_changed(files: &[(&str, u64)], cancel: &std::sync::atomic::AtomicBool, watch: &ReadWatch) -> Vec<BrowsedFile> {
     // (the web's files are not std::fs files)
     #[cfg(target_arch = "wasm32")]
@@ -634,11 +650,7 @@ pub(super) fn browsed_files_changed(files: &[(&str, u64)], cancel: &std::sync::a
                 if *recorded == 0 {
                     return BrowsedFile::Unchanged;
                 }
-                match seen.next() {
-                    Some(Pooled::Done(found)) => found,
-                    Some(Pooled::Failed(_)) => BrowsedFile::Unchanged,
-                    Some(Pooled::Unreached) | None => BrowsedFile::Unchecked,
-                }
+                browsed_verdict(seen.next(), cancel)
             })
             .collect()
     }
@@ -908,6 +920,33 @@ mod prepared_tests {
             "a record with no size isn't asked about, so ✕ doesn't matter to it"
         );
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// A run that ended on its own (a drive stopped answering) did not look at the sizes, but nobody pressed ✕: those
+    /// files count as unchanged, so they are promoted as the file-less records are, not dropped without a word.
+    #[test]
+    fn an_ended_run_leaves_browsed_files_unchanged_and_only_cancel_leaves_them_unchecked() {
+        let dir = temp_dir("browsed-ended");
+        std::fs::write(dir.join("a.jpg"), [0u8; 20]).unwrap();
+        let name = dir.join("a.jpg").to_string_lossy().into_owned();
+        let files = [(name.as_str(), 10u64)];
+        let watch = ReadWatch::default();
+        watch.end("a drive is not answering".into());
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        assert_eq!(browsed_files_changed(&files, &cancel, &watch), [BrowsedFile::Unchanged]);
+        cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+        assert_eq!(browsed_files_changed(&files, &cancel, &watch), [BrowsedFile::Unchecked]);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// A look that was given up is a failure of that file, whatever the cancel flag says about the rest.
+    #[test]
+    fn a_browsed_file_whose_look_was_skipped_is_failed() {
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        let skipped = || Some(Pooled::Failed("skipped: no answer after 30 s".to_string()));
+        assert_eq!(browsed_verdict(skipped(), &cancel), BrowsedFile::Failed("skipped: no answer after 30 s".into()));
+        cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+        assert_eq!(browsed_verdict(skipped(), &cancel), BrowsedFile::Failed("skipped: no answer after 30 s".into()));
     }
 
     /// A probe a scan left is used again for a file that is as it was, and only for it: a file that

@@ -256,7 +256,8 @@ fn contents_already_held(cat: &lightcraft_catalog::Catalog, opts: &ImportOptions
         return held;
     }
     let fresh = opts.on_deleted == OnDeleted::Fresh;
-    for p in cat.photos().filter(|p| !(fresh && p.deleted)) {
+    // (a browsed copy, Local, is not in the library: it holds no content)
+    for p in cat.photos().filter(|p| !p.local && !(fresh && p.deleted)) {
         if let Some(h) = p.content_hash.as_deref().map(crate::sync::base_hash)
             && batch.contains(h)
         {
@@ -326,7 +327,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                         .or_else(|| {
                             s.catalog
                                 .photos()
-                                .find(|p| p.content_hash.as_deref().is_some_and(|k| crate::sync::base_hash(k) == h.as_str()))
+                                .find(|p| !p.local && p.content_hash.as_deref().is_some_and(|k| crate::sync::base_hash(k) == h.as_str()))
                                 .map(|p| p.id)
                         })
                 });

@@ -405,7 +405,8 @@ pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &Sc
                     replaced.insert(PathBuf::from(f), id);
                 }
             }
-            BrowsedFile::Unchecked => {
+            // (✕, or a look that was given up: the file is read like the ones after it, and reported as not probed)
+            BrowsedFile::Unchecked | BrowsedFile::Failed(_) => {
                 by_path.remove(Path::new(f));
             }
         }

@@ -132,6 +132,40 @@ fn a_deleted_browse_record_still_counts_as_the_files_own() {
     let _ = std::fs::remove_dir_all(src);
 }
 
+/// A browse record in Recently Deleted is not promoted by importing its file, as the scan says (it lists the file as
+/// the path's own): the record stays a browsed one, and no photo joins the library under it.
+#[test]
+fn importing_the_file_of_a_deleted_browse_record_does_not_promote_it() {
+    let src = temp_dir("browsed-deleted-import");
+    let f = src.join("a.png");
+    write_png(&f, 77);
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [f], "local": true})).unwrap();
+    let id = r["imported"][0].as_u64().unwrap();
+    s.execute("photo.delete", &json!({"ids": [id]})).unwrap();
+    let r = s.execute("library.import", &json!({"paths": [f]})).unwrap();
+    assert_eq!(r["imported"], json!([]), "{r}");
+    assert!(s.catalog.photo(lightcraft_catalog::PhotoId(id)).unwrap().local, "the record is still only browsed: {r}");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// A copy that was only browsed (Local) is not a photo of the library: a file with its bytes, imported although a
+/// photo has its content (`importDuplicates`), is not one of those, and keeps the content's own key.
+#[test]
+fn a_browsed_copy_does_not_give_an_imported_file_a_duplicate_key() {
+    let src = temp_dir("browsed-dup-key");
+    let (a, b) = (src.join("a.png"), src.join("b.png"));
+    write_png(&a, 78);
+    std::fs::copy(&a, &b).unwrap();
+    let mut s = Session::new().with_fs();
+    s.execute("library.import", &json!({"paths": [a], "local": true})).unwrap();
+    let r = s.execute("library.import", &json!({"paths": [b], "importDuplicates": true})).unwrap();
+    let id = r["imported"][0].as_u64().unwrap();
+    let key = s.catalog.photo(lightcraft_catalog::PhotoId(id)).unwrap().content_hash.clone().unwrap();
+    assert!(!key.contains(":dup"), "no library photo has this content: {key}");
+    let _ = std::fs::remove_dir_all(src);
+}
+
 /// A browsed file that another application replaced since (it has another size) is not what its record says: the scan
 /// reads it again, so the content stored at the browse (the old file's, which the library also has) doesn't make it a
 /// duplicate, and importing it brings the record up to date as it joins the library.
