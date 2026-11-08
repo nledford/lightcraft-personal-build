@@ -552,6 +552,14 @@ pub struct LightcraftApp {
     pub(crate) welcome_drawn: bool,
     /// The new library's welcome has put the keyboard on Import Photos… (once per library opened).
     pub(crate) welcome_focused: bool,
+    /// The library generation (`Session::library_generation`) in which samples came into an empty library and a
+    /// sample was opened ([`panels::empty_library::land_on_samples`]): in that library the samples banner walks the
+    /// first edit through; another library, or none, has no tour.
+    pub(crate) samples_landed: Option<u64>,
+    /// How far the person has come since then: edited, compared ([`panels::samples::Tour`]).
+    pub(crate) samples_tour: panels::samples::Tour,
+    /// The settings the open photo came with, to tell the person's edit from them ([`panels::samples::TourBase`]).
+    pub(crate) samples_tour_base: Option<panels::samples::TourBase>,
 }
 
 /// How long a screenshot waits for in-flight renders before it is captured anyway (and the

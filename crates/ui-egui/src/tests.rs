@@ -100,6 +100,7 @@ mod rules_editor;
 mod sam_setup;
 mod samples;
 mod samples_banner;
+mod samples_landing;
 mod scan_probes;
 mod scroll;
 mod side_keys;
