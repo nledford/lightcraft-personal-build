@@ -133,6 +133,7 @@
   "Before": "Przed",
   "Before/After Settings": "Ustawienia porównania przed/po",
   "Before/After Split": "Podział przed/po",
+  "Before/After": "Przed/Po",
   "Before/After Split Top/Bottom": "Podział przed/po góra/dół",
   "Before/After Top/Bottom": "Przed/Po góra/dół",
   "Begin Interaction": "Rozpocznij interakcję",
@@ -328,6 +329,7 @@
   "Cut": "Wytnij",
   "Cut pages": "Wytnij strony",
   "Cycle Crop Overlay": "Przełącz nakładkę kadrowania",
+  "Crop Overlay": "Nakładka kadrowania",
   "Cycle Crop Overlay Orientation": "Przełącz orientację nakładki kadrowania",
   "Cycle Info Overlay": "Przełącz nakładkę informacji",
   "Cycle Mask Overlay Color": "Przełącz kolor nakładki maski",
@@ -1568,6 +1570,7 @@
   "XMP sidecars": "Pliki pomocnicze XMP",
   "Year": "Rok",
   "Yellow": "Żółty",
+  "White": "Biały",
   "Yellow Hue": "Odcień żółci",
   "Yellow Luminance": "Luminancja żółci",
   "Yellow Saturation": "Nasycenie żółci",
@@ -2432,7 +2435,6 @@
   "Counting library": "Liczenie biblioteki",
   "Previous page": "Poprzednia strona",
   "Next page": "Następna strona",
-  "Before/After": "Przed/Po",
   "History & Activity": "Historia i aktywność",
   "Show overlay": "Pokaż nakładkę",
   "Stack — click to expand (S)": "Stos — kliknij, aby rozwinąć (S)",
@@ -2466,5 +2468,8 @@
   "This folder stays listed while the grid shows its photos": "Ten folder pozostaje na liście, dopóki siatka pokazuje jego zdjęcia",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Klawisze działają na pasku bocznym: strzałki przesuwają, Enter otwiera, pisz, aby szukać, Esc wraca do zdjęć",
   "This row has no name to change": "Ten wiersz nie ma nazwy do zmiany",
-  "Keyboard in Sidebar": "Klawiatura na pasku bocznym"
+  "Keyboard in Sidebar": "Klawiatura na pasku bocznym",
+  "Loupe Overlay": "Nakładka lupy",
+  "View Options…": "Opcje widoku…",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Widok → Nakładka lupy → Opcje widoku wybiera wiersze, które pokazują Info 1 i Info 2."
 }

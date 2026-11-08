@@ -139,6 +139,7 @@
   "Before": "Prima",
   "Before/After Settings": "Impostazioni Prima/Dopo",
   "Before/After Split": "Prima/Dopo diviso",
+  "Before/After": "Prima/Dopo",
   "Before/After Split Top/Bottom": "Prima/Dopo diviso sopra/sotto",
   "Before/After Top/Bottom": "Prima/Dopo sopra/sotto",
   "Begin Interaction": "Inizia interazione",
@@ -342,6 +343,7 @@
   "Cut": "Taglia",
   "Cut pages": "Taglia pagine",
   "Cycle Crop Overlay": "Cambia sovrapposizione del ritaglio",
+  "Crop Overlay": "Sovrapposizione del ritaglio",
   "Cycle Crop Overlay Orientation": "Cambia orientamento della sovrapposizione del ritaglio",
   "Cycle Info Overlay": "Cambia sovrapposizione delle informazioni",
   "Cycle Mask Overlay Color": "Cambia colore della sovrapposizione maschera",
@@ -1636,6 +1638,7 @@
   "XMP sidecars": "File XMP collaterali",
   "Year": "Anno",
   "Yellow": "Giallo",
+  "White": "Bianco",
   "Yellow Hue": "Tonalità giallo",
   "Yellow Luminance": "Luminanza giallo",
   "Yellow Saturation": "Saturazione giallo",
@@ -2418,7 +2421,6 @@
   "Use Defaults": "Usa predefiniti",
   "Show briefly when photo changes": "Mostra brevemente al cambio di foto",
   "Camera & Lens": "Fotocamera e obiettivo",
-  "View → View Options chooses the lines Info 1 and Info 2 show.": "Visualizza → Opzioni di visualizzazione sceglie le righe di Info 1 e Info 2.",
   "Before/After Side by Side": "Prima/Dopo affiancati",
   "Clipping": "Tagli tonali",
   "Mask Overlay": "Sovrapposizione maschera",
@@ -2673,7 +2675,6 @@
   "The library becomes what it was when the backup was made. What it holds now is kept in Replaced in the library folder.": "La libreria torna com'era quando è stato fatto il backup. Ciò che contiene ora viene conservato in Replaced, nella cartella della libreria.",
   "Same Content as Another Photo": "Stesso contenuto di un'altra foto",
   "Counting library": "Conteggio della libreria",
-  "Before/After": "Prima/Dopo",
   "History & Activity": "Cronologia e attività",
   "Show overlay": "Mostra sovrapposizione",
   "Stack — click to expand (S)": "Pila — clic per espandere (S)",
@@ -2706,5 +2707,6 @@
   "This folder stays listed while the grid shows its photos": "Questa cartella resta nell'elenco finché la griglia ne mostra le foto",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "I tasti agiscono sulla barra laterale: le frecce spostano, Invio apre, digita per cercare, Esc torna alle foto",
   "This row has no name to change": "Questa riga non ha un nome da cambiare",
-  "Keyboard in Sidebar": "Tastiera nella barra laterale"
+  "Keyboard in Sidebar": "Tastiera nella barra laterale",
+  "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Visualizza → Sovrapposizione lente → Opzioni di visualizzazione sceglie le righe di Info 1 e Info 2."
 }
