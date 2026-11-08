@@ -982,9 +982,9 @@
   colour label at the other side) are each on a small shade, only as wide as they are, wherever they show: before,
   they lay on the bare photo and went out on a bright one. Which thumbnails show marks is as it was (a rated, flagged
   or labelled one, or one under the pointer or chosen). The band along the lower edge of a photo under the pointer or
-  a chosen one is as it was; the dark bar across a marked filmstrip cell is gone, its marks being on their shades. On
-  a thumbnail or a filmstrip cell narrower than its marks they end where the photo ends, and the stars close up and
-  get smaller to leave room for the flag, and an "edited" mark or a label's dot with no room left beside them is not drawn.
+  a chosen one is as it was, and a filmstrip cell still has its dark band behind the marks. On a thumbnail or a
+  filmstrip cell narrower than its marks they end where the photo ends: the "edited" mark is dropped first, then the
+  stars close up into one star and a number to leave room for the flag, and a label's dot with no room left beside them is not drawn.
 - The flag of a rejected photo on a thumbnail or a filmstrip cell is a lighter red, which stands out from its shade in every theme, and
   a rejected thumbnail is dimmed under its marks, not over them.
 - "Before", over a photo shown as it was before its edits, and the label of a hover preview are on a darker shade.
