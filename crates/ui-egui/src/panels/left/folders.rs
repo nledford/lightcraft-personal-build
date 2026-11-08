@@ -1140,8 +1140,7 @@ fn folder_item(
             }
         }
         FolderItem::CopyPath => {
-            let r = ui.button(crate::i18n::tr("Copy Path"));
-            crate::widgets::register(ui, "folderCopyPath", r.rect);
+            let r = MenuItem::new(crate::i18n::tr("Copy Path")).widget("folderCopyPath").show(ui);
             if r.clicked() {
                 ui.ctx().copy_text(native_path(path, std::path::MAIN_SEPARATOR));
                 app.toast(ui.ctx(), crate::i18n::tr("Path copied"));
