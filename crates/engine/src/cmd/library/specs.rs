@@ -314,10 +314,14 @@ pub fn specs() -> Vec<CommandSpec> {
                     }
                     ids.extend(found.into_iter().filter(|id| seen.insert(*id)));
                     for op in made {
-                        if let Op::SetFolderRecord { folder, .. } = &op
-                            && unmade_seen.insert(folder.clone())
-                        {
-                            unmade.push(op);
+                        match &op {
+                            // (a folder inside two of the paths is forgotten once)
+                            Op::SetFolderRecord { folder, .. } => {
+                                if unmade_seen.insert(folder.clone()) {
+                                    unmade.push(op);
+                                }
+                            }
+                            _ => unmade.push(op),
                         }
                     }
                 }

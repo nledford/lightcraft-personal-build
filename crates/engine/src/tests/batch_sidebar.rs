@@ -22,6 +22,11 @@
 //!   folder of the library refuses the whole call.
 //! - Given two folders, when both get a colour label at once (`folder.label {paths}`), then both
 //!   show it, and one undo takes both off.
+//! - A folder made with `folder.create` that holds no photo leaves the library with the folders
+//!   removed beside it, once even when two of the paths hold it, as one undo step; it takes a
+//!   label with the others.
+//! - Moving several albums where a smart album would include itself in the folder refuses the
+//!   whole call.
 
 use lightcraft_catalog::{AlbumId, Op, Photo, PhotoId, Source};
 use serde_json::json;
@@ -298,4 +303,111 @@ fn several_folders_get_a_colour_label_as_one_step() {
     s.execute("folder.label", &json!({"paths": ["/pics/2025/alps", "/pics/2026/beach"], "label": "blue"})).unwrap();
     s.execute("folder.label", &json!({"paths": ["/pics/2025/alps", "/pics/2026/beach"], "label": "none"})).unwrap();
     assert!(label(&s, "/pics/2025/alps").is_none() && label(&s, "/pics/2026/beach").is_none());
+}
+
+/// A scratch folder that goes away with the test, however it ends (`folder.create` makes real folders).
+struct Scratch(std::path::PathBuf);
+
+impl Scratch {
+    fn new(tag: &str) -> Scratch {
+        let dir = std::env::temp_dir().join(format!("lc-batch-sidebar-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        Scratch(dir)
+    }
+    fn path(&self, rel: &str) -> String {
+        // the host's separator throughout, as the code under test spells joined paths
+        self.0.join(rel).components().collect::<std::path::PathBuf>().to_string_lossy().to_string()
+    }
+}
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+fn make_folder(s: &mut Session, parent: &str, name: &str) {
+    s.execute("folder.create", &json!({"parent": parent, "name": name})).unwrap();
+}
+
+#[test]
+fn removing_a_folder_that_holds_only_a_made_folder_forgets_it_as_one_step() {
+    let dir = Scratch::new("remove-made");
+    let mut s = Session::new();
+    make_folder(&mut s, &dir.path(""), "new");
+    let photo = add_file(&mut s, &dir.path("kept/x.jpg"));
+    let (new, kept) = (dir.path("new"), dir.path("kept"));
+    assert!(s.catalog.holds_made_folder(&new));
+    let steps = s.undo.len();
+    // one path with a photo, one with only a made folder: both leave, once, as one step
+    let r = s.execute("library.removeFolder", &json!({"paths": [new, kept]})).unwrap();
+    assert_eq!(r["removed"], 1);
+    assert!(!s.catalog.holds_made_folder(&new), "no longer a made folder");
+    assert!(deleted(&s, photo));
+    assert_eq!(s.undo.len(), steps + 1);
+    undo(&mut s);
+    assert!(s.catalog.holds_made_folder(&new), "undo makes it a made folder again");
+    assert!(!deleted(&s, photo));
+    // the made folder alone, as before
+    let r = s.execute("library.removeFolder", &json!({"paths": [new]})).unwrap();
+    assert_eq!(r["removed"], 0);
+    assert!(!s.catalog.holds_made_folder(&new));
+}
+
+#[test]
+fn a_folder_and_one_inside_it_forget_the_folders_made_in_them_once() {
+    let dir = Scratch::new("remove-overlap");
+    std::fs::create_dir_all(dir.0.join("a/b")).unwrap();
+    let mut s = Session::new();
+    let photo = add_file(&mut s, &dir.path("a/x.jpg"));
+    make_folder(&mut s, &dir.path("a/b"), "new");
+    let (a, b, new) = (dir.path("a"), dir.path("a/b"), dir.path("a/b/new"));
+    assert!(s.catalog.holds_made_folder(&new));
+    let steps = s.undo.len();
+    let r = s.execute("library.removeFolder", &json!({"paths": [a, b]})).unwrap();
+    assert_eq!(r["removed"], 1);
+    assert!(!s.catalog.holds_made_folder(&new) && !s.catalog.holds_made_folder(&a));
+    assert!(deleted(&s, photo));
+    assert_eq!(s.undo.len(), steps + 1, "one step, though two paths hold the made folder");
+    undo(&mut s);
+    assert!(s.catalog.holds_made_folder(&new), "one undo brings the marker back");
+    assert!(!deleted(&s, photo));
+}
+
+#[test]
+fn several_folders_label_a_made_folder_that_holds_no_photo() {
+    let dir = Scratch::new("label-made");
+    let mut s = Session::new();
+    make_folder(&mut s, &dir.path(""), "empty");
+    add_file(&mut s, &dir.path("full/x.jpg"));
+    let (empty, full) = (dir.path("empty"), dir.path("full"));
+    let label = |s: &Session, path: &str| s.catalog.folder_record(path).and_then(|r| r.label);
+    let steps = s.undo.len();
+    s.execute("folder.label", &json!({"paths": [empty, full], "label": "green"})).unwrap();
+    assert!(label(&s, &empty).is_some() && label(&s, &full).is_some());
+    assert_eq!(s.undo.len(), steps + 1);
+    undo(&mut s);
+    assert!(label(&s, &empty).is_none() && label(&s, &full).is_none());
+    // alone, too
+    s.execute("folder.label", &json!({"paths": [empty], "label": "red"})).unwrap();
+    assert!(label(&s, &empty).is_some());
+    assert!(s.catalog.holds_made_folder(&empty), "labeling it leaves it a made folder");
+}
+
+#[test]
+fn moving_several_albums_refuses_a_smart_album_that_would_include_itself() {
+    let mut s = Session::new();
+    let plain = album(&mut s, json!({"name": "Plain"}));
+    let trips = album(&mut s, json!({"name": "Trips", "folder": true}));
+    let smart = s.execute("album.createSmart", &json!({"name": "From Trips", "rules": {"album": trips}})).unwrap()["id"].as_u64().unwrap();
+    let steps = s.undo.len();
+    // the smart album tests the folder it is going into: the whole call is refused, nothing moves
+    let e = s.execute("album.move", &json!({"ids": [plain, smart], "parent": trips})).unwrap_err().to_string();
+    assert!(e.contains("From Trips") && e.contains("include itself"), "{e}");
+    assert_eq!((parent_of(&s, plain), parent_of(&s, smart)), (None, None));
+    assert_eq!(s.undo.len(), steps, "nothing to undo");
+    // without it, the rest moves
+    s.execute("album.move", &json!({"ids": [plain], "parent": trips})).unwrap();
+    assert_eq!(parent_of(&s, plain), Some(trips));
 }
