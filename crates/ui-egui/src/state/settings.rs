@@ -167,7 +167,7 @@ pub struct AppSettings {
     /// Grid: when to show the rating / flag / edited badges.
     pub grid_badges: GridBadges,
     /// View ▸ Loupe Overlay ▸ View Options… ▸ Show message when loading or rendering photos: the loupe says
-    /// "Rendering…" while the photo it shows is not the finished render.
+    /// "Rendering…" after half a second while the photo it shows is not the finished render; off, only after 3 s.
     pub loupe_messages: bool,
     /// Settings ▸ Performance ▸ Prepare photos in the background, app-wide (a library may keep its
     /// own in its `prefs.json`): handed to the session at launch and kept in step with it. Read
