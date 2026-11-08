@@ -535,6 +535,38 @@ fn a_file_with_the_same_bytes_that_is_another_photo_of_the_library_is_never_remo
 }
 
 #[test]
+fn a_partial_copy_at_the_new_place_is_never_removed_as_a_copy() {
+    let dir = Scratch::new("partial-copy");
+    let mut s = open(&dir);
+    let b = add(&mut s, &dir.path("local/b.jpg"), "B");
+    // the move was cut short while it copied: the new place holds some of the bytes, the original is whole
+    std::fs::write(dir.path("share/b.jpg"), "B (partial)").unwrap();
+    crate::move_intent::write(&dir.library(), &[(dir.path("local/b.jpg"), dir.path("share/b.jpg"))]).unwrap();
+    let r = s.recover_moves();
+    assert_eq!(r.copies_removed, 0, "{r:?}");
+    assert!(matches!(r.problems.as_slice(), [crate::move_intent::MoveProblem::BothPlaces { .. }]), "{r:?}");
+    assert_eq!(std::fs::read_to_string(dir.path("local/b.jpg")).unwrap(), "B", "the original stays");
+    assert_eq!(std::fs::read_to_string(dir.path("share/b.jpg")).unwrap(), "B (partial)", "a file that differs is not removed");
+    assert_eq!(file_of(&s, b), dir.path("local/b.jpg"), "the library keeps pointing at the whole file");
+}
+
+#[test]
+fn a_dead_worker_in_a_library_without_a_folder_follows_nothing_while_the_source_is_still_there() {
+    let dir = Scratch::new("abandon-both-places");
+    let mut s = Session::new();
+    let b = add(&mut s, &dir.path("local/b.jpg"), "B");
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [b.0], "folder": dir.path("share")}), true).unwrap().unwrap();
+    drop(work.run());
+    // the original is back (or was never gone) while a file lies at the new place: not a move that arrived
+    std::fs::write(dir.path("local/b.jpg"), "B").unwrap();
+    let r = s.execute_fn("photo.moveToFolder", |s| Ok(json!(finish.abandon(s)))).unwrap();
+    assert_eq!(r["relinked"], 0, "{r}");
+    assert!(Path::new(&dir.path("local/b.jpg")).is_file() && Path::new(&dir.path("share/b.jpg")).is_file(), "both files stay: {r}");
+    assert_eq!(file_of(&s, b), dir.path("local/b.jpg"), "nothing is followed");
+    assert!(!s.move_running() && s.activity.list().is_empty());
+}
+
+#[test]
 fn checks_that_read_the_disk_refuse_on_the_worker_before_anything_moves() {
     let dir = Scratch::new("refuse");
     let mut s = open(&dir);
