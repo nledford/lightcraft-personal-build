@@ -1118,13 +1118,18 @@ fn skip_on_a_stalled_import_row_fails_that_file_and_goes_on() {
     let row = stalled_row(&mut h);
     assert_eq!(row.kind, "import");
     assert_eq!(row.stalled.as_ref().map(|s| s.what.as_str()), Some("IMG_hang.jpg"));
+    open_list(&mut h);
     assert!(h.step_until(T, |h| has(h, &format!("activity:skip:{}", row.id))), "the row offers Skip");
     assert!(has(&h, &format!("activity:cancel:{}", row.id)), "next to ✕");
     click(&mut h, &format!("activity:skip:{}", row.id));
     assert!(h.step_until(Duration::from_secs(30), |h| h.app.import.is_none()), "the import goes on");
     gate.open();
     assert_eq!(h.app.session.catalog.len(), 4, "the other files are added");
-    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("Imported 4 photos") && t.text.contains("1 not readable")), "{:?}", h.app.ui.toast);
+    assert!(
+        h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("Imported 4 photos") && t.text.contains("1 not readable")),
+        "{:?}",
+        h.app.ui.toast
+    );
     assert!(h.app.session.activity.list().is_empty());
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -1206,6 +1211,7 @@ fn skip_on_the_review_scans_row_lists_the_file_as_unreadable() {
     let row = stalled_row(&mut h);
     assert_eq!(row.kind, "scan", "{row:?}");
     assert_eq!(row.stalled.as_ref().map(|s| s.what.as_str()), Some("IMG_hang.jpg"));
+    open_list(&mut h);
     assert!(h.step_until(T, |h| has(h, &format!("activity:skip:{}", row.id))), "the row offers Skip");
     click(&mut h, &format!("activity:skip:{}", row.id));
     assert!(h.step_until(Duration::from_secs(30), |h| h.app.scan.is_none()), "the scan goes on");
