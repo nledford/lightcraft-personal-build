@@ -638,8 +638,15 @@ mod contact_sheet_tests {
         let guard = app.session.activity.start("export", "Exporting", Cancel::Flag(cancel.clone()));
         let (tx, rx) = channel();
         drop(tx);
-        app.export =
-            Some(ExportTask { total: 3, progress: Arc::new(Mutex::new((0, String::new()))), cancel, rx, guard, folder: Some("/tmp/out".into()), preparing: None });
+        app.export = Some(ExportTask {
+            total: 3,
+            progress: Arc::new(Mutex::new((0, String::new()))),
+            cancel,
+            rx,
+            guard,
+            folder: Some("/tmp/out".into()),
+            preparing: None,
+        });
         poll(&mut app, &egui::Context::default());
         assert!(app.export.is_none());
         let row = app.session.activity.finished().into_iter().next().expect("a worker that died always leaves a row");

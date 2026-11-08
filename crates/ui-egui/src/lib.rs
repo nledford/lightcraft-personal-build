@@ -540,7 +540,7 @@ pub struct LightcraftApp {
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) sidecars_row: Option<lightcraft_engine::activity::TaskGuard>,
     /// The library failed to open at launch: the blocking window, then the temporary-session
-/// banner (issue #100). Cleared once a library opens.
+    /// banner (issue #100). Cleared once a library opens.
     pub library_problem: Option<panels::library_problem::LibraryProblem>,
     /// First-frame focus/input state for a newly shown blocking library window.
     pub(crate) library_window_input: panels::library_problem::WindowBarrier,

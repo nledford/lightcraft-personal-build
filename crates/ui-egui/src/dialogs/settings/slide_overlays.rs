@@ -171,7 +171,9 @@ pub fn sections(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         }
         if graphic {
             row(ui, t, "Image", |ui| {
-                if app.services.pick_files.is_some() && crate::button::Button::new("Choose…").small().widget("button:slideshowPlateChoose").show(ui).clicked() {
+                if app.services.pick_files.is_some()
+                    && crate::button::Button::new("Choose…").small().widget("button:slideshowPlateChoose").show(ui).clicked()
+                {
                     // the dialog runs off the UI thread; the image is set when it closes
                     crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::SlidePlateImage);
                 }

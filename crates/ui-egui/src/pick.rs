@@ -232,11 +232,11 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
             continue;
         };
         match rx.try_recv() {
-        Ok(paths) if paths.is_empty() => {}
-        Ok(paths) => answered.push((p, paths)),
-        Err(TryRecvError::Empty) => waiting.push(p),
-        Err(TryRecvError::Disconnected) => log::warn!("{}: the file dialog ended without an answer", p.command),
-    }
+            Ok(paths) if paths.is_empty() => {}
+            Ok(paths) => answered.push((p, paths)),
+            Err(TryRecvError::Empty) => waiting.push(p),
+            Err(TryRecvError::Disconnected) => log::warn!("{}: the file dialog ended without an answer", p.command),
+        }
     }
     if !waiting.is_empty() {
         // the host repaints when a dialog closes; this is the net under it

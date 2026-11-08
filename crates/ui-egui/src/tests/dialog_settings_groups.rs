@@ -133,7 +133,15 @@ fn each_section_is_under_the_tab_a_person_would_look_in() {
     // Import is what happens to photos as they come in, from a camera or card or a watched folder too
     assert_eq!(
         under("import"),
-        ["Raw defaults", "Other images (JPEG, PNG, TIFF, HEIC…)", "Metadata", "Read from photos", "Dropped Files", "Cameras and Cards", "Auto Import"]
+        [
+            "Raw defaults",
+            "Other images (JPEG, PNG, TIFF, HEIC…)",
+            "Metadata",
+            "Read from photos",
+            "Dropped Files",
+            "Cameras and Cards",
+            "Auto Import"
+        ]
     );
     // Files is what is written beside the photo files and what they are opened in
     assert_eq!(under("files"), ["External Editing", "Lens profiles", "XMP sidecars"]);
