@@ -678,7 +678,7 @@ fn export_can_be_stopped_while_its_photos_are_prepared() {
 
 /// A photo that can't be exported (here: a demo photo has no original file to copy) used to be refused by
 /// `app.export` before anything started; now the export starts and ends with that error in a toast, with
-/// nothing written and no row left.
+/// nothing written, no running row, and a failed row in the finished ones that says why.
 #[test]
 fn a_photo_that_cannot_be_prepared_ends_the_export_with_its_error() {
     let mut h = demo();
@@ -693,7 +693,11 @@ fn a_photo_that_cannot_be_prepared_ends_the_export_with_its_error() {
     let toast = h.app.ui.toast.clone().map(|t| t.text).unwrap_or_default();
     assert!(toast.contains("generated demo photo"), "{toast}");
     assert!(written.lock().unwrap().is_empty(), "nothing is written");
-    assert!(h.app.session.activity.list().is_empty(), "no row is left");
+    assert!(h.app.session.activity.list().is_empty(), "no row is left running");
+    let finished = h.app.session.activity.finished();
+    let row = finished.iter().find(|r| r.kind == "export").expect("the export leaves a row");
+    assert_eq!(row.ending, lightcraft_engine::activity::Ending::Failed, "{row:?}");
+    assert!(row.detail.contains("generated demo photo"), "{row:?}");
 }
 
 fn preparing(h: &Headless) -> bool {

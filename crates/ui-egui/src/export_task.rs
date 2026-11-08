@@ -206,18 +206,22 @@ pub fn prepare(app: &mut LightcraftApp, ctx: &egui::Context) {
                     }
                 }
                 Ok(()) => {}
-                Err(e) => {
-                    app.export = None;
-                    app.toast(ctx, e);
-                }
+                Err(e) => end_unlaunched(app, ctx, e, stopped),
             }
         }
-        // (the row goes with the task, and `after` is dropped unrun: Photos is free again)
-        Err(e) => {
-            app.export = None;
-            app.toast(ctx, e);
-        }
+        // (the row ends as a failed one, and `after` is dropped unrun: Photos is free again)
+        Err(e) => end_unlaunched(app, ctx, e, false),
     }
+}
+
+/// An export that ended before its worker ran (an error preparing a photo, a thread that wouldn't start): its row in the
+/// activity stack ends with the error, as a batch that failed does in [`poll`], and the error is said as one.
+fn end_unlaunched(app: &mut LightcraftApp, ctx: &egui::Context, error: String, stopped: bool) {
+    if let Some(task) = app.export.take() {
+        let folder = task.folder.clone();
+        task.guard.finish(Outcome { path: folder, ..failed_outcome(error.clone(), stopped) });
+    }
+    app.toast_error(ctx, error);
 }
 
 /// Export a single paginated PDF with the same activity row and cancellation as image exports.

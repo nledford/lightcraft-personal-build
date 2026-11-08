@@ -125,9 +125,15 @@ fn tasks_message(stops: &[String], unstoppable: &[String]) -> String {
 }
 
 /// The quit goes through: the jobs that can stop are asked to, the ones that can't are what the prompt said it doesn't
-/// wait for. Not before: Cancel on a later prompt is back to work with everything still running.
+/// wait for, and files waiting for an import, or handed to one that has not started, are given up (the quit would
+/// otherwise start them). Not before: Cancel on a later prompt (the backup's) is back to work with everything still
+/// running and waiting.
 fn quit_now(app: &mut LightcraftApp) {
     app.session.activity.cancel_all();
+    app.waiting_import = Default::default();
+    if app.import.as_ref().is_some_and(|t| !t.listed()) {
+        app.import = None;
+    }
     app.ui.quit = true;
 }
 
@@ -821,12 +827,6 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
             // the jobs are not asked about again for this quit: the ones with no ✕ are still running when the window's
             // close request or Try Saving Again comes back through `may_close`
             app.quit_tasks_answered = true;
-            // files waiting for an import, and one handed its files but not started, are given up
-            // too (the quit would otherwise start them)
-            app.waiting_import = Default::default();
-            if app.import.as_ref().is_some_and(|t| !t.listed()) {
-                app.import = None;
-            }
             // the backup and unsaved changes still get their own questions; the jobs are asked to stop only once the
             // quit goes through (not the backup this quit waits for: `tasks_quitting_would_stop`)
             if may_close(app) {
