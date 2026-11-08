@@ -256,7 +256,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Rename Folder",
             [],
             None,
-            "{path, name} — rename a folder on disk (its files and sidecars go along) and relink the photos in it; one undo step (undo renames it back, refused if the old name is taken); refused for the home folder and its Pictures, Desktop and Downloads; otherwise refused in plain words, with nothing changed, when the folder isn't there or its disk isn't connected, or the disk says no → {path, relinked}",
+            "{path, name} — rename a folder on disk (its files and sidecars go along) and relink the photos in it; one undo step (undo renames it back, refused if the old name is taken); refused for the home folder and its Pictures, Desktop and Downloads; otherwise refused in plain words, with nothing changed, when the folder isn't there or its disk isn't connected, or the disk says no → {path, relinked (every catalog photo with a file in the folder), inLibrary (of those, the library's photos: not Local-only, not in Recently Deleted, virtual copies not counted)}",
             always,
             |s, p| {
                 let from = str_param(p, "path").ok_or_else(|| bad("folder.rename", "missing path"))?.trim_end_matches(['/', '\\']).to_string();
@@ -267,7 +267,7 @@ pub fn specs() -> Vec<CommandSpec> {
                     .ok_or_else(|| bad("folder.rename", "give a folder name (no slashes)"))?;
                 let to = Path::new(&from).with_file_name(name).to_string_lossy().to_string();
                 let n = move_folder(s, &from, &to).map_err(crate::EngineError::Other)?;
-                Ok(json!({"path": to, "relinked": n}))
+                Ok(json!({"path": to, "relinked": n.relinked, "inLibrary": n.in_library}))
             }
         ),
         cmd!(
@@ -275,7 +275,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Move Folder",
             [],
             None,
-            "{path, into: destination folder} — move a folder on disk into another and relink the photos in it; one undo step (undo moves it back, refused if the old place is taken); refused for the home folder and its Pictures, Desktop and Downloads; the destination folder must exist (it is never created) and be on the same disk (never copied and deleted); every other refusal (a missing folder, a disk that isn't connected, no permission, another disk) is a plain sentence naming the folder, with nothing changed → {path, relinked}",
+            "{path, into: destination folder} — move a folder on disk into another and relink the photos in it; one undo step (undo moves it back, refused if the old place is taken); refused for the home folder and its Pictures, Desktop and Downloads; the destination folder must exist (it is never created) and be on the same disk (never copied and deleted); every other refusal (a missing folder, a disk that isn't connected, no permission, another disk) is a plain sentence naming the folder, with nothing changed → {path, relinked (every catalog photo with a file in the folder), inLibrary (of those, the library's photos: not Local-only, not in Recently Deleted, virtual copies not counted)}",
             always,
             |s, p| {
                 let from = str_param(p, "path").ok_or_else(|| bad("folder.move", "missing path"))?.trim_end_matches(['/', '\\']).to_string();
@@ -284,7 +284,7 @@ pub fn specs() -> Vec<CommandSpec> {
                 let name = Path::new(&from).file_name().ok_or_else(|| bad("folder.move", "bad path"))?;
                 let to = Path::new(into).join(name).to_string_lossy().to_string();
                 let n = move_folder(s, &from, &to).map_err(crate::EngineError::Other)?;
-                Ok(json!({"path": to, "relinked": n}))
+                Ok(json!({"path": to, "relinked": n.relinked, "inLibrary": n.in_library}))
             }
         ),
         cmd!(
@@ -758,10 +758,18 @@ fn library_refusal(from: &str, src: &Path, library: &Path) -> String {
     }
 }
 
+/// What [`move_folder`] moved.
+pub(crate) struct Moved {
+    /// Every catalog photo whose file was in the folder, relinked (Local-only, deleted and virtual copies too).
+    pub relinked: usize,
+    /// Of those, the library's photos: not Local-only, not in Recently Deleted, virtual copies not counted again.
+    pub in_library: usize,
+}
+
 /// Rename or move a folder on disk (everything in it goes along, sidecars included) and relink
 /// the photos inside, as one undo step: undo renames the folder back and restores the photos'
 /// paths, redo repeats the move — each refused (and reported) when the destination is taken.
-pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result::Result<usize, String> {
+pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result::Result<Moved, String> {
     let (src, dst) = (Path::new(from), Path::new(to));
     check_places(from, to)?;
     if let Some(l) = s.library.as_ref() {
@@ -790,6 +798,14 @@ pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result:
     // photos are stored under the spelling they were added with: the folder as written, or as the disk has it
     // (a link in the path to the folder, or to its parent, resolved); each keeps the spelling it has
     let (real_src, real_dst) = (resolved(src), resolved(dst));
+    // (the photos of the library that went along: not browsed-only ones in Local, not the ones in Recently Deleted,
+    // and a virtual copy shares its original's file, so it is not another photo)
+    let in_library = s
+        .catalog
+        .photos()
+        .filter(|p| p.in_library() && p.copy_of.is_none())
+        .filter(|p| matches!(&p.source, lightcraft_catalog::Source::File { path } if Path::new(path).starts_with(src) || Path::new(path).starts_with(&real_src)))
+        .count();
     let mut ops: Vec<Op> = s
         .catalog
         .photos()
@@ -841,7 +857,7 @@ pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result:
         return Err(format!("{e}{back}"));
     }
     follow_folder(s, from, to);
-    Ok(n)
+    Ok(Moved { relinked: n, in_library })
 }
 
 /// Whether `path` is the user's home folder or one of its standard places (Pictures, Desktop,
