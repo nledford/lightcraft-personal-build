@@ -79,6 +79,7 @@ mod menubar;
 mod merge_preview;
 mod missing_sweep;
 mod move_folder;
+mod move_notice;
 mod offline;
 mod open_lightroom;
 pub(super) mod panels;

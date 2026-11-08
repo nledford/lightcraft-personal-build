@@ -44,6 +44,7 @@ impl LightcraftApp {
             backs_up_by_itself: true,
             notices: vec![],
             updates_rt: Default::default(),
+            move_notice: None,
             quit_prompt: None,
             notice_input: Default::default(),
             quit_confirmed: false,
