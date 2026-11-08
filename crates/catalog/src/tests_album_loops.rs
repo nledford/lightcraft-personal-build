@@ -731,6 +731,26 @@ fn apply_new_changes_what_apply_changes() {
     assert_eq!(a.to_snapshot(), b.to_snapshot());
 }
 
+/// Edits that pass the check leave what the albums on a loop hold as it was (main's #2798 test;
+/// with #776's rule that is nothing, before and after).
+#[test]
+fn what_an_album_on_a_loop_holds_is_left_as_it_was() {
+    let mut c = Catalog::new();
+    let id = c.alloc_photo_id();
+    c.apply(Op::AddPhoto { photo: Box::new(Photo::new(id, Source::Demo { scene: 1 }, "p.jpg", "JPEG", 60, 40, "2026-02-01T10:00:00")) }).unwrap();
+    c.apply(Op::SetRating { id, rating: 3 }).unwrap();
+    let first = smart(&mut c, "First", None, Filter::default());
+    let second = smart(&mut c, "Second", None, tests(&[("is", first)]));
+    c.apply(set_rules(first, tests(&[("is", second)]))).unwrap();
+    let held = |c: &Catalog| [first, second].map(|a| (c.album_photos(a), c.album_count(a)));
+    let looped = held(&c);
+    // edits that go through the check, one of them to an album on the loop
+    c.apply_new(set_rules(first, Filter { rule_set: tests(&[("is", second)]).rule_set, ..Default::default() })).unwrap();
+    let id = c.alloc_album_id();
+    c.apply_new(Op::AddAlbum { album: Album { smart: Some(Box::new(tests(&[("is", second)]))), ..Album::new(id, "Reads the loop") } }).unwrap();
+    assert_eq!(held(&c), looped);
+}
+
 /// The search for loops walks the albums with its own stack: a ring of thousands of smart albums
 /// is found, not overflowed.
 #[test]
