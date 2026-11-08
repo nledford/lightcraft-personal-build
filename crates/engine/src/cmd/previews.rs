@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use serde_json::{Value, json};
 
 use super::{CommandSpec, always, bad, cmd, str_param};
-use crate::activity::{Cancel, TaskGuard};
+use crate::activity::{Cancel, Ending, Outcome, TaskGuard};
 use crate::media::{RenderJob, THUMB_SIZES};
 use crate::{Result, Session};
 
@@ -57,7 +57,7 @@ impl PreviewBuild {
             "total": self.total,
             "done": self.done.load(Ordering::Relaxed),
             "failed": self.failed.load(Ordering::Relaxed),
-            "running": !self.finished.load(Ordering::Relaxed),
+            "running": !self.finished.load(Ordering::Acquire),
             "cancelled": self.cancel.load(Ordering::Relaxed),
             "what": if self.what.is_empty() { "previews" } else { self.what },
             "repaired": self.repaired.load(Ordering::Relaxed),
@@ -69,7 +69,7 @@ impl PreviewBuild {
     }
 
     pub fn running(&self) -> bool {
-        !self.finished.load(Ordering::Relaxed)
+        !self.finished.load(Ordering::Acquire)
     }
 
     /// The user is at photo `id`, moving `backward` or forward: build from there on.
@@ -95,6 +95,33 @@ impl PreviewBuild {
 
     pub fn error(&self) -> Option<String> {
         self.error.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone()
+    }
+
+    /// How the build ended, for its row: it failed as a whole, was stopped, or could not make some photos' previews.
+    fn outcome(&self) -> Outcome {
+        let failed = self.failed.load(Ordering::Relaxed);
+        if let Some(why) = self.error() {
+            return Outcome { failed, ..Outcome::failed(why) };
+        }
+        let ending = if self.cancel.load(Ordering::Relaxed) {
+            Ending::Stopped
+        } else if failed > 0 {
+            Ending::Problems
+        } else {
+            Ending::Done
+        };
+        Outcome { ending, failed, ..Default::default() }
+    }
+
+    /// The build is over: the row of how it went is kept, the build reads as finished, and only then does its running
+    /// row go (whoever waits for `finished` finds the row; whoever sees the running row go finds the build finished).
+    fn end(&self, task: Option<TaskGuard>) {
+        let task = task.map(|mut t| {
+            t.report(self.outcome());
+            t
+        });
+        self.finished.store(true, Ordering::Release);
+        drop(task);
     }
 }
 
@@ -401,7 +428,8 @@ type PhotoJobs = (u64, Vec<RenderJob>);
 /// Build every photo of `jobs` on `lanes` threads. `force`: render even the photos whose previews
 /// are there. `task`: the build's own row (`None`: another job's row shows it, e.g. the import's
 /// Getting photos ready).
-fn run_all(jobs: Vec<PhotoJobs>, state: &PreviewBuild, task: Option<&TaskGuard>, lanes: usize, force: bool) {
+fn run_all(jobs: Vec<PhotoJobs>, state: &PreviewBuild, task: Option<TaskGuard>, lanes: usize, force: bool) {
+    let row = task.as_ref();
     let total = jobs.len();
     let queue = std::sync::Mutex::new(jobs.into_iter().map(Some).collect::<Vec<_>>());
     let work = || {
@@ -431,7 +459,7 @@ fn run_all(jobs: Vec<PhotoJobs>, state: &PreviewBuild, task: Option<&TaskGuard>,
                 if !force && shared && (held.is_none() || already_built(&photo_jobs)) {
                     state.shared.fetch_add(1, Ordering::Relaxed);
                     let done = state.done.fetch_add(1, Ordering::Relaxed).saturating_add(1);
-                    if let Some(task) = task {
+                    if let Some(task) = row {
                         task.progress(done as u64, total as u64);
                     }
                     continue;
@@ -451,7 +479,7 @@ fn run_all(jobs: Vec<PhotoJobs>, state: &PreviewBuild, task: Option<&TaskGuard>,
                 break;
             }
             let done = state.done.fetch_add(1, Ordering::Relaxed).saturating_add(1);
-            if let Some(task) = task {
+            if let Some(task) = row {
                 task.progress(done as u64, total as u64);
             }
         }
@@ -471,7 +499,7 @@ fn run_all(jobs: Vec<PhotoJobs>, state: &PreviewBuild, task: Option<&TaskGuard>,
         let _ = lanes;
         work();
     }
-    state.finished.store(true, Ordering::Relaxed);
+    state.end(task);
 }
 
 /// The long edge a standard preview is built at: [`STANDARD_EDGE`], or what the loupe asks for
@@ -538,7 +566,7 @@ fn build(s: &mut Session, p: &Value) -> Result<Value> {
         if let Some(cancel) = gives_way {
             cancel.store(true, Ordering::Relaxed);
         }
-        run_all(jobs, &state, task.as_ref(), lanes, force);
+        run_all(jobs, &state, task, lanes, force);
         return Ok(state.json());
     }
     #[cfg(not(target_arch = "wasm32"))]
@@ -550,10 +578,10 @@ fn build(s: &mut Session, p: &Value) -> Result<Value> {
             drop(task);
             Err(std::io::Error::other("no thread (test)"))
         } else {
-            std::thread::Builder::new().name("lc-build-previews".into()).spawn(move || run_all(jobs, &st, task.as_ref(), lanes, force))
+            std::thread::Builder::new().name("lc-build-previews".into()).spawn(move || run_all(jobs, &st, task, lanes, force))
         };
         #[cfg(not(test))]
-        let started = std::thread::Builder::new().name("lc-build-previews".into()).spawn(move || run_all(jobs, &st, task.as_ref(), lanes, force));
+        let started = std::thread::Builder::new().name("lc-build-previews".into()).spawn(move || run_all(jobs, &st, task, lanes, force));
         if let Err(e) = started {
             // never started: not left "running", which would hold every later build back, and the
             // build it was to replace carries on
@@ -770,7 +798,7 @@ fn smart(s: &mut Session, p: &Value) -> Result<Value> {
                 log::warn!("{C}: {e}");
                 *st.error.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(e);
             }
-            st.finished.store(true, Ordering::Relaxed);
+            st.end(Some(task));
         };
         #[cfg(test)]
         let started = if test_gate::take_fail_spawn() {
