@@ -138,6 +138,12 @@ fn fill_for_white(fill: Color32) -> Color32 {
 
 /// The colours of a `kind` button in `state` with the theme `t`.
 pub fn look(t: &Tokens, kind: Kind, state: State) -> Look {
+    look_with_border(t, kind, state, t.button_border)
+}
+
+/// [`look`] with the border a Secondary button draws: the theme's, or what the ui draws plain buttons in
+/// where a window made it more legible ([`super::button_border`]).
+fn look_with_border(t: &Tokens, kind: Kind, state: State, secondary_border: Color32) -> Look {
     let filled = |base: Color32| {
         let base = fill_for_white(base);
         // hover and press go darker: white on them only reads better
@@ -157,7 +163,7 @@ pub fn look(t: &Tokens, kind: Kind, state: State) -> Look {
                 State::Hovered => t.hover,
                 State::Pressed => t.pressed,
             }),
-            border: Some(t.button_border),
+            border: Some(secondary_border),
             content: t.text,
         },
         Kind::Ghost => Look {
@@ -462,7 +468,7 @@ impl<'a> Button<'a> {
         } else {
             State::Idle
         };
-        let lk = look(&t, self.kind, state);
+        let lk = look_with_border(&t, self.kind, state, super::button_border(ui, &t));
         // (its own rectangle and its focus ring: a long text never runs over its neighbours)
         let p = &ui.painter_at(rect.expand(5.0));
         let radius = self.size.radius();
