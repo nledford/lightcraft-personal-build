@@ -1,8 +1,9 @@
 //! The activity stack (issue #345): every long-running task in one place, under the bell in the top bar. While
 //! something runs the bell wears a ring (how far along the work is, or a sweep while that isn't known), and the bar
 //! names the task beside it when there is room. A click opens the list: a row each with its name, a progress bar,
-//! what it is working on, and ✕ for the ones that can be cancelled. Nothing floats over the panels, so the list
-//! covers them only while it is open. The tasks come from the engine's registry
+//! what it is working on, and ✕ for the ones that can be cancelled. Nothing floats over the panels but the notice of a
+//! finished Synchronize Folder scan (no task, so not in the list); the list covers them only while it is open. The
+//! tasks come from the engine's registry
 //! ([`lightcraft_engine::activity`]); ✕ runs `activity.cancel` like any other frontend would.
 
 use std::f32::consts::{FRAC_PI_2, TAU};
@@ -343,7 +344,7 @@ pub fn show_scan_notice(app: &mut LightcraftApp, ctx: &egui::Context) {
     let t = Tokens::get(ctx);
     let mut notice = None;
     let frame = egui::Frame::NONE.fill(t.chrome).stroke(Stroke::new(1.0, t.field_border)).corner_radius(6).inner_margin(Margin::same(NOTICE_MARGIN));
-    egui::Area::new(egui::Id::unique("activity-stack")).order(egui::Order::Middle).fixed_pos(pos2(8.0, t.top_bar_h + 8.0)).show(ctx, |ui| {
+    egui::Area::new(egui::Id::unique("scan-notice")).order(egui::Order::Middle).fixed_pos(pos2(8.0, t.top_bar_h + 8.0)).show(ctx, |ui| {
         frame.show(ui, |ui| {
             let inner = NOTICE_WIDTH - 2.0 * (f32::from(NOTICE_MARGIN) + 1.0);
             ui.set_width(inner);

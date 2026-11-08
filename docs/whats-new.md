@@ -1033,7 +1033,9 @@
   top of the left panel for as long as a job ran. The bell in the top bar shows them: a ring for how far along they
   are, and beside it, in a wide window, the task's name and percentage, or how many run (a narrower window keeps the
   percentage or the count, and the bell's tooltip says the rest). Click the bell (or Window ▸ Tasks) for the list,
-  with ✕ to stop a task; it shows every task, the newest first, and scrolls. Esc or a click elsewhere closes it.
+  with ✕ to stop a task; it shows every task, the newest first, and scrolls. Esc or a click elsewhere closes it. The
+  one thing that still floats in the top-left corner is the notice that a Synchronize Folder scan finished in the
+  background; it is no task, so it is not in the list.
 - The bell used to open History. History is in the Window menu and on the tool strip, as before.
 
 ### Settings window
@@ -2013,7 +2015,8 @@
 ### Synchronize Folder: no need to wait for the scan
 - While Synchronize Folder… scans a folder (a large one on a network share can take minutes), its button is
   **Continue in Background**: the dialog closes, the scan goes on under its row in the activity stack, and you can
-  go on working. When it is done nothing pops up: a notice in the activity stack says how many changes were found.
+  go on working. When it is done nothing pops up: a notice in the top-left corner, under the top bar, says how many
+  changes were found.
   Click it to open the dialog with the result, or ✕ to let go of it. A scan that found nothing to do only says so.
   Cancel and the row's ✕ stop the scan as before. One folder is scanned at a time.
 - Working on the folder's photos while it is scanned (ratings, flags, colour labels, keywords, edits, albums,

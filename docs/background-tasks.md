@@ -9,7 +9,8 @@ count, and a narrow one the ring alone, with the count on the bell when several 
 tooltip. A click on the bell or the line opens
 the list (Window ▸ Tasks, `view.tasks`): each task has a row with its name, a progress bar, the count and what it's
 working on, and ✕ if it can stop, the task started last at the top. "No tasks are running" when none is. Esc, a click
-elsewhere or a dialog closes it. Nothing floats over the panels: the list covers them only while it is open.
+elsewhere or a dialog closes it. Nothing floats over the panels but the notice of a finished Synchronize Folder scan
+(no task, so not in the list): the list covers them only while it is open.
 Quitting asks first while a task that can stop is running. Agents see the same list through `activity.list` /
 `activity.cancel`, and `ui.inspect` reports it as `activity` (and whether the list is open as `activityOpen`); the tasks that ended and left a row are
 `activity.finished` / `activity.dismiss` and `activityFinished`.

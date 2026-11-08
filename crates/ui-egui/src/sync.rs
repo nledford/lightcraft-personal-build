@@ -5,7 +5,7 @@
 //! stack (issue #345); its ✕ stops them like the dialog's Cancel.
 //!
 //! The scan need not be waited for: Continue in Background closes the dialog and the scan goes
-//! on under its row. When it is done, a notice in the activity stack says so ([`SyncReady`]);
+//! on under its row. When it is done, a notice in the top-left corner, under the top bar, says so ([`SyncReady`]);
 //! a click on it opens the dialog with what was found, whenever the person is ready for it.
 
 use crate::check::Check;

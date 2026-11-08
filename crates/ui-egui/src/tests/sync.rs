@@ -630,7 +630,7 @@ fn the_dialogs_choices_read_in_the_chosen_language_with_their_counts() {
 //
 // * While the folder is scanned, the dialog's button is Continue in Background: the dialog
 //   closes, the scan goes on under its row, and the app is free for other things.
-// * When the scan is done nothing pops up: a notice in the activity stack says what was found.
+// * When the scan is done nothing pops up: a notice in the top-left corner, under the top bar, says what was found.
 //   A click on it opens the dialog with that result; ✕ lets go of it.
 // * A scan that found nothing to do only says so.
 // * ✕ on the scan's row stops a background scan too, and no notice follows.
@@ -706,7 +706,7 @@ fn a_scan_continued_in_the_background_ends_in_a_notice_that_opens_its_result() {
     assert!(h.app.ui.dialog.is_none(), "nothing pops up: {:?}", h.app.ui.dialog);
     let ready = h.app.sync_ready.clone().expect("a notice waits");
     assert_eq!((ready.counts.new, ready.counts.missing, ready.changes()), (1, 1, 2), "{ready:?}");
-    assert!(has_widget(&h, "activity:scanReady"), "shown in the activity stack");
+    assert!(has_widget(&h, "activity:scanReady"), "shown in the top-left corner, under the top bar");
     assert!(h.app.session.activity.list().is_empty(), "the scan's own row is gone");
     // it stays until it is looked at
     for _ in 0..20 {
