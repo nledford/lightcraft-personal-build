@@ -267,6 +267,9 @@
   `folder.rename` and `folder.move` commands now refuse the home folder and its Pictures, Desktop and Downloads too,
   so a script or an agent can't do it either.
 
+### The grid's title, count and empty messages are read by screen readers
+- VoiceOver and other screen readers now read the photo grid's heading (for example "All Photos") and its photo count ("0 of 24 photos"), and the messages an empty view shows: "No photos match the active filters" with its reason, "No photos in this folder", and the same for the compare, survey, detail, reference and people views and the right panel's "No photo selected".
+
 ## 2026-10-27
 
 ### A folder made with New Folder on Disk… appears in Folders at once
@@ -1322,6 +1325,18 @@
   Photos is a button as before. A session whose library couldn't be opened offers no Try Sample Photos there (Help ▸ Add
   Sample Photos still adds them).
 - The welcome's buttons are drawn by the button component: Import Photos… is primary, the others secondary.
+
+### The welcome reads for everyone
+- Screen readers now hear the empty library's welcome, not only its buttons: the title (as a heading), what it says,
+  the hint and the sample row's caption, and the right panel's note beside it.
+- A new library's welcome puts the keyboard on Import Photos…, so Enter or Space starts; the welcome's buttons show an
+  accent ring where the keyboard is. On the welcome's buttons, the sample photos and the samples banner, a focused
+  button no longer takes the keyboard from shortcuts such as Import Photos…'s own: it keeps only Enter, Space, Tab, Esc
+  and the arrows. Holding Alt as the window opens, to choose a library, takes the keyboard from the welcome's button.
+- Whether the row of sample photos fits the window is measured from the message instead of guessed, so a shorter window
+  than before still shows it.
+- The welcome also says that a folder can be looked through without importing it, under Local in the sidebar (the
+  desktop app).
 
 ### Sharper resampling in HDR and panorama merges
 - Merged photos (HDR and panorama) are resampled with a sharper filter (Lanczos-3 instead of bilinear). Moving a
