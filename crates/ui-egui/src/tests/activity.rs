@@ -426,13 +426,13 @@ fn stale_cancel_is_harmless() {
     let r = h.request("engine.execute", json!({"command": "activity.cancel", "params": {"id": id}}), T);
     assert_eq!(r["ok"], false, "an error result, not a panic: {r}");
     h.step();
-    assert!(h.app.ui.toast.is_none(), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_none(), "{:?}", h.app.ui.toast);
     // the same through the row's ✕ (clicked in the frame the task ended): no message in the status bar either
     h.app.ui.status = "Ready".into();
     crate::panels::activity::cancel(&mut h.app, id);
     h.step();
     assert_eq!(h.app.ui.status, "Ready");
-    assert!(h.app.ui.toast.is_none(), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_none(), "{:?}", h.app.ui.toast);
 }
 
 #[test]
@@ -705,7 +705,7 @@ fn final_merge_shows_a_row_and_cancels() {
     assert!(h.app.merge.last_result.is_none(), "nothing merged");
     assert_eq!(h.app.session.catalog.len(), before, "no photo added");
     assert!(h.app.session.activity.list().is_empty());
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert_eq!(toast, "HDR merge cancelled");
     let _ = std::fs::remove_dir_all(dir);
 }
@@ -888,9 +888,9 @@ fn immediate_library_commands_and_auto_sync_show_completion() {
 
     // This demo has no on-disk library to optimize. A failed command must not
     // report completion (or accidentally keep its preceding success toast).
-    h.app.ui.toast = None;
+    h.app.ui.clear_toasts();
     assert!(h.app.run("library.compact", json!({})).is_err());
-    assert!(h.app.ui.toast.is_none());
+    assert!(h.app.ui.toast().is_none());
 }
 
 /// The demo app, reading the files as they are on disk (the demo library reads none), keeping every ended task's row.

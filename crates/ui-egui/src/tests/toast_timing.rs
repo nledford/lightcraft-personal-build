@@ -179,7 +179,7 @@ fn the_same_text_shown_again_extends_without_restarting_the_fade() {
 }
 
 #[test]
-fn a_different_text_replaces_it_and_fades_in_again() {
+fn a_different_text_stacks_with_the_first_staying_and_fades_in_on_its_own() {
     let mut h = app();
     let c = ctx(&h);
     h.app.toast(&c, "Library saved");
@@ -189,6 +189,7 @@ fn a_different_text_replaces_it_and_fades_in_again() {
     let next = h.app.ui.toast.clone().unwrap();
     assert_eq!(next.text, "Undo");
     assert!(next.shown_at > first.shown_at);
+    assert_eq!(h.app.ui.earlier_toasts, vec![first], "the first one stays, above it, with its own clock");
 }
 
 #[test]

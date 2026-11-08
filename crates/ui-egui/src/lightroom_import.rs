@@ -681,7 +681,7 @@ mod tests {
         assert!(text.contains("1 originals are missing"), "{text}");
         assert!(text.contains("Show in Library"), "{text}");
         // The activity and toast can go away; the modal result remains until dismissed.
-        h.app.ui.toast = None;
+        h.app.ui.clear_toasts();
         h.step();
         assert!(h.app.ui.dialog.is_some());
         let dialog = h.app.ui.dialog.clone().unwrap();

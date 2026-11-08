@@ -115,6 +115,7 @@ mod text_prompt;
 mod thumb;
 mod titlebar;
 mod toast_timing;
+mod toasts;
 mod tool_overlay;
 mod tree_branch;
 mod tree_state;

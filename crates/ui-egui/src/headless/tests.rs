@@ -2049,7 +2049,7 @@ fn export_dialog_adds_to_apple_photos_on_macos() {
     let args = calls.lock().unwrap().clone();
     assert_eq!(args.len(), 1);
     assert_eq!(args[0][args[0].len() - 2..], written[..], "the files written go to Photos");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("2 added to Apple Photos album “Trip “2026””"), "{toast}");
     // Export with Previous repeats it
     assert_eq!(h.app.session.last_export.as_ref().unwrap()["addToPhotos"], true);
@@ -2133,7 +2133,7 @@ fn a_slow_photos_import_never_blocks_the_window() {
     assert!(t0.elapsed() < Duration::from_secs(5), "answered at once: {r}");
     assert_eq!(r["result"]["running"], true, "{r}");
     go.send(()).unwrap();
-    while !h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("Apple Photos")) {
+    while !h.app.ui.toast().is_some_and(|t| t.text.contains("Apple Photos")) {
         assert!(t0.elapsed() < Duration::from_secs(20), "the outcome is announced");
         h.step();
     }
@@ -2146,7 +2146,7 @@ fn a_slow_photos_import_never_blocks_the_window() {
         assert_eq!(r["result"]["applePhotos"]["running"], true, "{r}");
         assert_eq!(r["result"]["applePhotos"]["job"], 2, "{r}");
         go.send(()).unwrap();
-        while !h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("1 added to Apple Photos") && !t.text.contains("Slow")) {
+        while !h.app.ui.toast().is_some_and(|t| t.text.starts_with("1 added to Apple Photos") && !t.text.contains("Slow")) {
             assert!(t1.elapsed() < Duration::from_secs(20), "the outcome is announced");
             h.step();
         }
@@ -3839,7 +3839,7 @@ fn import_review_offers_recently_deleted_files() {
             h.step();
         }
         assert!(h.app.import.is_none(), "finished");
-        let toast = h.app.ui.toast.clone().map(|t| t.text).unwrap_or_default();
+        let toast = h.app.ui.toast().cloned().map(|t| t.text).unwrap_or_default();
         let photos = &h.app.session.catalog;
         assert_eq!(photos.photos().filter(|p| !p.deleted).count(), 2, "{choice}");
         let old = photos.photo(lightcraft_catalog::PhotoId(id));

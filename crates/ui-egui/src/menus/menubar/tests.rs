@@ -603,7 +603,7 @@ fn a_refused_backup_from_the_menu_shows_why() {
         h.step();
     }
     // (read at once: a toast keeps the UI repainting until it expires, so settling would outlive it)
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains(refusal), "the refusal is shown: {toast:?}");
 }
 
