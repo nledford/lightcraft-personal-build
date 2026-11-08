@@ -52,10 +52,10 @@ cited here still exists. Formerly docs/parity.md.
 | X. Cross-cutting behaviours (BEHAV) | 24 | 6 | 1 | 1 | 8/8 (100%) | 7/10 (70%) |
 | Y. Menus | 86 | 0 | 4 | 8 | 47/47 (100%) | 23/23 (100%) |
 | Z. Keyboard shortcuts (desktop) | 78 | 5 | 2 | 1 | 49/52 (94%) | 24/26 (92%) |
-| Lightroom Classic extras | 41 | 26 | 21 | 8 | — | 24/27 (89%) |
-| **Total** | 422 | 70 | 57 | 35 | 193/203 (95%) | 147/163 (90%) |
+| Lightroom Classic extras | 41 | 27 | 21 | 8 | — | 24/28 (86%) |
+| **Total** | 422 | 71 | 57 | 35 | 193/203 (95%) | 147/164 (90%) |
 
-Weighted completion (✅ = 1, 🟡 = ½, 🚫 left out): **83.2%** of 549 in-scope rows — P0 97.5% of 203 · P1 94.2% of 163 · P2 57.4% of 182.
+Weighted completion (✅ = 1, 🟡 = ½, 🚫 left out): **83.2%** of 550 in-scope rows — P0 97.5% of 203 · P1 93.9% of 164 · P2 57.4% of 182.
 <!-- /parity:summary -->
 
 ## Top gaps and shortcut notes
