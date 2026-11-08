@@ -1214,13 +1214,8 @@ fn a_stopped_scan_that_found_nothing_is_not_up_to_date() {
 #[test]
 fn a_stopped_scan_counts_only_its_new_files_as_changes() {
     let counts = crate::state::SyncCounts { new: 2, copies: 1, moved: 3, missing: 4, metadata: 5, ..Default::default() };
-    let mut ready = crate::sync::SyncReady {
-        path: "/p".into(),
-        name: "p".into(),
-        disk: true,
-        counts,
-        choice: lightcraft_engine::sync::SyncChoice::default(),
-    };
+    let mut ready =
+        crate::sync::SyncReady { path: "/p".into(), name: "p".into(), disk: true, counts, choice: lightcraft_engine::sync::SyncChoice::default() };
     assert_eq!(ready.changes(), 14, "a scan that ran to its end counts all of it");
     ready.counts.stopped = true;
     assert_eq!(ready.changes(), 2, "a stopped scan: the new files");
