@@ -68,6 +68,7 @@
   "Import failed: {e}": "Error de importación: {e}",
   "Import photos with File → Import Photos… ({}), or drop them here": "Importar fotos con Archivo → Importar fotos… ({}) o soltarlas aquí",
   "Import warnings ({n}):\n{warnings}": "Avisos de importación ({n}):\n{warnings}",
+  "The XMP sidecar of {path} is too large to read; its keywords, ratings and settings were not imported.": "The XMP sidecar of {path} is too large to read; its keywords, ratings and settings were not imported.",
   "The XMP sidecars of {n} photos couldn't be written (is their folder offline?). LightCraft keeps trying.": "No se pudieron escribir los archivos XMP de {n} fotos (¿su carpeta está desconectada?). LightCraft lo sigue intentando.",
   "XMP profile \"{profile}\" was not applied for {path}; colors may differ from Lightroom.": "El perfil XMP \"{profile}\" no se aplicó a {path}; los colores pueden diferir de Lightroom.",
   "Lightroom geometry was not preserved for {path}; {mode} will be recalculated.": "La geometría de Lightroom no se conservó para {path}; {mode} se recalculará.",

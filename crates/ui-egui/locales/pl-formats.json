@@ -300,6 +300,7 @@
   "Slideshow exported: {what}": "Wyeksportowano pokaz slajdów: {what}",
   " · {n} skipped (could not be rendered)": " · pominięte (nie udało się wyrenderować): {n}",
   "{n} raws can now be developed from their raw data": "Pliki RAW, które można już wywołać z danych surowych: {n}",
+  "The XMP sidecar of {path} is too large to read; its keywords, ratings and settings were not imported.": "The XMP sidecar of {path} is too large to read; its keywords, ratings and settings were not imported.",
   "The XMP sidecars of {n} photos couldn't be written (is their folder offline?). LightCraft keeps trying.": "Nie udało się zapisać plików XMP dla zdjęć ({n}) — czy ich folder jest niedostępny? LightCraft ponawia próby.",
   "Create the keyword “{name}”": "Utwórz słowo kluczowe „{name}”",
   "new, inside {parent}": "nowe, w {parent}",

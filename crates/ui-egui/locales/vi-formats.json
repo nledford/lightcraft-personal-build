@@ -187,6 +187,7 @@
   "Tagged {n} photo{} from the tracklog": "Đã gắn thẻ {n} ảnh{:.0} từ nhật ký tuyến",
   "Template preview: {name}": "Template preview: {name}",
   "The SAM 3 download failed: {e}": "Tải SAM 3 thất bại: {e}",
+  "The XMP sidecar of {path} is too large to read; its keywords, ratings and settings were not imported.": "The XMP sidecar of {path} is too large to read; its keywords, ratings and settings were not imported.",
   "The XMP sidecars of {n} photos couldn't be written (is their folder offline?). LightCraft keeps trying.": "The XMP sidecars of {n} photos couldn't be written (is their folder offline?). LightCraft keeps trying.",
   "There is a keyword set “{name}” already": "Đã có bộ từ khóa «{name}»",
   "There is a “{name}” at the top level already. Merge the two?": "Đã có «{name}» ở cấp cao nhất. Gộp hai mục?",

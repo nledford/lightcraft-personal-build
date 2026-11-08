@@ -125,10 +125,12 @@ pub struct SyncReady {
 
 impl SyncReady {
     /// How many changes there are to look at (files the library has elsewhere count when the box
-    /// under Import new photos brings them in).
+    /// under Import new photos brings them in). A scan that stopped when the drive stopped answering
+    /// offers only the new files: nothing else it counted can be acted on.
     pub fn changes(&self) -> usize {
         let c = &self.counts;
-        c.new + if self.choice.import_duplicates { c.copies } else { 0 } + c.moved + c.missing + c.metadata
+        let new = c.new + if self.choice.import_duplicates { c.copies } else { 0 };
+        if c.stopped { new } else { new + c.moved + c.missing + c.metadata }
     }
 }
 
@@ -706,22 +708,25 @@ pub fn poll_run(app: &mut LightcraftApp, ctx: &egui::Context) {
             .filter(|(_, n)| *n > 0)
             .map(|(what, n)| format!("{} {n}", crate::i18n::tr(what)))
             .collect();
-    // how it ended comes first: never "up to date" for a run that was stopped or failed
+    // how it ended comes first: never "up to date" for a run that was stopped or failed. One of them only: a crash
+    // outranks the drive's reason, which outranks a Cancel (a Cancel that came while the drive stopped answering is
+    // not what stopped the run)
     if crashed {
         parts.insert(0, crate::i18n::tr("Stopped by an error (see the log)").to_string());
+    } else if let Some(why) = &r.stopped {
+        parts.insert(0, format!("{}: {why}", crate::i18n::tr("Stopped")));
     } else if stopped {
         parts.insert(0, crate::i18n::tr("Stopped").to_string());
     }
     if let Some(e) = not_saved.first() {
         parts.push(format!("{}: {e}", crate::i18n::tr("Not saved")));
     }
-    if let Some(why) = &r.stopped {
-        parts.insert(0, format!("{}: {why}", crate::i18n::tr("Stopped")));
-    }
     let text = if parts.is_empty() { crate::i18n::tr("The library is up to date with this folder.").to_string() } else { parts.join(" · ") };
-    if r.stopped.is_some() {
+    if crashed {
+        app.toast_error_for(ctx, format!("{name}: {text}"), 12.0);
+    } else if r.stopped.is_some() {
         app.toast_error(ctx, format!("{name}: {text}"));
-    } else if not_saved.is_empty() && !crashed && r.failed.is_empty() {
+    } else if not_saved.is_empty() && r.failed.is_empty() {
         app.toast(ctx, format!("{name}: {text}"));
     } else {
         app.toast_error_for(ctx, format!("{name}: {text}"), 12.0);

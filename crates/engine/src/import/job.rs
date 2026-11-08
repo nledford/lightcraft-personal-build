@@ -72,8 +72,9 @@ pub struct ImportJob {
 #[derive(Debug, Default)]
 pub struct Prepared {
     pub scanned: usize,
-    /// A Cancel left files of the batch undone (they have no item): the batch is not the whole of
-    /// what was asked. A Cancel that came after the last file was prepared leaves this `false`.
+    /// Files of the batch were left undone (they have no item): the batch is not the whole of what was asked. A
+    /// Cancel stopped them, or the drive stopped a transfer for good ([`Prepared::stopped`]). A Cancel that came
+    /// after the last file was prepared leaves this `false`.
     pub cut_short: bool,
     pub(super) items: Vec<PreparedItem>,
     /// Why the import cannot go on, when it ended early for a reason of its own (the drive stopped answering).
