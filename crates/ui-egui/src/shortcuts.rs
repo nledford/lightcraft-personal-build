@@ -709,7 +709,8 @@ fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fi
         return;
     }
     // the Sort menus' rule for these two rows holds for the keys too (a native menu enforces it for its own keys)
-    if sort_row_off(app, f) {
+    if let Some(why) = sort_row_off(app, f) {
+        app.refuse(why);
         return;
     }
     // a command that can't run (an export with no folder, nothing to undo…) says why
@@ -725,13 +726,15 @@ fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fi
     }
 }
 
-/// Reshuffle and Previous Shuffle where the Sort menus turn them off.
-fn sort_row_off(app: &LightcraftApp, f: &str) -> bool {
+/// Why Reshuffle and Previous Shuffle are off where the Sort menus turn them off, in the engine's
+/// words for the same refusals (`library.previousShuffle`); `None` when `f` is neither or its row is on.
+fn sort_row_off(app: &LightcraftApp, f: &str) -> Option<&'static str> {
     let menu = crate::menus::sort_menu::SortMenu::of(&app.session);
     match f {
-        "library.shuffle" => !menu.reshuffle_enabled(),
-        "library.previousShuffle" => !menu.previous_enabled(),
-        _ => false,
+        "library.shuffle" if !menu.reshuffle_enabled() => Some("the view is not sorted at random"),
+        "library.previousShuffle" if !menu.reshuffle_enabled() => Some("the view is not sorted at random"),
+        "library.previousShuffle" if !menu.previous_enabled() => Some("no earlier shuffle"),
+        _ => None,
     }
 }
 

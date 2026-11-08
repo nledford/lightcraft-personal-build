@@ -247,15 +247,29 @@ impl LightcraftApp {
         match self.run_told(id, params) {
             Ok(v) => Some(v),
             Err(refusal) => {
-                let now = self.tick_now();
-                // A toast the command made itself (a partial import report) says what did happen:
-                // keep it ahead of the reason rather than replacing it.
-                let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
-                let said = refusal_toast(made, &refusal);
-                self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
+                self.tell_refusal(before, &refusal);
                 None
             }
         }
+    }
+
+    /// Say why something the person asked for did not happen, as [`Self::act`] does for a refused
+    /// command: for a key whose menu row is off, which never reaches a command. `why` is a reason
+    /// in the engine's words; the toast says it as a sentence in the interface's language.
+    pub fn refuse(&mut self, why: &str) {
+        let before = self.ui.toast.clone();
+        let refusal = Refusal { why: crate::sentence(why), error: why.to_string(), kind: lightcraft_engine::ErrorKind::Other };
+        self.tell_refusal(before, &refusal);
+    }
+
+    /// The toast for `refusal`; `before` is the toast shown when the attempt began.
+    fn tell_refusal(&mut self, before: Option<crate::toast::Toast>, refusal: &Refusal) {
+        let now = self.tick_now();
+        // A toast the command made itself (a partial import report) says what did happen:
+        // keep it ahead of the reason rather than replacing it.
+        let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
+        let said = refusal_toast(made, refusal);
+        self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
     }
 
     /// Run a command whose refusal is expected here and means nothing to the person (it is

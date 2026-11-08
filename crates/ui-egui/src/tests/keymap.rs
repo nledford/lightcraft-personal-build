@@ -354,6 +354,20 @@ fn the_shuffle_keys_follow_the_sort_menus_rules() {
     assert_eq!(seed(&h), now, "both are off in Recently Added, where the sort is not used");
 }
 
+/// A shuffle key that its Sort-menu row turns off says why, as a refused command does, instead of doing nothing.
+#[test]
+fn a_shuffle_key_its_menu_row_turns_off_says_why() {
+    let mut h = demo();
+    let chord = |h: &mut Headless, key: &str| press(h, key, &["cmd", "alt", "shift"]);
+    let said = |h: &Headless| h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    chord(&mut h, "R");
+    assert_eq!(said(&h), "The view is not sorted at random", "Reshuffle under a date sort");
+    h.app.ui.toast = None;
+    h.app.run("library.sort", json!({"key": "random", "seed": 9})).unwrap();
+    chord(&mut h, "P");
+    assert_eq!(said(&h), "No earlier shuffle", "Previous Shuffle before any reshuffle");
+}
+
 /// Press `key` with the named modifiers held (`cmd`, `shift`, `alt`, `ctrl`).
 fn press(h: &mut Headless, key: &str, mods: &[&str]) {
     let mut p = json!({ "key": key });

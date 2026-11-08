@@ -116,6 +116,8 @@ enum Then {
 pub struct Pending {
     pub command: String,
     then: Then,
+    /// The library that was open when the dialog was asked for ([`lightcraft_engine::Session::library_generation`]).
+    library: u64,
     stage: Stage,
 }
 
@@ -145,14 +147,15 @@ fn start(app: &mut LightcraftApp, command: &str, request: PickRequest, then: The
         return Started::Later;
     }
     let one_at_a_time = app.services.picker_one_at_a_time;
+    let library = app.session.library_generation();
     let Some(show) = app.services.picker.as_mut() else { return Started::No };
     if one_at_a_time && !app.pending_picks.is_empty() {
-        app.pending_picks.push(Pending { command: command.to_string(), then, stage: Stage::Waiting(request) });
+        app.pending_picks.push(Pending { command: command.to_string(), then, library, stage: Stage::Waiting(request) });
         return Started::Later;
     }
     match show(request) {
         Ok(rx) => {
-            app.pending_picks.push(Pending { command: command.to_string(), then, stage: Stage::Up(rx) });
+            app.pending_picks.push(Pending { command: command.to_string(), then, library, stage: Stage::Up(rx) });
             Started::Later
         }
         Err(e) => {
@@ -241,6 +244,9 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
     }
     app.pending_picks = waiting;
     for (p, paths) in answered {
+        if stale(app, ctx, &p) {
+            continue;
+        }
         match p.then {
             Then::Run { params, key, kind } => {
                 let params = with_answer(&params, key, kind, &paths);
@@ -285,6 +291,18 @@ fn start_waiting(app: &mut LightcraftApp, ctx: &egui::Context) {
     }
 }
 
+/// Whether `p` was asked for in a library that is not the open one any more. Its answer (photos or a
+/// folder chosen for that library) is dropped, and the person told: a command run with it would act
+/// on the library that is open now (#3343).
+fn stale(app: &mut LightcraftApp, ctx: &egui::Context, p: &Pending) -> bool {
+    if p.library == app.session.library_generation() {
+        return false;
+    }
+    log::info!("{}: another library was opened while the file dialog was up; its answer is dropped", p.command);
+    app.toast_error(ctx, "The library changed while the file dialog was up; nothing was done. Try again".to_string());
+    true
+}
+
 /// What a waiting request the host can't show comes to, as on a host with no dialogs of its own.
 /// A command runs again, so that its `ask` falls to the synchronous service (or finds none and
 /// fails), and what comes of it is reported. That holds for the commands that ask for their own
@@ -293,6 +311,9 @@ fn start_waiting(app: &mut LightcraftApp, ctx: &egui::Context) {
 /// message, which is what the person is told. A field asks the synchronous service and takes the
 /// answer, or says the host has no such dialog.
 fn run_without_picker(app: &mut LightcraftApp, ctx: &egui::Context, p: Pending) {
+    if stale(app, ctx, &p) {
+        return;
+    }
     match p.then {
         Then::Run { params, .. } => {
             let picker = app.services.picker.take();
@@ -629,5 +650,26 @@ mod tests {
         h.app.run("file.addFolder", json!({})).unwrap();
         assert_eq!(kinds(&asked), [PickKind::Files, PickKind::Folder]);
         assert_eq!(h.app.pending_picks.len(), 2);
+    }
+
+    /// A dialog answered after another library was opened (from the menu bar, an agent): its photos
+    /// were chosen for the library that was open when it was asked, and must not be imported into the
+    /// new one (#3343).
+    #[test]
+    fn an_answer_that_comes_after_another_library_was_opened_is_dropped_and_says_so() {
+        let dir = std::env::temp_dir().join(format!("lc-pick-swap-src-{}", std::process::id()));
+        let photo = photo_in(&dir);
+        let library = std::env::temp_dir().join(format!("lc-pick-swap-lib-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&library);
+        let (mut h, asked) = app_with_picker();
+        h.app.run("file.addPhotos", json!({})).unwrap();
+        h.app.session.open_library(&library, true).unwrap();
+        asked.lock().unwrap()[0].1.send(vec![photo]).unwrap();
+        assert!(import_sources(&mut h).is_none(), "nothing is imported into the library that was opened meanwhile");
+        assert!(h.app.pending_picks.is_empty());
+        let said = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+        assert!(said.contains("library changed"), "the person is told why nothing happened: {said}");
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&library);
     }
 }
