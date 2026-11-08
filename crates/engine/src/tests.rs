@@ -15,6 +15,7 @@ mod backup_list;
 mod backup_opened_folder;
 mod backup_prune;
 mod backup_schedule;
+mod batch_sidebar;
 mod color;
 mod constrain_crop;
 mod crop_angle;
