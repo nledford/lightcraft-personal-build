@@ -402,6 +402,38 @@ fn a_failed_thumbnail_is_retried_only_when_its_photo_changes() {
     assert!(r.request_needed(slot, 77, 10), "a missing file is tried again");
 }
 
+/// #2875: an edit that moves no file asks about no file. Keeping the failed thumbnails through another photo's change reads
+/// what the checks already found gone; it doesn't queue a check of a file nobody has asked about (with the checks on their own
+/// thread, as in the app), which would put a probe of the drive behind every rating.
+#[test]
+fn following_the_catalog_asks_about_no_file() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let mut catalog = Catalog::default();
+    let p = photo();
+    let other = PhotoId(2);
+    catalog.apply(Op::AddPhoto { photo: Box::new((*p).clone()) }).unwrap();
+    let other_photo = Photo::new(other, Source::File { path: "other.jpg".into() }, "other.jpg", "JPEG", 60, 40, "2026-01-01");
+    catalog.apply(Op::AddPhoto { photo: Box::new(other_photo) }).unwrap();
+    let asked = Arc::new(AtomicUsize::new(0));
+    let mut files = lightcraft_engine::availability::Availability::default();
+    let a = asked.clone();
+    files.set_probe(Arc::new(move |_| {
+        a.fetch_add(1, Ordering::SeqCst);
+        true
+    }));
+    files.run_in_background(Arc::new(|| {}));
+    let slot = Slot::Thumb(p.id);
+    let mut r = Renderer::default();
+    r.follow_catalog(&catalog, &files);
+    r.failed.insert(slot, (77, "unrecognised image format".into(), r.catalog_rev, p.id));
+    catalog.apply(Op::SetRating { id: other, rating: 1 }).unwrap();
+    r.follow_catalog(&catalog, &files);
+    // (the answer would come from the checks' own thread: give it time to be asked)
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    assert_eq!(asked.load(Ordering::SeqCst), 0, "no file was asked about");
+    assert!(!r.request_needed(slot, 77, 10), "another photo's change retries nothing");
+}
+
 #[test]
 fn a_fast_draft_is_drawn_in_the_frame_that_asked_for_it() {
     let mut s = Session::new();
