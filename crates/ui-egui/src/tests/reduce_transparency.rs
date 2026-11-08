@@ -111,6 +111,8 @@ fn the_photo_grid_badges_are_solid_with_it_on() {
     // the dimming of a rejected photo is the photo's own state and stays see-through: the demo's rejects (ids 4, 10, 16, 22)
     // are cleared so the count of what is see-through does not depend on how far down the grid draws
     run(&mut h, "photo.flag", json!({"flag": "none", "ids": [4, 10, 16, 22]}));
+    // (and the toast that command raises: a slow runner reads it mid-fade, which stays see-through by design)
+    h.app.ui.clear_toasts();
     h.app.ui.settings.grid_badges = crate::state::GridBadges::Always;
     h.request("ui.set", json!({"view": "photoGrid", "right": "none"}), T);
     h.settle(SETTLE);
