@@ -285,6 +285,12 @@
   date sort again or leave Recently Deleted, as the direction already was for Random. Reshuffle is always listed, in both menus, under its own
   separator below the sort keys, and is on only while you sort at random.
 
+### A new sort order or a reshuffle keeps your place
+- Choosing another sort, flipping its direction, pressing Reshuffle or changing the date grouping no longer leaves the
+  grid scrolled to where the photos used to be. If the active photo was on screen, the grid scrolls to wherever it
+  landed (the filmstrip follows it too); if you had scrolled away from it, the grid starts at the top of the new
+  arrangement. Rating or editing a photo under a sort it affects still never moves the scroll position.
+
 ### The empty photo grid names Import Photos' shortcut as it is bound
 - When a view is empty and the way in is File ▸ Import Photos…, the message under "No photos" used a fixed "Cmd+Shift+I" (or a translation's fixed copy of it) whatever the platform or the binding. It now shows the key as the menu bar writes it (on a Mac its glyphs, elsewhere Ctrl+Shift+I) on its own line under the sentence, follows a remapped key, and names no key when Import Photos has none. The sentence now wraps in a narrow window instead of running off its edge.
 
