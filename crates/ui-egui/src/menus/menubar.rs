@@ -1458,9 +1458,10 @@ fn nodes_ui(ui: &mut egui::Ui, nodes: &[MenuNode], clicked: &mut Option<(String,
         if long && let Some(h) = row_h {
             let clip = ui.clip_rect();
             if top + h < clip.top() || top > clip.bottom() {
-                // the row's place, and its one auto id, so the rows after it keep theirs
+                // the row's place, and the two auto ids a `MenuItem` takes (one in `allocate_at_least`,
+                // one skipped after its own id), so the rows after it keep theirs
                 ui.add_space(h);
-                ui.skip_ahead_auto_ids(1);
+                ui.skip_ahead_auto_ids(2);
                 continue;
             }
         }

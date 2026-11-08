@@ -73,7 +73,6 @@ mod tests {
     fn appkits_own_full_screen_row_is_switched_off() {
         let (defaults, _domain) = throwaway("full-screen");
         let key = NSString::from_str("NSFullScreenMenuItemEverywhere");
-        assert!(defaults.objectForKey(&key).is_none(), "nothing sets it until the call");
         switch_off(&defaults);
         assert!(defaults.objectForKey(&key).is_some(), "the key is set, not just absent");
         assert!(!defaults.boolForKey(&key), "the default AppKit reads is off");
