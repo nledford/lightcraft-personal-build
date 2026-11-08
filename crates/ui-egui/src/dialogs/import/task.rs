@@ -972,7 +972,8 @@ mod tests {
     /// Then it names the error and the warnings, and an import that did not stop has no such toast.
     #[test]
     fn a_stopped_quiet_import_keeps_its_xmp_warnings_in_the_toast() {
-        let warning = ImportWarning { path: "a.jpg".into(), code: ImportWarningCode::UnmappedXmp, profile: None, mode: None, fields: vec!["crs:Foo".into()] };
+        let warning =
+            ImportWarning { path: "a.jpg".into(), code: ImportWarningCode::UnmappedXmp, profile: None, mode: None, fields: vec!["crs:Foo".into()] };
         let mut task = ImportTask::new(vec!["/share".into()], json!({}), 0, false);
         assert_eq!(stopped_text(&task), None, "an import that did not stop");
         task.stopped = Some("the drive is not answering".into());
