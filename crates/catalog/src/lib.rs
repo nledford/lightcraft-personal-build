@@ -29,6 +29,7 @@ pub mod lock;
 mod log_writer;
 pub mod model;
 pub mod opened_folder;
+mod order;
 pub mod query;
 pub mod restore;
 pub mod rules;
@@ -862,6 +863,7 @@ impl Catalog {
         ids.dedup();
         ids
     }
+
     fn album_mut(&mut self, id: AlbumId) -> Result<&mut Album> {
         self.albums.get_mut(&id).ok_or(CatalogError::NoAlbum(id))
     }
@@ -1461,6 +1463,7 @@ impl Catalog {
     /// wrote).
     pub fn repair(&mut self) -> Vec<String> {
         let mut changed = Vec::new();
+        self.index.orders.forget();
         // Segmentation grids shared by the snapshot this was read from (issue #2154): each
         // reference takes its grid's data, and the table is not kept — a live catalog always
         // stores the data inline, so masks render and serialize without the snapshot's table.
@@ -1861,6 +1864,8 @@ mod tests_log_thread;
 mod tests_opened_folder;
 #[cfg(test)]
 mod tests_policy;
+#[cfg(test)]
+mod tests_order;
 #[cfg(test)]
 mod tests_repair;
 #[cfg(test)]
