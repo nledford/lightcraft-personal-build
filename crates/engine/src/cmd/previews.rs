@@ -115,12 +115,14 @@ impl PreviewBuild {
 
     /// The build is over: the row of how it went is kept, the build reads as finished, and only then does its running
     /// row go (whoever waits for `finished` finds the row; whoever sees the running row go finds the build finished).
-    /// The background preparation says nothing unless it failed as a whole: it gives way all the time (to a build
-    /// asked for, a view change, the setting switched off), and none of those is a task someone stopped, whose
-    /// row would stay in `activity.finished` for good. (A worker that panics still reports `Died` as its guard drops.)
+    /// The background preparation says nothing when it only gave way: that happens all the time (to a build asked
+    /// for, a view change, the setting switched off), and none of those is a task someone stopped, whose row would
+    /// stay in `activity.finished` for good. One that failed as a whole, or ended with photos it could not make
+    /// previews for, reports like any build. (A worker that panics still reports `Died` as its guard drops.)
     fn end(&self, task: Option<TaskGuard>) {
         let task = task.map(|mut t| {
-            if !self.background || self.error().is_some() {
+            let gave_way = self.background && self.cancel.load(Ordering::Relaxed) && self.error().is_none();
+            if !gave_way {
                 t.report(self.outcome());
             }
             t

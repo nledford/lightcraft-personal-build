@@ -276,6 +276,35 @@ fn the_background_build_giving_way_leaves_no_row_among_the_finished() {
     std::fs::remove_dir_all(&root).unwrap();
 }
 
+/// Only the give-way is silent: a background build that ends with photos it could not make previews for
+/// leaves its needs-attention row among the finished, like a build asked for.
+#[test]
+fn a_background_build_that_ends_with_failed_photos_leaves_a_row_that_says_so() {
+    let (mut s, root, ids) = library("bgfailed", 2);
+    let dir = s.media.rendered.disk().expect("a library has a disk cache").dir().to_path_buf();
+    let _ = std::fs::remove_dir_all(&dir);
+    // a file where the cache folder goes: nothing can be written under it
+    std::fs::write(&dir, b"not a folder").unwrap();
+    s.execute("library.buildPreviews", &json!({"ids": ids_json(&ids), "edge": 300, "background": true})).unwrap();
+    let bg = s.preview_build.clone().unwrap();
+    assert!(bg.background);
+    assert!(wait_finished(&bg), "the build ends");
+    assert!(!bg.cancel.load(Ordering::Relaxed), "nobody stopped it");
+    let mut rows = Vec::new();
+    for _ in 0..1500 {
+        rows = s.activity.finished().into_iter().filter(|r| r.kind == "previews").collect::<Vec<_>>();
+        if !rows.is_empty() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    assert_eq!(rows.len(), 1, "a row for a build with failed photos: {rows:?}");
+    assert_eq!((rows[0].ending, rows[0].failed), (crate::activity::Ending::Problems, 2), "{rows:?}");
+    let _ = std::fs::remove_file(&dir);
+    drop(s);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 /// Note 48: the background preparation starts once the user steps through photos in the loupe
 /// (not when a library opens), builds the view's previews in one cancellable row, and a stop
 /// from that row holds for the view.
