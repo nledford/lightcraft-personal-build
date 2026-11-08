@@ -1009,14 +1009,25 @@ pub fn swatch_toggle(ui: &mut Ui, id: &str, swatch: Color32, active: bool, name:
     resp.on_hover_text(name)
 }
 
-/// A segmented control: `labels` share the available width equally, `per_row` per row. Each segment is
-/// addressable as `button:{id}-{key}` (keys parallel to labels). Returns the clicked index.
+/// Room left and right of a segment's name.
+const SEGMENT_PAD: f32 = 5.0;
+
+/// A segmented control: `labels` share the available width equally, at most `per_row` to a row (fewer where
+/// the longest name would not fit its share; a name is cut only where one to a row is too narrow). Each
+/// segment is addressable as `button:{id}-{key}` (keys parallel to labels). Returns the clicked index.
 pub fn segmented(ui: &mut Ui, id: &str, items: &[(&str, &str)], active: Option<usize>, per_row: usize) -> Option<usize> {
     let t = Tokens::get(ui.ctx());
-    let per_row = per_row.max(1);
     let gap = 4.0;
     let w = ui.available_width();
-    let seg_w = ((w - gap * (per_row as f32 - 1.0)) / per_row as f32).max(24.0);
+    let width_of = |per_row: usize| ((w - gap * (per_row as f32 - 1.0)) / per_row as f32).max(24.0);
+    // `per_row` to a row, or fewer where the longest name (a translation) would not fit its
+    // share of the width: "Mit Hilfslinien" ran out of a third of the panel
+    let widest = items
+        .iter()
+        .map(|(label, _)| ui.painter().layout_no_wrap(crate::i18n::tr(label).to_string(), t.caption_strong(), t.text).size().x)
+        .fold(0.0, f32::max);
+    let per_row = (1..=per_row.max(1)).rev().find(|n| width_of(*n) >= widest + 2.0 * SEGMENT_PAD).unwrap_or(1);
+    let seg_w = width_of(per_row);
     let mut clicked = None;
     for (row_i, row) in items.chunks(per_row).enumerate() {
         ui.horizontal(|ui| {
@@ -1036,7 +1047,9 @@ pub fn segmented(ui: &mut Ui, id: &str, items: &[(&str, &str)], active: Option<u
                 };
                 let p = ui.painter();
                 p.rect(r, CornerRadius::same(4), fill, Stroke::new(1.0, t.button_border), StrokeKind::Inside);
-                p.text(r.center(), Align2::CENTER_CENTER, label, t.caption_strong(), t.text);
+                // (cut short only where even a row to itself is too narrow for the name)
+                let name = one_line(p, label, t.caption_strong(), t.text, seg_w - 2.0 * SEGMENT_PAD);
+                p.galley(r.center() - name.size() / 2.0, name, t.text);
                 if resp.has_focus() {
                     focus_ring(p, r, &t);
                 }

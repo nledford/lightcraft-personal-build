@@ -1006,6 +1006,27 @@
 - A long file name on the filmstrip or in the Import grid is shortened in the middle to the room it has, so the
   number of the frame stays (`IMG_20…_153012` where it was `IMG_20240712_…`).
 
+### Longer words keep to their place
+- Edit: Reset goes to a row of its own under Auto, B&W and HDR when it has no room beside them. In German
+  ("Zurücksetzen") it lay over HDR.
+- A row of choices (the crop overlays, Upright, the vignette styles, the two tabs of Versions) puts fewer to a row
+  when the longest name would not fit its share of the width: "Mit Hilfslinien" ran out of a third of the panel,
+  "Goldfarben" out of a quarter.
+- The filter bar puts on each row what fits there, by what its words measure: Type and Edited go down to the second
+  row, or to one of their own, where they ran off the edge of the grid (the long German name of the Edited filter,
+  with both side panels open), and the bar grows by a row. In English each row holds what it did down to a grid about
+  720 pt wide; narrower than that, Type and Edited go to the second row, and below about 680 pt to a row of their
+  own. A part that is wider than the whole bar still runs off it (German under about 645 pt).
+
+### Small things in how the interface writes
+- Text marked for emphasis is in the full text colour; it was the label colour, the same as the text around it.
+- Edit: the profile and the white balance are written at the size of any control's value (13 pt). They were 15
+  and 14 pt, larger than and as large as the 14 pt headers of the sections they stand in.
+- The format on the card of Info, in capitals, has a little room between its letters.
+- What an empty view says (no photo selected, nothing to compare, no reference photo) is wrapped inside the view
+  and centred; a long sentence ran out of a narrow one.
+- German: the day of a date has two figures as its month does ("Freitag, 04.09.2026", not "4.09.2026").
+
 ### Settings window
 - Settings is one size on every tab and stays where it is as you go through them; before, each tab made its own
   size and the tabs moved under the pointer. The tabs stay in place while a long page scrolls (in a very short
