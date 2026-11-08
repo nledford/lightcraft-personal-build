@@ -1094,22 +1094,23 @@ fn a_rescan_after_a_stopped_scan_starts_from_the_default_choices() {
     let dir = Scratch::new("restopped");
     let mut h = changed_folder(&dir);
     open_and_scan(&mut h, &dir.path("trip"));
-    if let Some(Dialog::SynchronizeFolder { counts: Some(c), relink_moved, import_new, .. }) = &mut h.app.ui.dialog {
+    if let Some(Dialog::SynchronizeFolder { counts: Some(c), relink_moved, import_duplicates, .. }) = &mut h.app.ui.dialog {
         c.stopped = true;
         *relink_moved = false;
-        // (the one choice the person can still make)
-        *import_new = false;
+        // (the choices the person can still make: with Import new unticked, main's Synchronize has nothing to hand over
+        // and only closes, so it stays ticked; the box under it is the one the rescan has to keep)
+        *import_duplicates = true;
     }
-    let a = h.app.session.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
-    let r = h.request("engine.execute", json!({"command": "photo.rate", "params": {"ids": [a.0], "rating": 3}}), T);
+    // (the folder's photos change meanwhile: c.png, which the scan listed as new, comes in some other way)
+    let r = h.request("engine.execute", json!({"command": "library.import", "params": {"paths": [dir.path("trip/c.png")]}}), T);
     assert_eq!(r["ok"], true, "{r}");
     let r = h.request("ui.dialog.confirm", json!({}), T);
     assert_eq!(r["ok"], false, "{r}");
     let rescanned = h.step_until(T, |h| matches!(&h.app.ui.dialog, Some(Dialog::SynchronizeFolder { counts: Some(_), .. })));
     assert!(rescanned);
     assert!(
-        matches!(h.app.ui.dialog, Some(Dialog::SynchronizeFolder { relink_moved: true, import_new: false, .. })),
-        "Relink back to its default, Import new as the person left it: {:?}",
+        matches!(h.app.ui.dialog, Some(Dialog::SynchronizeFolder { relink_moved: true, import_new: true, import_duplicates: true, .. })),
+        "Relink back to its default, what the person could still choose as they left it: {:?}",
         h.app.ui.dialog
     );
 }
