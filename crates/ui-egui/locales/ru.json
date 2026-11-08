@@ -2735,5 +2735,6 @@
   "This row has no name to change": "У этой строки нет имени, которое можно изменить",
   "Keyboard in Sidebar": "Клавиатура в боковой панели",
   "Moving photos": "Перемещение фото",
-  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "Перемещение остановлено из-за ошибки (см. журнал). Библиотека следует за уже перемещёнными файлами; XMP-файл мог остаться на старом месте."
+  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "Перемещение остановлено из-за ошибки (см. журнал). Библиотека следует за уже перемещёнными файлами; XMP-файл мог остаться на старом месте.",
+  "Stopped: no photo was moved": "Остановлено: ни одно фото не перемещено"
 }

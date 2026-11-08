@@ -2530,5 +2530,6 @@
   "This row has no name to change": "此行没有可更改的名称",
   "Keyboard in Sidebar": "在边栏中使用键盘",
   "Moving photos": "正在移动照片",
-  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "移动因出错而停止（见日志）。图库会跟随已移动的文件；XMP 附属文件可能还留在原位置。"
+  "Moving was stopped by an error (see the log). The library follows the files that had moved; an XMP sidecar may have stayed at the old place.": "移动因出错而停止（见日志）。图库会跟随已移动的文件；XMP 附属文件可能还留在原位置。",
+  "Stopped: no photo was moved": "已停止：没有移动任何照片"
 }
