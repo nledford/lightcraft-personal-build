@@ -49,8 +49,8 @@ use crate::media::ProbeInfo;
 use crate::sidecar::{SidecarLookup, SidecarNaming};
 use crate::{EngineError, Result, Session};
 
-/// The largest XMP sidecar read when looking for metadata updates; a bigger one is skipped.
-const MAX_SIDECAR_BYTES: u64 = 16 * 1024 * 1024;
+/// The largest XMP sidecar read when looking for metadata updates or importing; a bigger one is skipped.
+pub(crate) const MAX_SIDECAR_BYTES: u64 = 16 * 1024 * 1024;
 
 /// How far a scan is: the folders and files listed so far (the walk, which comes first and on a
 /// network share can take minutes), the folder's files probed ([`ScanProgress`], whose `cancel`

@@ -3,9 +3,9 @@ use super::files::copy_into;
 #[cfg(not(target_arch = "wasm32"))]
 use super::files::shown;
 use super::job::{Prepared, PreparedItem, ReadyFile};
-use super::scan::note_content;
 #[cfg(not(target_arch = "wasm32"))]
 use super::reads;
+use super::scan::note_content;
 use super::types::{Duplicate, ImportOptions, ImportReport, Kept, Moved, OnDeleted};
 use super::{HashMap, Op, Path, PathBuf, Photo, PhotoId, ProbeInfo, ReadWatch, Session, Source, progressed};
 
@@ -67,8 +67,31 @@ pub(super) fn name_family(name: &str) -> String {
 /// Threads for `jobs` file reads (probes, copies) at once.
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn workers(jobs: usize) -> usize {
-    std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4).clamp(1, 8).min(jobs.max(1))
+    workers_with(std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4), jobs)
 }
+
+/// [`workers`] on a machine with `cores` cores.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn workers_with(cores: usize, jobs: usize) -> usize {
+    cores.clamp(1, 8).min(jobs.max(1))
+}
+
+/// Threads for `jobs` reads of a drive that may be a network share: a read there is a round trip or several, not
+/// work for a core, so up to [`READ_THREADS`] go at once whatever the machine's cores (never fewer than [`workers`]).
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn read_threads(jobs: usize) -> usize {
+    read_threads_with(std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4), jobs)
+}
+
+/// [`read_threads`] on a machine with `cores` cores.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn read_threads_with(cores: usize, jobs: usize) -> usize {
+    READ_THREADS.min(jobs).max(workers_with(cores, jobs))
+}
+
+/// The most threads that read files of an import or scan at once.
+#[cfg(not(target_arch = "wasm32"))]
+const READ_THREADS: usize = 16;
 
 /// Files per batch for a caller that prepares an import in batches ([`ImportJob::prepare_files`]):
 /// enough to keep every probe and copy thread busy (a batch waits for its slowest file), few

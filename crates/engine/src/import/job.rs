@@ -405,7 +405,7 @@ impl ImportJob {
             // the XMP sidecar (or a raw's embedded XMP), read before copying: its capture time files
             // and names the copy when the file itself has none (a duplicate needs only that time)
             let raw = info.kind == MediaKind::Raw;
-            let found = if stems.owns(&path) { sidecars.owner } else { sidecars.owner.and_then(|f| f.own(&path, self.naming, &self.listed)) };
+            let found = sidecars.choose(stems.owns(&path));
             let sidecar_file = found.as_ref().map(|f| f.path.clone());
             // (a duplicate whose capture time is known needs no sidecar: its packet is not used)
             let skip_packet = duplicate_of.is_some() && info.captured.is_some();

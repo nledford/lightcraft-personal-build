@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 #[cfg(not(target_arch = "wasm32"))]
-use super::commit::workers;
+use super::commit::{read_threads, workers};
 #[cfg(test)]
 use super::job::{ImportJob, Prepared, PreparedItem, ReadyFile};
 use super::scan::ScanProgress;
@@ -402,38 +402,54 @@ pub(super) struct Found {
     pub(super) text: Option<String>,
 }
 
-/// The sidecar the readers found for a file of an import: what the library's naming finds
-/// ([`crate::sidecar::find_sidecar`]), read by a file that owns its stem's sidecar. A file that does not own it reads
-/// its own `<file>.xmp` instead ([`Found::own`], asked at the planning: who owns the shared stem sidecar among the
+/// The sidecars the readers found for a file of an import: what the library's naming finds
+/// ([`crate::sidecar::find_sidecar`]), read by a file that owns its stem's sidecar, and, when that is the shared stem
+/// one, the file's own `<file>.xmp`, read by a file that does not own it (who owns the shared stem sidecar among the
 /// files of the import and the library, [`crate::sidecar::ImportStems`] issue #1905, is only known once every file is
-/// probed).
+/// probed: so the readers, which may ask the disk, find and read what either answer needs, and [`Sidecars::choose`],
+/// at the planning, which must not, picks).
 #[derive(Default)]
 pub(super) struct Sidecars {
-    pub(super) owner: Option<Found>,
+    owner: Option<Found>,
+    /// `owner` is under the shared stem name (`IMG_0001.xmp`), so a file that does not own it reads `own` instead.
+    shared: bool,
+    /// The file's own `<file>.xmp`: looked up only when `owner` is under the shared name.
+    own: Option<Found>,
 }
 
 impl Sidecars {
     fn read(path: &str, naming: crate::sidecar::SidecarNaming, listed: &super::ListedFolders) -> Sidecars {
-        let owner = listed.find_for_import(path, naming).map(|path| {
-            let text = std::fs::read_to_string(&path).ok();
-            Found { path, text }
-        });
-        Sidecars { owner }
+        let Some(owner) = listed.find_for_import(path, naming) else { return Sidecars::default() };
+        // (a sidecar that is not under the shared name is the file's own already: nothing more to look up)
+        let shared = crate::sidecar::is_shared_stem_sidecar(path, &owner);
+        let own = shared.then(|| listed.find_own_for_import(path, naming)).flatten().map(|path| Found { text: read_text(&path), path });
+        let owner = Found { text: read_text(&owner), path: owner };
+        Sidecars { owner: Some(owner), shared, own }
+    }
+
+    /// What a file reads: the shared sidecar when it `owns_stem` it, else its own `<file>.xmp`, never the packet of the
+    /// sibling that owns the shared one. A sidecar that is not under the shared name is the file's own. Looks at
+    /// nothing on the disk (the planning thread must not wait on it).
+    pub(super) fn choose(self, owns_stem: bool) -> Option<Found> {
+        if owns_stem || !self.shared { self.owner } else { self.own }
     }
 }
 
-impl Found {
-    /// What `original` reads when it does not own its stem's sidecar, `self` being what the readers found for it: its own
-    /// `<file>.xmp`, never the packet of the sibling that owns the shared one. A sidecar that is not under the shared
-    /// name is the file's own already.
-    pub(super) fn own(self, original: &str, naming: crate::sidecar::SidecarNaming, listed: &super::ListedFolders) -> Option<Found> {
-        if !crate::sidecar::is_shared_stem_sidecar(original, &self.path) {
-            return Some(self);
+/// The text of the sidecar at `path` (`None`: it could not be read, or is over [`crate::sync::MAX_SIDECAR_BYTES`], which
+/// is skipped and logged): never more than that is read.
+pub(super) fn read_text(path: &Path) -> Option<String> {
+    use std::io::Read as _;
+    let cap = crate::sync::MAX_SIDECAR_BYTES;
+    let mut text = String::new();
+    // (one byte past the cap tells a file that is over it from one that is just at it)
+    let read = std::fs::File::open(path).and_then(|f| f.take(cap.saturating_add(1)).read_to_string(&mut text));
+    match read {
+        Ok(n) if u64::try_from(n).map_or(true, |n| n > cap) => {
+            log::warn!("import {}: too large for an XMP sidecar (over {cap} bytes): skipped", path.display());
+            None
         }
-        listed.asked.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let path = crate::sidecar::own_sidecar_for_import(original, naming, Some(&self.path))?;
-        let text = std::fs::read_to_string(&path).ok();
-        Some(Found { path, text })
+        Ok(_) => Some(text),
+        Err(_) => None,
     }
 }
 
@@ -526,7 +542,9 @@ pub(super) fn read_files(
         let sidecars = sidecars
             .as_ref()
             .filter(|_| info.is_ok())
-            .filter(|source| !source.known.as_ref().is_some_and(|known| info.as_ref().is_ok_and(|i| i.content_hash.as_ref().is_some_and(|h| known.contains(h)))))
+            .filter(|source| {
+                !source.known.as_ref().is_some_and(|known| info.as_ref().is_ok_and(|i| i.content_hash.as_ref().is_some_and(|h| known.contains(h))))
+            })
             .map(|source| Sidecars::read(&path, source.naming, &source.listed))
             .unwrap_or_default();
         Read { info, sidecars, unreached: false, reused }
@@ -535,7 +553,7 @@ pub(super) fn read_files(
     {
         use std::sync::Arc;
         let paths: Vec<String> = jobs.iter().map(|j| j.path.clone()).collect();
-        let pool = reads::Pool { watch, cancel, name: "lc-import-read", threads: workers(jobs.len()) };
+        let pool = reads::Pool { watch, cancel, name: "lc-import-read", threads: read_threads(jobs.len()) };
         let work: Arc<dyn Fn(ReadJob) -> Read + Send + Sync> = Arc::new(read_one);
         let outcomes = pool.run(jobs, &|i| paths.get(i).map(|p| shown(p)).unwrap_or_default(), work, Arc::new(|_| {}), Arc::new(|| {}), &|_| {
             done.fetch_add(1, Relaxed);
@@ -791,8 +809,8 @@ mod prepared_tests {
             Ok(ProbeInfo { format: "JPEG".into(), ..ProbeInfo::default() })
         }));
         let prepared = job.prepare(&unread_paths(400), &cancel);
-        // at most the files the (up to 8) readers had already started
-        assert!(seen.load(Relaxed) <= 8, "read {} files after cancel", seen.load(Relaxed));
+        // at most the files the readers (up to 16, `read_threads`) had already started
+        assert!(seen.load(Relaxed) <= read_threads(400), "read {} files after cancel", seen.load(Relaxed));
         assert!(prepared.items.is_empty());
     }
 
