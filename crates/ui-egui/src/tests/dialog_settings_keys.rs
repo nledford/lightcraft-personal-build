@@ -101,9 +101,9 @@ fn tab_stops_once_at_the_tabs_and_once_at_each_row_of_choices() {
     // And again: to Open in, past the other twelve languages
     key(&mut h, "Tab");
     assert_eq!(focused(&h), "button:settingsStartup-0");
-    // And the fourth press reaches the first checkbox of General
+    // And the fourth press reaches the first checkbox of General (the update check, under Open in)
     key(&mut h, "Tab");
-    assert_eq!(focused(&h), "check:settings.autoAdvance");
+    assert_eq!(focused(&h), "check:settings.updateCheckAtStart");
     // And Shift+Tab goes back the same way, one stop a row
     back_tab(&mut h);
     assert_eq!(focused(&h), "button:settingsStartup-0");
@@ -185,7 +185,7 @@ fn the_arrow_keys_move_inside_a_row_of_choices_and_space_chooses() {
     key(&mut h, "ArrowRight");
     assert_eq!(focused(&h), "button:settingsStartup-2");
     key(&mut h, "Tab");
-    assert_eq!(focused(&h), "check:settings.autoAdvance");
+    assert_eq!(focused(&h), "check:settings.updateCheckAtStart");
     // And coming back, the stop is the choice that holds
     back_tab(&mut h);
     assert_eq!(focused(&h), "button:settingsStartup-1");
