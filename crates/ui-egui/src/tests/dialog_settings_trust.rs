@@ -213,6 +213,11 @@ fn write_png(path: &str, seed: u8) {
 
 /// A library on disk with one photo and its smart preview built, whose folder picker answers `to`.
 fn with_smart_preview(dir: &TempFolder, to: &str) -> Headless {
+    with_smart_preview_services(dir, Services::default(), to)
+}
+
+/// [`with_smart_preview`] on a host with `services` of its own (its folder picker answers `to`).
+fn with_smart_preview_services(dir: &TempFolder, mut services: Services, to: &str) -> Headless {
     write_png(&dir.path("trip/a.png"), 3);
     let mut session = lightcraft_engine::Session::new().with_fs();
     session.open_library(dir.0.join("library"), false).unwrap();
@@ -220,7 +225,27 @@ fn with_smart_preview(dir: &TempFolder, to: &str) -> Headless {
     session.execute("library.smartPreviews", &json!({})).unwrap();
     std::fs::create_dir_all(to).unwrap();
     let to = to.to_string();
-    headless(session, Services { pick_folder: Some(Box::new(move || Some(to.clone()))), ..Default::default() })
+    services.pick_folder = Some(Box::new(move || Some(to.clone())));
+    headless(session, services)
+}
+
+/// What the host's folder dialog answers on: the sender its channel is handed over on when it opens.
+type DialogAnswer = std::sync::Arc<std::sync::Mutex<Option<std::sync::mpsc::Sender<Vec<String>>>>>;
+
+/// [`with_smart_preview`] on a host whose folder dialog runs elsewhere: the test speaks its answer on the sender
+/// the dialog hands over when it opens.
+fn with_deferred_folder_dialog(dir: &TempFolder, to: &str) -> (Headless, DialogAnswer) {
+    let slot = DialogAnswer::default();
+    let opened = slot.clone();
+    let services = Services {
+        picker: Some(Box::new(move |_| {
+            let (tx, rx) = std::sync::mpsc::channel();
+            *opened.lock().unwrap() = Some(tx);
+            Ok(rx)
+        })),
+        ..Default::default()
+    };
+    (with_smart_preview_services(dir, services, to), slot)
 }
 
 fn smart(h: &mut Headless) -> Value {
@@ -270,6 +295,71 @@ fn saying_yes_deletes_the_smart_previews_and_changes_the_folder() {
     assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(0), json!(true)), "{now}");
     assert_eq!(now["path"], json!(to));
     assert!(!has(&h, "button:settingsSmartDelete"));
+}
+
+/// A folder chosen in the host's own dialog while another choice was made, closed after the choice
+/// became "Delete them": the delete is still asked about first, in Settings (the answer is what
+/// changes the folder), and nothing is deleted before it.
+#[test]
+fn a_delete_chosen_while_the_folder_dialog_was_up_is_asked_about_when_it_closes() {
+    let dir = TempFolder::new("settings-trust-smart-deferred");
+    let to = dir.path("elsewhere");
+    let (mut h, tx_slot) = with_deferred_folder_dialog(&dir, &to);
+    show_library(&mut h);
+    assert_eq!(smart(&mut h)["count"], 1);
+    // Given "Move them" chosen, so the click defers to the host's dialog
+    click(&mut h, "button:settingsSmartChoose");
+    assert_eq!(smart(&mut h)["custom"], json!(false), "nothing changed yet: the dialog is up");
+    let tx = tx_slot.lock().unwrap().take().expect("the dialog opened");
+    // When the choice becomes "Delete them" while the dialog is up, and the dialog then closes
+    click(&mut h, "button:settingsSmartExisting-2");
+    tx.send(vec![to.to_string()]).unwrap();
+    // Then nothing has been deleted or moved: the question is Settings' to ask
+    let mut steps = 0;
+    while !has(&h, "button:settingsSmartDelete") && steps < 40 {
+        h.step();
+        steps += 1;
+    }
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(1), json!(false)), "nothing before the answer: {now}");
+    assert!(has(&h, "button:settingsSmartDelete"), "it asks");
+    // and the answer is what changes the folder and deletes
+    click(&mut h, "button:settingsSmartDelete");
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(0), json!(true)), "{now}");
+    assert!(!has(&h, "button:settingsSmartDelete"));
+}
+
+/// The same, with Settings' Library tab left while the dialog was up: the section's own remembered
+/// question went stale, and the parked folder still comes back as that question, not silence.
+#[test]
+fn a_delete_parked_over_a_settings_tab_switch_still_asks() {
+    let dir = TempFolder::new("settings-trust-smart-tab");
+    let to = dir.path("elsewhere");
+    let (mut h, tx_slot) = with_deferred_folder_dialog(&dir, &to);
+    show_library(&mut h);
+    click(&mut h, "button:settingsSmartChoose");
+    let tx = tx_slot.lock().unwrap().take().expect("the dialog opened");
+    click(&mut h, "button:settingsSmartExisting-2");
+    // another Settings tab is up when the dialog closes (and stays a while after it)
+    show(&mut h, "general");
+    tx.send(vec![to.to_string()]).unwrap();
+    for _ in 0..10 {
+        h.step();
+    }
+    // When the Library section is shown again, the question is there
+    show_library(&mut h);
+    let mut steps = 0;
+    while !has(&h, "button:settingsSmartDelete") && steps < 40 {
+        h.step();
+        steps += 1;
+    }
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(1), json!(false)), "still nothing before the answer: {now}");
+    assert!(has(&h, "button:settingsSmartDelete"), "the parked folder comes back as the question");
+    click(&mut h, "button:settingsSmartDelete");
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(0), json!(true)), "{now}");
 }
 
 #[test]

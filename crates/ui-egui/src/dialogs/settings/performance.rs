@@ -262,14 +262,17 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     // That choice, and a change waiting for an answer, are kept from one frame of this section to
     // the next only, and only for this library and this folder: with Settings closed, another
     // tab or library opened, or the folder changed some other way, nothing is left chosen or asked.
-    let ask_id = egui::Id::unique("smart-ask");
+    let ask_id = smart_ask_id();
     // (counted in frames: the first pass of a frame that opens a prompt draws the prompt alone, so
     // passes skip a number while Settings is still the same window)
     let pass = ui.ctx().cumulative_frame_nr();
     let library = smart_library(app);
     let kept: Option<SmartAsk> = ui.data(|d| d.get_temp(ask_id));
     let mut ask = kept.filter(|k| pass.saturating_sub(k.pass) <= 1 && k.library == library && k.folder == path).unwrap_or_default();
-    let mut mode = ask.mode;
+    // a folder chosen in a dialog that ran off the UI thread, kept until this section is drawn
+    // (of this library: a folder chosen for another one, opened while the dialog was up, is not taken up for this)
+    let picked = ui.data_mut(|d| d.remove_temp::<(String, String, u8)>(smart_picked_id())).filter(|(lib, _, _)| *lib == library).map(|(_, dir, m)| (dir, m));
+    let mut mode = picked.as_ref().map_or(ask.mode, |(_, m)| *m);
     if count > 0 {
         row(ui, t, crate::i18n::tr("Existing previews"), |ui| {
             choices(ui, "settingsSmartExisting", &[(0u8, "Move them"), (1, "Leave them"), (2, "Delete them")], &mut mode);
@@ -280,13 +283,9 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     // be deleted for is known: until then the change (the command's parameters) waits here.
     // (asked for "Delete them" only: choosing otherwise withdraws the question)
     let mut waiting: Option<Value> = ask.waiting.take().filter(|_| existing == "discard");
-    // a folder chosen in a dialog that ran off the UI thread since the last frames
-    // (of this library: a folder chosen for another one, opened while the dialog was up, is not taken up for this)
-    let picked = ui
-        .data_mut(|d| d.remove_temp::<(u64, String, String)>(smart_picked_id()))
-        .filter(|(at, lib, _)| pass.saturating_sub(*at) <= 3 && *lib == library)
-        .map(|(_, _, dir)| dir);
-    let mut change = picked.map(|dir| json!({"path": dir, "existing": existing}));
+    // The choice that was up when the dialog closed is the one it was parked with, whatever this section last drew
+    // (a tab left while the dialog was up lets the remembered choice go stale): "Delete them" stays the question.
+    let mut change = picked.map(|(dir, _)| json!({"path": dir, "existing": existing}));
     ui.horizontal(|ui| {
         ui.add_space(LABEL_W);
         if app.services.pick_folder.is_some() {
@@ -448,6 +447,12 @@ fn smart_picked_id() -> egui::Id {
     egui::Id::unique("smart-picked")
 }
 
+/// Where the section keeps its [`SmartAsk`] between frames.
+#[cfg(not(target_arch = "wasm32"))]
+fn smart_ask_id() -> egui::Id {
+    egui::Id::unique("smart-ask")
+}
+
 /// The library the smart previews section is about, as [`SmartAsk`] and a folder chosen for it name it.
 #[cfg(not(target_arch = "wasm32"))]
 fn smart_library(app: &LightcraftApp) -> String {
@@ -455,13 +460,15 @@ fn smart_library(app: &LightcraftApp) -> String {
 }
 
 /// A folder was chosen for the smart previews (the dialog may have run off the UI thread): the
-/// section above takes it up when it is next drawn, with the "Existing previews" choice then (and,
-/// for "Delete them", the one more question), as for a folder chosen with the synchronous service.
-/// One not taken up within a few frames (another tab was showing), or when another library is open by then, is dropped.
+/// section above takes it up when it is next drawn, with the "Existing previews" choice it was
+/// parked with (and, for "Delete them", the one more question), as for a folder chosen with the
+/// synchronous service. It waits for as long as that takes (another tab may be showing); one for a
+/// library that is no longer the open one is dropped, as a dialog's answer is.
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn smart_folder_picked(app: &LightcraftApp, ctx: &egui::Context, path: String) {
-    let pass = ctx.cumulative_frame_nr();
-    ctx.data_mut(|d| d.insert_temp(smart_picked_id(), (pass, smart_library(app), path)));
+    let library = smart_library(app);
+    let mode = ctx.data(|d| d.get_temp::<SmartAsk>(smart_ask_id())).filter(|k| k.library == library).map_or(0, |k| k.mode);
+    ctx.data_mut(|d| d.insert_temp(smart_picked_id(), (library, path, mode)));
     ctx.request_repaint();
 }
 
