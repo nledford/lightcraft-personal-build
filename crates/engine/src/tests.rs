@@ -70,6 +70,7 @@ mod slideshow_export;
 mod slow_drive;
 mod spots;
 mod sync;
+mod trash;
 mod view_follow;
 mod view_reconcile;
 pub(super) mod xmp;
