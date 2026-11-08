@@ -145,6 +145,36 @@ fn removing_the_samples_clears_a_filter_on_an_album_that_goes() {
     }
 }
 
+/// The same for a filter on several albums (`albums`): only the one that goes is taken out of it.
+#[test]
+fn removing_the_samples_takes_the_album_that_goes_out_of_a_filter_on_several_albums() {
+    // Given the person's own photo in the sample album Portfolio (which stays), and a filter, or the one put aside, on
+    // Mountains (only samples; it goes) and Portfolio together
+    for put_aside in [false, true] {
+        let dir = temp_dir("filter-albums");
+        png(&dir.join("own.png"));
+        let mut s = Session::with_demo().with_fs();
+        s.execute("library.import", &json!({"paths": [dir.join("own.png").to_string_lossy()]})).unwrap();
+        let own = s.catalog.photos().find(|p| matches!(p.source, Source::File { .. })).map(|p| p.id).unwrap();
+        let portfolio = album(&s, "Portfolio").unwrap();
+        let mut photos = s.catalog.album(portfolio).unwrap().photos.clone();
+        photos.push(own);
+        s.catalog.apply(Op::SetAlbumPhotos { id: portfolio, photos }).unwrap();
+        let mountains = album(&s, "Mountains").unwrap();
+        s.set_filter(lightcraft_catalog::Filter { albums: vec![mountains, portfolio], ..Default::default() });
+        if put_aside {
+            s.execute("library.toggleFilters", &json!({})).unwrap();
+        }
+        // When the samples are removed
+        s.execute("library.removeSamples", &json!({})).unwrap();
+        // Then the filter (or the one put aside) names the album that stays alone
+        if s.filters_off() {
+            s.execute("library.toggleFilters", &json!({})).unwrap();
+        }
+        assert_eq!(s.filter().albums, vec![portfolio], "the filter's albums after removal (put aside: {put_aside})");
+    }
+}
+
 #[test]
 fn removing_the_samples_clears_the_mask_and_spot_chosen_on_a_photo_that_goes() {
     // Given a mask and a spot chosen on the active sample photo, and a photo of the person's own

@@ -266,7 +266,7 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     // (counted in frames: the first pass of a frame that opens a prompt draws the prompt alone, so
     // passes skip a number while Settings is still the same window)
     let pass = ui.ctx().cumulative_frame_nr();
-    let library = app.session.library.as_ref().map(|l| l.dir.display().to_string()).unwrap_or_default();
+    let library = smart_library(app);
     let kept: Option<SmartAsk> = ui.data(|d| d.get_temp(ask_id));
     let mut ask = kept.filter(|k| pass.saturating_sub(k.pass) <= 1 && k.library == library && k.folder == path).unwrap_or_default();
     let mut mode = ask.mode;
@@ -281,8 +281,12 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     // (asked for "Delete them" only: choosing otherwise withdraws the question)
     let mut waiting: Option<Value> = ask.waiting.take().filter(|_| existing == "discard");
     // a folder chosen in a dialog that ran off the UI thread since the last frames
-    let picked = ui.data_mut(|d| d.remove_temp::<(u64, String)>(smart_picked_id())).filter(|(at, _)| pass.saturating_sub(*at) <= 3);
-    let mut change = picked.map(|(_, dir)| json!({"path": dir, "existing": existing}));
+    // (of this library: a folder chosen for another one, opened while the dialog was up, is not taken up for this)
+    let picked = ui
+        .data_mut(|d| d.remove_temp::<(u64, String, String)>(smart_picked_id()))
+        .filter(|(at, lib, _)| pass.saturating_sub(*at) <= 3 && *lib == library)
+        .map(|(_, _, dir)| dir);
+    let mut change = picked.map(|dir| json!({"path": dir, "existing": existing}));
     ui.horizontal(|ui| {
         ui.add_space(LABEL_W);
         if app.services.pick_folder.is_some() {
@@ -445,14 +449,20 @@ fn smart_picked_id() -> egui::Id {
     egui::Id::unique("smart-picked")
 }
 
+/// The library the smart previews section is about, as [`SmartAsk`] and a folder chosen for it name it.
+#[cfg(not(target_arch = "wasm32"))]
+fn smart_library(app: &LightcraftApp) -> String {
+    app.session.library.as_ref().map(|l| l.dir.display().to_string()).unwrap_or_default()
+}
+
 /// A folder was chosen for the smart previews (the dialog may have run off the UI thread): the
 /// section above takes it up when it is next drawn, with the "Existing previews" choice then (and,
 /// for "Delete them", the one more question), as for a folder chosen with the synchronous service.
-/// One not taken up within a few frames (another tab was showing) is dropped.
+/// One not taken up within a few frames (another tab was showing), or when another library is open by then, is dropped.
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn smart_folder_picked(ctx: &egui::Context, path: String) {
+pub(crate) fn smart_folder_picked(app: &LightcraftApp, ctx: &egui::Context, path: String) {
     let pass = ctx.cumulative_frame_nr();
-    ctx.data_mut(|d| d.insert_temp(smart_picked_id(), (pass, path)));
+    ctx.data_mut(|d| d.insert_temp(smart_picked_id(), (pass, smart_library(app), path)));
     ctx.request_repaint();
 }
 

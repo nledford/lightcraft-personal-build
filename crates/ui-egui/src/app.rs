@@ -5,7 +5,10 @@ use super::{
     AiModel, Caches, CommandError, ControlRequest, ControlResponse, ERROR_TOAST_SECONDS, ErrorKind, GESTURE_TIMEOUT_MS, LightcraftApp,
     MAX_PENDING_GESTURES, MAX_PENDING_SHOTS, MAX_SHOT_BYTES, MAX_SHOT_TOTAL_BYTES, MAX_TEXTURE_SIDE, PendingGesture, PendingShot, Perf, QuitBackup,
     REFUSAL_SECONDS, Receiver, Refusal, SCREEN_PROFILE, SCREENSHOT_FALLBACK_MS, SCREENSHOT_SETTLE_MS, SHOT_FORCE_BUSY_MS, SHOT_SETTLE_FRAMES,
-    SHOT_SETTLE_MS, Sender, Session, ShotGeometry, TOAST_SECONDS, UNDO_TOAST_SECONDS, UiState, Value, docking, drop_overlay, export_task, focus_scan, frame_rate, headless, i18n, import, lightroom_import, menus, merge, panels, pick, recheck, refusal_toast, render, shortcuts, slideshow_export, state, sync, tasks, theme, updates_ui, widgets, TOAST_READ_SECONDS, };
+    SHOT_SETTLE_MS, Sender, Session, ShotGeometry, TOAST_READ_SECONDS, TOAST_SECONDS, UNDO_TOAST_SECONDS, UiState, Value, docking, drop_overlay,
+    export_task, focus_scan, frame_rate, headless, i18n, import, lightroom_import, menus, merge, panels, pick, recheck, refusal_toast, render,
+    shortcuts, slideshow_export, state, sync, tasks, theme, updates_ui, widgets,
+};
 
 mod control;
 mod cull_toast;
@@ -440,9 +443,11 @@ impl LightcraftApp {
     fn start_waiting(&mut self, ctx: &egui::Context) {
         // nothing leaves the line while the question about dropping it is open: a task started now would refuse the
         // switch (an import) or escape the drop the person is agreeing to (a build). A question about a library no
-        // longer open is stale (the next drawn frame drops it; a hidden window draws none) and holds nothing.
+        // longer open is stale (the next drawn frame drops it; a hidden window draws none) and holds nothing. Nor does
+        // one start once Quit Anyway answered that the waiting tasks won't run: the quit still waits for its backup or
+        // the unsaved question, and `cancel_all` would then stop a task that began meanwhile partway.
         let asked = self.switch_prompt.as_ref().is_some_and(|p| p.generation == self.session.library_generation());
-        self.session.activity.hold_line(asked);
+        self.session.activity.hold_line(asked || self.quit_tasks_answered);
         self.session.start_waiting();
         // The app's own wait while its slots are taken, row or no row yet: an import set this frame (Auto Import, its
         // row comes at the next tick), a synchronize, or a Local folder being read (it becomes an import when read).

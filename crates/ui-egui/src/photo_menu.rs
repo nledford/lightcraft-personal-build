@@ -160,7 +160,7 @@ fn stands_for_presets(n: &MenuNode) -> bool {
 
 /// The menu for `photo` (the right-click selects it unless it is one of the selected photos).
 pub fn nodes(app: &LightcraftApp, photo: PhotoId) -> Vec<MenuNode> {
-    let any = !app.session.selected().is_empty();
+    let any = app.session.selected_count() > 0;
     nodes_with(app, photo, &app.session.commands(), presets(app, any))
 }
 
@@ -175,8 +175,7 @@ fn nodes_with(app: &LightcraftApp, photo: PhotoId, infos: &[CommandInfo], preset
     let sub = |title: &str, label: &str| find_submenu(menu(title), label).cloned();
     let submenu =
         |label: &str, children: Vec<Option<MenuNode>>| MenuNode::Submenu { label: label.into(), children: children.into_iter().flatten().collect() };
-    let selected = app.session.selected();
-    let several = selected.len() > 1;
+    let several = app.session.selected_count() > 1;
     let view = app.ui.view;
     let sep = || Some(MenuNode::Separator);
     let open = |id: &str, label: &'static str| {
@@ -240,7 +239,7 @@ fn nodes_with(app: &LightcraftApp, photo: PhotoId, infos: &[CommandInfo], preset
         v.push(row("photo.addToLibrary"));
     }
     v.push(row("album.toggleTarget"));
-    if crate::panels::grid::local_only(app, &selected) {
+    if crate::panels::grid::selection_local_only(app) {
         // albums hold library photos (issue #684): the row is off and says to add them first
         v.push(Some(menubar::item("album.addPhotos", Value::Null, crate::i18n::tr("Add to Album"), None, false, None)));
     } else {

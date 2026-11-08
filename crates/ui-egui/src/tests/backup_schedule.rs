@@ -326,6 +326,37 @@ fn a_quit_cancelled_while_it_waited_does_not_happen_by_itself() {
     drop(task);
 }
 
+/// Given a quit that was answered with Quit Anyway (the tasks waiting in line "won't run") and now waits for its
+/// backup, when the lane they wait for frees, then they stay in line: one started now would be stopped partway when
+/// the quit goes through.
+#[test]
+fn a_task_waiting_in_line_does_not_start_while_a_quit_waits_for_its_backup() {
+    use std::sync::atomic::Ordering;
+    let dir = temp("line-held");
+    let mut h = app_with_a_library_in(&dir);
+    prefs(&mut h, json!({"onClose": "always"}));
+    h.app.session.backup_hold.store(true, Ordering::SeqCst);
+    let lane = h.app.session.activity.start("import", "Importing", lightcraft_engine::activity::Cancel::Yes);
+    let request = lightcraft_engine::activity::Request {
+        command: crate::import::IMPORT_REQUEST.into(),
+        params: json!({"paths": [dir.join("nowhere").to_string_lossy()]}),
+        ..Default::default()
+    };
+    h.app.session.activity.enqueue("import", "Importing", request).unwrap();
+    assert!(!may_close(&mut h.app));
+    h.step();
+    assert!(matches!(h.app.quit_prompt, Some(QuitPrompt::Tasks(_))), "{:?}", h.app.quit_prompt);
+    click(&mut h, "button:quitAnyway");
+    assert_eq!(h.app.quit_backup, QuitBackup::Running, "the quit waits for its backup");
+    // the lane frees while the backup runs
+    drop(lane);
+    for _ in 0..10 {
+        h.step();
+    }
+    assert_eq!(h.app.session.activity.waiting().len(), 1, "it stays in line: {:?}", h.app.session.activity.list());
+    h.app.session.backup_hold.store(false, Ordering::SeqCst);
+}
+
 /// Given a backup of another library is still running after a switch, when the person quits a
 /// library that is backed up on quitting, then that other backup is asked about like any task:
 /// it is not the backup this quit waits for.

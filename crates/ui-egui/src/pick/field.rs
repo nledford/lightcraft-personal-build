@@ -214,7 +214,7 @@ pub(super) fn apply(app: &mut LightcraftApp, ctx: &egui::Context, field: &Field,
             }
         }
         #[cfg(not(target_arch = "wasm32"))]
-        Field::SmartPreviewsFolder => crate::dialogs::settings::smart_folder_picked(ctx, path),
+        Field::SmartPreviewsFolder => crate::dialogs::settings::smart_folder_picked(app, ctx, path),
         Field::DenoiseModel => crate::panels::denoise::inspect_model(app, &path),
         Field::SlidePlateImage => {
             app.act("slideshow.overlays", json!({"identityPlate": {"image": path}}));

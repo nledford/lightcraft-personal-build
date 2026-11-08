@@ -118,7 +118,16 @@ fn an_empty_folders_section_offers_both_imports() {
     let rect = |id: &str| h.app.widgets.iter().find(|(w, _)| w == id).map(|(_, r)| *r).unwrap_or_else(|| panic!("no widget {id}"));
     let (hint, photos, folder) = (rect("sidebarEmpty:folders"), rect("source:folders:import"), rect("source:folders:importFolder"));
     assert!(hint.bottom() <= photos.top() && photos.bottom() <= folder.top(), "{hint:?} {photos:?} {folder:?}");
-    assert!(folder.bottom() <= rect("sidebarSection:keywords").top(), "the rows belong to Folders, above the next section");
+    // (the next section below: Local, which is not on every platform, else By Date)
+    let next = h
+        .app
+        .widgets
+        .iter()
+        .filter_map(|(w, r)| w.strip_prefix("sidebarSection:").map(|_| r.top()))
+        .filter(|top| *top > folder.top())
+        .min_by(f32::total_cmp)
+        .expect("a section below Folders");
+    assert!(folder.bottom() <= next, "the rows belong to Folders, above the next section: {folder:?} {next}");
 }
 
 /// Given a host with no folder picker (the web build), when Folders is empty, then only Import

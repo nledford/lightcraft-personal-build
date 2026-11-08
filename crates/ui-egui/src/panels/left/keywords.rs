@@ -52,7 +52,9 @@ fn keyword_row(
         tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, branch, open, format!("keywordToggle:{}", n.path), &n.name, inside);
     }
     let shown = n.path.replace('|', " › ");
-    let resp = resp.on_hover_text(if sel {
+    // (a plain click clears the filter only when this is the one keyword chosen; among several it chooses this one: `keyword_clicked`)
+    let only = sel && app.session.filter().keywords_wanted().len() == 1;
+    let resp = resp.on_hover_text(if only {
         // the row is the filter now and a click clears it (below)
         crate::i18n::tr_format!("Stop showing only photos with {path}", path = shown)
     } else if n.children.is_empty() {
