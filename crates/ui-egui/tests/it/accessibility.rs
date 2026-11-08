@@ -286,12 +286,9 @@ fn a_slider_value_field_is_named_value_and_describes_how_to_use_it() {
 /// "Edit" menu too, so the name alone doesn't pick the tool-strip button). The bottom bar's view
 /// buttons are radio buttons (#3259: one of several choices), the rest plain buttons.
 fn button_described(h: &Harness<'_, LightcraftApp>, name: &str, help: &str) -> bool {
-    h.root()
-        .children_recursive()
-        .map(|n| n.accesskit_node())
-        .any(|n| {
-            matches!(n.role(), Role::Button | Role::RadioButton) && n.label().as_deref() == Some(name) && n.description().as_deref() == Some(help)
-        })
+    h.root().children_recursive().map(|n| n.accesskit_node()).any(|n| {
+        matches!(n.role(), Role::Button | Role::RadioButton) && n.label().as_deref() == Some(name) && n.description().as_deref() == Some(help)
+    })
 }
 
 /// A screen reader reads a control's name every time it lands on it: the shortcut belongs in the
