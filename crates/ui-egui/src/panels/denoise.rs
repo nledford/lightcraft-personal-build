@@ -216,7 +216,7 @@ pub fn detail_status(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, am
                     let r = ui.small_button(crate::i18n::tr("Make it now"));
                     register(ui, "denoise:make", r.rect);
                     if r.clicked() {
-                        let _ = app.run("denoise.queue", json!({"ids": [id.0]}));
+                        app.act("denoise.queue", json!({"ids": [id.0]}));
                     }
                 });
             }

@@ -24,6 +24,11 @@ type Asked = Arc<Mutex<Vec<(PickRequest, Sender<Vec<String>>)>>>;
 /// The demo app, its picker (each request recorded with the sender that answers it) and a flag
 /// that says whether a synchronous dialog service was called.
 fn app() -> (Headless, Asked, Arc<AtomicBool>) {
+    app_with(lightcraft_engine::Session::with_demo().with_fs())
+}
+
+/// [`app`] on the given session.
+fn app_with(session: lightcraft_engine::Session) -> (Headless, Asked, Arc<AtomicBool>) {
     let blocked = Arc::new(AtomicBool::new(false));
     let hit = |b: &Arc<AtomicBool>| {
         let b = b.clone();
@@ -66,7 +71,7 @@ fn app() -> (Headless, Asked, Arc<AtomicBool>) {
         })),
         ..Default::default()
     };
-    let mut app = LightcraftApp::new(lightcraft_engine::Session::with_demo().with_fs(), services);
+    let mut app = LightcraftApp::new(session, services);
     let asked: Asked = Default::default();
     let a = asked.clone();
     app.services.picker = Some(Box::new(move |req| {
@@ -270,14 +275,20 @@ fn the_model_file_dialog_does_not_block_and_its_answer_is_checked() {
 
 #[test]
 fn the_smart_previews_folder_dialog_does_not_block_and_its_answer_is_applied() {
-    let (mut h, asked, blocked) = app();
-    h.app.ui.dialog = Some(Dialog::Settings { tab: "performance".into() });
+    // (the Smart previews section is the library's: it is drawn on the Library tab, for a library on disk)
+    let dir = scratch("smart-folder");
+    let mut session = lightcraft_engine::Session::new().with_fs();
+    session.open_library(dir.join("library"), false).unwrap();
+    let (mut h, asked, blocked) = app_with(session);
+    h.app.ui.dialog = Some(Dialog::Settings { tab: "library".into() });
     h.settle(T);
     press(&mut h, &asked, &blocked, Field::SmartPreviewsFolder, PickKind::Folder);
     h.app.ui.toast = None;
     answer(&mut h, &asked, 0, "/no/such/folder");
     assert!(h.app.pending_picks.is_empty());
     assert!(h.app.ui.toast.is_some(), "the answer was applied: the engine's refusal is shown");
+    drop(h);
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]
