@@ -342,7 +342,9 @@ fn model_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, m: &Value, 
                         ui.label(RichText::new(crate::i18n::tr("installed")).color(dim));
                     }
                 });
-                ui.label(RichText::new(licence_line(m)).font(t.caption()).color(if m["licence"]["commercial"] == "yes" { dim } else {
+                ui.label(RichText::new(licence_line(m)).font(t.caption()).color(if m["licence"]["commercial"] == "yes" {
+                    dim
+                } else {
                     t.text_caution()
                 }));
                 // how fast it is, as times faster than a ResNet-100 model (milliseconds would depend on the computer),

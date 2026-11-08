@@ -7,8 +7,7 @@ use super::selection::{
 };
 use super::{
     Album, AlbumId, ColorLabel, CommandSpec, CopyrightStatus, Filter, Flag, GroupBy, LibrarySource, Op, PhotoId, Result, Selection, Session, Sort,
-    SortKey,
-    SourceOwned, Value, always, bad, bool_or, cmd, has_active, has_library_selection, has_selection, json, ok, str_param,
+    SortKey, SourceOwned, Value, always, bad, bool_or, cmd, has_active, has_library_selection, has_selection, json, ok, str_param,
 };
 
 /// Seeds stay exactly representable as a JSON double, so web and agent clients read back what they wrote.
@@ -174,7 +173,9 @@ pub fn specs() -> Vec<CommandSpec> {
                 // only what this call sets is refused (null and an empty list clear): a field the source owns that is
                 // left in the filter (a source set without `source_shown`) must not block every other change, and
                 // `set` below takes it out
-                let sets = |o: &&SourceOwned| o.params().iter().any(|n| p.get(*n).is_some_and(|v| !v.is_null() && v.as_array().is_none_or(|a| !a.is_empty())));
+                let sets = |o: &&SourceOwned| {
+                    o.params().iter().any(|n| p.get(*n).is_some_and(|v| !v.is_null() && v.as_array().is_none_or(|a| !a.is_empty())))
+                };
                 if let Some(field) = s.source.owned_fields_set_in(&f).iter().find(sets) {
                     return Err(bad("library.filter", field.refusal()));
                 }

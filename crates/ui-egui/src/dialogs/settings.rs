@@ -268,7 +268,8 @@ pub fn window(app: &mut LightcraftApp, ui: &mut egui::Ui, tab: &mut String, max_
         let mut pinned = false;
         if shown == "slideshow" && found.is_none() && room >= PAGE_MIN_HEIGHT {
             // (the filter row is taken off the page, not off the preview: the slide is as large as it was)
-            let slide_h = ((room + filter_row).min(PAGE_SIZE.y) * PINNED_PREVIEW_SHARE - PREVIEW_CHROME).max(crate::panels::slide_layout::PREVIEW_MIN_H);
+            let slide_h =
+                ((room + filter_row).min(PAGE_SIZE.y) * PINNED_PREVIEW_SHARE - PREVIEW_CHROME).max(crate::panels::slide_layout::PREVIEW_MIN_H);
             if height - (slide_h + PREVIEW_CHROME_DRAWN) >= PINNED_PAGE_MIN_HEIGHT {
                 let before = ui.cursor().top();
                 crate::panels::slide_layout::preview(app, ui, &Tokens::get(ui.ctx()), slide_h);

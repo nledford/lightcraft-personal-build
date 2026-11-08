@@ -65,7 +65,18 @@ fn the_tabs_are_named_and_ordered_for_what_they_hold() {
 const SECTIONS: &[(&str, &[&str])] = &[
     ("general", &["Startup", "Culling", "Dialogs"]),
     ("library", &["Library", "Local folders"]),
-    ("import", &["Raw defaults", "Other images (JPEG, PNG, TIFF, HEIC…)", "Metadata", "Read from photos", "Dropped Files", "Cameras and Cards", "Auto Import"]),
+    (
+        "import",
+        &[
+            "Raw defaults",
+            "Other images (JPEG, PNG, TIFF, HEIC…)",
+            "Metadata",
+            "Read from photos",
+            "Dropped Files",
+            "Cameras and Cards",
+            "Auto Import",
+        ],
+    ),
     ("files", &["External Editing", "Lens profiles", "XMP sidecars"]),
     ("performance", &["Rendering", "Preview cache", "Prepare photos in the background"]),
     ("display", &["Monitor profile"]),
@@ -122,7 +133,15 @@ fn each_section_is_under_the_tab_a_person_would_look_in() {
     // Import is what happens to photos as they come in, from a camera or card or a watched folder too
     assert_eq!(
         under("import"),
-        ["Raw defaults", "Other images (JPEG, PNG, TIFF, HEIC…)", "Metadata", "Read from photos", "Dropped Files", "Cameras and Cards", "Auto Import"]
+        [
+            "Raw defaults",
+            "Other images (JPEG, PNG, TIFF, HEIC…)",
+            "Metadata",
+            "Read from photos",
+            "Dropped Files",
+            "Cameras and Cards",
+            "Auto Import"
+        ]
     );
     // Files is what is written beside the photo files and what they are opened in
     assert_eq!(under("files"), ["External Editing", "Lens profiles", "XMP sidecars"]);

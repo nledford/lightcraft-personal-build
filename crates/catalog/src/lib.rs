@@ -1863,9 +1863,9 @@ mod tests_log_thread;
 #[cfg(test)]
 mod tests_opened_folder;
 #[cfg(test)]
-mod tests_policy;
-#[cfg(test)]
 mod tests_order;
+#[cfg(test)]
+mod tests_policy;
 #[cfg(test)]
 mod tests_repair;
 #[cfg(test)]

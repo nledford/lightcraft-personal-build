@@ -2671,7 +2671,9 @@ fn a_local_folders_menu_takes_the_folders_order_and_grays_out_remove_inside_a_pl
     right_click(&mut h, &format!("source:local:{place}"));
     in_order(
         &h,
-        &["folderAddToMyPhotos", "folderSynchronize",
+        &[
+            "folderAddToMyPhotos",
+            "folderSynchronize",
             "folderNewFolder",
             "folderRename",
             "folderMoveTo",

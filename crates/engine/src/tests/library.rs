@@ -418,7 +418,7 @@ fn filter_any_of_several_flags() {
     assert_eq!(vis.len(), all - rejects);
     assert!(vis.iter().all(|id| s.catalog.photo(*id).unwrap().flag != Flag::Reject));
     assert!(s.filter().describe().contains("flag pick or none"), "{}", s.filter().describe());
-    let chips = crate::filter_chips(&s.filter(), &s.catalog);
+    let chips = crate::filter_chips(s.filter(), &s.catalog);
     let chip = chips.iter().find(|c| c.label.starts_with("Flag")).expect("a flag chip");
     assert_eq!(chip.label, "Flag: pick or none");
     s.execute("library.filter", &chip.clear).unwrap();
@@ -445,7 +445,8 @@ fn filter_flag_and_flags_together_chip() {
         s.execute("photo.flag", &json!({"ids": [id], "flag": f})).unwrap();
     }
     let picks = s.catalog.photos().filter(|p| p.in_library() && p.flag == Flag::Pick).count();
-    let chip = |s: &Session| crate::filter_chips(&s.filter(), &s.catalog).into_iter().find(|c| c.label.starts_with("Flag")).expect("a flag chip").label;
+    let chip =
+        |s: &Session| crate::filter_chips(s.filter(), &s.catalog).into_iter().find(|c| c.label.starts_with("Flag")).expect("a flag chip").label;
     s.execute("library.filter", &json!({"flag": "pick", "flags": ["pick", "none"]})).unwrap();
     assert_eq!(s.visible_cloned().len(), picks);
     assert_eq!(chip(&s), "Flag: pick");

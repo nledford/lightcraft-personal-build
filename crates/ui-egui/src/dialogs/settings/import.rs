@@ -86,13 +86,10 @@ pub(super) fn import_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens)
             let widget = format!("field:settings.{key}");
             let shown = field(
                 ui,
-                crate::text_field::TextField::singleline(&widget, &mut text)
-                    .hint(hint_text)
-                    .width(240.0)
-                    .saves_with(library, |typed| {
-                        let typed = typed.trim();
-                        (typed != value).then(|| crate::text_field::Save { command: "library.preferences", params: json!({"import": {key: typed}}) })
-                    }),
+                crate::text_field::TextField::singleline(&widget, &mut text).hint(hint_text).width(240.0).saves_with(library, |typed| {
+                    let typed = typed.trim();
+                    (typed != value).then(|| crate::text_field::Save { command: "library.preferences", params: json!({"import": {key: typed}}) })
+                }),
             );
             if let Some(save) = shown.save {
                 app.act(save.command, save.params);

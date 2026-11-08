@@ -702,11 +702,11 @@ impl Session {
             self.note_filter_change(before, commits);
         }
         if self.depth == 0 && was_active.is_some() && self.active() != was_active {
-        self.previous_active = was_active;
-        if let Some(left) = was_active {
-            self.auto_version(left);
+            self.previous_active = was_active;
+            if let Some(left) = was_active {
+                self.auto_version(left);
+            }
         }
-    }
         if r.is_ok()
             && let Some(params) = journal
             && self.depth == 0
@@ -832,11 +832,9 @@ impl Session {
     /// they are (returns false).
     pub(crate) fn merge_folder_moves(&mut self, n: usize, label: &str) -> bool {
         let Some(from) = self.undo.len().checked_sub(n).filter(|_| n > 0) else { return false };
-        if self
-            .undo
-            .get(from..)
-            .is_none_or(|t| t.iter().any(|e| e.folders.len() != 1 || e.filters.is_some() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty()))
-        {
+        if self.undo.get(from..).is_none_or(|t| {
+            t.iter().any(|e| e.folders.len() != 1 || e.filters.is_some() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty())
+        }) {
             return false;
         }
         let tail = self.undo.split_off(from);
