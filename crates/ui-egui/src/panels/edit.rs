@@ -18,7 +18,7 @@ use crate::menu_item::MenuItem;
 use crate::render::Slot;
 use crate::state::RightPanel;
 use crate::theme::Tokens;
-use crate::widgets::{BAND_COLORS, SliderOut, divider, flyout_row, hex, register, section_header, slider, text_button};
+use crate::widgets::{BAND_COLORS, SliderOut, command_button, divider, flyout_row, hex, register, section_header, slider, text_button};
 
 mod curve;
 mod grading;
@@ -108,7 +108,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
                     egui::RichText::new(crate::i18n::tr_format!("Auto Sync: edits apply to {n} photos", n = n)).color(t.text_link()).font(t.label()),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if Button::new("Turn Off").small().widget("button:autoSyncOff").show(ui).clicked() {
+                    if  Button::new("Turn Off").small().widget("button:autoSyncOff").show(ui).clicked() {
                         app.act("develop.autoSync", json!({"on": false}));
                     }
                 });
@@ -128,16 +128,8 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
             let below = r.rect.bottom();
             egui::Popup::menu(&r).show(|ui| profile_menu(app, ui, &d, below));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if crate::widgets::icon_button(
-                    ui,
-                    "profileBrowser",
-                    Icon::ProfileGrid,
-                    vec2(28.0, 28.0),
-                    false,
-                    true,
-                    crate::i18n::tr("Browse Profiles"),
-                )
-                .clicked()
+                if crate::widgets::icon_command(ui, "profileBrowser", Icon::ProfileGrid, vec2(28.0, 28.0), true, crate::i18n::tr("Browse Profiles"))
+                    .clicked()
                 {
                     app.act("panel.profiles", json!({}));
                 }

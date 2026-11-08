@@ -320,6 +320,12 @@
   button. This holds in every language, including Japanese and Traditional Chinese, which write the shortcut in
   full-width brackets. The tooltip you see on hover is unchanged.
 
+### A stack badge's tooltip names the stack key as it is bound
+- Hovering a stack's badge in the grid said "(S)" even after you had remapped the key that expands and collapses stacks. It now shows the key you set for Expand/Collapse Stack, written as the menu bar writes it. With that unbound, it shows Soft Proofing's key (which a grid reads as the stack toggle) unless the native menu takes that key, and then no key. In the filmstrip, where S is Soft Proofing, the tooltip names a key only when Expand/Collapse Stack has one of its own.
+
+### Screen readers tell buttons, switches and choices apart
+- With VoiceOver, a button that does something (Reset, Auto, Choose…, Create Album, Back) is now a button, not a check box that is "unchecked". A button that is on or off (B&W, HDR) says whether it is on, and one of several choices (Format, Color space, Sharpen, a language, the view buttons: Photo Grid, Square Grid, Detail, Compare, Survey and People) is a radio button that says which one is chosen.
+
 ## 2026-10-27
 
 ### Increase contrast
@@ -491,11 +497,6 @@
   thumbnail badges and the frame-rate overlay. On macOS it follows System Settings ▸
   Accessibility ▸ Display ▸ Reduce transparency until you change it in Settings; **Use the system setting** beside the
   tick box hands the choice back. On Windows, Linux and the web version it is manual for now (off by default).
-
-## 2026-10-28
-
-### A stack badge's tooltip names the stack key as it is bound
-- Hovering a stack's badge in the grid said "(S)" even after you had remapped the key that expands and collapses stacks. It now shows the key you set for Expand/Collapse Stack, written as the menu bar writes it. With that unbound, it shows Soft Proofing's key (which a grid reads as the stack toggle) unless the native menu takes that key, and then no key. In the filmstrip, where S is Soft Proofing, the tooltip names a key only when Expand/Collapse Stack has one of its own.
 
 ## 2026-10-24
 

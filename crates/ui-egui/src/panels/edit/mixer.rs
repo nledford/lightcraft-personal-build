@@ -1,7 +1,7 @@
 use super::curve::set_tat;
 use super::sliders::{control, sub_title};
 use super::{
-    BAND_COLORS, Button, Color32, DevelopSettings, Icon, LightcraftApp, Sense, Stroke, Tokens, hex, json, paint, register, text_button, vec2,
+    BAND_COLORS, Button, Color32, DevelopSettings, Icon, LightcraftApp, Sense, Stroke, Tokens, command_button, hex, json, paint, register, text_button, vec2,
 };
 use crate::check::check;
 
@@ -137,7 +137,7 @@ pub(super) fn point_color(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &Develo
                 app.ui.point_color_visualize = v;
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if Button::new("Delete").small().widget("button:pointColorDelete").show(ui).clicked() {
+                if  Button::new("Delete").small().widget("button:pointColorDelete").show(ui).clicked() {
                     app.act("pointColor.delete", json!({"index": sel}));
                 }
             });

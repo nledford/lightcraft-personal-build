@@ -245,8 +245,7 @@ pub fn section(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         }
         ui.data_mut(|d| d.insert_temp(mem, name));
         if app.services.pick_slideshow_templates.is_some()
-            && crate::button::Button::new("Import…").small().widget("button:slideshowTemplateImport").show(ui).clicked()
-        {
+            && crate::button::Button::new("Import…").small().widget("button:slideshowTemplateImport").show(ui).clicked() {
             let paths = app.services.pick_slideshow_templates.as_mut().map(|pick| pick()).unwrap_or_default();
             for path in paths {
                 act(app, &ctx, "slideshow.templates.import", json!({"path": path}), |r| {
