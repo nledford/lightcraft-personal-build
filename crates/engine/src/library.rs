@@ -810,6 +810,8 @@ impl Session {
         // the records of moves this session had settled belong to the library it leaves: they stay
         // on disk for the open that follows them (forgetting them here deletes none)
         self.settled_moves.clear();
+        // a run of the old library no longer holds the new one's history
+        self.undo_hold = std::sync::Weak::new();
         self.interaction = None;
         self.pending_log.clear();
         self.selection = Selection::default();
