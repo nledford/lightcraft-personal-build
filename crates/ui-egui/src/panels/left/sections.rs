@@ -429,12 +429,12 @@ fn new_album_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         app.ui.dialog = Some(crate::state::Dialog::NewAlbum { name: String::new(), folder: false, parent: None, include_selected: true });
     }
     if MenuItem::new(crate::i18n::tr("Create Smart Album…")).show(ui).clicked() {
-        app.ui.dialog = Some(crate::state::Dialog::SmartRules {
-            id: None,
-            name: String::new(),
-            rules: lightcraft_catalog::RuleSet { rules: vec![crate::panels::rules_editor::new_rule()], ..Default::default() },
-            parent: None,
-        });
+        app.ui.dialog = Some(crate::state::Dialog::smart_rules(
+            None,
+            String::new(),
+            lightcraft_catalog::RuleSet { rules: vec![crate::panels::rules_editor::new_rule()], ..Default::default() },
+            None,
+        ));
     }
     // (a view that can't be saved as rules greys this out, and says why)
     let why_not = app.session.view_save_refusal();

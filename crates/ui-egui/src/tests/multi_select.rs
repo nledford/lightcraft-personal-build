@@ -1034,7 +1034,7 @@ fn the_smart_album_editor_counts_photos_of_every_folder_the_album_was_made_from(
             ["id"]
             .as_u64()
             .unwrap();
-    h.app.ui.dialog = Some(Dialog::SmartRules { id: Some(id), name: "Two folders".into(), rules: Default::default(), parent: None });
+    h.app.ui.dialog = Some(Dialog::smart_rules(Some(id), "Two folders".into(), Default::default(), None));
     h.settle(SETTLE);
     let text = h.painted_text().join(" ");
     assert!(text.contains("2 photos match"), "{text}");
@@ -1052,7 +1052,7 @@ fn the_smart_album_editor_counts_within_the_albums_the_album_was_made_from() {
     run(&mut h, "library.source", json!({"kind": "album", "ids": [a, c]}));
     let several = run(&mut h, "album.createSmart", json!({"name": "Both"}))["id"].as_u64().unwrap();
     // When its editor opens with no rule of its own
-    h.app.ui.dialog = Some(Dialog::SmartRules { id: Some(several), name: "Both".into(), rules: Default::default(), parent: None });
+    h.app.ui.dialog = Some(Dialog::smart_rules(Some(several), "Both".into(), Default::default(), None));
     h.settle(SETTLE);
     // Then it counts those three photos
     let text = h.painted_text().join(" ");
@@ -1061,7 +1061,7 @@ fn the_smart_album_editor_counts_within_the_albums_the_album_was_made_from() {
     h.app.ui.dialog = None;
     run(&mut h, "library.source", json!({"kind": "album", "id": b}));
     let one = run(&mut h, "album.createSmart", json!({"name": "One"}))["id"].as_u64().unwrap();
-    h.app.ui.dialog = Some(Dialog::SmartRules { id: Some(one), name: "One".into(), rules: Default::default(), parent: None });
+    h.app.ui.dialog = Some(Dialog::smart_rules(Some(one), "One".into(), Default::default(), None));
     h.settle(SETTLE);
     let text = h.painted_text().join(" ");
     assert!(text.contains("1 photo match"), "{text}");
