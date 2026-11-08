@@ -413,6 +413,9 @@ impl LightcraftApp {
         if self.edit_saves_refused.0 < ctx.cumulative_pass_nr() && !crate::text_field::any_unfinished(ctx) {
             self.edit_saves_refused.1.clear();
         }
+        // what the views asked a thumbnail of in this frame is the frame before's now: aged here, once for each
+        // frame drawn, not in `logic`, which a hidden window gets as well, with no frame to draw
+        self.renderer.frame_drawn();
         panels::notices::finish_ui_pass(self, ctx);
         panels::library_problem::finish_ui_pass(self, ctx);
         self.ui_passes = self.ui_passes.wrapping_add(1);

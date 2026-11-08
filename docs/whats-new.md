@@ -115,6 +115,18 @@
   name took about 3.8 s and now takes about 0.9 s (a view's sort of its own photos: 3.9 s and 1.6 s); a sort by capture
   date, which reaches the names only for photos that tie, goes from 0.83 s to 0.76 s.
 
+### The grid's thumbnails follow the memory budget, and unreadable files stop filling the log
+- The thumbnails the grid and the filmstrip kept off screen were capped at 600 pictures whatever Settings ▸ Performance ▸
+  Memory for caches said: a small budget still gave them up to about 400 MB, and a large one never used its room. They
+  now hold up to a quarter of the budget, so a smaller budget keeps fewer pictures off screen and a larger one more.
+- A folder whose files can't be read (a drive that went to sleep, a card of damaged files) wrote a warning, with the
+  file's path, for every photo the grid asked about, and kept a note of each one for as long as the app ran. The log
+  now has the first 20 such warnings and then one a second, saying how many it left out (in a line of its own once
+  the failures stop); `LIGHTCRAFT_LOG=debug` still lists every one. The notes, which keep the grid from asking for
+  the same file every frame, are kept for the photos on screen, and for 1,024 others at most.
+- `ui.inspect` reports the grid's thumbnails and the limit they are held to, and `library.memory` the photo records
+  of the catalog, which the memory budget doesn't limit (`docs/control-protocol.md`, `docs/gpu-pipeline.md`).
+
 ## 2026-11-02
 
 ### The Windows title bar is readable from the moment the window opens
