@@ -250,7 +250,7 @@ pub(crate) fn smart_folder_default() -> String {
 /// the effective folder, what is in it, and choosing another one.
 #[cfg(not(target_arch = "wasm32"))]
 pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
-    let cache = egui::Id::unique("smart-location");
+    let cache = smart_location_id();
     let Some(loc) = smart_location(app, ui, cache) else { return };
     heading(ui, t, "Smart previews");
     let path = loc["path"].as_str().unwrap_or_default().to_string();
@@ -269,11 +269,11 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     let library = smart_library(app);
     let kept: Option<SmartAsk> = ui.data(|d| d.get_temp(ask_id));
     let mut ask = kept.filter(|k| pass.saturating_sub(k.pass) <= 1 && k.library == library && k.folder == path).unwrap_or_default();
-    // a folder chosen in a dialog that ran off the UI thread, kept until this section is drawn
+    // a "Delete them" folder chosen in a dialog that ran off the UI thread, kept until this section is drawn
     // (of this library: a folder chosen for another one, opened while the dialog was up, is not taken up for this)
-    let picked =
-        ui.data_mut(|d| d.remove_temp::<(String, String, u8)>(smart_picked_id())).filter(|(lib, _, _)| *lib == library).map(|(_, dir, m)| (dir, m));
-    let mut mode = picked.as_ref().map_or(ask.mode, |(_, m)| *m);
+    let generation = app.session.library_generation();
+    let picked = ui.data_mut(|d| d.remove_temp::<(u64, String)>(smart_parked_id())).filter(|(g, _)| *g == generation).map(|(_, dir)| dir);
+    let mut mode = if picked.is_some() { 2 } else { ask.mode };
     if count > 0 {
         row(ui, t, crate::i18n::tr("Existing previews"), |ui| {
             choices(ui, "settingsSmartExisting", &[(0u8, "Move them"), (1, "Leave them"), (2, "Delete them")], &mut mode);
@@ -284,9 +284,9 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     // be deleted for is known: until then the change (the command's parameters) waits here.
     // (asked for "Delete them" only: choosing otherwise withdraws the question)
     let mut waiting: Option<Value> = ask.waiting.take().filter(|_| existing == "discard");
-    // The choice that was up when the dialog closed is the one it was parked with, whatever this section last drew
-    // (a tab left while the dialog was up lets the remembered choice go stale): "Delete them" stays the question.
-    let mut change = picked.map(|(dir, _)| json!({"path": dir, "existing": existing}));
+    // A parked folder is the "Delete them" one (the choice it was parked with, whatever this section last drew: a tab
+    // left while the dialog was up lets the remembered choice go stale): "Delete them" stays the question.
+    let mut change = picked.map(|dir| json!({"path": dir, "existing": existing}));
     ui.horizontal(|ui| {
         ui.add_space(LABEL_W);
         if app.services.pick_folder.is_some() {
@@ -344,7 +344,7 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     let result = change.map(|params| app.run("library.smartPreviewsLocation", params));
     if let Some(r) = result {
         ui.data_mut(|d| d.remove::<(f64, Value)>(cache));
-        smart_change_toast(app, ui, r, existing);
+        smart_change_toast(app, ui.ctx(), r, existing);
     }
     hint(ui, t, crate::i18n::tr("Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library."));
 }
@@ -411,7 +411,7 @@ fn smart_folder_rows(ui: &mut egui::Ui, t: &Tokens, loc: &Value) {
 
 /// Says what a folder change did: how many previews were moved or deleted, and how many failed.
 #[cfg(not(target_arch = "wasm32"))]
-fn smart_change_toast(app: &mut LightcraftApp, ui: &egui::Ui, result: Result<Value, String>, existing: &str) {
+fn smart_change_toast(app: &mut LightcraftApp, ctx: &egui::Context, result: Result<Value, String>, existing: &str) {
     match result {
         Ok(v) => {
             let failed = v["failed"].as_array().map_or(0, Vec::len);
@@ -423,12 +423,12 @@ fn smart_change_toast(app: &mut LightcraftApp, ui: &egui::Ui, result: Result<Val
             };
             let msg = if failed > 0 { crate::i18n::tr_format!("{msg} ({failed} failed)", failed = failed, msg = msg) } else { msg };
             if failed > 0 {
-                app.toast_error(ui.ctx(), msg);
+                app.toast_error(ctx, msg);
             } else {
-                app.toast(ui.ctx(), msg);
+                app.toast(ctx, msg);
             }
         }
-        Err(e) => app.toast_error(ui.ctx(), e),
+        Err(e) => app.toast_error(ctx, e),
     }
 }
 
@@ -442,10 +442,17 @@ fn custom_cache_option(cur: u32) -> Option<(u32, String)> {
     Some((cur, label))
 }
 
-/// Where a folder chosen in the file dialog waits for the smart previews section to take it up.
+/// Where a "Delete them" folder chosen in the file dialog waits for the smart previews section's question:
+/// the library it was chosen in ([`lightcraft_engine::Session::library_generation`]) and the folder.
 #[cfg(not(target_arch = "wasm32"))]
-fn smart_picked_id() -> egui::Id {
-    egui::Id::unique("smart-picked")
+fn smart_parked_id() -> egui::Id {
+    egui::Id::unique("smart-parked")
+}
+
+/// Where the section keeps its location listing between frames (dropped after a change).
+#[cfg(not(target_arch = "wasm32"))]
+fn smart_location_id() -> egui::Id {
+    egui::Id::unique("smart-location")
 }
 
 /// Where the section keeps its [`SmartAsk`] between frames.
@@ -454,23 +461,39 @@ fn smart_ask_id() -> egui::Id {
     egui::Id::unique("smart-ask")
 }
 
-/// The library the smart previews section is about, as [`SmartAsk`] and a folder chosen for it name it.
+/// The library the smart previews section is about, as [`SmartAsk`] names it.
 #[cfg(not(target_arch = "wasm32"))]
 fn smart_library(app: &LightcraftApp) -> String {
     app.session.library.as_ref().map(|l| l.dir.display().to_string()).unwrap_or_default()
 }
 
-/// A folder was chosen for the smart previews (the dialog may have run off the UI thread): the
-/// section above takes it up when it is next drawn, with the "Existing previews" choice it was
-/// parked with (and, for "Delete them", the one more question), as for a folder chosen with the
-/// synchronous service. It waits for as long as that takes (another tab may be showing); one for a
-/// library that is no longer the open one is dropped, as a dialog's answer is.
+/// A folder was chosen for the smart previews (the dialog may have run off the UI thread), while
+/// Settings is open. "Move them" and "Leave them", the choice the section last drew, apply at once,
+/// as for a folder chosen with the synchronous service. "Delete them" is parked for the section's
+/// one more question, which guards the deletion: the section takes the park up when it is next drawn
+/// (another tab may be showing until then), and a park for a library that is no longer the open one
+/// is dropped, as a dialog's answer is ([`drop_parked_smart_folder`] drops it with Settings).
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn smart_folder_picked(app: &LightcraftApp, ctx: &egui::Context, path: String) {
+pub(crate) fn smart_folder_picked(app: &mut LightcraftApp, ctx: &egui::Context, path: String) {
     let library = smart_library(app);
     let mode = ctx.data(|d| d.get_temp::<SmartAsk>(smart_ask_id())).filter(|k| k.library == library).map_or(0, |k| k.mode);
-    ctx.data_mut(|d| d.insert_temp(smart_picked_id(), (library, path, mode)));
-    ctx.request_repaint();
+    if mode == 2 {
+        ctx.data_mut(|d| d.insert_temp(smart_parked_id(), (app.session.library_generation(), path)));
+        ctx.request_repaint();
+        return;
+    }
+    let existing = if mode == 1 { "leave" } else { "move" };
+    let result = app.run("library.smartPreviewsLocation", json!({"path": path, "existing": existing}));
+    ctx.data_mut(|d| d.remove::<(f64, Value)>(smart_location_id()));
+    smart_change_toast(app, ctx, result, existing);
+}
+
+/// Settings is not open: a folder parked for its deletion question is dropped, as the question went with it.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn drop_parked_smart_folder(app: &LightcraftApp, ctx: &egui::Context) {
+    if !matches!(app.ui.dialog, Some(crate::state::Dialog::Settings { .. })) {
+        ctx.data_mut(|d| d.remove::<(u64, String)>(smart_parked_id()));
+    }
 }
 
 #[cfg(test)]

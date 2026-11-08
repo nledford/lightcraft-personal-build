@@ -241,6 +241,9 @@ pub(crate) fn prepare(app: &LightcraftApp, ui: &mut egui::Ui) {
 /// actually on screen over this dialog; ordinary dialogs without that window keep their normal
 /// Escape and outside-click behaviour.
 pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
+    // a smart-previews folder parked for Settings' deletion question goes with Settings
+    #[cfg(not(target_arch = "wasm32"))]
+    settings::drop_parked_smart_folder(app, ctx);
     let Some(mut dlg) = app.ui.dialog.clone() else { return };
     let at_start = dlg.clone();
     let library_blocks = crate::panels::library_problem::blocks_dialog_input(app);

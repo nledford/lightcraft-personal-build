@@ -362,6 +362,89 @@ fn a_delete_parked_over_a_settings_tab_switch_still_asks() {
     assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(0), json!(true)), "{now}");
 }
 
+/// The host's folder dialog opened from the Library tab with `choice` ("button:settingsSmartExisting-N") made, then
+/// Settings' General tab shown (the Library section is not drawn), and the dialog closes on `to`.
+fn folder_chosen_from_another_tab(h: &mut Headless, tx_slot: &DialogAnswer, choice: &str, to: &str) {
+    show_library(h);
+    click(h, "button:settingsSmartChoose");
+    let tx = tx_slot.lock().unwrap().take().expect("the dialog opened");
+    click(h, choice);
+    show(h, "general");
+    tx.send(vec![to.to_string()]).unwrap();
+    for _ in 0..10 {
+        h.step();
+    }
+}
+
+/// "Move them" and "Leave them" need no question: they apply when the host's dialog closes, whichever Settings tab is showing,
+/// and are not kept for a later visit to the Library tab.
+#[test]
+fn a_move_chosen_in_the_folder_dialog_applies_when_it_closes() {
+    let dir = TempFolder::new("settings-trust-smart-close-move");
+    let to = dir.path("elsewhere");
+    let (mut h, tx_slot) = with_deferred_folder_dialog(&dir, &to);
+    folder_chosen_from_another_tab(&mut h, &tx_slot, "button:settingsSmartExisting-0", &to);
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone(), now["path"].clone()), (json!(1), json!(true), json!(to)), "moved at once: {now}");
+}
+
+#[test]
+fn a_leave_chosen_in_the_folder_dialog_applies_when_it_closes() {
+    let dir = TempFolder::new("settings-trust-smart-close-leave");
+    let to = dir.path("elsewhere");
+    let (mut h, tx_slot) = with_deferred_folder_dialog(&dir, &to);
+    folder_chosen_from_another_tab(&mut h, &tx_slot, "button:settingsSmartExisting-1", &to);
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone(), now["path"].clone()), (json!(0), json!(true), json!(to)), "left behind: {now}");
+}
+
+/// A parked "Delete them" folder goes with Settings: opened again, the Library tab neither asks nor changes anything.
+#[test]
+fn a_parked_delete_is_dropped_when_settings_closes() {
+    let dir = TempFolder::new("settings-trust-smart-park-closed");
+    let to = dir.path("elsewhere");
+    let (mut h, tx_slot) = with_deferred_folder_dialog(&dir, &to);
+    folder_chosen_from_another_tab(&mut h, &tx_slot, "button:settingsSmartExisting-2", &to);
+    assert!(!has(&h, "button:settingsSmartDelete"), "the Library section is not showing");
+    key(&mut h, "Escape");
+    assert!(h.app.ui.dialog.is_none());
+    for _ in 0..4 {
+        h.step();
+    }
+    show_library(&mut h);
+    for _ in 0..10 {
+        h.step();
+    }
+    assert!(!has(&h, "button:settingsSmartDelete"), "no question about a folder chosen in a Settings that is gone");
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(1), json!(false)), "nothing changed: {now}");
+}
+
+/// A parked folder is bound to the library session it was chosen in, not to its directory: the same library
+/// opened again (another session) does not take it up.
+#[test]
+fn a_parked_delete_is_dropped_when_the_library_is_opened_again() {
+    let dir = TempFolder::new("settings-trust-smart-park-reopened");
+    let (library_b, _) = another_library(&dir);
+    let to = dir.path("elsewhere");
+    let (mut h, tx_slot) = with_deferred_folder_dialog(&dir, &to);
+    folder_chosen_from_another_tab(&mut h, &tx_slot, "button:settingsSmartExisting-2", &to);
+    // When the library is left and opened again while Settings stays up
+    let library_a = dir.path("library");
+    h.app.run("app.openLibrary", json!({"path": library_b})).unwrap();
+    h.app.run("app.openLibrary", json!({"path": library_a})).unwrap();
+    h.app.ui.dialog = Some(Dialog::Settings { tab: "library".into() });
+    h.settle(T);
+    show_library(&mut h);
+    for _ in 0..10 {
+        h.step();
+    }
+    // Then the folder is not asked about, and nothing changed
+    assert!(!has(&h, "button:settingsSmartDelete"), "the park belongs to the session it was chosen in");
+    let now = smart(&mut h);
+    assert_eq!((now["count"].clone(), now["custom"].clone()), (json!(1), json!(false)), "nothing changed: {now}");
+}
+
 #[test]
 fn moving_the_smart_previews_needs_no_question() {
     let dir = TempFolder::new("settings-trust-smart-move");

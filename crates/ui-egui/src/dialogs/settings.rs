@@ -48,7 +48,7 @@ use performance::performance_tab;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 pub(crate) use performance::smart_folder_default;
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) use performance::smart_folder_picked;
+pub(crate) use performance::{drop_parked_smart_folder, smart_folder_picked};
 use slideshow::slideshow_tab;
 pub(crate) use widgets::{ask_first, choices, heading, hint, row};
 use widgets::{focus_style, legible_controls};
