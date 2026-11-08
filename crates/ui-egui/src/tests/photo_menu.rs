@@ -68,7 +68,7 @@ fn the_filmstrip_menu_copies_the_file_path() {
     assert!(toast(&h).contains("Copied"), "{}", toast(&h));
 }
 
-/// A row whose command refuses says why, in the command's own words, instead of doing nothing.
+/// A row whose command refuses says why, in the command's own reason, instead of doing nothing.
 #[test]
 fn a_refused_row_says_why() {
     let mut h = demo("photoGrid");
@@ -78,7 +78,11 @@ fn a_refused_row_says_why() {
     h.app.ui.toast = None;
     right_click(&mut h, &format!("thumb:{}", p.0));
     go(&mut h, "ui.clickWidget", "photomenu:photo.duplicate");
-    assert_eq!(toast(&h), expected);
+    // (the reason, as the menu bar's click says it, not the engine's "invalid parameters for …" error)
+    let reason = expected.rsplit("`: ").next().unwrap_or(&expected);
+    assert!(reason.contains("no file to duplicate"), "{expected}");
+    assert_eq!(toast(&h).to_lowercase(), reason.to_lowercase());
+    assert!(!toast(&h).contains("invalid parameters"), "{}", toast(&h));
 }
 
 /// Metadata ▸ Copy Metadata on one photo and Metadata ▸ Paste Metadata on another, through the
