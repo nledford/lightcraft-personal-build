@@ -38,7 +38,8 @@ pub fn bindable() -> &'static [Bindable] {
         }
         let ui_keys: Vec<(Modifiers, Key)> = v.iter().filter_map(|b| b.default.and_then(parse)).collect();
         for c in lightcraft_engine::command_specs() {
-            if v.iter().any(|b| b.id == c.id) {
+            // (files go to the Trash only after the question: its dialog is what a key can open)
+            if v.iter().any(|b| b.id == c.id) || c.id == "photo.trashFiles" {
                 continue;
             }
             let default = c.shortcut.filter(|sc| parse(sc).is_some_and(|k| !ui_keys.contains(&k)));
@@ -660,7 +661,7 @@ fn fire_alias(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, params: se
     // a slideshow: Space pauses / resumes
     if id == "view.zoomToggle" && app.ui.slideshow.is_some() {
         if let Ok(v) = app.run("slideshow.togglePause", json!({})) {
-            app.toast(ctx, crate::i18n::tr(if v["paused"] == true { "Slideshow paused" } else { "Slideshow resumed" }));
+            app.toast_on(ctx, "slideshow", crate::i18n::tr(if v["paused"] == true { "Slideshow paused" } else { "Slideshow resumed" }));
         }
         return;
     }
@@ -719,8 +720,8 @@ fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fi
     crate::menus::menubar::menu_defaults(f, &mut params);
     if app.act(f, params).is_some() {
         match f {
-            "edit.undo" => app.toast(ctx, crate::i18n::tr("Undo")),
-            "edit.redo" => app.toast(ctx, crate::i18n::tr("Redo")),
+            "edit.undo" => app.toast_on(ctx, "history", crate::i18n::tr("Undo")),
+            "edit.redo" => app.toast_on(ctx, "history", crate::i18n::tr("Redo")),
             _ => {}
         }
     }

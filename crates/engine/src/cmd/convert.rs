@@ -4,7 +4,7 @@
 
 use std::path::Path;
 
-use lightcraft_catalog::{MediaKind, Op, Source};
+use lightcraft_catalog::{MediaKind, Op, PhotoId, Source};
 use serde_json::{Value, json};
 
 use super::{CommandSpec, bad, cmd, has_active, has_selection};
@@ -33,13 +33,17 @@ pub(crate) fn write_dng_for(s: &Session, path: &str, packet: String) -> std::res
 pub(crate) fn write_dng_with(file_bytes: Option<&crate::merge::ByteReader>, path: &str, packet: String) -> std::result::Result<String, String> {
     let bytes = match file_bytes {
         Some(r) => r(path)?,
-        None => std::fs::read(path).map_err(|e| format!("{path}: {e}"))?,
+        None => crate::files::fs::read_reporting(path).map_err(|e| format!("{path}: {e}"))?,
     };
+    // (the steps below are CPU work with no disk wait: their ends tell a pool's watch that the job goes on)
+    crate::import::progressed();
     let mut raw = lightcraft_raw::decode(&bytes).map_err(|e| format!("{path}: {e}"))?;
+    crate::import::progressed();
     crate::camera_preview::with_starting_colour(&mut raw, &bytes);
     drop(bytes);
     let dng = lightcraft_raw::write_dng(&raw, &lightcraft_raw::DngWriteOptions { xmp: (!packet.is_empty()).then_some(packet), ..Default::default() })
         .map_err(|e| e.to_string())?;
+    crate::import::progressed();
     let back = lightcraft_raw::decode(&dng).map_err(|e| format!("{path}: the DNG written for it doesn't decode ({e}); the raw is kept"))?;
     let same = match (&back.data, &raw.data) {
         (lightcraft_raw::RawData::U16(a), lightcraft_raw::RawData::U16(b)) => a == b,
@@ -51,15 +55,40 @@ pub(crate) fn write_dng_with(file_bytes: Option<&crate::merge::ByteReader>, path
     if (back.width, back.height, back.cpp) != (raw.width, raw.height, raw.cpp) || !same {
         return Err(format!("{path}: the DNG written for it doesn't hold the same raw data; the raw is kept"));
     }
+    crate::import::progressed();
     drop((raw, back));
     let out = lightcraft_catalog::safe_file::write_new_unique(&mut dng_names(path), &dng)
         .map_err(|e| format!("{path}: could not write its DNG ({e}); the raw is kept"))?;
     Ok(out.to_string_lossy().to_string())
 }
 
+/// Why `ph` isn't converted, if it isn't.
+fn not_convertible(ph: &lightcraft_catalog::Photo) -> Option<&'static str> {
+    if ph.kind != MediaKind::Raw {
+        Some("not a raw photo")
+    } else if ph.copy_of.is_some() {
+        Some("a virtual copy")
+    } else if ph.format.eq_ignore_ascii_case("DNG") {
+        Some("already a DNG")
+    } else {
+        None
+    }
+}
+
 fn convert(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "photo.convertToDng";
+    s.refuse_while_trashing(C)?;
     let ids = s.targets(p)?;
+    // before the first DNG is written: a raw on its way to another folder is read half-moved, and the
+    // DNG would be left next to a file that is no longer there
+    let moving: Vec<PhotoId> = ids
+        .iter()
+        .copied()
+        .filter(|id| {
+            s.catalog.photo(*id).is_some_and(|ph| matches!(&ph.source, Source::File { path } if not_convertible(ph).is_none() && s.is_moving(path)))
+        })
+        .collect();
+    s.refuse_detaching(&moving)?;
     let mut ops = Vec::new();
     let mut converted = Vec::new();
     let mut skipped = Vec::new();
@@ -69,17 +98,8 @@ fn convert(s: &mut Session, p: &Value) -> Result<Value> {
             skipped.push(json!([id.0, "not a file"]));
             continue;
         };
-        if ph.kind != MediaKind::Raw || ph.format.eq_ignore_ascii_case("DNG") || ph.copy_of.is_some() {
-            skipped.push(json!([
-                id.0,
-                if ph.kind != MediaKind::Raw {
-                    "not a raw photo"
-                } else if ph.copy_of.is_some() {
-                    "a virtual copy"
-                } else {
-                    "already a DNG"
-                }
-            ]));
+        if let Some(why) = not_convertible(&ph) {
+            skipped.push(json!([id.0, why]));
             continue;
         }
         let packet = crate::sidecar::sidecar_packet(&ph, &s.catalog);
@@ -125,6 +145,7 @@ pub fn specs() -> Vec<CommandSpec> {
 /// the library and stack it on top of the original. The host opens the file in the editor.
 fn edit_external(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "photo.editExternal";
+    s.refuse_while_trashing(C)?;
     let mut ids = s.targets(p)?;
     ids.dedup();
     if ids.is_empty() {
@@ -342,6 +363,7 @@ fn reload(s: &mut Session, p: &Value) -> Result<Value> {
 /// same settings, metadata, rating, flag, label and albums. → {ids}
 fn duplicate(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "photo.duplicate";
+    s.refuse_while_trashing(C)?;
     let mut made = Vec::new();
     for id in s.targets(p)? {
         let Some(ph) = s.catalog.photo(id).map(|p| (**p).clone()) else { continue };

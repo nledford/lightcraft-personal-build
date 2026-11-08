@@ -1851,6 +1851,37 @@ fn settle_waits_for_file_system_checks() {
     assert_eq!(check(&mut h), Some(true));
 }
 
+/// A file-system check that panics is no pending work for ever: the count drops (so `busy()` and `settle` go on) and the check can be asked again.
+#[test]
+fn a_file_system_check_that_panics_is_not_pending_for_ever() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static ASKED: AtomicUsize = AtomicUsize::new(0);
+    fn panics(_: &str) -> bool {
+        ASKED.fetch_add(1, Ordering::SeqCst);
+        panic!("a listing that dies");
+    }
+    let mut h = demo([800.0, 600.0]);
+    h.settle(SETTLE);
+    let check = |h: &mut Headless| {
+        let raw = HeadlessView::raw_input(h.size, 1.0, 0.0, vec![]);
+        h.view.run(raw, |ui| {
+            let _ = crate::panels::left::fs_cached(ui, "test-panics", "x", 0.0, panics);
+        });
+    };
+    check(&mut h);
+    let t0 = Instant::now();
+    while crate::panels::left::fs_cached_running(&h.view.ctx) > 0 && t0.elapsed() < SETTLE {
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    assert_eq!(crate::panels::left::fs_cached_running(&h.view.ctx), 0, "the dead check no longer counts as running");
+    check(&mut h);
+    let t0 = Instant::now();
+    while ASKED.load(Ordering::SeqCst) < 2 && t0.elapsed() < SETTLE {
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    assert_eq!(ASKED.load(Ordering::SeqCst), 2, "and it is asked again, not stuck as running");
+}
+
 /// Photo > Rename Photos…: the dialog previews and renames the selection.
 #[test]
 fn rename_dialog_renames_the_selection() {
@@ -2068,7 +2099,7 @@ fn export_dialog_adds_to_apple_photos_on_macos() {
     let args = calls.lock().unwrap().clone();
     assert_eq!(args.len(), 1);
     assert_eq!(args[0][args[0].len() - 2..], written[..], "the files written go to Photos");
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("2 added to Apple Photos album “Trip “2026””"), "{toast}");
     // Export with Previous repeats it
     assert_eq!(h.app.session.last_export.as_ref().unwrap()["addToPhotos"], true);
@@ -2154,7 +2185,7 @@ fn a_slow_photos_import_never_blocks_the_window() {
     assert!(t0.elapsed() < Duration::from_secs(5), "answered at once: {r}");
     assert_eq!(r["result"]["running"], true, "{r}");
     go.send(()).unwrap();
-    while !h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("Apple Photos")) {
+    while !h.app.ui.toast().is_some_and(|t| t.text.contains("Apple Photos")) {
         assert!(t0.elapsed() < Duration::from_secs(20), "the outcome is announced");
         h.step();
     }
@@ -2167,7 +2198,7 @@ fn a_slow_photos_import_never_blocks_the_window() {
         assert_eq!(r["result"]["applePhotos"]["running"], true, "{r}");
         assert_eq!(r["result"]["applePhotos"]["job"], 2, "{r}");
         go.send(()).unwrap();
-        while !h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("1 added to Apple Photos") && !t.text.contains("Slow")) {
+        while !h.app.ui.toast().is_some_and(|t| t.text.starts_with("1 added to Apple Photos") && !t.text.contains("Slow")) {
             assert!(t1.elapsed() < Duration::from_secs(20), "the outcome is announced");
             h.step();
         }
@@ -3333,6 +3364,41 @@ fn cmd_q_quits() {
     assert!(h.quit_requested());
 }
 
+/// File → Import from Folder… on a folder that was browsed in Local offers its photos, adding
+/// them in place (they aren't "In library" yet), and confirming brings them into the library.
+#[test]
+fn import_from_folder_offers_the_photos_browsed_in_local() {
+    let mut h = demo([1300.0, 900.0]);
+    let t = Duration::from_secs(10);
+    let dir = std::env::temp_dir().join(format!("lc-ui-browsed-import-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let img = lightcraft_raster::Rgba8::from_fn(24, 16, |x, y| [(x * 9) as u8, (y * 12) as u8, 80, 255]);
+    let o = lightcraft_engine::export::ExportOptions { format: lightcraft_engine::export::ExportFormat::Png, ..Default::default() };
+    for (i, name) in ["a.png", "b.png"].iter().enumerate() {
+        let mut img = img.clone();
+        img.data[0][0] = i as u8; // different bytes per file
+        std::fs::write(dir.join(name), lightcraft_engine::export::encode_image(&img, &o).unwrap()).unwrap();
+    }
+    let library_before = h.app.session.catalog.photos().filter(|p| !p.local).count();
+    let r = h.request("engine.execute", json!({"command": "library.browse", "params": {"path": dir.to_string_lossy()}}), t);
+    assert_eq!(r["ok"], true, "{r}");
+    h.settle(SETTLE);
+    assert_eq!(h.app.session.catalog.photos().filter(|p| p.local).count(), 2, "both browsed");
+    let r = h.request("engine.execute", json!({"command": "file.addFolder", "params": {"path": dir.to_string_lossy()}}), t);
+    assert_eq!(r["ok"], true, "{r}");
+    h.settle(SETTLE);
+    let Some(crate::state::Dialog::Import { opts }) = &h.app.ui.dialog else { panic!("no import review: {:?}", h.app.ui.dialog) };
+    assert_eq!(opts.candidates.len(), 2);
+    assert!(opts.candidates.iter().all(|c| c.duplicate.is_none()), "browsed is not \"In library\": {:?}", opts.candidates);
+    assert_eq!(opts.selected_paths().len(), 2, "both offered, checked");
+    assert_eq!(h.request("ui.dialog.confirm", json!({}), t)["ok"], true);
+    h.settle(SETTLE);
+    assert_eq!(h.app.session.catalog.photos().filter(|p| !p.local).count(), library_before + 2, "both joined the library");
+    assert_eq!(h.app.session.catalog.photos().filter(|p| p.local).count(), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// File → Import from Folder… opens the import review for a folder (searched recursively).
 #[test]
 fn add_folder_opens_the_import_review() {
@@ -3926,7 +3992,7 @@ fn import_review_offers_recently_deleted_files() {
             h.step();
         }
         assert!(h.app.import.is_none(), "finished");
-        let toast = h.app.ui.toast.clone().map(|t| t.text).unwrap_or_default();
+        let toast = h.app.ui.toast().cloned().map(|t| t.text).unwrap_or_default();
         let photos = &h.app.session.catalog;
         assert_eq!(photos.photos().filter(|p| !p.deleted).count(), 2, "{choice}");
         let old = photos.photo(lightcraft_catalog::PhotoId(id));

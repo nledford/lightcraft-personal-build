@@ -9,15 +9,15 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::SystemTime;
 
-use crate::sidecar::{SidecarNaming, find_sidecar, sidecar_candidates};
+use crate::sidecar::{SidecarLookup, SidecarNaming, find_sidecar, sidecar_candidates};
 use crate::walk::EntryKind;
 
 /// One listed folder.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 struct Folder {
     /// The names listed as files (links are not: the disk says where they lead).
     files: HashSet<String>,
@@ -36,19 +36,24 @@ struct Folder {
 /// The `.xmp` names and the file names of a folder are trusted only while its modification time
 /// is what it was when it was listed (looked at once per folder per batch: [`ListedFolders::new_batch`]); a
 /// volume whose folders keep no usable time (it can't be read) is probed as before.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ListedFolders {
-    folders: HashMap<PathBuf, Folder>,
+    // (shared, not copied, by the readers of a batch: they look sidecars up on threads of their own, see `import::reads`)
+    folders: Arc<HashMap<PathBuf, Folder>>,
     /// folder → whether its time is still the listed one, for the batch being handled.
-    checked: Mutex<HashMap<PathBuf, bool>>,
+    checked: Arc<Mutex<HashMap<PathBuf, Arc<OnceLock<bool>>>>>,
     /// How often the disk was asked after all about a sidecar (for the tests).
-    pub(crate) asked: AtomicUsize,
+    pub(crate) asked: Arc<AtomicUsize>,
+    /// How often the disk was asked about a file's own sidecar (`<file>.xmp`), which a file that may not read the shared
+    /// one reads, after the lookup that found the shared one (for the tests: `asked` counts the lookups of the
+    /// library's naming only).
+    pub(crate) asked_own: Arc<AtomicUsize>,
     /// How many folders' times were looked at (for the tests).
-    pub(crate) looked: AtomicUsize,
+    pub(crate) looked: Arc<AtomicUsize>,
     /// The threads that looked a sidecar up for an import (for the tests: the lookups of a batch are
     /// not made one after another by the thread that plans it).
     #[cfg(test)]
-    pub(crate) lookers: Mutex<HashSet<std::thread::ThreadId>>,
+    pub(crate) lookers: Arc<Mutex<HashSet<std::thread::ThreadId>>>,
 }
 
 impl ListedFolders {
@@ -79,7 +84,7 @@ impl ListedFolders {
             }
         }
         listed.xmp = xmp;
-        self.folders.insert(folder.to_path_buf(), listed);
+        Arc::make_mut(&mut self.folders).insert(folder.to_path_buf(), listed);
     }
 
     /// A new batch of files is handled: look at the folders' times again. A folder's time is looked at
@@ -92,7 +97,7 @@ impl ListedFolders {
 
     /// The names of files are needed to take a path for a file (once the files are expanded, no more).
     pub(crate) fn forget_files(&mut self) {
-        for f in self.folders.values_mut() {
+        for f in Arc::make_mut(&mut self.folders).values_mut() {
             f.files = HashSet::new();
         }
     }
@@ -101,20 +106,20 @@ impl ListedFolders {
     fn unchanged(&self, dir: &Path, listed: Option<SystemTime>) -> bool {
         // (no time to compare with: not trusted, and the disk is not asked)
         let Some(listed) = listed else { return false };
-        let mut checked = self.checked.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(known) = checked.get(dir) {
-            return *known;
-        }
-        self.looked.fetch_add(1, Ordering::Relaxed);
-        let now = std::fs::metadata(dir).and_then(|m| m.modified()).ok();
-        let same = now == Some(listed);
-        checked.insert(dir.to_path_buf(), same);
-        same
+        // (the map's lock is held only to find the folder's cell: the time is read inside the cell, so a folder on a
+        // slow share does not hold up the lookups in the others, and each folder is still looked at once)
+        let cell = Arc::clone(self.checked.lock().unwrap_or_else(|e| e.into_inner()).entry(dir.to_path_buf()).or_default());
+        *cell.get_or_init(|| {
+            self.looked.fetch_add(1, Ordering::Relaxed);
+            let now = std::fs::metadata(dir).and_then(|m| m.modified()).ok();
+            now == Some(listed)
+        })
     }
 
     /// Take over `walked`'s folders, which are newer than the ones held for them.
     pub(crate) fn absorb(&mut self, walked: ListedFolders) {
-        self.folders.extend(walked.folders);
+        let walked = Arc::try_unwrap(walked.folders).unwrap_or_else(|shared| (*shared).clone());
+        Arc::make_mut(&mut self.folders).extend(walked);
     }
 
     /// Whether a listing says `path` is a file, as it was found: the disk need not be asked.
@@ -127,32 +132,65 @@ impl ListedFolders {
             && self.folders.get(dir).is_some_and(|f| f.files.contains(name) && self.unchanged(dir, f.modified))
     }
 
+    /// The `.xmp` names of `original`'s folder as the listing has them, where it can vouch for them: the folder was
+    /// listed completely, is as it was, and `original`'s name is one the listing and the disk read alike. `None`
+    /// where it can't say.
+    fn trusted_xmp(&self, original: &str) -> Option<&HashSet<String>> {
+        let path = Path::new(original);
+        let dir = path.parent()?;
+        let folder = self.folders.get(dir)?;
+        let xmp = folder.xmp.as_ref()?;
+        let name = path.file_name().and_then(|n| n.to_str())?;
+        if !original.ends_with(name) || crate::sync::asks_the_disk(name) || !crate::sync::plain_name(name) || !self.unchanged(dir, folder.modified) {
+            return None;
+        }
+        Some(xmp)
+    }
+
+    /// Whether the listing shows that sidecar name `candidate` is not there (`false` where it can't say: a name the
+    /// disk may resolve another way).
+    fn is_absent(xmp: &HashSet<String>, candidate: &Path) -> bool {
+        candidate.file_name().and_then(|n| n.to_str()).is_some_and(|n| crate::sync::plain_name(n) && !xmp.contains(&n.to_ascii_lowercase()))
+    }
+
     /// Whether the listing of `original`'s folder shows that none of its sidecar names is there.
     /// `false` where it can't say: the folder was not listed (or not completely), or a name is
     /// one the disk may resolve another way.
     fn rules_out(&self, original: &str, naming: SidecarNaming) -> bool {
-        let path = Path::new(original);
-        let Some(dir) = path.parent() else { return false };
-        let Some((xmp, modified)) = self.folders.get(dir).and_then(|f| Some((f.xmp.as_ref()?, f.modified))) else { return false };
-        let Some(name) = path.file_name().and_then(|n| n.to_str()) else { return false };
-        if !original.ends_with(name) || crate::sync::asks_the_disk(name) || !crate::sync::plain_name(name) || !self.unchanged(dir, modified) {
-            return false;
-        }
-        sidecar_candidates(original, naming)
-            .all(|c| c.file_name().and_then(|n| n.to_str()).is_some_and(|n| crate::sync::plain_name(n) && !xmp.contains(&n.to_ascii_lowercase())))
+        let Some(xmp) = self.trusted_xmp(original) else { return false };
+        sidecar_candidates(original, naming).all(|c| Self::is_absent(xmp, &c))
     }
 
-    /// [`crate::sidecar::find_sidecar_for_import`], without asking the disk where the listing shows
-    /// there is none: a file that owns its stem sidecar ([`crate::sidecar::ImportStems`]) is looked
-    /// up as [`ListedFolders::find`] does; one that doesn't reads only its own `<file>.xmp`.
-    pub(crate) fn find_for_import(&self, stems: &crate::sidecar::ImportStems, naming: SidecarNaming, original: &str) -> Option<PathBuf> {
+    /// [`ListedFolders::find`] for a file an import is adding, made by the readers: what the library's naming finds,
+    /// which a file that owns its stem sidecar ([`crate::sidecar::ImportStems`]) reads (one that doesn't reads its own
+    /// `<file>.xmp`, [`ListedFolders::find_own_for_import`]).
+    pub(crate) fn find_for_import(&self, original: &str, naming: SidecarNaming) -> Option<PathBuf> {
         #[cfg(test)]
         self.lookers.lock().unwrap_or_else(|e| e.into_inner()).insert(std::thread::current().id());
-        if stems.owns(original) {
-            return self.find(original, naming);
+        self.find(original, naming)
+    }
+
+    /// The sidecar a file that does not own its stem's sidecar reads (issue #1905): its own `<file>.xmp`, the name it
+    /// writes, never the packet of the sibling that owns the shared one ([`SidecarLookup::find`] without the shared
+    /// names). Made by the readers, once the one found for the file proved to be under the shared name: the planning
+    /// only chooses between what they found. Like [`ListedFolders::find`], it asks the disk only for the names the
+    /// listing does not show absent.
+    pub(crate) fn find_own_for_import(&self, original: &str, naming: SidecarNaming) -> Option<PathBuf> {
+        #[cfg(test)]
+        self.lookers.lock().unwrap_or_else(|e| e.into_inner()).insert(std::thread::current().id());
+        let listed = self.trusted_xmp(original);
+        let mut asked = false;
+        let found = SidecarLookup { naming, owns_stem: false }
+            .candidates(original)
+            .filter(|c| !listed.is_some_and(|xmp| Self::is_absent(xmp, c)))
+            .find(|c| {
+                asked = true;
+                c.is_file()
+            });
+        if asked {
+            self.asked_own.fetch_add(1, Ordering::Relaxed);
         }
-        self.asked.fetch_add(1, Ordering::Relaxed);
-        crate::sidecar::find_sidecar_for_import(stems, naming, original)
+        found
     }
 
     /// [`find_sidecar`], without asking the disk where the listing shows there is none.

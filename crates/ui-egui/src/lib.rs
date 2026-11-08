@@ -32,20 +32,24 @@ pub mod i18n;
 pub mod icons;
 mod import_queue;
 pub mod increase_contrast;
+mod job_notice;
 pub mod lens_db;
 pub mod library_work;
 pub mod lightroom_import;
 pub mod links;
 pub mod loupe_timing;
 pub mod menus;
+pub mod missing_count;
 mod missing_sweep;
 pub mod motion;
+pub mod move_task;
 pub mod multi_select;
 pub mod panels;
 pub mod pick;
 pub mod recheck;
 pub mod region;
 pub mod reload;
+pub mod relocate;
 pub mod render;
 pub mod shortcuts;
 pub mod sidebar;
@@ -59,6 +63,7 @@ pub mod theme;
 mod thumb;
 pub mod toast;
 pub mod transparency;
+pub mod trash_run;
 pub mod tree_state;
 pub mod widgets;
 pub mod window_place;
@@ -71,6 +76,8 @@ mod tests;
 use tests::panels as tests_panels;
 #[cfg(test)]
 use tests::{fixtures as tests_fixtures, render_fixtures as tests_render_fixtures};
+#[cfg(test)]
+mod tests_video;
 
 use std::sync::mpsc::{Receiver, Sender};
 
@@ -117,8 +124,9 @@ pub use clock::{monotonic_ms, now_ms};
 #[cfg(target_os = "linux")]
 pub use services::OpenModelFolderFn;
 pub use services::{
-    CheckEditorFn, HostAction, OpenAllWithFn, OpenUrlFn, OpenWithFn, PickFiles, PickFolder, PngEncode, RevealFn, SaveFile, ScreenProfileFn, Services,
-    SharedWrite, SystemIncreaseContrastFn, SystemReduceMotionFn, SystemReduceTransparencyFn, SystemThemeFn, WriteFn,
+    CheckEditorFn, DockBadgeFn, HostAction, KeepAwakeFn, Notice, NotifyFn, OpenAllWithFn, OpenUrlFn, OpenWithFn, PickFiles, PickFolder, PngEncode,
+    RevealFn, SaveFile, ScreenProfileFn, Services, SharedWrite, SystemIncreaseContrastFn, SystemReduceMotionFn, SystemReduceTransparencyFn,
+    SystemThemeFn, WriteFn,
 };
 use state::{GestureFrame, InjectedPress};
 
@@ -317,6 +325,9 @@ pub struct LightcraftApp {
     /// Warnings to show one at a time (damaged settings files…, issue #103).
     pub notices: Vec<String>,
     pub(crate) updates_rt: updates_ui::Runtime,
+    /// What following moves an earlier run cut short came to, shown once under its own title
+    /// ([`panels::notices::recovered_text`]); not a settings problem.
+    pub move_notice: Option<String>,
     /// Quitting was stopped to ask first: changes couldn't be saved, or tasks are running.
     pub quit_prompt: Option<QuitPrompt>,
     /// Keyboard/focus/input state for the prompt above, including its one-frame creation barrier.
@@ -339,6 +350,8 @@ pub struct LightcraftApp {
     /// Quit Anyway was chosen in the running-tasks prompt: it is not asked again for this quit (the tasks that can't be
     /// stopped are still running when the window's close request or Try Saving Again comes back through `may_close`).
     pub(crate) quit_tasks_answered: bool,
+    /// Quit Anyway was chosen while a move was still finishing the file in hand: quitting doesn't wait for it.
+    pub quit_cuts_move: bool,
     control_rx: Option<Receiver<ControlRequest>>,
     pending_screenshots: Vec<PendingShot>,
     /// Synthetic-input control requests waiting for a fresh layout and delivery (plan §4.5).
@@ -385,10 +398,6 @@ pub struct LightcraftApp {
     /// Test-only: how many times background preparation was advanced (once per logic pass).
     #[cfg(test)]
     pub(crate) prep_ticks: u32,
-    /// Test-only: a delay for the sidebar's Missing Photos count worker (a slow disk). Kept here,
-    /// not in `ui`, because `ui.set` rebuilds `ui` and would drop it.
-    #[cfg(test)]
-    pub(crate) missing_count_test_delay: Option<std::time::Duration>,
     /// Offscreen context for headless screenshots of the windowed app.
     shadow: Option<headless::HeadlessView>,
     /// The frame being laid out is the offscreen one of a headless screenshot: it has no pointer of
@@ -512,6 +521,29 @@ pub struct LightcraftApp {
     pub sync_queued: Option<sync::SyncRescan>,
     /// The scans of the Synchronize N Folders dialog, one folder after another.
     pub sync_scans: Option<sync::ManyScan>,
+    /// Photos being moved to another folder in the background (`move_task`).
+    pub move_run: Option<move_task::MoveRun>,
+    /// How the last background move ended (`ui.inspect` → `move.last`).
+    pub last_move: Option<Value>,
+    /// Move Files to Trash at work in the background.
+    pub trash_run: Option<trash_run::TrashRun>,
+    /// An Erase question a finished Move Files to Trash has to ask (photo ids, library generation),
+    /// waiting for the dialog slot to be free.
+    pub trash_erase_later: Option<(Vec<u64>, u64)>,
+    /// A folder's files being looked for where the person said the folder is now.
+    pub relocate: Option<relocate::RelocateTask>,
+    /// Lookings of a library that was left whose workers have not answered yet (a share that does
+    /// not), at most [`relocate::MAX_LEFT_BEHIND`]; a looking is refused beyond that.
+    pub relocate_left_behind: Vec<relocate::RelocateTask>,
+    /// What was found when only some of them are there, for the dialog that asks about it (and
+    /// whether that dialog was shown yet: it waits for another dialog to be done with).
+    pub relocate_asked: Option<(relocate::Request, lightcraft_engine::relocate::Located, bool)>,
+    /// The library (`Session::library_generation`) `relocate` / `relocate_asked` were started in;
+    /// [`relocate::poll`] drops them once another library is open.
+    pub relocate_library: u64,
+    /// How the latest locating of a folder went (`ui.inspect` → `relocate.last`, see
+    /// [`relocate::status`]).
+    pub relocate_last: Option<Value>,
     /// A Lightroom catalog inspect/import in progress.
     pub lightroom: Option<lightroom_import::LightroomTask>,
     /// Last terminal Lightroom result, exposed by the command's status/wait response.
@@ -574,6 +606,12 @@ pub struct LightcraftApp {
     /// The activity row that says automatic XMP writes are waiting for their folder, held for as long as they wait.
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) sidecars_row: Option<lightcraft_engine::activity::TaskGuard>,
+    /// What the host was last told keeps the machine awake (`services.keep_awake`): the reason, or `None` for idle.
+    pub(crate) awake_told: Option<String>,
+    /// The job count the host was last told for the Dock badge (`services.dock_badge`).
+    pub(crate) badge_told: usize,
+    /// Which running jobs ended, for the system notification (`services.notify`).
+    pub(crate) job_watch: job_notice::JobWatch,
     /// The library failed to open at launch: the blocking window, then the temporary-session
     /// banner (issue #100). Cleared once a library opens.
     pub library_problem: Option<panels::library_problem::LibraryProblem>,
@@ -840,6 +878,15 @@ pub struct Caches {
     /// selection's keywords and that text.
     completions: Option<(u64, std::sync::Arc<panels::keywording::Offers>)>,
     date_groups: Option<(u64, std::sync::Arc<Vec<lightcraft_catalog::DateGroup>>)>,
+    /// When every library photo's file was last handed to the background checks for the Missing
+    /// Photos count: (library, catalog revision, egui time); and whether files came in that no
+    /// check was asked for ([`Caches::missing_count`]).
+    files_swept: Option<(u64, u64, f64)>,
+    files_unchecked: bool,
+    /// Whether the list of every file is being made for the checks.
+    files_listing: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    /// The Missing Photos count.
+    pub missing: missing_count::MissingCount,
     filter_values: Option<(u64, std::sync::Arc<FilterValues>)>,
     /// The albums' counts as the sidebar shows them, with the tally that follows edits.
     album_counts: Option<AlbumCounts>,

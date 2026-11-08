@@ -138,12 +138,20 @@ enum Started {
     No,
 }
 
+/// Whether a dialog for `command` is up (or waits for its turn) in the library that is open now. An entry asked in a
+/// library since left does not count: the next [`poll`] answers it with the library-changed refusal, whatever its
+/// dialog does.
+pub fn waiting(app: &LightcraftApp, command: &str) -> bool {
+    let library = app.session.library_generation();
+    app.pending_picks.iter().any(|p| p.command == command && p.library == library)
+}
+
 /// Show `request` through the host's [`Picker`] and note what to do with its answer. A dialog
 /// already up (or waiting) for `command` is not opened twice. A host that shows one dialog at a
 /// time ([`Services::picker_one_at_a_time`]) holds the request until the dialog in front of it has
 /// closed ([`poll`] shows it then), in the order asked.
 fn start(app: &mut LightcraftApp, command: &str, request: PickRequest, then: Then) -> Started {
-    if app.pending_picks.iter().any(|p| p.command == command) {
+    if waiting(app, command) {
         return Started::Later;
     }
     let one_at_a_time = app.services.picker_one_at_a_time;

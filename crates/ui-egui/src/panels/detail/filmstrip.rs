@@ -135,6 +135,8 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
             let img_area = Rect::from_min_max(cr.min + vec2(10.0, 22.0), cr.max - vec2(10.0, 8.0));
             let mut badge = None;
             if let Some(photo) = app.session.catalog.photo(*id).cloned() {
+                // a catalogued clip has no frame to decode: its tile is not a failed photo's
+                let is_video = photo.is_video();
                 let (photo_rect, failure) = if let Some(tex) = app.renderer.thumb(*id) {
                     let [tw, th] = tex.size;
                     let s = (img_area.width() / tw as f32).min(img_area.height() / th as f32);
@@ -144,9 +146,9 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                     (fr, None)
                 } else {
                     let ph = crate::thumb::placeholder_rect(img_area, crate::panels::grid::photo_aspect(Some(&*photo)));
-                    crate::thumb::paint_placeholder(p, ph, &t);
+                    paint_missing_frame(p, &t, ph, is_video);
                     crate::panels::grid::selection_ring(p, &t, ph, state);
-                    let failure = app.renderer.thumb_failure(*id).map(str::to_owned);
+                    let failure = app.renderer.thumb_failure(*id).filter(|_| !is_video).map(str::to_owned);
                     if failure.is_none() && crate::panels::grid::thumb_may_arrive(app, *id) {
                         crate::panels::grid::paint_loading_cue(p, &t, img_area, ph, "film:badge:loading:", id.0);
                     }
@@ -165,6 +167,26 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                     surround: true,
                 };
                 badge = crate::thumb::overlay(app, ui, &overlay);
+                // A catalogued clip's running time, as the grid and the loupe show it: above the marks row, which
+                // takes the photo's lower edge when the badges are on
+                if let Some(text) = photo.duration.filter(|_| is_video).map(crate::widgets::format_duration).filter(|t| !t.is_empty()) {
+                    let p = ui.painter();
+                    let g = p.layout_no_wrap(text, t.semibold(9.0), Color32::WHITE);
+                    let br = duration_pill(photo_rect, g.size().x, app.ui.settings.film_badges);
+                    p.rect_filled(br, 3.0, Color32::from_black_alpha(175));
+                    crate::icons::paint(
+                        p,
+                        Rect::from_center_size(pos2(br.left() + 8.0, br.center().y), vec2(9.0, 9.0)),
+                        crate::icons::Icon::Video,
+                        Color32::WHITE,
+                    );
+                    p.galley(pos2(br.left() + 14.0, br.center().y - g.size().y / 2.0), g, Color32::WHITE);
+                }
+            }
+            // A catalogued video has no frame yet: its icon reads it at a glance in the strip too (the grid and the
+            // loupe show the same badges and card).
+            if app.renderer.thumb(*id).is_none() && app.session.catalog.photo(*id).is_some_and(|p| p.is_video()) {
+                crate::icons::paint(ui.painter(), Rect::from_center_size(img_area.center(), vec2(24.0, 24.0)), crate::icons::Icon::Video, t.text_dim);
             }
             if resp.clicked() {
                 let m = ui.input(|i| i.modifiers);
@@ -217,5 +239,42 @@ pub(crate) fn film_spoken(name: &str, failed: bool) -> String {
         (_, false) => name.to_string(),
         (true, true) => crate::i18n::tr("This photo can't be opened").to_string(),
         (false, true) => format!("{name}, {}", crate::i18n::tr("This photo can't be opened")),
+    }
+}
+
+/// The placeholder a cell shows while its frame is not ready: a catalogued clip's dark tile, which
+/// has no frame to decode yet and must not read as a failed photo, or a photo's skeleton (the
+/// overlay marks a failed thumbnail).
+fn paint_missing_frame(p: &egui::Painter, t: &Tokens, rect: Rect, video: bool) {
+    if video {
+        p.rect_filled(rect, 0.0, Color32::from_gray(30));
+    } else {
+        crate::thumb::paint_placeholder(p, rect, t);
+    }
+}
+
+/// A clip's running-time pill in a filmstrip cell, for a `text_w` wide text: at the photo's lower right corner, lifted
+/// above the marks row that takes the lower edge when `marks` are on.
+fn duration_pill(photo: Rect, text_w: f32, marks: bool) -> Rect {
+    let lift = if marks { crate::thumb::Surface::Film.metrics().bar } else { 0.0 };
+    Rect::from_min_size(pos2(photo.right() - text_w - 22.0, photo.bottom() - lift - 16.0), vec2(text_w + 20.0, 14.0))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The pill never covers the marks row (rating, flag…) along the photo's lower edge (review of #2822).
+    #[test]
+    fn the_duration_pill_keeps_above_the_marks_row() {
+        let photo = Rect::from_min_size(pos2(10.0, 20.0), vec2(100.0, 56.0));
+        let bar_top = photo.bottom() - crate::thumb::Surface::Film.metrics().bar;
+        let with_marks = duration_pill(photo, 24.0, true);
+        assert!(with_marks.bottom() <= bar_top, "{with_marks:?} over the marks row from {bar_top}");
+        assert!(photo.contains_rect(with_marks));
+        // without the marks the pill keeps its place at the photo's corner
+        let bare = duration_pill(photo, 24.0, false);
+        assert_eq!(bare.bottom(), photo.bottom() - 2.0);
+        assert_eq!(bare.right(), photo.right() - 2.0);
     }
 }

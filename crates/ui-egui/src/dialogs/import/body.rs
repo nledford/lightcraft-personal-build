@@ -75,11 +75,12 @@ pub(crate) fn note_dialog_bottom(ui: &egui::Ui) {
 /// the same bytes as one earlier in the list (no library photo) is a copy in the source.
 pub(super) fn dup_counts(d: &ImportDialog) -> (usize, usize, usize) {
     let trashed = d.trashed.iter().filter(|t| **t).count();
-    let in_source = d.candidates.iter().filter(|c| c.duplicate.as_deref() == Some("content") && c.existing.is_none()).count();
-    // (a browsed photo that adding in place brings in isn't skipped)
-    let browsed = if d.copy { 0 } else { d.browsed.iter().filter(|b| **b).count() };
-    let dups =
-        d.candidates.iter().filter(|c| c.duplicate.is_some()).count().saturating_sub(trashed).saturating_sub(in_source).saturating_sub(browsed);
+    // (a copy of a browsed photo that copying brings in, because it leaves the browsed one out, is neither)
+    let twins = (0..d.candidates.len()).filter(|i| d.is_copy_twin(*i)).count();
+    let in_source = d.candidates.iter().filter(|c| c.duplicate.as_deref() == Some("content") && c.existing.is_none()).count() - twins;
+    // (a browsed photo isn't offered while copying: it counts as already there)
+    let browsed = if d.copy { (0..d.candidates.len()).filter(|i| d.is_browsed(*i)).count() } else { 0 };
+    let dups = (d.candidates.iter().filter(|c| c.duplicate.is_some()).count() + browsed).saturating_sub(trashed + twins).saturating_sub(in_source);
     (dups, in_source, trashed)
 }
 
@@ -209,23 +210,20 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
             .on_hover_text(crate::i18n::tr("Reference the files where they are"))
             .clicked()
         {
-            d.copy = false;
-            d.move_files = false;
+            d.set_transfer(false, false);
         }
         let can_copy = app.session.library.as_ref().is_some_and(|l| l.on_disk) || app.services.pick_folder.is_some();
         let r =
             ui.add_enabled_ui(can_copy, |ui| crate::widgets::choice_button(ui, "importCopy", crate::i18n::tr("Copy"), d.copy && !d.move_files)).inner;
         if r.on_hover_text(crate::i18n::tr("Copy the files (into the library's Originals/, or a folder you choose)")).clicked() {
-            d.copy = true;
-            d.move_files = false;
+            d.set_transfer(true, false);
         }
         let r =
             ui.add_enabled_ui(can_copy, |ui| crate::widgets::choice_button(ui, "importMove", crate::i18n::tr("Move"), d.copy && d.move_files)).inner;
         if r.on_hover_text(crate::i18n::tr("Move the files (into the library's Originals/, or a folder you choose), removing them from the source"))
             .clicked()
         {
-            d.copy = true;
-            d.move_files = true;
+            d.set_transfer(true, true);
         }
     });
     let r = ui.label(
@@ -607,7 +605,21 @@ fn candidate_cell(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDial
     crate::widgets::announce(&resp, c.name.clone());
     register(ui, format!("import:{i}"), img);
     let p = ui.painter();
-    p.rect_filled(img, 3.0, t.skeleton);
+    p.rect_filled(img, 3.0, if c.kind == lightcraft_catalog::MediaKind::Video { Color32::from_gray(30) } else { t.skeleton });
+    if c.kind == lightcraft_catalog::MediaKind::Video {
+        let side = 32.0;
+        crate::icons::paint(p, Rect::from_center_size(img.center(), vec2(side, side)), crate::icons::Icon::Video, t.text_dim);
+        if let Some(d) = c.duration {
+            let text = crate::widgets::format_duration(d);
+            if !text.is_empty() {
+                let g = p.layout_no_wrap(text, t.semibold(9.0), Color32::WHITE);
+                let w = g.size().x + 10.0;
+                let br = Rect::from_min_size(pos2(img.right() - w - 4.0, img.bottom() - 18.0), vec2(w, 14.0));
+                p.rect_filled(br, 3.0, Color32::from_black_alpha(175));
+                p.galley(br.min + vec2(5.0, 1.0), g, Color32::WHITE);
+            }
+        }
+    }
     // thumbnail (background job; the grid only asks for the cells in view)
     let slot = Slot::Import(slot_index);
     let edge = thumb_edge(img.width(), ui.ctx().pixels_per_point());
@@ -634,10 +646,12 @@ fn candidate_cell(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDial
     let badge = match (&c.duplicate, &c.error) {
         // checked with "Leave them", the file goes without `onDeleted`: the engine restores it
         (Some(_), _) if in_trash && on => Some(if d.on_deleted == "fresh" { "Will be replaced" } else { "Will be restored" }),
+        (Some(_), _) if d.is_copy_twin(i) => None,
         (Some(_), _) if in_trash => Some("In Recently Deleted"),
         (Some(_), _) if d.is_browsed(i) && !d.copy => None,
         (Some(r), _) if r == "path" => Some("In library"),
         (Some(_), _) => Some("Duplicate"),
+        (None, None) if d.copy && d.is_browsed(i) => Some("In library"),
         (None, Some(_)) => Some("Unreadable"),
         (None, None) if c.truncated => Some("Damaged"),
         _ => None,

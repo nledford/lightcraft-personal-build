@@ -63,6 +63,9 @@ pub mod media;
 pub mod memory;
 pub mod merge;
 mod model_download;
+mod move_check;
+pub mod move_intent;
+pub mod move_job;
 pub mod open_path;
 pub mod originals;
 mod pdf;
@@ -75,6 +78,7 @@ pub mod print_color;
 pub mod print_pdf;
 pub mod profile_refs;
 pub mod proof;
+pub mod relocate;
 pub mod rename;
 pub mod segment;
 mod selection_facts;
@@ -90,6 +94,7 @@ pub mod sync;
 mod sync_same;
 pub mod text;
 pub mod trash;
+pub mod trash_job;
 mod undo_filters;
 mod view;
 pub mod walk;
@@ -100,7 +105,7 @@ pub use album_counts::CountsAge;
 pub use cmd::{CommandInfo, CommandSpec, command_specs, find_command};
 pub use errors::{AiModel, ErrorKind};
 pub use fonts::{CRAFT_FONTS, CraftFont};
-use lightcraft_catalog::{AlbumId, Catalog, Filter, Op, PhotoId, Sort};
+use lightcraft_catalog::{AlbumId, Catalog, CatalogError, Filter, Op, PhotoId, Sort};
 use lightcraft_develop::DevelopSettings;
 pub use media::{RenderJob, SourceLevel};
 pub use selection_facts::{SelectionFacts, SelectionIndex, SelectionView};
@@ -133,6 +138,11 @@ pub enum EngineError {
     /// The work was cancelled (by the person, an agent or a newer request): not a failure.
     #[error("{0}")]
     Cancelled(String),
+    /// A background move of photos is running and this change would clash with it (open another
+    /// library, move other files, take a moving photo out of the library or point it at another
+    /// file): nothing was changed ([`ErrorKind::MoveInProgress`]).
+    #[error("{0}")]
+    MoveInProgress(String),
     /// The feature needs `model`, which is not installed (or still downloading): a frontend
     /// offers its download (terms first) on [`ErrorKind::ModelMissing`], not on the message.
     #[error("{msg}")]
@@ -150,8 +160,9 @@ pub struct UndoEntry {
     pub op: Op,
     /// Folders to rename on disk (`from` → `to`, in this order) before `op` is applied: Rename /
     /// Move Folder (whose `op` relinks the photos inside; Move Folders has several, all or none
-    /// done). Never overwrites; refused when `to` exists. An empty `to` removes the (empty)
-    /// folder `from`, an empty `from` creates `to` (Create Folder).
+    /// done; a located folder, `on_disk: false`, renames nothing and only follows). Never
+    /// overwrites; refused when `to` exists. An empty `to` removes the (empty) folder `from`, an
+    /// empty `from` creates `to` (Create Folder).
     pub folders: Vec<FolderMove>,
     /// What the step did to the person's filter (a keyword deleted or renamed, a folder removed…): undo carries it
     /// back and redo forward (see [`undo_filters`]).
@@ -163,6 +174,17 @@ pub struct UndoEntry {
     /// Folders of `folders` a failed history step left at their `to` (moving them back also failed): a
     /// retry doesn't move them again, and the photos below them were relinked to follow.
     pub(crate) folders_done: Vec<FolderMove>,
+    /// Files to put back from the Trash (undo), or to move there again (redo), once `op` is
+    /// applied: a step of `photo.trashFiles`.
+    pub(crate) trash: Option<trash::TrashStep>,
+}
+
+/// An undo or redo step's label, with what could not be done about its files.
+fn noted(label: String, note: Option<String>) -> String {
+    match note {
+        Some(note) => format!("{label} ({note})"),
+        None => label,
+    }
 }
 
 /// The one photo an undo step changes, when it changes exactly one through its edit, rating, flag,
@@ -187,16 +209,20 @@ fn single_photo(op: &Op, depth: usize) -> Option<PhotoId> {
     }
 }
 
-/// A folder renamed or moved on disk as part of an undo step.
+/// A folder renamed or moved on disk as part of an undo step, or (`on_disk: false`) a folder
+/// located where it already is, which moves no file.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FolderMove {
     pub from: String,
     pub to: String,
+    /// The step renames the folder on disk. `false` for a folder located where it already is
+    /// (`folder.updateLocation`): only the photos and the view follow, no file is touched.
+    pub on_disk: bool,
 }
 
 impl FolderMove {
     fn reversed(&self) -> Self {
-        Self { from: self.to.clone(), to: self.from.clone() }
+        Self { from: self.to.clone(), to: self.from.clone(), on_disk: self.on_disk }
     }
 }
 
@@ -315,6 +341,15 @@ pub struct Session {
     pub total_from_view: u64,
     pub total_counted: u64,
     pub undo: Vec<UndoEntry>,
+    /// While a long run (a synchronize) is still putting its steps into the history, the run's
+    /// token: the history keeps every step then, so the run can fold them into one whole step
+    /// before the bound applies ([`Session::hold_undo`]). Dead (or never set) when no run holds it.
+    undo_hold: std::sync::Weak<()>,
+    /// Set while a run puts one of its own steps into the history ([`Session::run_step`]).
+    in_run_step: bool,
+    /// A run has put a step into the history under the current hold: from then on any other
+    /// commit (an edit between its steps) ends the hold at once, as the steps can't be folded.
+    hold_stepped: bool,
     /// Undo steps committed in this session, ever (the history drops its oldest past 1000, so
     /// its length can't tell how many steps a command just made; see [`Session::commits`]).
     commits: u64,
@@ -386,6 +421,11 @@ pub struct Session {
     pub media: media::MediaCache,
     /// Current time provider (ISO 8601); injectable for tests and wasm.
     pub clock: Box<dyn Fn() -> String + Send>,
+    /// The Trash `photo.trashFiles` moves files to (the system's; tests use one of their own).
+    pub trash: std::sync::Arc<dyn trash::Bin>,
+    /// Held by a Move Files to Trash at work ([`trash_job::TrashPlan`]): another one, and the
+    /// commands that move files, wait for it ([`Session::refuse_while_trashing`]).
+    pub(crate) trash_busy: Arc<std::sync::atomic::AtomicBool>,
     depth: u32,
     /// [`Session::start_waiting`] is starting tasks (the commands it runs don't start more themselves).
     starting_waiting: bool,
@@ -399,6 +439,18 @@ pub struct Session {
     pub library: Option<library::Library>,
     /// Identity of current library opening; refreshed only after a successful open.
     pub(crate) library_identity: Arc<()>,
+    /// The move to another folder running in the background, if any ([`move_job`]): other file
+    /// moves wait for it, and its photos' sidecars are written once it ends.
+    pub(crate) moving: std::sync::Weak<move_job::MoveTicket>,
+    /// Records of file moves now in the catalog ([`move_intent`]), removed once it is saved.
+    pub(crate) settled_moves: Vec<std::path::PathBuf>,
+    /// Photos whose automatic sidecar write waits for their file to arrive at the folder it is
+    /// being moved to ([`move_job`]); written when the move ends. Not a failure: no notice.
+    pub(crate) held_sidecars: std::collections::BTreeSet<PhotoId>,
+    /// The photos this session put on the list of held writes kept beside the move records
+    /// ([`move_intent`]): without the library's lock, it takes back only these, and leaves the
+    /// entries another run (or program) put there.
+    pub(crate) held_listed: std::collections::BTreeSet<PhotoId>,
     /// XMP sidecar preferences (persisted with the library).
     pub xmp: sidecar::XmpPrefs,
     /// Parameters of the last export (`app.export` params, minus targets), persisted in prefs.json.
@@ -449,6 +501,14 @@ pub struct Session {
     pub before: std::collections::HashMap<PhotoId, Arc<DevelopSettings>>,
     /// File probes from the last import review (`library.importPreview`), reused by the import.
     pub import_probes: std::collections::HashMap<String, media::ProbeInfo>,
+    /// How long a file read of an import or scan goes without progress before the row says it waits for that file and
+    /// offers Skip ([`import::STALL_AFTER`]). For tests, which cannot wait 10 s: nothing else sets it.
+    #[doc(hidden)]
+    pub import_stall_after: std::time::Duration,
+    /// The reads of imports and scans that were given up and are still blocked in the system, counted over all runs
+    /// ([`import::StuckReaders`]); a session starts with the process-wide count, a test may give its own.
+    #[doc(hidden)]
+    pub stuck_readers: std::sync::Arc<import::StuckReaders>,
     /// The last Synchronize Folder scan, which `folder.synchronize` acts on while it is current
     /// (see [`Session::take_folder_changes`]).
     pub folder_changes: Option<sync::FolderChanges>,
@@ -547,6 +607,15 @@ impl Default for Session {
 }
 
 impl Session {
+    /// Commands that move files or undo a step wait while Move Files to Trash is at work: a path
+    /// it planned must not come to name another photo's file before it is moved or erased.
+    pub(crate) fn refuse_while_trashing(&self, c: &str) -> Result<()> {
+        if self.trash_busy.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(cmd::bad(c, "files are being moved to the Trash: try again when that has finished"));
+        }
+        Ok(())
+    }
+
     pub fn library_generation(&self) -> u64 {
         self.library_generation
     }
@@ -592,6 +661,9 @@ impl Session {
             total_counted: 0,
             total: None,
             undo: Vec::new(),
+            undo_hold: std::sync::Weak::new(),
+            in_run_step: false,
+            hold_stepped: false,
             commits: 0,
             redo: Vec::new(),
             pending_sidecar_repairs: Vec::new(),
@@ -626,6 +698,7 @@ impl Session {
             pending_log: Vec::new(),
             media: media::MediaCache::default(),
             clock: Box::new(|| "2026-09-30T12:00:00".to_string()),
+            trash: std::sync::Arc::new(trash::SystemBin),
             depth: 0,
             starting_waiting: false,
             active_mask: None,
@@ -633,6 +706,11 @@ impl Session {
             active_spot: None,
             library: None,
             library_identity: Arc::new(()),
+            moving: std::sync::Weak::new(),
+            settled_moves: Vec::new(),
+            held_sidecars: Default::default(),
+            held_listed: Default::default(),
+            trash_busy: Arc::default(),
             xmp: sidecar::XmpPrefs::default(),
             last_export: None,
             last_merge: Default::default(),
@@ -655,6 +733,8 @@ impl Session {
             recent_keywords: Vec::new(),
             before: Default::default(),
             import_probes: Default::default(),
+            import_stall_after: import::STALL_AFTER,
+            stuck_readers: import::StuckReaders::global(),
             folder_changes: None,
             activity: Default::default(),
             preview_build: None,
@@ -850,7 +930,10 @@ impl Session {
             // persistence trouble (a failed compaction, an older queued change still unwritten by
             // a command that changed nothing) doesn't fail the command; `library.info` reports it.
             let produced = self.pending_log.len() > log_start;
-            if let Err(e @ EngineError::NotSaved(_)) = self.persist()
+            let saved = self.persist();
+            // the records of moves this command settled go once the catalog that follows them is saved
+            self.clear_settled_moves();
+            if let Err(e @ EngineError::NotSaved(_)) = saved
                 && produced
                 && r.is_ok()
             {
@@ -869,10 +952,22 @@ impl Session {
     /// Apply an op as one undoable step. A new edit: one that would make a smart album include
     /// itself is refused here, whichever command, task or caller asked ([`Catalog::apply_new`]);
     /// undo, redo and opening a library bring back what was and are not held to that.
+    ///
+    /// A batch that fails and cannot be rolled back whole ([`CatalogError::PartlyApplied`]) did change the catalog, so
+    /// it is journaled all the same (replaying it leaves the same changes), and what is left of its rollback is the
+    /// undo step: undoing it finishes the rollback. The error still reaches the caller.
     pub fn commit(&mut self, label: &str, op: Op) -> Result<()> {
         self.not_stuck()?;
+        self.refuse_detaching(&self.detached_moving_photos(&op))?;
         let fwd = op.clone();
-        let inv = self.apply_through(op, Catalog::apply_new)?;
+        let (inv, failure) = match self.apply_through(op, Catalog::apply_new) {
+            Ok(inv) => (inv, None),
+            Err(EngineError::Catalog(CatalogError::PartlyApplied { cause, remaining })) => {
+                let remaining = *remaining;
+                (remaining.clone(), Some(EngineError::Catalog(CatalogError::PartlyApplied { cause, remaining: Box::new(remaining) })))
+            }
+            Err(e) => return Err(e),
+        };
         self.pending_log.push(fwd);
         self.undo.push(UndoEntry {
             label: label.to_string(),
@@ -882,16 +977,63 @@ impl Session {
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
             folders_done: Vec::new(),
+            trash: None,
         });
         self.commits = self.commits.wrapping_add(1);
-        if self.undo.len() > 1000 {
-            let mut dropped = self.undo.remove(0);
-            self.pending_sidecar_repairs.append(&mut dropped.retry_sidecars);
+        if self.hold_stepped && !self.in_run_step {
+            // an edit between a run's steps: they can't be folded any more (the run sees it on
+            // its next step or at its end), so the history is cut now, not when the next step comes
+            self.undo_hold = std::sync::Weak::new();
+            self.hold_stepped = false;
         }
+        self.trim_undo();
         for mut dropped in self.redo.drain(..) {
             self.pending_sidecar_repairs.append(&mut dropped.retry_sidecars);
         }
-        Ok(())
+        failure.map_or(Ok(()), Err)
+    }
+
+    /// Drop the oldest undo steps past [`UNDO_STEPS`], keeping the sidecar repairs they owed;
+    /// nothing while a run holds the history ([`Session::hold_undo`]).
+    pub(crate) fn trim_undo(&mut self) {
+        if self.undo_hold.strong_count() > 0 {
+            return;
+        }
+        let excess = self.undo.len().saturating_sub(UNDO_STEPS);
+        for mut dropped in self.undo.drain(..excess) {
+            self.pending_sidecar_repairs.append(&mut dropped.retry_sidecars);
+        }
+    }
+
+    /// Do `f`, a run's own step ([`Session::hold_undo`]): the commits it makes keep the hold, and
+    /// any other commit after the run's first one ends it. Every commit a run makes for the hold
+    /// goes through here.
+    pub(crate) fn run_step<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
+        let (was, commits) = (std::mem::replace(&mut self.in_run_step, true), self.commits);
+        // a panic in `f` (caught further up, at the command) must not leave the flag set
+        let out = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(self)));
+        self.in_run_step = was;
+        self.hold_stepped |= self.commits != commits;
+        match out {
+            Ok(out) => out,
+            Err(panic) => std::panic::resume_unwind(panic),
+        }
+    }
+
+    /// Let a long run that commits many steps (a synchronize) fold them into one step: while the
+    /// returned token lives, the history is not cut to [`UNDO_STEPS`], so the run's first steps
+    /// are still there when it merges them ([`Session::merge_undo`]) and one Undo takes back the
+    /// whole run. The run drops the token when it is done (or abandoned) and calls
+    /// [`Session::trim_undo`]; a commit after the token died does it too. Runs that overlap
+    /// share one token: the history is cut once the last of them lets go.
+    pub(crate) fn hold_undo(&mut self) -> std::sync::Arc<()> {
+        if let Some(token) = self.undo_hold.upgrade() {
+            return token;
+        }
+        let token = std::sync::Arc::new(());
+        self.undo_hold = std::sync::Arc::downgrade(&token);
+        self.hold_stepped = false;
+        token
     }
 
     /// [`Catalog::apply`] for what brings back what was (an undo or a redo).
@@ -920,7 +1062,11 @@ impl Session {
                 _ => {}
             }
         }
-        let inv = apply(&mut self.catalog, op)?;
+        // (a batch that was only partly taken back changed the catalog all the same: what hangs on its photos goes too)
+        let applied = apply(&mut self.catalog, op);
+        if applied.is_err() && !matches!(applied, Err(CatalogError::PartlyApplied { .. })) {
+            return applied.map_err(Into::into);
+        }
         for id in invalidated {
             self.media.forget(id);
         }
@@ -930,17 +1076,20 @@ impl Session {
         }
         #[cfg(target_arch = "wasm32")]
         let _ = replaced;
-        Ok(inv)
+        Ok(applied?)
     }
 
     /// [`Session::commit`] for an op that goes with a folder already renamed on disk; the undo
     /// step renames it back (`folder` is the undo direction: current place → old place).
     pub(crate) fn commit_with_folder(&mut self, label: &str, op: Op, folder: FolderMove) -> Result<()> {
-        self.commit(label, op)?;
-        if let Some(e) = self.undo.last_mut() {
+        let result = self.commit(label, op);
+        // (a batch only partly taken back is journaled and has its undo step too: that step moves the folder back)
+        if (result.is_ok() || matches!(result, Err(EngineError::Catalog(CatalogError::PartlyApplied { .. }))))
+            && let Some(e) = self.undo.last_mut()
+        {
             e.folders = vec![folder];
         }
-        Ok(())
+        result
     }
 
     /// Fold the last `n` undo steps, each a folder move, into one: undo moves every folder back
@@ -964,6 +1113,7 @@ impl Session {
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
             folders_done: Vec::new(),
+            trash: None,
         });
         true
     }
@@ -985,8 +1135,12 @@ impl Session {
     pub(crate) fn apply_system(&mut self, op: Op) -> Result<()> {
         self.not_stuck()?;
         let fwd = op.clone();
-        self.catalog.apply(op)?;
-        self.pending_log.push(fwd);
+        let applied = self.catalog.apply(op);
+        if applied.is_ok() || matches!(applied, Err(CatalogError::PartlyApplied { .. })) {
+            // (a batch only partly taken back changed the catalog all the same: the journal has to say so)
+            self.pending_log.push(fwd);
+        }
+        applied?;
         Ok(())
     }
 
@@ -1028,7 +1182,11 @@ impl Session {
         }
         let Some(entries) = self.undo.get(self.undo.len() - n..) else { return };
         // Folder moves, steps that carry a filter change and partially applied file steps stay on their own.
-        if entries.iter().any(|e| !e.folders.is_empty() || e.filters.is_some() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty()) {
+        // (and so do steps that moved files to the Trash: their undo is file work too)
+        if entries
+            .iter()
+            .any(|e| !e.folders.is_empty() || e.filters.is_some() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty() || e.trash.is_some())
+        {
             return;
         }
         let tail = self.undo.split_off(self.undo.len() - n);
@@ -1041,6 +1199,7 @@ impl Session {
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
             folders_done: Vec::new(),
+            trash: None,
         });
     }
 
@@ -1048,6 +1207,17 @@ impl Session {
     fn apply_silent(&mut self, op: Op) -> Result<()> {
         self.catalog.apply(op)?;
         Ok(())
+    }
+
+    /// The file work of a `photo.trashFiles` step being undone or redone, once its catalog op is
+    /// applied: files come back from the Trash, or go there again. Returns the step that
+    /// reverses it and what could not be done (the catalog step stands either way: a photo
+    /// whose file did not come back shows as missing).
+    fn trash_step(&self, step: Option<&trash::TrashStep>) -> (Option<trash::TrashStep>, Option<String>) {
+        let Some(step) = step else { return (None, None) };
+        let bin = self.trash.clone();
+        let (back, note) = step.run(bin.as_ref());
+        (Some(back), note)
     }
 
     pub fn undo_step(&mut self) -> Result<String> {
@@ -1060,12 +1230,18 @@ impl Session {
         let redo = match self.apply_with_files(&mut e, fs) {
             Ok(r) => r,
             Err(err) => {
-                self.undo.push(e);
+                // (a step that was only partly applied cannot be tried again: what is left of it goes to the other
+                // stack, where taking it back returns the catalog to where it was before the attempt)
+                match self.rest_of_partial_step(&mut e, &err) {
+                    Some(rest) => self.redo.push(rest),
+                    None => self.undo.push(e),
+                }
                 return Err(err);
             }
         };
         // (the filter first: the photo is shown if it is in view under the filter the step's undo leaves)
         let carried = self.carry_filters(e.filters.as_ref());
+        let (trash, note) = self.trash_step(e.trash.as_ref());
         self.show_undone(&e.op);
         self.reconcile_view();
         self.pending_log.push(e.op);
@@ -1077,8 +1253,36 @@ impl Session {
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
             folders_done: Vec::new(),
+            trash,
         });
-        Ok(e.label)
+        Ok(noted(e.label, note))
+    }
+
+    /// The step that takes back what an undo or redo step (`e`) left in the catalog when it failed part-way
+    /// ([`CatalogError::PartlyApplied`]); `None` when it failed without changing anything. The step itself cannot be
+    /// tried again from where the catalog now is, so its sidecars to repair are handed on.
+    fn rest_of_partial_step(&mut self, e: &mut UndoEntry, err: &EngineError) -> Option<UndoEntry> {
+        let EngineError::Catalog(CatalogError::PartlyApplied { remaining, .. }) = err else { return None };
+        self.pending_sidecar_repairs.append(&mut e.retry_sidecars);
+        // (the inverses of path corrections it kept come after what is left, as when a step succeeds)
+        let op = match (**remaining).clone() {
+            op if e.retry_inverse.is_empty() => op,
+            Op::Batch { mut ops } => {
+                ops.append(&mut e.retry_inverse);
+                Op::Batch { ops }
+            }
+            op => Op::Batch { ops: std::iter::once(op).chain(std::mem::take(&mut e.retry_inverse)).collect() },
+        };
+        Some(UndoEntry {
+            label: e.label.clone(),
+            op,
+            folders: Vec::new(),
+            filters: None,
+            retry_inverse: Vec::new(),
+            retry_sidecars: Vec::new(),
+            folders_done: Vec::new(),
+            trash: None,
+        })
     }
 
     pub fn redo_step(&mut self) -> Result<String> {
@@ -1091,12 +1295,16 @@ impl Session {
         let undo = match self.apply_with_files(&mut e, fs) {
             Ok(r) => r,
             Err(err) => {
-                self.redo.push(e);
+                match self.rest_of_partial_step(&mut e, &err) {
+                    Some(rest) => self.undo.push(rest),
+                    None => self.redo.push(e),
+                }
                 return Err(err);
             }
         };
         // (the filter first: the photo is shown if it is in view under the filter the step leaves)
         let carried = self.carry_filters(e.filters.as_ref());
+        let (trash, note) = self.trash_step(e.trash.as_ref());
         self.show_undone(&e.op);
         self.reconcile_view();
         self.pending_log.push(e.op);
@@ -1108,8 +1316,9 @@ impl Session {
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
             folders_done: Vec::new(),
+            trash,
         });
-        Ok(e.label)
+        Ok(noted(e.label, note))
     }
 
     /// After an undo or redo that changed one photo (its edit, rating, flag, label, metadata or
@@ -1138,14 +1347,23 @@ impl Session {
         // The entry is detached from self.undo/self.redo: include it before any global
         // repair can retire, then retry revalidates it before moving its own packets.
         rename::validate_sidecars(fs, &entry.retry_sidecars).map_err(|e| EngineError::Other(format!("can't move the files back: {e}")))?;
+        // A step that would take a moving photo out of the library or point it at another file says how many.
+        self.refuse_detaching(&self.detached_moving_photos(&entry.op))?;
         // Repair discarded file steps before another path change can stale their exact paths.
         // Unrelated metadata history must remain usable while a sidecar is still unwritable.
-        if !entry.folders.is_empty() || !entry.retry_sidecars.is_empty() || !self.file_moves(&entry.op).is_empty() {
+        // (a folder that is only located, `on_disk: false`, renames nothing)
+        if entry.folders.iter().any(|f| f.on_disk) || !entry.retry_sidecars.is_empty() || !self.file_moves(&entry.op).is_empty() {
+            self.refuse_while_moving()?;
             self.repair_sidecars_with(fs).map_err(|e| EngineError::Other(format!("can't move the files back: {e}")))?;
         }
         rename::retry_sidecars(fs, &mut entry.retry_sidecars).map_err(|e| EngineError::Other(format!("can't move the files back: {e}")))?;
         let op = &entry.op;
-        let folders = entry.folders.clone();
+        let moves = self.file_moves(op);
+        // noted before anything moves: a stop part-way is found and followed at the next open
+        let record = self.record_moves(&moves)?;
+        let all_folders = entry.folders.clone();
+        // the folders to rename on disk: a located one only follows
+        let folders: Vec<FolderMove> = all_folders.iter().filter(|f| f.on_disk).cloned().collect();
         for (i, f) in folders.iter().enumerate() {
             if entry.folders_done.contains(f) {
                 continue;
@@ -1164,6 +1382,7 @@ impl Session {
                     // the history), and a retry leaves them where they are
                     message.push_str(&self.follow_stuck_folders(entry, &stuck));
                 }
+                self.settle_moves(record);
                 return Err(EngineError::Other(message));
             }
         }
@@ -1172,13 +1391,17 @@ impl Session {
                 let _ = fs.move_folder(&f.to, &f.from);
             }
         };
-        let moves = self.file_moves(op);
-        if let Err(mut e) = rename::move_all(fs, &moves) {
+        let moved = rename::move_all(fs, &moves);
+        if let Err(mut e) = moved {
             entry.retry_sidecars.append(&mut e.pending_sidecars);
             if e.stuck.is_empty() {
                 undo_folder();
             }
-            let (message, mut inverses) = self.follow_stuck(op, e, false);
+            let (message, mut inverses, followed) = self.follow_stuck(op, e, false);
+            // (a library that could not follow keeps the record for the next open)
+            if followed {
+                self.settle_moves(record);
+            }
             // A later successful retry observes the corrected paths. Retain their old paths
             // now, so the opposite history direction still restores the entire original step.
             inverses.append(&mut entry.retry_inverse);
@@ -1187,8 +1410,13 @@ impl Session {
         }
         match self.apply_catalog(op.clone()) {
             Ok(inv) => {
-                for f in folders {
-                    cmd::browse::follow_folder(self, &f.from, &f.to);
+                self.settle_moves(record);
+                for f in all_folders {
+                    if f.on_disk {
+                        cmd::browse::follow_folder(self, &f.from, &f.to);
+                    } else {
+                        relocate::follow_located(self, &f.from, &f.to);
+                    }
                 }
                 if entry.retry_inverse.is_empty() {
                     Ok(inv)
@@ -1202,11 +1430,35 @@ impl Session {
                 }
             }
             Err(e) => {
-                let back: Vec<(String, String)> = moves.iter().rev().map(|(a, b)| (b.clone(), a.clone())).collect();
-                if let Err(mut be) = rename::move_all(fs, &back) {
-                    entry.retry_sidecars.append(&mut be.pending_sidecars);
-                    return Err(EngineError::Other(format!("{e}; the files could not all be moved back: {}", be.message)));
+                if matches!(e, EngineError::Catalog(CatalogError::PartlyApplied { .. })) {
+                    // the step changed the catalog in part: the journal has to say so
+                    self.pending_log.push(entry.op.clone());
                 }
+                let back: Vec<(String, String)> = moves.iter().rev().map(|(a, b)| (b.clone(), a.clone())).collect();
+                let moved_back = rename::move_all(fs, &back);
+                // (what is left of a rollback that failed part-way must follow the files as far as they went back,
+                // not move them again)
+                let e = match e {
+                    EngineError::Catalog(CatalogError::PartlyApplied { cause, remaining }) => EngineError::Catalog(CatalogError::PartlyApplied {
+                        cause,
+                        remaining: Box::new(rename::rest_after_move_back(*remaining, &moved_back)),
+                    }),
+                    e => e,
+                };
+                if let Err(mut be) = moved_back {
+                    entry.retry_sidecars.append(&mut be.pending_sidecars);
+                    // the files stay at the new place and the library doesn't point there: the record stays for the next open
+                    let moved = format!("the files could not all be moved back: {}", be.message);
+                    return Err(match e {
+                        // (what is left of the rollback must reach the undo and redo stacks all the same)
+                        EngineError::Catalog(CatalogError::PartlyApplied { cause, remaining }) => EngineError::Catalog(CatalogError::PartlyApplied {
+                            cause: Box::new(CatalogError::Invalid(format!("{cause}; {moved}"))),
+                            remaining,
+                        }),
+                        e => EngineError::Other(format!("{e}; {moved}")),
+                    });
+                }
+                self.settle_moves(record);
                 undo_folder();
                 Err(e)
             }
@@ -1972,6 +2224,9 @@ impl Session {
         }
     }
 }
+
+/// Undo steps kept; the oldest go first.
+pub const UNDO_STEPS: usize = 1000;
 
 /// Automatic versions kept per photo.
 pub const AUTO_VERSIONS: usize = 20;

@@ -178,6 +178,21 @@ pub(crate) fn services(cc: &eframe::CreationContext<'_>, log_file: Option<&std::
         screen_profile: win_screen_profile::service(cc),
         #[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
         screen_profile: None,
+        // macOS: a running job keeps the Mac awake and the window out of App Nap
+        #[cfg(target_os = "macos")]
+        keep_awake: Some(keep_awake::service()),
+        #[cfg(not(target_os = "macos"))]
+        keep_awake: None,
+        // macOS: the number of running jobs on the Dock icon
+        #[cfg(target_os = "macos")]
+        dock_badge: Some(dock_badge::service()),
+        #[cfg(not(target_os = "macos"))]
+        dock_badge: None,
+        // macOS: a notification when a job ends while the window is in the background
+        #[cfg(target_os = "macos")]
+        notify: Some(notify::service()),
+        #[cfg(not(target_os = "macos"))]
+        notify: None,
         pick_display_profile: Some(Box::new(|| {
             let mut d = file_dialog()
                 .set_title(lightcraft_ui_egui::i18n::tr("Choose Monitor Profile"))
@@ -267,6 +282,10 @@ pub(crate) fn services(cc: &eframe::CreationContext<'_>, log_file: Option<&std::
         })),
         // atomic (temp file + sync + rename): a failed write never leaves a truncated file
         write_shared: Some(std::sync::Arc::new(lightcraft_engine::export::write_file)),
+        original_copy: Some(Box::new(lightcraft_engine::export::copy_original)),
+        original_copy_shared: Some(std::sync::Arc::new(lightcraft_engine::export::copy_original)),
+        // the copier itself checks the source before it writes anything
+        original_check: None,
         write: Some(Box::new(lightcraft_engine::export::write_file)),
         write_new: Some(Box::new(lightcraft_engine::export::write_file_new)),
         png: Some(Box::new(|img: &lightcraft_raster::Rgba8| {

@@ -1277,7 +1277,8 @@ fn native_video_reimport_repairs_kind_without_losing_edits_or_memberships() {
     let mut expected = (**s.catalog.photo(id).unwrap()).clone();
     expected.kind = lightcraft_catalog::MediaKind::Video;
     s.execute("library.filter", &json!({"kind": "video"})).unwrap();
-    assert!(s.visible().is_empty());
+    // the Videos filter finds a legacy record by its VIDEO format, before the repair as well
+    assert_eq!(s.visible(), &[id]);
     let result = s.execute("library.importLightroom", &json!({"path": path})).unwrap();
     assert_eq!(result["mapping"]["1"], id.0);
     assert_eq!(result["imported"], 0);
@@ -1289,7 +1290,8 @@ fn native_video_reimport_repairs_kind_without_losing_edits_or_memberships() {
     assert_eq!(s.catalog.stack(stack.id), Some(&stack));
     s.execute("edit.undo", &json!({})).unwrap();
     assert_eq!(s.catalog.to_snapshot(), before);
-    assert!(s.visible().is_empty());
+    // (the undone import leaves the legacy record, which the Videos filter still finds)
+    assert_eq!(s.visible(), &[id]);
     s.execute("edit.redo", &json!({})).unwrap();
     assert_eq!(s.catalog.to_snapshot(), after);
     assert_eq!(s.visible(), &[id]);
@@ -1458,6 +1460,26 @@ fn probed_original_is_counted_once_and_reimport_adds_nothing() {
         assert_eq!(s.catalog.len(), 1);
     }
     assert_eq!(probes.load(Ordering::Relaxed), 1);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+/// Given a drive that stopped answering (as many abandoned reads still blocked as are allowed),
+/// When a Lightroom catalog is prepared,
+/// Then the import is an error (so nothing is committed): its photos were never read, so none is added without its file.
+#[test]
+fn an_import_that_cannot_read_is_an_error_not_photos_without_files() {
+    let dir = std::env::temp_dir().join(format!("lightcraft-lrcat-stopped-reads-{}", std::process::id()));
+    std::fs::create_dir_all(dir.join("Photos")).unwrap();
+    let source = dir.join("source.lrcat");
+    std::fs::write(dir.join("Photos/test.ARW"), b"original").unwrap();
+    std::fs::write(&source, native_catalog(&photo_tables((dir.to_str().unwrap(), "")))).unwrap();
+    let mut s = crate::Session::new();
+    s.stuck_readers = Arc::new(crate::import::StuckReaders::new(0));
+    s.media.file_probe = Some(Arc::new(|_| Ok(crate::media::ProbeInfo { format: "ARW".into(), width: 20, height: 10, ..Default::default() })));
+    let mut job = crate::lightroom_job::LightroomJob::new(&mut s, source, false).unwrap();
+    let Err(e) = job.prepare(&AtomicBool::new(false)) else { panic!("an import that read nothing is not committed") };
+    assert_ne!(e.kind(), crate::ErrorKind::Cancelled, "{e}");
+    assert!(e.to_string().contains("still waiting"), "{e}");
     std::fs::remove_dir_all(dir).unwrap();
 }
 

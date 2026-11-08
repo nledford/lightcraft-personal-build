@@ -23,6 +23,8 @@ pub struct Toast {
     pub hovered: bool,
     /// Colour-label styling.
     pub label: Option<ColorLabel>,
+    /// What it says the state of ("flag", "panel"…), if anything: a newer message on the topic replaces it.
+    pub topic: Option<&'static str>,
 }
 
 /// CJK ideographs, kana and hangul: scripts that don't separate words with spaces.

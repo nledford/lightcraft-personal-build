@@ -258,7 +258,7 @@ pub fn open(app: &mut LightcraftApp, paths: Vec<String>) -> Result<Value, String
     }
     let sources = paths.clone();
     let (input, paths) = ScanInput::new(&mut app.session, &paths);
-    let progress = std::sync::Arc::new(ScanProgress::default());
+    let progress = std::sync::Arc::new(ScanProgress::new(app.session.import_stall_after, app.session.stuck_readers.clone()));
     let (tx, rx) = std::sync::mpsc::channel();
     let p = progress.clone();
     let job = move || {
@@ -315,7 +315,7 @@ pub fn browse(app: &mut LightcraftApp, path: &str, subfolders: Option<bool>) -> 
     // the photos the library already knows from this folder show at once: keep or pick the active one
     app.session.keep_active_in_view();
     let (mut input, _) = ScanInput::new(&mut app.session, std::slice::from_ref(&dir_s));
-    let progress = std::sync::Arc::new(ScanProgress::default());
+    let progress = std::sync::Arc::new(ScanProgress::new(app.session.import_stall_after, app.session.stuck_readers.clone()));
     let (tx, rx) = std::sync::mpsc::channel();
     let p = progress.clone();
     // the worker resolves the path as given: on Unix `link/..` is the folder above where the link points, which the
@@ -369,6 +369,7 @@ pub fn browse(app: &mut LightcraftApp, path: &str, subfolders: Option<bool>) -> 
             truncated: false,
             unreadable: 0,
             unsupported: 0,
+            stopped: None,
             listed,
         }));
     };
@@ -452,6 +453,8 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
             task.guard.progress(done as u64, total as u64);
             // while the folders are listed the total isn't known: say what is happening instead
             task.guard.detail(if total == 0 { crate::i18n::tr("Looking for photos…") } else { "" });
+            // a file that has stopped answering is named on the row, which then offers Skip
+            crate::panels::activity::follow_reads(&task.guard, &task.progress.reads);
             return;
         }
         Err(_) => {
@@ -512,14 +515,28 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
             }
         }
     }
+    // (a drive that stopped answering ends the scan early: the folder shows only what was reached before)
+    let stopped = out.stopped.as_ref().map(|why| format!("{}: {why}", crate::i18n::tr("Stopped")));
     task.guard.finish(Outcome {
-        ending: if failed > 0 { Ending::Problems } else { Ending::Done },
-        detail: if found_none { crate::i18n::tr("No photos found").to_string() } else { not_readable_text(failed) },
+        ending: if failed > 0 || stopped.is_some() { Ending::Problems } else { Ending::Done },
+        detail: if let Some(text) = &stopped {
+            text.clone()
+        } else if found_none {
+            crate::i18n::tr("No photos found").to_string()
+        } else {
+            not_readable_text(failed)
+        },
         failed,
         failures,
         path,
         ..Default::default()
     });
+    // a review says so when it opens (a dialog open at the scan's end can keep it waiting past the toast's time)
+    if let Some(text) = &stopped
+        && (task.browse || out.candidates.is_empty())
+    {
+        app.toast_error(ctx, text.clone());
+    }
     if task.browse {
         // the folder and the ones its photos are in count as browsed now, as `library.browse` records them, so
         // their untouched Local photos aren't forgotten while the folder is in use
@@ -535,7 +552,7 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
         }
         // what the library doesn't know yet joins the Local view
         let queue: Vec<String> =
-            out.candidates.iter().filter(|c| c.duplicate != Some("path".into()) && c.error.is_none()).map(|c| c.path.clone()).collect();
+            out.candidates.iter().filter(|c| c.duplicate != Some("path".into()) && !c.local && c.error.is_none()).map(|c| c.path.clone()).collect();
         if !queue.is_empty() {
             let undo0 = app.session.undo.len();
             let total = queue.len();
@@ -570,16 +587,7 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
         })
         .collect();
     d.set_trashed(trashed);
-    let browsed = d
-        .candidates
-        .iter()
-        .map(|c| {
-            c.duplicate.as_deref() == Some("path")
-                && c.existing.is_some_and(|id| app.session.catalog.photo(lightcraft_catalog::PhotoId(id)).is_some_and(|p| p.local && !p.deleted))
-        })
-        .collect();
-    d.set_browsed(browsed);
-    d.copy = task.copy || task.destination.is_some();
+    d.set_transfer(task.copy || task.destination.is_some(), false);
     if let Some(dest) = task.destination {
         d.destination = dest;
         // the files go into that folder itself, not into dated subfolders of it
@@ -590,6 +598,7 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
     d.sources = task.sources;
     d.library = Some(app.session.library_generation());
     app.review_pending_listed = Some(out.listed);
+    d.stopped = stopped;
     app.review_pending = Some(crate::state::Dialog::Import { opts: Box::new(d) });
     show_pending_review(app, ctx);
 }
@@ -609,6 +618,11 @@ fn show_pending_review(app: &mut LightcraftApp, ctx: &egui::Context) {
         return;
     }
     if app.ui.dialog.is_none() {
+        if let Some(crate::state::Dialog::Import { opts }) = &mut app.review_pending
+            && let Some(text) = opts.stopped.take()
+        {
+            app.toast_error(ctx, text);
+        }
         app.ui.dialog = app.review_pending.take();
         app.review_listed = app.review_pending_listed.take();
     } else {

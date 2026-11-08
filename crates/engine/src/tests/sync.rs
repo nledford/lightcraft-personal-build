@@ -19,7 +19,7 @@ use std::time::{Duration, SystemTime};
 
 use serde_json::{Value, json};
 
-use crate::Session;
+use crate::{Session, UNDO_STEPS};
 
 /// A scratch folder that goes away with the test, however it ends.
 struct Scratch(PathBuf);
@@ -824,6 +824,45 @@ fn a_cancelled_synchronize_does_nothing_more() {
     assert_eq!((r.imported, s.undo.len()), (0, steps_before));
 }
 
+/// Do the work of synchronizing a new file that grew after the scan, so the work reads it again
+/// instead of reusing the scan's probe; `during` runs as the file is read. How many steps it
+/// handed over; `progress` says how far it got.
+fn sync_work_rereading_a_file(tag: &str, progress: &crate::sync::SyncProgress, during: impl Fn() + Send + Sync + 'static) -> usize {
+    let dir = Scratch::new(tag);
+    let mut s = library(&dir);
+    write_png(&dir.path("trip/c.png"), 3);
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let mut file = std::fs::OpenOptions::new().append(true).open(dir.path("trip/c.png")).unwrap();
+    std::io::Write::write_all(&mut file, b"\0").unwrap();
+    s.media.file_probe = Some(std::sync::Arc::new(move |_: &str| {
+        during();
+        Ok(crate::media::ProbeInfo { format: "PNG".into(), ..Default::default() })
+    }));
+    let (work, _commit) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    let mut sent = 0;
+    work.run(progress, |_| {
+        sent += 1;
+        true
+    });
+    sent
+}
+
+#[test]
+fn a_batch_that_cancel_cut_short_is_not_counted_as_done() {
+    let progress = crate::sync::SyncProgress::default();
+    let cancel = progress.files.cancel.clone();
+    // Cancel while the work reads the batch's file
+    sync_work_rereading_a_file("cut-short", &progress, move || cancel.store(true, std::sync::atomic::Ordering::Relaxed));
+    assert_eq!(progress.counts(), (0, 1), "the file was left undone: done must be less than total");
+}
+
+#[test]
+fn a_batch_that_ran_to_its_end_is_counted_as_done() {
+    let progress = crate::sync::SyncProgress::default();
+    let sent = sync_work_rereading_a_file("whole-batch", &progress, || {});
+    assert_eq!((progress.counts(), sent), ((1, 1), 1));
+}
+
 /// Ready a synchronize of the trip folder and do its work, keeping the steps for the test to
 /// commit when it likes.
 fn readied(s: &mut Session, dir: &Scratch, choice: crate::sync::SyncChoice) -> (Vec<crate::sync::SyncStep>, crate::sync::SyncCommit) {
@@ -881,6 +920,298 @@ fn an_undo_pressed_while_synchronizing_is_not_folded_into_it() {
     // undoing the run's last step never takes the rating with it
     s.execute("edit.undo", &json!({})).unwrap();
     assert_eq!(s.catalog.photo(a).unwrap().rating, 4, "the earlier, unrelated step stays");
+}
+
+/// A library with `n` more photos (files that need not exist: the steps below never read them).
+fn with_extra_photos(s: &mut Session, n: usize) -> Vec<lightcraft_catalog::PhotoId> {
+    (0..n)
+        .map(|i| {
+            let id = s.catalog.alloc_photo_id();
+            let name = format!("extra-{i}.png");
+            let p = lightcraft_catalog::Photo::new(
+                id,
+                lightcraft_catalog::Source::File { path: format!("/gone/{name}") },
+                &name,
+                "X",
+                6,
+                4,
+                "2026-01-01",
+            );
+            s.catalog.apply(lightcraft_catalog::Op::AddPhoto { photo: Box::new(p) }).unwrap();
+            id
+        })
+        .collect()
+}
+
+/// The history keeps 1,000 steps; a synchronize of a big folder makes thousands (one per few
+/// photos). Undo must take back all of it, never only the last 1,000 steps.
+#[test]
+fn undoing_a_synchronize_of_more_than_a_thousand_steps_takes_back_all_of_it() {
+    let dir = Scratch::new("big-undo");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let before = holdings(&s);
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work, mut commit) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    for id in &ids {
+        commit.apply(&mut s, crate::sync::SyncStep::Remove(vec![*id]));
+    }
+    let r = commit.finish(&mut s);
+    assert_eq!(r.removed, ids.len(), "{r:?}");
+    assert!(s.catalog.photos().filter(|p| p.file_name.starts_with("extra-")).all(|p| !p.in_library()));
+    assert_eq!(s.undo.last().map(|e| e.label.as_str()), Some("Synchronize Folder"));
+    assert!(s.undo.len() <= 1000, "the history is bounded again: {}", s.undo.len());
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(holdings(&s), before, "one Undo takes back the whole run");
+    s.execute("edit.redo", &json!({})).unwrap();
+    assert!(s.catalog.photos().filter(|p| p.file_name.starts_with("extra-")).all(|p| !p.in_library()), "and Redo does it all again");
+}
+
+/// What the person did before the run still counts toward the bound: the oldest go, as ever.
+#[test]
+fn a_synchronize_keeps_the_history_bounded_and_drops_the_oldest_earlier_step() {
+    let dir = Scratch::new("big-bound");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let a = s.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
+    // a full history: the import's step and 999 ratings
+    for i in 0..UNDO_STEPS - 1 {
+        s.execute("photo.rate", &json!({"ids": [a.0], "rating": i % 5 + 1})).unwrap();
+    }
+    assert_eq!(s.undo.len(), UNDO_STEPS);
+    let second = s.undo[1].label.clone();
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work, mut commit) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    for id in &ids {
+        commit.apply(&mut s, crate::sync::SyncStep::Remove(vec![*id]));
+    }
+    assert!(s.undo.len() > UNDO_STEPS, "the run's steps are all held until it ends: {}", s.undo.len());
+    commit.finish(&mut s);
+    assert_eq!(s.undo.len(), UNDO_STEPS);
+    assert_eq!(s.undo.last().map(|e| e.label.as_str()), Some("Synchronize Folder"));
+    assert_eq!(s.undo.first().map(|e| e.label.as_str()), Some(second.as_str()), "only the oldest earlier step went");
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert!(s.catalog.photos().filter(|p| p.file_name.starts_with("extra-")).all(|p| p.in_library()), "still the whole run");
+}
+
+/// Runs that overlap (a control-channel synchronize while the app's own run is going) share
+/// the hold: the history is cut only once the last of them is done.
+#[test]
+fn overlapping_runs_hold_the_history_until_the_last_lets_go() {
+    let dir = Scratch::new("big-overlap");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let first = s.hold_undo();
+    let second = s.hold_undo();
+    drop(second);
+    for id in &ids {
+        s.run_step(|s| s.commit("Remove", lightcraft_catalog::Op::SetDeleted { id: *id, deleted: true })).unwrap();
+    }
+    assert!(s.undo.len() > UNDO_STEPS, "the first run still holds: {}", s.undo.len());
+    drop(first);
+    s.trim_undo();
+    assert_eq!(s.undo.len(), UNDO_STEPS);
+}
+
+/// Opening another library clears its history, and a run of the old one no longer holds it.
+#[test]
+fn opening_another_library_ends_the_hold_of_a_run_of_the_old_one() {
+    let dir = Scratch::new("big-open");
+    let mut s = library(&dir);
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work, _commit) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    assert!(s.undo_hold.upgrade().is_some(), "the run holds the history");
+    s.open_library(dir.path("other"), false).unwrap();
+    assert!(s.undo_hold.upgrade().is_none(), "the new library's history is its own");
+}
+
+/// A run nobody finishes (its task dropped) doesn't leave the history growing without bound.
+#[test]
+fn a_synchronize_dropped_without_finishing_leaves_the_history_bounded() {
+    let dir = Scratch::new("big-dropped");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work, mut commit) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    for id in &ids {
+        commit.apply(&mut s, crate::sync::SyncStep::Remove(vec![*id]));
+    }
+    drop(commit);
+    let a = s.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
+    s.execute("photo.rate", &json!({"ids": [a.0], "rating": 2})).unwrap();
+    assert!(s.undo.len() <= 1000, "{}", s.undo.len());
+}
+
+/// Edits made between the steps of a run keep today's behavior: the run is not folded into
+/// one step, and the history stays bounded.
+#[test]
+fn an_edit_between_the_steps_of_a_big_synchronize_keeps_the_history_bounded() {
+    let dir = Scratch::new("big-interleaved");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let a = s.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work, mut commit) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    for (i, id) in ids.iter().enumerate() {
+        commit.apply(&mut s, crate::sync::SyncStep::Remove(vec![*id]));
+        if i == 10 {
+            s.execute("photo.rate", &json!({"ids": [a.0], "rating": 4})).unwrap();
+        }
+    }
+    assert!(s.undo.len() <= UNDO_STEPS, "released at the edit, so bounded before the run ends: {}", s.undo.len());
+    commit.finish(&mut s);
+    assert!(s.undo.len() <= 1000, "{}", s.undo.len());
+    assert_ne!(s.undo.last().map(|e| e.label.as_str()), Some("Synchronize Folder"), "not folded around the edit");
+}
+
+/// An edit made while the run's worker is between steps (no step arrives for a while) ends the
+/// hold at once: the history is bounded when the edit lands, not when the next step comes.
+#[test]
+fn an_edit_while_the_run_waits_for_its_next_step_bounds_the_history_at_once() {
+    let dir = Scratch::new("big-stalled");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let a = s.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work, mut commit) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    for id in &ids {
+        commit.apply(&mut s, crate::sync::SyncStep::Remove(vec![*id]));
+    }
+    assert!(s.undo.len() > UNDO_STEPS, "the run holds its steps: {}", s.undo.len());
+    s.execute("photo.rate", &json!({"ids": [a.0], "rating": 4})).unwrap();
+    assert_eq!(s.undo.len(), UNDO_STEPS, "no step came after the edit, yet the history is cut");
+    s.execute("photo.rate", &json!({"ids": [a.0], "rating": 5})).unwrap();
+    assert_eq!(s.undo.len(), UNDO_STEPS, "and stays cut");
+    commit.finish(&mut s);
+    assert_ne!(s.undo.last().map(|e| e.label.as_str()), Some("Synchronize Folder"), "not folded around the edits");
+}
+
+/// An edit that fills the history to the bound looks, by length alone, like no edit at all
+/// (the oldest step goes as the edit comes): the run still sees it and folds nothing around it.
+#[test]
+fn an_edit_that_leaves_the_history_as_long_as_it_was_is_still_seen_by_the_run() {
+    let dir = Scratch::new("big-same-length");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let a = s.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work, mut commit) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    for id in ids.iter().take(UNDO_STEPS - s.undo.len()) {
+        commit.apply(&mut s, crate::sync::SyncStep::Remove(vec![*id]));
+    }
+    assert_eq!(s.undo.len(), UNDO_STEPS);
+    s.execute("photo.rate", &json!({"ids": [a.0], "rating": 4})).unwrap();
+    assert_eq!(s.undo.len(), UNDO_STEPS);
+    let edit_label = s.undo.last().map(|e| e.label.clone()).unwrap();
+    commit.finish(&mut s);
+    assert_eq!(s.undo.last().map(|e| e.label.as_str()), Some(edit_label.as_str()), "the edit stays its own step");
+}
+
+/// The same edit, and the run goes on: its next step sees the edit too, so nothing is folded
+/// around it.
+#[test]
+fn a_step_after_an_edit_that_left_the_history_as_long_as_it_was_does_not_fold_the_edit() {
+    let dir = Scratch::new("big-same-length-next");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let a = s.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work, mut commit) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    let before_edit = UNDO_STEPS - s.undo.len();
+    for id in ids.iter().take(before_edit) {
+        commit.apply(&mut s, crate::sync::SyncStep::Remove(vec![*id]));
+    }
+    s.execute("photo.rate", &json!({"ids": [a.0], "rating": 4})).unwrap();
+    commit.apply(&mut s, crate::sync::SyncStep::Remove(vec![ids[before_edit]]));
+    commit.finish(&mut s);
+    assert_ne!(s.undo.last().map(|e| e.label.as_str()), Some("Synchronize Folder"), "the edit is not part of it");
+    assert!(s.undo.len() <= UNDO_STEPS, "{}", s.undo.len());
+}
+
+/// An edit made before the run's first step is not between its steps: the run still holds the
+/// history, so a run of more than 1,000 steps is one whole step and Undo takes back all of it.
+#[test]
+fn an_edit_before_the_first_step_of_a_big_synchronize_leaves_it_whole() {
+    let dir = Scratch::new("big-early-edit");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let a = s.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work, mut commit) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    s.execute("photo.rate", &json!({"ids": [a.0], "rating": 4})).unwrap();
+    let before = holdings(&s);
+    for id in &ids {
+        commit.apply(&mut s, crate::sync::SyncStep::Remove(vec![*id]));
+    }
+    commit.finish(&mut s);
+    assert_eq!(s.undo.last().map(|e| e.label.as_str()), Some("Synchronize Folder"));
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(holdings(&s), before, "one Undo takes back the whole run, and not the edit before it");
+}
+
+/// Run A has stepped and run B joins; an edit lands before B's first step. The edit ends A's
+/// hold (A can't be folded around it) but B has not stepped, so it still holds the history: a run
+/// of more than 1,000 steps is one whole step, and Undo takes back all of it.
+#[test]
+fn an_edit_before_the_first_step_of_an_overlapping_run_leaves_it_whole() {
+    let dir = Scratch::new("big-overlap-early-edit");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let a = s.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work_a, mut first) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    first.apply(&mut s, crate::sync::SyncStep::Remove(vec![ids[0]]));
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work_b, mut second) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    s.execute("photo.rate", &json!({"ids": [a.0], "rating": 4})).unwrap();
+    let before = holdings(&s);
+    for id in &ids[1..] {
+        second.apply(&mut s, crate::sync::SyncStep::Remove(vec![*id]));
+    }
+    assert!(s.undo.len() > UNDO_STEPS, "the second run holds its steps: {}", s.undo.len());
+    second.finish(&mut s);
+    assert_eq!(s.undo.last().map(|e| e.label.as_str()), Some("Synchronize Folder"));
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(holdings(&s), before, "one Undo takes back the whole second run, and not the edit before it");
+    first.finish(&mut s);
+    assert!(s.undo.len() <= UNDO_STEPS, "the history is bounded again: {}", s.undo.len());
+}
+
+/// An Undo pressed mid-run ends the run's hold (it can't be folded around the Undo); the history
+/// is cut then, even when the step that sees it commits nothing (a failed batch).
+#[test]
+fn an_undo_seen_by_a_step_that_commits_nothing_still_bounds_the_history() {
+    let dir = Scratch::new("big-undo-no-commit");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    let (_work, mut commit) = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).unwrap();
+    for id in &ids {
+        commit.apply(&mut s, crate::sync::SyncStep::Remove(vec![*id]));
+    }
+    assert!(s.undo.len() > UNDO_STEPS, "the run holds its steps: {}", s.undo.len());
+    s.execute("edit.undo", &json!({})).unwrap();
+    // photos that are gone already: nothing to commit
+    commit.apply(&mut s, crate::sync::SyncStep::Remove(vec![ids[0]]));
+    assert!(s.undo.len() <= UNDO_STEPS, "cut at the step that saw the Undo: {}", s.undo.len());
+}
+
+/// A step that panics (caught higher up) must not leave the session thinking every later commit
+/// belongs to a run.
+#[test]
+fn a_panic_in_a_run_step_does_not_leave_the_session_marked() {
+    let dir = Scratch::new("big-panic");
+    let mut s = library(&dir);
+    let ids = with_extra_photos(&mut s, 1_100);
+    let a = s.catalog.photos().find(|p| p.file_name == "a.png").unwrap().id;
+    let _hold = s.hold_undo();
+    let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| s.run_step(|_| panic!("a step that fails"))));
+    assert!(caught.is_err());
+    for id in &ids {
+        s.run_step(|s| s.commit("Remove", lightcraft_catalog::Op::SetDeleted { id: *id, deleted: true })).unwrap();
+    }
+    s.execute("photo.rate", &json!({"ids": [a.0], "rating": 4})).unwrap();
+    assert_eq!(s.undo.len(), UNDO_STEPS, "an edit after the run's steps ends the hold");
 }
 
 #[test]
@@ -942,4 +1273,211 @@ fn removing_missing_photos_takes_them_out_of_their_stacks() {
     assert!(s.catalog.stack_of(b).is_none(), "like photo.delete, a removed photo leaves its stack: {:?}", s.catalog.stack_of(b));
     s.execute("edit.undo", &json!({})).unwrap();
     assert!(s.catalog.stack_of(b).is_some(), "one undo step puts b back in its stack");
+}
+
+/// Given a folder with a new file whose read stops answering (a share that dropped its connection),
+/// When the scan has waited on it and Skip is asked for,
+/// Then the scan names that file while it waits, and then lists it as unreadable with the skip as its reason, with
+/// the other new file found as usual.
+#[test]
+fn a_probe_that_stops_answering_is_named_and_skipping_it_lists_the_file_as_unreadable() {
+    use crate::import::tests_reads::{Gate, until};
+    let dir = Scratch::new("stall");
+    let mut s = library(&dir);
+    write_png(&dir.path("trip/new.png"), 7);
+    write_png(&dir.path("trip/hang.png"), 8);
+    let (gate, real) = (Gate::default(), s.media.file_probe.clone().unwrap());
+    let in_probe = gate.clone();
+    s.media.file_probe = Some(std::sync::Arc::new(move |p: &str| {
+        if p.ends_with("hang.png") {
+            in_probe.wait();
+        }
+        real(p)
+    }));
+    let input = crate::sync::SyncInput::new(&mut s, &dir.path("trip"), false).unwrap();
+    let progress = std::sync::Arc::new(crate::sync::SyncProgress::new(crate::import::tests_reads::STALL, crate::import::tests_reads::own_stuck()));
+    progress.files.reads.set_poll(Duration::from_millis(5));
+    let p = progress.clone();
+    let worker = std::thread::spawn(move || crate::sync::scan_with(input, &p));
+    until("the stall to be reported", || progress.files.reads.stalled().is_some());
+    assert_eq!(progress.files.reads.stalled().map(|s| s.what).as_deref(), Some("hang.png"));
+    progress.files.reads.skip();
+    let changes = worker.join().unwrap();
+    gate.open();
+    assert_eq!(changes.unreadable.len(), 1, "{changes:?}");
+    assert!(changes.unreadable[0].path.ends_with("hang.png"));
+    assert!(changes.unreadable[0].error.as_deref().is_some_and(|e| e.starts_with("skipped: no answer after ")), "{:?}", changes.unreadable[0]);
+    assert_eq!(changes.new.len(), 1);
+    assert!(changes.new[0].path.ends_with("new.png"));
+}
+
+/// A library of `trip/a.png`, `trip/day1/b.png` and `n` photos `trip/hang-check-<i>.png` (whose checks wait on the
+/// returned gate), the hung ones' files and `b.png` gone from the disk, so that a check that did run would call them
+/// missing.
+fn hanging_checks(dir: &Scratch, n: usize) -> (Session, crate::import::tests_reads::Gate, crate::sync::CheckHookGuard) {
+    use crate::import::tests_reads::Gate;
+    for i in 0..n {
+        let file = dir.path(&format!("trip/hang-check-{i}.png"));
+        write_png(&file, 20 + i as u8);
+        // (checks run newest capture first, and a PNG's capture date is its file's time: old ones come last, so that
+        // `a.png` and `b.png` are checked before the hung ones can use up the skips, however many readers there are)
+        let old = std::time::SystemTime::now() - Duration::from_secs(3600);
+        std::fs::File::options().write(true).open(&file).unwrap().set_modified(old).unwrap();
+    }
+    write_png(&dir.path("trip/a.png"), 1);
+    write_png(&dir.path("trip/day1/b.png"), 2);
+    let mut s = Session::new().with_fs();
+    s.execute("library.import", &json!({"paths": [dir.path("trip")]})).unwrap();
+    assert_eq!(s.catalog.len(), 2 + n);
+    std::fs::remove_file(dir.path("trip/day1/b.png")).unwrap();
+    for i in 0..n {
+        std::fs::remove_file(dir.path(&format!("trip/hang-check-{i}.png"))).unwrap();
+    }
+    let gate = Gate::default();
+    let in_check = gate.clone();
+    // (only this test's photos hang: its folder is its own)
+    let hook = crate::sync::hook_checks_under(&dir.path("trip/hang-check-"), std::sync::Arc::new(move || in_check.wait()));
+    (s, gate, hook)
+}
+
+/// Skip every check the row names until the scan is over.
+fn scan_skipping(s: &mut Session, dir: &Scratch) -> crate::sync::FolderChanges {
+    use crate::import::tests_reads::until;
+    let input = crate::sync::SyncInput::new(s, &dir.path("trip"), false).unwrap();
+    let progress = std::sync::Arc::new(crate::sync::SyncProgress::new(crate::import::tests_reads::STALL, crate::import::tests_reads::own_stuck()));
+    progress.files.reads.set_poll(Duration::from_millis(5));
+    let p = progress.clone();
+    let worker = std::thread::spawn(move || crate::sync::scan_with(input, &p));
+    until("the scan to end", || {
+        progress.files.reads.skip();
+        worker.is_finished()
+    });
+    worker.join().unwrap()
+}
+
+/// Given a photo whose check never answers (its file is gone, which a check that ran would find),
+/// When the check is skipped,
+/// Then the photo is not listed as missing (nothing is known of it) but as unreadable and unchecked, while a photo whose
+/// check ran is listed as missing.
+#[test]
+fn a_skipped_check_is_not_listed_as_missing() {
+    let dir = Scratch::new("skipcheck");
+    let (mut s, gate, _hook) = hanging_checks(&dir, 1);
+    let changes = scan_skipping(&mut s, &dir);
+    gate.open();
+    let missing: Vec<&str> = changes.missing.iter().map(|m| m.path.as_str()).collect();
+    assert_eq!(missing.len(), 1, "{missing:?}");
+    assert!(missing[0].ends_with("b.png"), "{missing:?}");
+    assert!(changes.stopped.is_none());
+    // nothing is known of the photo that was skipped: it is listed with the reason, and the folder is not "up to date"
+    assert_eq!(changes.unchecked, 1);
+    assert_eq!(changes.unreadable.len(), 1, "{:?}", changes.unreadable);
+    assert!(changes.unreadable[0].error.as_deref().is_some_and(|e| e.starts_with("skipped: no answer after ")), "{:?}", changes.unreadable[0]);
+}
+
+/// Given a scan whose checks stop answering one after another,
+/// When the fourth is skipped,
+/// Then the scan says it stopped, and lists nothing as missing for the checks that never ran.
+#[test]
+fn a_scan_that_stops_at_the_cap_says_so() {
+    let dir = Scratch::new("capcheck");
+    let (mut s, gate, _hook) = hanging_checks(&dir, 6);
+    let changes = scan_skipping(&mut s, &dir);
+    gate.open();
+    let why = changes.stopped.clone().expect("the scan says why it stopped");
+    assert!(why.contains("not answering"), "{why}");
+    assert!(changes.missing.iter().all(|m| !m.path.contains("hang-check")), "{:?}", changes.missing);
+}
+
+/// Given a Synchronize run whose reads of new files stop answering one after another,
+/// When the fourth is skipped,
+/// Then the run hands over a `Stopped` step last and does no relinking, removing or sidecar reading after it, and
+/// the report says why.
+#[test]
+fn a_synchronize_run_stops_at_the_cap_and_does_nothing_after() {
+    use crate::import::tests_reads::{Gate, until};
+    use crate::sync::{SyncChoice, SyncJob, SyncProgress, SyncStep};
+    let dir = Scratch::new("runcap");
+    let mut s = library(&dir);
+    std::fs::remove_file(dir.path("trip/day1/b.png")).unwrap();
+    for i in 0..4 {
+        write_png(&dir.path(&format!("trip/hang-{i}.png")), 30 + i as u8);
+    }
+    for i in 0..6 {
+        write_png(&dir.path(&format!("trip/ok-{i}.png")), 50 + i as u8);
+    }
+    let changes = crate::sync::scan(&mut s, &dir.path("trip"), false).unwrap();
+    assert_eq!((changes.new.len(), changes.missing.len()), (10, 1));
+    // the hung files change size, so the probes the scan kept for them no longer hold: they are read again
+    for i in 0..4 {
+        let mut bytes = std::fs::read(dir.path(&format!("trip/hang-{i}.png"))).unwrap();
+        bytes.extend_from_slice(b"more");
+        std::fs::write(dir.path(&format!("trip/hang-{i}.png")), bytes).unwrap();
+    }
+    let (gate, real) = (Gate::default(), s.media.file_probe.clone().unwrap());
+    let in_probe = gate.clone();
+    s.media.file_probe = Some(std::sync::Arc::new(move |p: &str| {
+        if p.contains("hang-") {
+            in_probe.wait();
+        }
+        real(p)
+    }));
+    let choice = SyncChoice { remove_missing: true, read_metadata: true, ..SyncChoice::default() };
+    let (work, mut commit) = SyncJob::start(&mut s, changes, choice).unwrap();
+    let progress = std::sync::Arc::new(SyncProgress::new(crate::import::tests_reads::STALL, crate::import::tests_reads::own_stuck()));
+    progress.files.reads.set_poll(Duration::from_millis(5));
+    let (tx, rx) = std::sync::mpsc::channel();
+    let p = progress.clone();
+    let worker = std::thread::spawn(move || work.run(&p, |step| tx.send(step).is_ok()));
+    until("the run to end", || {
+        progress.files.reads.skip();
+        worker.is_finished()
+    });
+    worker.join().unwrap();
+    gate.open();
+    let steps: Vec<SyncStep> = rx.try_iter().collect();
+    assert!(matches!(steps.last(), Some(SyncStep::Stopped(why)) if why.contains("not answering")), "the last step says it stopped");
+    assert!(
+        steps.iter().all(|st| matches!(st, SyncStep::Import(_) | SyncStep::Stopped(_))),
+        "no relinking, removing or sidecar reading after the drive stopped answering"
+    );
+    for step in steps {
+        commit.apply(&mut s, step);
+    }
+    let report = commit.finish(&mut s);
+    assert!(report.stopped.as_deref().is_some_and(|w| w.contains("not answering")), "{report:?}");
+    assert!(report.failed.iter().all(|(path, _)| !path.is_empty()), "the stop is not one of the failed files: {report:?}");
+    assert_eq!(report.removed, 0);
+    assert!(s.catalog.photos().any(|p| p.file_name == "b.png" && p.in_library()), "the missing photo was not removed");
+}
+
+/// Given a scan that stopped at the cap (the drive stopped answering) and found a photo missing,
+/// When the run is made from its changes (remove missing on),
+/// Then the run hands over only a `Stopped` step: the missing photo is not removed on a partial scan.
+#[test]
+fn a_run_made_from_a_stopped_scan_does_nothing_but_say_so() {
+    use crate::sync::{SyncChoice, SyncJob, SyncProgress, SyncStep};
+    let dir = Scratch::new("stoppedscan");
+    let (mut s, gate, _hook) = hanging_checks(&dir, 6);
+    let changes = scan_skipping(&mut s, &dir);
+    gate.open();
+    assert!(changes.stopped.is_some());
+    assert!(changes.missing.iter().any(|m| m.path.ends_with("b.png")), "{:?}", changes.missing);
+    let choice = SyncChoice { remove_missing: true, read_metadata: true, ..SyncChoice::default() };
+    let (work, mut commit) = SyncJob::start(&mut s, changes, choice).unwrap();
+    let progress = SyncProgress::new(crate::import::tests_reads::STALL, crate::import::tests_reads::own_stuck());
+    let mut steps = Vec::new();
+    work.run(&progress, |step| {
+        steps.push(step);
+        true
+    });
+    assert!(matches!(steps.as_slice(), [SyncStep::Stopped(why)] if why.contains("not answering")));
+    for step in steps {
+        commit.apply(&mut s, step);
+    }
+    let report = commit.finish(&mut s);
+    assert!(report.stopped.as_deref().is_some_and(|w| w.contains("not answering")), "{report:?}");
+    assert!(report.failed.is_empty(), "the stop is not one of the failed files: {report:?}");
+    assert_eq!(report.removed, 0);
+    assert!(s.catalog.photos().any(|p| p.file_name == "b.png" && p.in_library()));
 }

@@ -18,6 +18,10 @@ fn headless(session: lightcraft_engine::Session) -> Headless {
     let r = h.request("ui.set", json!({"view": "photoGrid", "leftPanel": true}), T);
     assert_eq!(r["ok"], true, "{r}");
     h.settle(SETTLE);
+    // (the photos' files are not on disk: the Missing Photos row appears, and moves the rows below it, when the
+    // background checks find them gone; the tests aim at rows, so they wait for it)
+    h.step_until(T, |h| h.file_checks_done());
+    h.settle(SETTLE);
     h
 }
 

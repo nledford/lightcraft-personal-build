@@ -261,7 +261,7 @@ fn a_drop_while_a_dialog_is_open_leaves_the_dialog_and_imports_nothing() {
     assert!(matches!(h.app.ui.dialog, Some(Dialog::WhatsNew)), "the open dialog stays");
     assert!(h.app.scan.is_none() && h.app.import.is_none(), "no scan or import started");
     assert_eq!(photos(&h), 0);
-    assert!(h.app.ui.toast.is_some(), "the person is told why");
+    assert!(h.app.ui.toast().is_some(), "the person is told why");
 }
 
 /// A prompt owns the library and the top layer: a drop while it is up stays queued (it is not
@@ -708,7 +708,7 @@ fn a_model_drop_on_a_no_library_window_does_not_open_its_dialog_behind_it() {
             h.step();
         }
         assert!(h.app.ui.dialog.is_none(), "{tag}: no face model dialog behind the window");
-        let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+        let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
         assert!(toast.contains("drop the model again"), "{tag}: {toast}");
     }
 }
@@ -1072,7 +1072,7 @@ fn a_drop_while_a_scan_runs_is_refused() {
     }
     assert!(h.app.ui.dialog.is_none(), "no review opened");
     assert!(h.app.scan.is_some() && h.app.import.is_none(), "the running scan was left alone and nothing else started");
-    assert!(h.app.ui.toast.is_some(), "the person is told why");
+    assert!(h.app.ui.toast().is_some(), "the person is told why");
     assert_eq!(photos(&h), 0);
 }
 
@@ -1086,7 +1086,7 @@ fn a_direct_drop_while_a_scan_runs_is_refused_too() {
     let _scan = crate::import::stall_scan(&mut h.app);
     drop_files(&mut h, &[dir.path("more")], false);
     assert!(h.app.import.is_none(), "no second import");
-    assert!(h.app.ui.toast.is_some());
+    assert!(h.app.ui.toast().is_some());
 }
 
 /// A Local folder browse scan counts too: a review-first drop would be rejected by `open`, and a
@@ -1107,7 +1107,7 @@ fn a_drop_while_a_browse_scan_runs_is_refused_in_both_modes() {
         }
         assert!(h.app.ui.dialog.is_none() && h.app.import.is_none(), "direct={direct}: nothing started");
         assert!(h.app.scan.is_some(), "the browse was left alone");
-        assert!(h.app.ui.toast.is_some(), "the person is told why");
+        assert!(h.app.ui.toast().is_some(), "the person is told why");
     }
 }
 
@@ -1123,7 +1123,7 @@ fn hovering_photos_while_a_lightroom_import_is_pending_says_they_will_be_refused
     assert!(!said(&h, "review"), "{:?}", h.painted_text());
     drop_files(&mut h, &[dir.path("trip")], false);
     assert!(h.app.ui.dialog.is_none(), "no review opened");
-    assert!(h.app.ui.toast.is_some(), "the person is told why");
+    assert!(h.app.ui.toast().is_some(), "the person is told why");
     assert_eq!(photos(&h), 0);
 }
 
@@ -1159,9 +1159,9 @@ fn photos_dropped_with_no_library_open_wait_for_one() {
     assert!(h.app.ui.dialog.is_none() && h.app.import.is_none(), "no review, no import into the temporary session");
     assert_eq!(photos(&h), 0);
     // a preset belongs to a library: refused, not imported into the session the library replaces
-    h.app.ui.toast = None;
+    h.app.ui.clear_toasts();
     drop_files(&mut h, &[dir.path("warm.lcpreset")], false);
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("drop the presets again"), "{toast}");
 }
 
@@ -1391,6 +1391,25 @@ fn auto_import_waits_for_an_import_that_starts_during_its_listing() {
     h.app.session.import_defaults.auto_folder = None;
 }
 
+/// A move to another folder in the background (its files arrive in the watched folder before the library knows
+/// them): Auto Import looks at nothing meanwhile, and a file that was added to the folder is imported after the move.
+#[test]
+fn auto_import_waits_for_a_move_and_then_imports_the_new_file() {
+    let dir = Scratch::new("auto-move");
+    let mut h = app(&dir);
+    second_auto_import_listing(&mut h, &dir);
+    let (tx, guard) = crate::move_task::stalled(&mut h.app);
+    apply_auto_import_listing(&mut h);
+    assert!(h.app.import.is_none(), "no import starts while a move runs");
+    assert_eq!(photos(&h), 0);
+    // the move ends (nothing to follow: the worker's channel closes), and the next listings import the file
+    drop(guard);
+    drop(tx);
+    assert!(h.step_until(T, |h| h.app.move_run.is_none()), "the move is followed");
+    assert!(h.step_until(T, |h| photos(h) == 1), "the watched folder's file arrives after the move: {}", photos(&h));
+    h.app.session.import_defaults.auto_folder = None;
+}
+
 /// The same with a Local folder browse: a browse that finishes replaces `app.import` with its own, so
 /// Auto Import doesn't start one beside it.
 #[test]
@@ -1410,6 +1429,7 @@ fn auto_import_waits_for_a_browse_that_starts_during_its_listing() {
         truncated: false,
         unreadable: 0,
         unsupported: 0,
+        stopped: None,
         listed: Default::default(),
     }))
     .unwrap();

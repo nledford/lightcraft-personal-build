@@ -22,7 +22,11 @@ fn temp_dir(tag: &str) -> std::path::PathBuf {
 
 /// A small procedural PNG (distinct per seed).
 fn write_png(path: &Path, seed: u8) {
-    let (w, h) = (48usize, 32usize);
+    write_png_sized(path, seed, 48, 32);
+}
+
+/// [`write_png`] of another size: a replaced file is noticed by its size, as probes kept from a scan are.
+fn write_png_sized(path: &Path, seed: u8, w: usize, h: usize) {
     let data: Vec<[u8; 4]> = (0..w * h).map(|i| [(i % w * 5) as u8, (i / w * 7) as u8, seed, 255]).collect();
     let img = lightcraft_raster::Rgba8 { width: w, height: h, data };
     let bytes = lightcraft_codecs::encode_png(&lightcraft_codecs::EncodeImage::rgba8(&img), &lightcraft_codecs::EncodeMeta::default()).unwrap();
@@ -84,6 +88,417 @@ fn recursive_discovery_includes_sony_sr2_and_srf_case_insensitively() {
     assert_eq!(found, expected);
     assert_eq!(crate::import::expand(&expected, None), expected, "folder and direct discovery agree");
     std::fs::remove_dir_all(src).unwrap();
+}
+
+/// A file that was only browsed (Local) is not "already in the library": the scan offers it, and
+/// importing it brings the browsed record (with its edits) into the library.
+#[test]
+fn a_browsed_photos_own_file_is_offered_and_joins_the_library_when_imported() {
+    let src = temp_dir("browsed-own");
+    let f = src.join("a.png");
+    write_png(&f, 75);
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [f], "local": true})).unwrap();
+    let id = r["imported"][0].as_u64().unwrap();
+    s.execute("photo.rate", &json!({"ids": [id], "rating": 3})).unwrap();
+    let scan = s.execute("library.importPreview", &json!({"paths": [f]})).unwrap();
+    assert_eq!(scan["duplicates"], 0, "{scan}");
+    assert_eq!(scan["candidates"][0]["duplicate"], Value::Null, "{scan}");
+    assert_eq!(scan["candidates"][0]["existing"], id, "the candidate still names the browsed record: {scan}");
+    assert_eq!(scan["candidates"][0]["local"], true, "and says it was only browsed: {scan}");
+    let r = s.execute("library.import", &json!({"paths": [f]})).unwrap();
+    assert_eq!(r["imported"], json!([id]), "{r}");
+    let p = s.catalog.photo(lightcraft_catalog::PhotoId(id)).unwrap();
+    assert!(!p.local && p.rating == 3, "the same record, now in the library, edits kept");
+    let scan = s.execute("library.importPreview", &json!({"paths": [f]})).unwrap();
+    assert_eq!(scan["duplicates"], 1, "now it is in the library: {scan}");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// A browse record in Recently Deleted still counts as the path's: the scan lists the file as it did,
+/// not as a new browsed file.
+#[test]
+fn a_deleted_browse_record_still_counts_as_the_files_own() {
+    let src = temp_dir("browsed-deleted");
+    let f = src.join("a.png");
+    write_png(&f, 76);
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [f], "local": true})).unwrap();
+    let id = r["imported"][0].as_u64().unwrap();
+    s.execute("photo.delete", &json!({"ids": [id]})).unwrap();
+    let scan = s.execute("library.importPreview", &json!({"paths": [f]})).unwrap();
+    assert_eq!(scan["candidates"][0]["duplicate"], "path", "{scan}");
+    assert_eq!(scan["candidates"][0].get("local"), None, "{scan}");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// A browse record in Recently Deleted is not promoted by importing its file, as the scan says (it lists the file as
+/// the path's own): the record stays a browsed one, and no photo joins the library under it.
+#[test]
+fn importing_the_file_of_a_deleted_browse_record_does_not_promote_it() {
+    let src = temp_dir("browsed-deleted-import");
+    let f = src.join("a.png");
+    write_png(&f, 77);
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [f], "local": true})).unwrap();
+    let id = r["imported"][0].as_u64().unwrap();
+    s.execute("photo.delete", &json!({"ids": [id]})).unwrap();
+    let r = s.execute("library.import", &json!({"paths": [f]})).unwrap();
+    assert_eq!(r["imported"], json!([]), "{r}");
+    assert!(s.catalog.photo(lightcraft_catalog::PhotoId(id)).unwrap().local, "the record is still only browsed: {r}");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// A copy that was only browsed (Local) is not a photo of the library: a file with its bytes, imported although a
+/// photo has its content (`importDuplicates`), is not one of those, and keeps the content's own key.
+#[test]
+fn a_browsed_copy_does_not_give_an_imported_file_a_duplicate_key() {
+    let src = temp_dir("browsed-dup-key");
+    let (a, b) = (src.join("a.png"), src.join("b.png"));
+    write_png(&a, 78);
+    std::fs::copy(&a, &b).unwrap();
+    let mut s = Session::new().with_fs();
+    s.execute("library.import", &json!({"paths": [a], "local": true})).unwrap();
+    let r = s.execute("library.import", &json!({"paths": [b], "importDuplicates": true})).unwrap();
+    let id = r["imported"][0].as_u64().unwrap();
+    let key = s.catalog.photo(lightcraft_catalog::PhotoId(id)).unwrap().content_hash.clone().unwrap();
+    assert!(!key.contains(":dup"), "no library photo has this content: {key}");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// A browsed file that another application replaced since (it has another size) is not what its record says: the scan
+/// reads it again, so the content stored at the browse (the old file's, which the library also has) doesn't make it a
+/// duplicate, and importing it brings the record up to date as it joins the library.
+#[test]
+fn a_browsed_file_replaced_since_is_read_again_before_it_joins_the_library() {
+    let src = temp_dir("browsed-replaced");
+    let (a, b) = (src.join("a.png"), src.join("b.png"));
+    write_png(&a, 75);
+    std::fs::copy(&a, &b).unwrap();
+    let mut s = Session::new().with_fs();
+    // b is in the library; a was only browsed, with the same bytes
+    s.execute("library.import", &json!({"paths": [b]})).unwrap();
+    let r = s.execute("library.import", &json!({"paths": [a], "local": true})).unwrap();
+    let id = r["imported"][0].as_u64().unwrap();
+    let old = s.catalog.photo(lightcraft_catalog::PhotoId(id)).unwrap().content_hash.clone();
+    let scan = s.execute("library.importPreview", &json!({"paths": [a]})).unwrap();
+    assert_eq!(scan["candidates"][0]["duplicate"], "content", "the file is what was browsed, and the library has its bytes: {scan}");
+    write_png_sized(&a, 9, 64, 40);
+    let scan = s.execute("library.importPreview", &json!({"paths": [a]})).unwrap();
+    assert!(scan["candidates"][0]["duplicate"].is_null(), "the file that is there now is new to the library: {scan}");
+    assert_eq!(scan["candidates"][0]["width"], 64, "{scan}");
+    assert_eq!(scan["candidates"][0]["local"], true, "it still says it was only browsed (Copy and Move leave it out): {scan}");
+    assert_eq!(scan["candidates"][0]["existing"], id, "and names the record: {scan}");
+    let r = s.execute("library.import", &json!({"paths": [a]})).unwrap();
+    assert_eq!(r["imported"], json!([id]), "the same record joins the library: {r}");
+    let p = s.catalog.photo(lightcraft_catalog::PhotoId(id)).unwrap();
+    assert!(!p.local, "it is in the library now");
+    assert_eq!((p.width, p.height, p.file_size), (64, 40, std::fs::metadata(&a).unwrap().len()), "the record describes the file it has now");
+    assert_ne!(p.content_hash, old, "and holds its content, not the old file's");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// A browsed file replaced by a copy of a photo the library has is a duplicate of that photo, and its record stays
+/// browsed.
+#[test]
+fn a_browsed_file_replaced_by_a_copy_of_a_library_photo_is_a_duplicate() {
+    let src = temp_dir("browsed-replaced-dup");
+    let (a, c) = (src.join("a.png"), src.join("c.png"));
+    write_png(&a, 75);
+    write_png_sized(&c, 9, 64, 40);
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [c]})).unwrap();
+    let library_id = r["imported"][0].as_u64().unwrap();
+    let r = s.execute("library.import", &json!({"paths": [a], "local": true})).unwrap();
+    let id = r["imported"][0].as_u64().unwrap();
+    std::fs::copy(&c, &a).unwrap();
+    let scan = s.execute("library.importPreview", &json!({"paths": [a]})).unwrap();
+    assert_eq!(scan["candidates"][0]["duplicate"], "content", "{scan}");
+    assert_eq!(scan["candidates"][0]["existing"], library_id, "of the library's photo: {scan}");
+    assert_eq!(scan["candidates"][0]["local"], true, "it is still the browsed record's file (Copy and Move leave it out): {scan}");
+    let r = s.execute("library.import", &json!({"paths": [a]})).unwrap();
+    assert_eq!(ids(&r, "imported"), 0, "{r}");
+    assert_eq!(r["duplicates"][0]["existing"], library_id, "{r}");
+    assert!(s.catalog.photo(lightcraft_catalog::PhotoId(id)).unwrap().local, "the record was not brought in");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// ✕ while the sizes of browsed files are checked: a file that wasn't checked is not promoted (it stays a browsed record),
+/// where the check used to run for every file whatever the ✕ said.
+#[test]
+fn a_cancelled_import_does_not_promote_a_browsed_file_it_did_not_check() {
+    use crate::import::{ImportJob, ImportOptions, commit_prepared};
+    let src = temp_dir("browsed-cancel-import");
+    let a = src.join("a.png");
+    write_png(&a, 75);
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [a], "local": true})).unwrap();
+    let id = r["imported"][0].as_u64().unwrap();
+    let mut job = ImportJob::new(&mut s, ImportOptions::default()).unwrap();
+    let cancel = std::sync::atomic::AtomicBool::new(true);
+    let prepared = job.prepare(&[a.to_string_lossy().to_string()], &cancel);
+    let report = commit_prepared(&mut s, &job.opts, job.now(), prepared).unwrap();
+    assert!(report.imported.is_empty() && report.duplicates.is_empty(), "nothing was decided about the file: {report:?}");
+    assert!(s.catalog.photo(lightcraft_catalog::PhotoId(id)).unwrap().local, "the record is still only browsed");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// ✕ while a scan checks the sizes of browsed files: a file that wasn't checked is not offered as the record's own (it is
+/// one of the files the scan didn't reach, like the ones after it).
+#[test]
+fn a_cancelled_scan_does_not_vouch_for_a_browsed_file_it_did_not_check() {
+    use crate::import::{ScanInput, ScanProgress, scan_with};
+    let src = temp_dir("browsed-cancel-scan");
+    let a = src.join("a.png");
+    write_png(&a, 75);
+    let mut s = Session::new().with_fs();
+    s.execute("library.import", &json!({"paths": [a], "local": true})).unwrap();
+    let (input, paths) = ScanInput::new(&mut s, &[a.to_string_lossy().to_string()]);
+    let progress = ScanProgress::default();
+    progress.cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+    let out = scan_with(input, &paths, &progress);
+    assert_eq!(out.candidates.len(), 1);
+    assert!(!out.candidates[0].local && out.candidates[0].error.is_some(), "not vouched for as the browsed record's file: {:?}", out.candidates[0]);
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// A file of its own with the new content of a replaced browsed file stands in for it when copying leaves it out.
+#[test]
+fn a_twin_of_a_replaced_browsed_file_stands_in_for_it_when_copying() {
+    let src = temp_dir("browsed-replaced-twin");
+    let (a, d) = (src.join("a.png"), src.join("d.png"));
+    write_png(&a, 75);
+    let mut s = Session::new().with_fs();
+    s.execute("library.import", &json!({"paths": [a], "local": true})).unwrap();
+    write_png_sized(&a, 9, 64, 40);
+    std::fs::copy(&a, &d).unwrap();
+    let scan = s.execute("library.importPreview", &json!({"paths": [a, d]})).unwrap();
+    let found = scan["candidates"].as_array().unwrap();
+    assert_eq!(found[0]["local"], true, "{scan}");
+    assert_eq!(found[1]["duplicate"], "content", "{scan}");
+    assert_eq!(found[1]["browsedTwin"], found[0]["path"], "{scan}");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// A browsed file replaced by a copy of another browsed file isn't a stand-in: the first file of its own is.
+#[test]
+fn a_replaced_browsed_file_does_not_take_the_stand_in_of_another_browsed_file() {
+    let src = temp_dir("browsed-replaced-standin");
+    let (a, b, d) = (src.join("a.png"), src.join("b.png"), src.join("d.png"));
+    write_png(&a, 75);
+    write_png_sized(&b, 9, 64, 40);
+    let mut s = Session::new().with_fs();
+    s.execute("library.import", &json!({"paths": [a, b], "local": true})).unwrap();
+    std::fs::copy(&a, &b).unwrap();
+    std::fs::copy(&a, &d).unwrap();
+    let scan = s.execute("library.importPreview", &json!({"paths": [a, b, d]})).unwrap();
+    let found = scan["candidates"].as_array().unwrap();
+    assert!(found[1]["browsedTwin"].is_null(), "a browsed file doesn't stand in: {scan}");
+    assert_eq!(found[2]["browsedTwin"], found[0]["path"], "the file of its own does: {scan}");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// "Import as new" replaces the trashed library photo with the same content when the browsed twin
+/// is promoted, as it does for a new file.
+#[test]
+fn promoting_a_browsed_twin_as_new_replaces_the_trashed_library_photo() {
+    let src = temp_dir("browsed-fresh");
+    let original = src.join("original.png");
+    let twin = src.join("browsed.png");
+    write_png(&original, 77);
+    std::fs::copy(&original, &twin).unwrap();
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [original]})).unwrap();
+    let old = r["imported"][0].as_u64().unwrap();
+    let r = s.execute("library.import", &json!({"paths": [twin], "local": true})).unwrap();
+    let local = r["imported"][0].as_u64().unwrap();
+    s.execute("photo.delete", &json!({"ids": [old]})).unwrap();
+    let r = s.execute("library.import", &json!({"paths": [twin], "onDeleted": "fresh"})).unwrap();
+    assert_eq!(r["imported"], json!([local]), "{r}");
+    let trashed = s.catalog.photos().filter(|p| p.deleted).count();
+    assert_eq!(trashed, 0, "the trashed twin is gone");
+    assert!(s.catalog.photo(lightcraft_catalog::PhotoId(local)).is_some_and(|p| p.in_library()));
+    let _ = std::fs::remove_dir_all(src);
+}
+
+/// Restoring a trashed library photo by the content of a browsed file doesn't relink it onto the
+/// path the browse record holds: that would leave two records on one file.
+#[test]
+fn restoring_by_a_browsed_twin_does_not_relink_onto_its_path() {
+    let src = temp_dir("browsed-restore");
+    let original = src.join("original.png");
+    let renamed = src.join("renamed.png");
+    write_png(&original, 78);
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [original]})).unwrap();
+    let old = r["imported"][0].as_u64().unwrap();
+    std::fs::rename(&original, &renamed).unwrap();
+    s.execute("photo.delete", &json!({"ids": [old]})).unwrap();
+    let r = s.execute("library.import", &json!({"paths": [renamed], "local": true})).unwrap();
+    let local = r["imported"][0].as_u64().unwrap();
+    let r = s.execute("library.import", &json!({"paths": [renamed]})).unwrap();
+    assert_eq!(r["restored"], json!([old]), "{r}");
+    let on_path = s.catalog.photos().filter(|p| matches!(&p.source, lightcraft_catalog::Source::File { path } if Path::new(path) == renamed)).count();
+    assert_eq!(on_path, 1, "one record holds the renamed file");
+    assert!(s.catalog.photo(lightcraft_catalog::PhotoId(local)).is_some_and(|p| p.local), "the browse record is left alone");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+#[test]
+fn local_twin_does_not_block_reimport_after_permanent_delete_and_restart() {
+    use lightcraft_catalog::PhotoId;
+    for mode in ["add", "copy"] {
+        let src = temp_dir(&format!("local-twin-src-{mode}"));
+        let lib = temp_dir(&format!("local-twin-lib-{mode}"));
+        let original = src.join("original.png");
+        let twin = src.join("browsed.png");
+        write_png(&original, 71);
+        std::fs::copy(&original, &twin).unwrap();
+        let bytes = std::fs::read(&original).unwrap();
+        let mut s = Session::new().with_fs();
+        s.open_library(&lib, false).unwrap();
+        let r = s.execute("library.import", &json!({"paths": [original], "mode": mode})).unwrap();
+        let old = r["imported"][0].as_u64().unwrap();
+        let r = s.execute("library.import", &json!({"paths": [twin], "local": true})).unwrap();
+        let local = PhotoId(r["imported"][0].as_u64().unwrap());
+        let before = s.catalog.photo(local).unwrap().clone();
+        s.execute("photo.delete", &json!({"ids": [old]})).unwrap();
+        s.execute("library.source", &json!({"kind": "recentlyDeleted"})).unwrap();
+        s.execute("library.select", &json!({"ids": [old]})).unwrap();
+        s.execute("photo.deletePermanently", &json!({"ids": [old]})).unwrap();
+        s.close_library().unwrap();
+        s.open_library(&lib, false).unwrap();
+        let scan = s.execute("library.importPreview", &json!({"paths": [original]})).unwrap();
+        assert_eq!(scan["duplicates"], 0, "a browsed copy is not a library duplicate: {scan}");
+        let r = s.execute("library.import", &json!({"paths": [original], "mode": mode})).unwrap();
+        assert_eq!(ids(&r, "imported"), 1, "{r}");
+        assert_eq!(ids(&r, "restored"), 0);
+        assert_eq!(ids(&r, "duplicates"), 0);
+        assert_ne!(r["imported"][0], old);
+        assert_eq!(s.catalog.photo(local).unwrap(), &before, "leave the other path's browse record alone");
+        assert_eq!(s.catalog.photos().filter(|p| p.in_library()).count(), 1);
+        let scan = s.execute("library.importPreview", &json!({"paths": [original]})).unwrap();
+        assert_eq!(scan["duplicates"], 1, "the actual library photo still counts");
+        assert_eq!(std::fs::read(&original).unwrap(), bytes);
+        assert_eq!(std::fs::read(&twin).unwrap(), bytes);
+        s.close_library().unwrap();
+        let _ = std::fs::remove_dir_all(src);
+        let _ = std::fs::remove_dir_all(lib);
+    }
+}
+
+#[test]
+fn local_twin_import_matches_the_library_photo_before_promoting() {
+    use lightcraft_catalog::PhotoId;
+    let src = temp_dir("local-twin-priority");
+    let original = src.join("original.png");
+    let twin = src.join("browsed.png");
+    write_png(&original, 72);
+    std::fs::copy(&original, &twin).unwrap();
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [original]})).unwrap();
+    let id = r["imported"][0].as_u64().unwrap();
+    s.execute("photo.rate", &json!({"ids": [id], "rating": 5})).unwrap();
+    let r = s.execute("library.import", &json!({"paths": [twin], "local": true})).unwrap();
+    let local = PhotoId(r["imported"][0].as_u64().unwrap());
+    let scan = s.execute("library.importPreview", &json!({"paths": [twin]})).unwrap();
+    assert_eq!(scan["duplicates"], 1, "{scan}");
+    assert_eq!(scan["candidates"][0]["existing"], id);
+    let r = s.execute("library.import", &json!({"paths": [twin]})).unwrap();
+    assert_eq!(ids(&r, "imported"), 0);
+    assert_eq!(r["duplicates"][0]["existing"], id);
+    s.execute("photo.delete", &json!({"ids": [id]})).unwrap();
+    let r = s.execute("library.import", &json!({"paths": [twin], "onDeleted": "skip"})).unwrap();
+    assert_eq!(ids(&r, "imported"), 0, "skip must not promote the local twin: {r}");
+    assert_eq!(r["duplicates"][0]["existingDeleted"], true);
+    let r = s.execute("library.import", &json!({"paths": [twin]})).unwrap();
+    assert_eq!(r["restored"], json!([id]));
+    assert!(s.catalog.photo(local).unwrap().local);
+    assert_eq!(s.catalog.photo(PhotoId(id)).unwrap().rating, 5);
+    let _ = std::fs::remove_dir_all(src);
+}
+
+#[test]
+fn local_twins_are_deduplicated_when_promoted_in_one_import() {
+    let src = temp_dir("local-twin-batch");
+    let a = src.join("a.png");
+    let b = src.join("b.png");
+    let c = src.join("c.png");
+    write_png(&a, 73);
+    std::fs::copy(&a, &b).unwrap();
+    std::fs::copy(&a, &c).unwrap();
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [a, b], "local": true})).unwrap();
+    assert_eq!(ids(&r, "imported"), 2, "browsing shows both paths: {r}");
+    let scan = s.execute("library.importPreview", &json!({"paths": [a, b, c]})).unwrap();
+    assert_eq!(scan["duplicates"], 2, "only one candidate per content: {scan}");
+    let r = s.execute("library.import", &json!({"paths": [a, b, c]})).unwrap();
+    assert_eq!(ids(&r, "imported"), 1, "{r}");
+    assert_eq!(ids(&r, "duplicates"), 2);
+    assert_eq!(s.catalog.photos().filter(|p| p.in_library()).count(), 1);
+    assert_eq!(s.catalog.photos().filter(|p| p.local).count(), 1);
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(s.catalog.photos().filter(|p| p.in_library()).count(), 0);
+    assert_eq!(s.catalog.photos().filter(|p| p.local).count(), 2);
+    let _ = std::fs::remove_dir_all(src);
+}
+
+#[test]
+fn twins_of_a_browsed_photo_are_copies_in_the_source_not_library_duplicates() {
+    let src = temp_dir("local-twin-scan");
+    let a = src.join("a.png");
+    let b = src.join("b.png");
+    let c = src.join("c.png");
+    let d = src.join("d.png");
+    write_png(&a, 75);
+    std::fs::copy(&a, &b).unwrap();
+    std::fs::copy(&a, &c).unwrap();
+    std::fs::copy(&a, &d).unwrap();
+    let mut s = Session::new().with_fs();
+    s.execute("library.import", &json!({"paths": [a, b], "local": true})).unwrap();
+    let scan = s.execute("library.importPreview", &json!({"paths": [a, b, c, d]})).unwrap();
+    let found = scan["candidates"].as_array().unwrap();
+    assert_eq!(found.len(), 4, "{scan}");
+    assert_eq!(found[0]["local"], true, "{scan}");
+    assert!(found[0]["duplicate"].is_null(), "the first browsed copy is offered: {scan}");
+    for twin in &found[1..] {
+        assert_eq!(twin["duplicate"], "content", "{scan}");
+        assert!(twin["existing"].is_null(), "no library photo has these bytes, a browsed record isn't one: {scan}");
+    }
+    // (copying leaves the browsed photo out: the first file of its own stands in for it, once)
+    assert!(found[1]["browsedTwin"].is_null(), "a browsed twin doesn't: {scan}");
+    assert_eq!(found[2]["browsedTwin"], found[0]["path"], "{scan}");
+    assert!(found[3]["browsedTwin"].is_null(), "{scan}");
+    let _ = std::fs::remove_dir_all(src);
+}
+
+#[test]
+fn local_twin_promotion_counts_across_background_import_batches() {
+    use crate::import::{ImportJob, ImportOptions, commit_prepared};
+    let src = temp_dir("local-twin-worker");
+    let a = src.join("a.png");
+    let b = src.join("b.png");
+    let c = src.join("c.png");
+    write_png(&a, 74);
+    std::fs::copy(&a, &b).unwrap();
+    std::fs::copy(&a, &c).unwrap();
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [a, b], "local": true})).unwrap();
+    let id = r["imported"][0].as_u64().unwrap();
+    s.execute("photo.rate", &json!({"ids": [id], "rating": 4})).unwrap();
+    let mut job = ImportJob::new(&mut s, ImportOptions::default()).unwrap();
+    let cancel = std::sync::atomic::AtomicBool::new(false);
+    let first = job.prepare(&[a.to_string_lossy().to_string()], &cancel);
+    let report = commit_prepared(&mut s, &job.opts, job.now(), first).unwrap();
+    assert_eq!(report.imported, [id], "promote the existing record with its edits");
+    assert_eq!(s.catalog.photo(lightcraft_catalog::PhotoId(id)).unwrap().rating, 4);
+    let next = job.prepare(&[b.to_string_lossy().to_string(), c.to_string_lossy().to_string()], &cancel);
+    let report = commit_prepared(&mut s, &job.opts, job.now(), next).unwrap();
+    assert!(report.imported.is_empty());
+    assert_eq!(report.duplicates.len(), 2);
+    assert!(report.duplicates.iter().all(|d| d.existing == Some(id)));
+    assert_eq!(s.catalog.photos().filter(|p| p.in_library()).count(), 1);
+    let _ = std::fs::remove_dir_all(src);
 }
 
 #[test]
@@ -1168,6 +1583,34 @@ fn smart_previews_stand_in_for_offline_originals() {
     s.execute("library.smartPreviews", &json!({"discard": true})).unwrap();
     s.media.forget(id);
     assert!(s.render_now(id, 48, 32).is_err());
+    let _ = std::fs::remove_dir_all(src.with_extension("offline"));
+    let _ = std::fs::remove_dir_all(&lib);
+}
+
+/// The app asks whether an original is there from a cache a worker fills, and about its smart preview
+/// only once the original is known to be offline. A render that finds the original gone before that
+/// (the drive was unplugged a moment ago, or the photo was never looked at) uses the smart preview all
+/// the same, in the layout it is in: the folders of the older releases keep them flat.
+#[test]
+fn a_render_that_finds_the_original_gone_uses_the_smart_preview_in_either_layout() {
+    let src = temp_dir("smartgone-src");
+    let lib = temp_dir("smartgone-lib");
+    write_png(&src.join("a.png"), 11);
+    let mut s = Session::new().with_fs();
+    s.open_library(&lib, false).unwrap();
+    s.execute("library.import", &json!({"paths": [src.join("a.png").to_string_lossy()]})).unwrap();
+    let id = s.active().unwrap();
+    assert_eq!(s.execute("library.smartPreviews", &json!({})).unwrap()["built"], 1);
+    // as in the app, and nothing is known about the photo yet
+    s.media.availability.run_in_background(std::sync::Arc::new(|| {}));
+    std::fs::rename(&src, src.with_extension("offline")).unwrap();
+    s.media.forget(id);
+    s.render_now(id, 48, 32).expect("renders from the smart preview in the sharded folder");
+    // (another size: not the render just made)
+    let (dir, photo) = (s.media.smart_dir.clone().unwrap(), s.catalog.photo(id).unwrap().clone());
+    std::fs::rename(crate::smart::sharded_file_path(&dir, &photo), dir.join(crate::smart::file_name(&photo))).unwrap();
+    s.media.forget(id);
+    s.render_now(id, 44, 30).expect("renders from the smart preview in the flat folder");
     let _ = std::fs::remove_dir_all(src.with_extension("offline"));
     let _ = std::fs::remove_dir_all(&lib);
 }
@@ -3660,4 +4103,593 @@ fn a_broken_link_before_dotdot_is_an_error() {
     // without reading the disk the spelling is still the folder by name
     assert_eq!(crate::import::browse_spelling(&link.join("..")).unwrap(), dir);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Helper to append a 4-byte-typed box with big-endian size to a byte buffer.
+pub(super) fn write_test_box(out: &mut Vec<u8>, fourcc: &[u8; 4], body: &[u8]) {
+    let size = (body.len() + 8) as u32;
+    out.extend_from_slice(&size.to_be_bytes());
+    out.extend_from_slice(fourcc);
+    out.extend_from_slice(body);
+}
+
+/// Construct a minimal synthetic MP4 byte stream containing ftyp and moov boxes for testing.
+pub(super) fn synthetic_mp4(timescale: u32, duration: u32, width: u32, height: u32, creation_time: u32) -> Vec<u8> {
+    let mut out = Vec::new();
+
+    let mut ftyp = Vec::new();
+    ftyp.extend_from_slice(b"mp42");
+    ftyp.extend_from_slice(&0u32.to_be_bytes());
+    ftyp.extend_from_slice(b"isommp42");
+    write_test_box(&mut out, b"ftyp", &ftyp);
+
+    let mut mvhd = Vec::new();
+    mvhd.push(0);
+    mvhd.extend_from_slice(&[0, 0, 0]);
+    mvhd.extend_from_slice(&creation_time.to_be_bytes());
+    mvhd.extend_from_slice(&0u32.to_be_bytes());
+    mvhd.extend_from_slice(&timescale.to_be_bytes());
+    mvhd.extend_from_slice(&duration.to_be_bytes());
+    mvhd.extend_from_slice(&0x00010000u32.to_be_bytes());
+    mvhd.extend_from_slice(&0x0100u16.to_be_bytes());
+    mvhd.extend_from_slice(&[0; 10]);
+    mvhd.extend_from_slice(&0x00010000u32.to_be_bytes());
+    mvhd.extend_from_slice(&0u32.to_be_bytes());
+    mvhd.extend_from_slice(&0u32.to_be_bytes());
+    mvhd.extend_from_slice(&0u32.to_be_bytes());
+    mvhd.extend_from_slice(&0x00010000u32.to_be_bytes());
+    mvhd.extend_from_slice(&0u32.to_be_bytes());
+    mvhd.extend_from_slice(&0u32.to_be_bytes());
+    mvhd.extend_from_slice(&0u32.to_be_bytes());
+    mvhd.extend_from_slice(&0x40000000u32.to_be_bytes());
+    mvhd.extend_from_slice(&[0; 24]);
+    mvhd.extend_from_slice(&2u32.to_be_bytes());
+
+    let mut tkhd = Vec::new();
+    tkhd.push(0);
+    tkhd.extend_from_slice(&[0, 0, 1]);
+    tkhd.extend_from_slice(&creation_time.to_be_bytes());
+    tkhd.extend_from_slice(&0u32.to_be_bytes());
+    tkhd.extend_from_slice(&1u32.to_be_bytes());
+    tkhd.extend_from_slice(&0u32.to_be_bytes());
+    tkhd.extend_from_slice(&duration.to_be_bytes());
+    tkhd.extend_from_slice(&[0; 8]);
+    tkhd.extend_from_slice(&0u16.to_be_bytes());
+    tkhd.extend_from_slice(&0u16.to_be_bytes());
+    tkhd.extend_from_slice(&0u16.to_be_bytes());
+    tkhd.extend_from_slice(&0u16.to_be_bytes());
+    tkhd.extend_from_slice(&0x00010000u32.to_be_bytes());
+    tkhd.extend_from_slice(&0u32.to_be_bytes());
+    tkhd.extend_from_slice(&0u32.to_be_bytes());
+    tkhd.extend_from_slice(&0u32.to_be_bytes());
+    tkhd.extend_from_slice(&0x00010000u32.to_be_bytes());
+    tkhd.extend_from_slice(&0u32.to_be_bytes());
+    tkhd.extend_from_slice(&0u32.to_be_bytes());
+    tkhd.extend_from_slice(&0u32.to_be_bytes());
+    tkhd.extend_from_slice(&0x40000000u32.to_be_bytes());
+    tkhd.extend_from_slice(&(width << 16).to_be_bytes());
+    tkhd.extend_from_slice(&(height << 16).to_be_bytes());
+
+    let mut mdia = Vec::new();
+    let mut hdlr = Vec::new();
+    hdlr.extend_from_slice(&[0, 0, 0, 0]);
+    hdlr.extend_from_slice(&0u32.to_be_bytes());
+    hdlr.extend_from_slice(b"vide");
+    hdlr.extend_from_slice(&[0; 12]);
+    hdlr.extend_from_slice(b"VideoHandler\0");
+    write_test_box(&mut mdia, b"hdlr", &hdlr);
+
+    let mut trak = Vec::new();
+    write_test_box(&mut trak, b"tkhd", &tkhd);
+    write_test_box(&mut trak, b"mdia", &mdia);
+
+    let mut moov = Vec::new();
+    write_test_box(&mut moov, b"mvhd", &mvhd);
+    write_test_box(&mut moov, b"trak", &trak);
+
+    write_test_box(&mut out, b"moov", &moov);
+    out
+}
+
+/// Verify importing MP4/MOV videos catalogs them with MediaKind::Video and correct duration.
+#[test]
+fn video_files_import_with_duration_and_kind() {
+    let src = temp_dir("video-import");
+    // 2026-05-04 10:00:00 UTC = 1_777_888_800 Unix seconds.
+    // In Mac 1904 epoch (+ 2_082_844_800): 3_860_733_600.
+    let mac_secs = 2_082_844_800u64 + 1_777_888_800u64;
+    let mp4_bytes = synthetic_mp4(1000, 84_500, 1920, 1080, mac_secs as u32);
+    let clip_path = src.join("clip.mp4");
+    std::fs::write(&clip_path, &mp4_bytes).unwrap();
+
+    let mut s = Session::new().with_fs();
+
+    // Verify scan candidates report duration and MediaKind::Video
+    let candidates = crate::import::scan(&mut s, &[clip_path.to_string_lossy().into_owned()]);
+    assert_eq!(candidates.len(), 1);
+    let c = &candidates[0];
+    assert_eq!(c.kind, lightcraft_catalog::MediaKind::Video);
+    assert_eq!(c.format, "MP4");
+    assert_eq!(c.width, 1920);
+    assert_eq!(c.height, 1080);
+    assert_eq!(c.duration, Some(84.5));
+    assert_eq!(c.captured.as_deref(), Some("2026-05-04T10:00:00+00:00"));
+
+    // Import into library
+    let r = s.execute("library.import", &json!({"paths": [src.to_string_lossy()]})).unwrap();
+    assert_eq!((ids(&r, "imported"), ids(&r, "failed")), (1, 0), "{r}");
+    assert_eq!(s.catalog.len(), 1);
+
+    let photo = s.catalog.photos().next().unwrap();
+    assert_eq!(photo.kind, lightcraft_catalog::MediaKind::Video);
+    assert_eq!(photo.duration, Some(84.5));
+    assert_eq!(photo.format, "MP4");
+    assert_eq!(photo.width, 1920);
+    assert_eq!(photo.height, 1080);
+    assert_eq!(photo.captured.as_deref(), Some("2026-05-04T10:00:00+00:00"));
+
+    let _ = std::fs::remove_dir_all(&src);
+
+    // An unreadable video with ftyp box only fails to probe rather than cataloguing as 0x0 video
+    let truncated_ftyp = b"\0\0\0\x18ftypmp42\0\0\0\0mp42isom";
+    assert!(crate::files::probe_bytes("bad.mp4", truncated_ftyp).is_err());
+}
+
+/// Verify importing videos supports Copy mode with date-based folder organization.
+#[test]
+fn video_files_support_copy_and_date_organization() {
+    let src = temp_dir("video-copy-src");
+    let lib = temp_dir("video-copy-lib");
+
+    let mac_secs = 2_082_844_800u64 + 1_777_888_800u64; // 2026-05-04 10:00:00
+    let mp4_bytes = synthetic_mp4(1000, 15_000, 3840, 2160, mac_secs as u32);
+    let clip_path = src.join("clip.mp4");
+    std::fs::write(&clip_path, &mp4_bytes).unwrap();
+
+    let mut s = Session::new().with_fs();
+    s.open_library(&lib, false).unwrap();
+
+    let r = s
+        .execute(
+            "library.import",
+            &json!({
+                "paths": [src.to_string_lossy()],
+                "mode": "copy",
+                "organize": "byDay",
+            }),
+        )
+        .unwrap();
+    assert_eq!((ids(&r, "imported"), ids(&r, "failed")), (1, 0), "{r}");
+
+    let photo = s.catalog.photos().next().unwrap();
+    assert_eq!(photo.kind, lightcraft_catalog::MediaKind::Video);
+    assert_eq!(photo.duration, Some(15.0));
+
+    // Originals should be filed under Originals/2026/2026-05-04/clip.mp4
+    let stored_path = match &photo.source {
+        lightcraft_catalog::Source::File { path } => path.clone(),
+        _ => panic!("expected File source"),
+    };
+    let normalized = stored_path.replace('\\', "/");
+    assert!(normalized.ends_with("/Originals/2026/2026-05-04/clip.mp4"), "expected date-based organization, got: {stored_path}");
+
+    let _ = std::fs::remove_dir_all(&src);
+    let _ = std::fs::remove_dir_all(&lib);
+}
+
+/// Verify video smart collection rules match on kind and duration.
+#[test]
+fn video_smart_collections_and_rule_matching() {
+    let src = temp_dir("video-rules");
+    let mac_secs = 2_082_844_800u64 + 1_777_888_800u64;
+    let clip1 = synthetic_mp4(1000, 120_000, 1920, 1080, mac_secs as u32); // 2 minutes
+    let clip2 = synthetic_mp4(1000, 10_000, 1920, 1080, mac_secs as u32); // 10 seconds
+
+    std::fs::write(src.join("long.mp4"), &clip1).unwrap();
+    std::fs::write(src.join("short.mp4"), &clip2).unwrap();
+    write_png(&src.join("photo.png"), 42);
+
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [src.to_string_lossy()]})).unwrap();
+    assert_eq!(ids(&r, "imported"), 3, "{r}");
+
+    let photos: Vec<_> = s.catalog.photos().cloned().collect();
+    let long_clip = photos.iter().find(|p| p.file_name == "long.mp4").unwrap();
+    let short_clip = photos.iter().find(|p| p.file_name == "short.mp4").unwrap();
+    let photo = photos.iter().find(|p| p.file_name == "photo.png").unwrap();
+
+    use lightcraft_catalog::rules::Rule;
+
+    // Check kind rule
+    let video_rule = Rule::Field { field: "kind".into(), op: "is".into(), value: json!("video") };
+    assert!(video_rule.matches(long_clip, &s.catalog));
+    assert!(video_rule.matches(short_clip, &s.catalog));
+    assert!(!video_rule.matches(photo, &s.catalog));
+
+    // Check duration rule
+    let gt_minute = Rule::Field { field: "duration".into(), op: "gt".into(), value: json!(60) };
+    assert!(gt_minute.matches(long_clip, &s.catalog));
+    assert!(!gt_minute.matches(short_clip, &s.catalog));
+    assert!(!gt_minute.matches(photo, &s.catalog));
+
+    let _ = std::fs::remove_dir_all(&src);
+}
+
+/// Verify catalogued videos are never scheduled for render, thumbnail, variant, or smart preview jobs.
+#[test]
+fn the_bounded_video_reader_skips_an_mdat_before_moov() {
+    let src = temp_dir("video-mdat-first");
+    let file = synthetic_mp4(1000, 84_500, 640, 360, 0);
+    let ftyp_len = u32::from_be_bytes([file[0], file[1], file[2], file[3]]) as usize;
+    let mut bytes = file[..ftyp_len].to_vec();
+    // a 64-bit `mdat` between ftyp and moov: the reader seeks over the payload
+    let payload = vec![0u8; 4096];
+    bytes.extend_from_slice(&1u32.to_be_bytes());
+    bytes.extend_from_slice(b"mdat");
+    bytes.extend_from_slice(&((16 + payload.len()) as u64).to_be_bytes());
+    bytes.extend_from_slice(&payload);
+    bytes.extend_from_slice(&file[ftyp_len..]);
+    for name in ["clip.mp4", "clip.jpg", "clip.dng"] {
+        std::fs::write(src.join(name), &bytes).unwrap();
+    }
+
+    let mut s = Session::new().with_fs();
+    let candidates = crate::import::scan(&mut s, &[src.to_string_lossy().into_owned()]);
+    assert_eq!(candidates.len(), 3);
+    for candidate in candidates {
+        assert_eq!(candidate.kind, lightcraft_catalog::MediaKind::Video);
+        assert_eq!(candidate.duration, Some(84.5));
+        assert!(candidate.error.is_none(), "{:?}", candidate.error);
+    }
+    let _ = std::fs::remove_dir_all(&src);
+}
+
+#[test]
+fn video_metadata_after_thousands_of_fragments_is_read_without_the_payloads() {
+    let file = synthetic_mp4(1000, 84_500, 640, 360, 0);
+    let ftyp_len = u32::from_be_bytes(file[..4].try_into().unwrap()) as usize;
+    let mut fragmented = file[..ftyp_len].to_vec();
+    for _ in 0..2048 {
+        for kind in [b"moof", b"mdat"] {
+            fragmented.extend_from_slice(&8u32.to_be_bytes());
+            fragmented.extend_from_slice(kind);
+        }
+    }
+    fragmented.extend_from_slice(&file[ftyp_len..]);
+    let mut reader = std::io::Cursor::new(&fragmented);
+    // Import and display skip fragments entirely: their payloads never count against the cap.
+    let metadata = crate::files::read_video_metadata_from(&mut reader, fragmented.len() as u64, "fragmented.mp4").unwrap();
+    assert_eq!(metadata, file, "fragment boxes are skipped; only the movie metadata is retained");
+    assert_eq!(lightcraft_meta::probe_video(&metadata).unwrap().duration, Some(84.5));
+
+    // The location check asks for the fragments too: their metadata may hide a place. Payload
+    // boxes (mdat) are still skipped.
+    let mut expected = file[..ftyp_len].to_vec();
+    for _ in 0..2048 {
+        expected.extend_from_slice(&8u32.to_be_bytes());
+        expected.extend_from_slice(b"moof");
+    }
+    expected.extend_from_slice(&file[ftyp_len..]);
+    let mut reader = std::io::Cursor::new(&fragmented);
+    let with_fragments = crate::files::read_video_metadata_from_with_fragments(&mut reader, fragmented.len() as u64, "fragmented.mp4", true).unwrap();
+    assert_eq!(with_fragments, expected, "fragment payloads are skipped; moof metadata is retained for verification");
+    assert_eq!(lightcraft_meta::probe_video(&with_fragments).unwrap().duration, Some(84.5));
+}
+
+#[test]
+fn candidate_thumbnails_skip_legacy_videos_and_failed_probes() {
+    let src = temp_dir("legacy-video-candidate");
+    write_png(&src.join("photo.png"), 42);
+    let mut s = Session::new().with_fs();
+    let mut candidates = crate::import::scan(&mut s, &[src.to_string_lossy().into_owned()]);
+    let mut candidate = candidates.pop().unwrap();
+    assert!(s.candidate_thumb_job(&candidate, 256, 0).is_some());
+    candidate.error = Some("unreadable original".into());
+    assert!(s.candidate_thumb_job(&candidate, 256, 0).is_none());
+    candidate.error = None;
+    candidate.name = "legacy.mov".into();
+    candidate.path = "/legacy.mov".into();
+    candidate.format = "VIDEO".into();
+    assert_eq!(candidate.kind, lightcraft_catalog::MediaKind::Image);
+    assert!(s.candidate_thumb_job(&candidate, 256, 0).is_none());
+    candidate.kind = lightcraft_catalog::MediaKind::Video;
+    assert!(s.candidate_thumb_job(&candidate, 256, 0).is_none());
+    std::fs::remove_dir_all(src).unwrap();
+}
+
+/// A moov over the 64 MiB metadata cap is refused instead of read.
+#[test]
+fn a_moov_over_the_metadata_cap_is_refused_without_reading_it() {
+    let src = temp_dir("video-big-moov");
+    let path = src.join("big.mp4");
+    const CAP: u64 = 64 * 1024 * 1024;
+    let total = CAP + 16;
+    let mut f = std::fs::File::create(&path).unwrap();
+    let mut header = Vec::new();
+    header.extend_from_slice(&1u32.to_be_bytes()); // 64-bit box size
+    header.extend_from_slice(b"moov");
+    header.extend_from_slice(&total.to_be_bytes());
+    std::io::Write::write_all(&mut f, &header).unwrap();
+    f.set_len(total).unwrap(); // sparse: the test does not write 64 MiB
+    drop(f);
+
+    let (_, probe) = crate::files::fs_hooks();
+    for name in ["big.mp4", "big.jpg", "big.dng"] {
+        let renamed = src.join(name);
+        if renamed != path {
+            std::fs::hard_link(&path, &renamed).unwrap();
+        }
+        let err = probe(&renamed.to_string_lossy()).expect_err("a moov over the cap is an error whatever its extension");
+        assert!(err.contains("64MB"), "{err}");
+    }
+    let _ = std::fs::remove_dir_all(&src);
+}
+
+/// A PNG named .mp4 is probed as the PNG it is, not catalogued as a video.
+#[test]
+fn a_file_named_mp4_that_is_not_a_container_is_probed_as_what_it_is() {
+    let src = temp_dir("video-misnamed");
+    write_png(&src.join("really-a-photo.mp4"), 7);
+    let mut s = Session::new().with_fs();
+    let candidates = crate::import::scan(&mut s, &[src.to_string_lossy().into_owned()]);
+    assert_eq!(candidates.len(), 1);
+    assert_eq!(candidates[0].kind, lightcraft_catalog::MediaKind::Image, "{:?}", candidates[0].error);
+    assert_eq!(candidates[0].format, "PNG");
+    assert_eq!((candidates[0].width, candidates[0].height), (48, 32));
+    let r = s.execute("library.import", &json!({"paths": [src.to_string_lossy()]})).unwrap();
+    assert_eq!(ids(&r, "imported"), 1, "{r}");
+    let p = s.catalog.photos().next().unwrap();
+    assert!(!p.is_video(), "an image misnamed .mp4 is not a video in the catalog");
+    let _ = std::fs::remove_dir_all(&src);
+}
+
+/// A raw file whose name says .mp4 is catalogued as the raw its bytes are, and never becomes a
+/// video through the extension alone.
+#[test]
+fn a_raw_named_mp4_is_probed_as_a_raw_not_a_video() {
+    let src = temp_dir("raw-misnamed-video");
+    let path = src.join("really-a-raw.mp4");
+    std::fs::write(&path, crate::tests::xmp::synthetic_dng_with(None, lightcraft_meta::Metadata::default())).unwrap();
+    let mut s = Session::new().with_fs();
+    let candidates = crate::import::scan(&mut s, &[src.to_string_lossy().into_owned()]);
+    assert_eq!(candidates.len(), 1);
+    assert_eq!(candidates[0].kind, lightcraft_catalog::MediaKind::Raw, "{:?}", candidates[0].error);
+    let r = s.execute("library.import", &json!({"paths": [src.to_string_lossy()]})).unwrap();
+    assert_eq!(ids(&r, "imported"), 1, "{r}");
+    let p = s.catalog.photos().next().unwrap();
+    assert_eq!(p.kind, lightcraft_catalog::MediaKind::Raw);
+    assert!(!p.is_video(), "a raw named .mp4 is not a video in the catalog");
+    let _ = std::fs::remove_dir_all(&src);
+}
+
+/// A video’s top-level XMP title and keywords reach the catalogued photo.
+#[test]
+fn a_clip_carries_its_top_level_xmp_into_the_catalog() {
+    // Some cameras and editors write XMP in a top-level `uuid` box: the bounded reader keeps it,
+    // and its title and keywords reach the photo (the web build's full-byte probe already did).
+    let src = temp_dir("video-xmp");
+    let mut bytes = synthetic_mp4(1000, 30_000, 640, 360, 0);
+    let xmp = concat!(
+        r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">"#,
+        r#"<rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/">"#,
+        r#"<dc:title><rdf:Alt><rdf:li xml:lang="x-default">Sunset clip</rdf:li></rdf:Alt></dc:title>"#,
+        r#"<dc:subject><rdf:Bag><rdf:li>beach</rdf:li></rdf:Bag></dc:subject>"#,
+        r#"</rdf:Description></rdf:RDF></x:xmpmeta>"#
+    );
+    const XMP_UUID: [u8; 16] = [0xbe, 0x7a, 0xcf, 0xcb, 0x97, 0xa9, 0x42, 0xe8, 0x9c, 0x71, 0x99, 0x94, 0x91, 0xe3, 0xaf, 0xac];
+    bytes.extend_from_slice(&((8 + 16 + xmp.len()) as u32).to_be_bytes());
+    bytes.extend_from_slice(b"uuid");
+    bytes.extend_from_slice(&XMP_UUID);
+    bytes.extend_from_slice(xmp.as_bytes());
+    std::fs::write(src.join("xmp.mp4"), &bytes).unwrap();
+
+    let mut s = Session::new().with_fs();
+    let candidates = crate::import::scan(&mut s, &[src.to_string_lossy().into_owned()]);
+    assert_eq!(candidates.len(), 1);
+    assert_eq!(candidates[0].kind, lightcraft_catalog::MediaKind::Video, "{:?}", candidates[0].error);
+    assert!(candidates[0].error.is_none(), "{:?}", candidates[0].error);
+    let r = s.execute("library.import", &json!({"paths": [src.to_string_lossy()]})).unwrap();
+    assert_eq!(ids(&r, "imported"), 1, "{r}");
+    let photo = s.catalog.photos().next().unwrap();
+    assert_eq!(photo.meta.title, "Sunset clip");
+    assert_eq!(photo.meta.keywords, vec!["beach".to_string()]);
+    let _ = std::fs::remove_dir_all(&src);
+}
+
+/// All Metadata on a clip reads its metadata boxes, never the whole file: a 256 MiB `mdat` (sparse
+/// on disk) sits before the `moov`, and a whole-file reader would go through the byte hook, which fails.
+#[test]
+fn all_metadata_on_a_video_reads_only_its_metadata_boxes() {
+    use std::io::{Seek, SeekFrom, Write};
+    let src = temp_dir("video-all-metadata");
+    let file = synthetic_mp4(1000, 84_500, 640, 360, 0);
+    let ftyp_len = u32::from_be_bytes([file[0], file[1], file[2], file[3]]) as usize;
+    let xmp = concat!(
+        r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">"#,
+        r#"<rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/">"#,
+        r#"<dc:title><rdf:Alt><rdf:li xml:lang="x-default">Sunset clip</rdf:li></rdf:Alt></dc:title>"#,
+        r#"</rdf:Description></rdf:RDF></x:xmpmeta>"#
+    );
+    const XMP_UUID: [u8; 16] = [0xbe, 0x7a, 0xcf, 0xcb, 0x97, 0xa9, 0x42, 0xe8, 0x9c, 0x71, 0x99, 0x94, 0x91, 0xe3, 0xaf, 0xac];
+    let mdat_len: u64 = 256 * 1024 * 1024;
+    let path = src.join("clip.mp4");
+    let mut f = std::fs::File::create(&path).unwrap();
+    f.write_all(&file[..ftyp_len]).unwrap();
+    f.write_all(&1u32.to_be_bytes()).unwrap();
+    f.write_all(b"mdat").unwrap();
+    f.write_all(&mdat_len.to_be_bytes()).unwrap();
+    f.seek(SeekFrom::Start(ftyp_len as u64 + mdat_len)).unwrap();
+    f.write_all(&file[ftyp_len..]).unwrap();
+    f.write_all(&((8 + 16 + xmp.len()) as u32).to_be_bytes()).unwrap();
+    f.write_all(b"uuid").unwrap();
+    f.write_all(&XMP_UUID).unwrap();
+    f.write_all(xmp.as_bytes()).unwrap();
+    drop(f);
+
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [src.to_string_lossy()]})).unwrap();
+    assert_eq!(ids(&r, "imported"), 1, "{r}");
+    let id = s.catalog.photos().next().unwrap().id;
+    assert!(s.catalog.photo(id).unwrap().is_video());
+    s.media.file_bytes = Some(std::sync::Arc::new(|path: &str| Err(format!("{path}: read whole"))));
+
+    let r = s.execute("photo.allMetadata", &json!({"id": id.0})).unwrap();
+    let row = |name: &str| r["exif"].as_array().unwrap().iter().find(|row| row["name"] == name).map(|row| row["value"].as_str().unwrap().to_string());
+    assert_eq!(row("Duration").as_deref(), Some("84.50 s"), "{r}");
+    assert_eq!(row("Width").as_deref(), Some("640"), "{r}");
+    assert!(r["xmp"].as_array().unwrap().iter().any(|x| x["value"] == "Sunset clip"), "{r}");
+    let _ = std::fs::remove_dir_all(&src);
+}
+
+/// A clip whose name has no video extension takes its format from its bytes (a QuickTime `ftyp`
+/// reads as MOV, not the MP4 default).
+#[test]
+fn a_clip_without_a_video_extension_takes_its_sniffed_format() {
+    let src = temp_dir("video-sniffed-format");
+    let mut bytes = synthetic_mp4(1000, 2_000, 640, 360, 0);
+    bytes[8..12].copy_from_slice(b"qt  ");
+    bytes[16..24].copy_from_slice(b"qt  qt  ");
+    std::fs::write(src.join("clip.jpg"), &bytes).unwrap();
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [src.to_string_lossy()]})).unwrap();
+    assert_eq!(ids(&r, "imported"), 1, "{r}");
+    let photo = s.catalog.photos().next().unwrap();
+    assert!(photo.is_video());
+    assert_eq!(photo.format, "MOV");
+    let _ = std::fs::remove_dir_all(&src);
+}
+
+/// Only an XMP `uuid` box joins the metadata: another vendor's `uuid` box is skipped like `mdat`.
+#[test]
+fn the_metadata_reader_keeps_only_the_xmp_uuid_box() {
+    const XMP_UUID: [u8; 16] = [0xbe, 0x7a, 0xcf, 0xcb, 0x97, 0xa9, 0x42, 0xe8, 0x9c, 0x71, 0x99, 0x94, 0x91, 0xe3, 0xaf, 0xac];
+    let mut bytes = synthetic_mp4(1000, 2_000, 640, 360, 0);
+    let moov_and_ftyp = bytes.len();
+    let mut vendor = [7u8; 16].to_vec();
+    vendor.extend_from_slice(&[0xAB; 4096]);
+    write_test_box(&mut bytes, b"uuid", &vendor);
+    let mut xmp = XMP_UUID.to_vec();
+    xmp.extend_from_slice(b"<x:xmpmeta/>");
+    write_test_box(&mut bytes, b"uuid", &xmp);
+    let len = bytes.len() as u64;
+    let kept = crate::files::read_video_metadata_from(&mut std::io::Cursor::new(&bytes), len, "clip.mp4").unwrap();
+    assert_eq!(kept.len(), moov_and_ftyp + 8 + xmp.len());
+    assert!(!kept.contains(&0xAB));
+    assert!(kept.windows(16).any(|w| w == XMP_UUID));
+}
+
+/// Bytes after a complete `moov` that are no box (a camera's trailer, such as Insta360's, or a
+/// few stray bytes) end the movie for import; a known box cut short, or a trailer before any
+/// `moov`, is still an error, and the location check, which must read every byte, refuses both.
+#[test]
+fn a_trailer_after_the_movie_header_ends_the_clip_for_import_only() {
+    let clip = synthetic_mp4(1000, 2_000, 640, 360, 0);
+    let read = |bytes: &[u8], fragments: bool| {
+        crate::files::read_video_metadata_from_with_fragments(&mut std::io::Cursor::new(bytes), bytes.len() as u64, "clip.mp4", fragments)
+    };
+    // a size past the end of the file, under no known box type: not a box
+    let mut camera_trailer = b"\xff\xff\xff\xf0INSV-TRAILER".to_vec();
+    camera_trailer.extend_from_slice(&[0x5A; 120]);
+    camera_trailer.extend_from_slice(b"8db42d694ccc418790edff439fe026bf");
+    for (name, trailer) in
+        [("stray bytes", vec![0xEE; 5]), ("a non-box header", b"\x00\x00\x10\x00ZZZZ".to_vec()), ("a camera trailer", camera_trailer)]
+    {
+        let mut bytes = clip.clone();
+        bytes.extend_from_slice(&trailer);
+        assert_eq!(read(&bytes, false).unwrap(), clip, "{name}: the trailer is left out");
+        assert!(read(&bytes, true).is_err(), "{name}: the location check can't vouch for it");
+    }
+    // an mdat cut short after the moov is a truncated clip, not a trailer
+    let mut truncated = clip.clone();
+    truncated.extend_from_slice(&4096u32.to_be_bytes());
+    truncated.extend_from_slice(b"mdat");
+    truncated.extend_from_slice(&[0; 100]);
+    assert!(read(&truncated, false).is_err());
+    // stray bytes before any moov: the movie header is missing
+    let ftyp_len = u32::from_be_bytes([clip[0], clip[1], clip[2], clip[3]]) as usize;
+    let mut no_moov = clip[..ftyp_len].to_vec();
+    no_moov.extend_from_slice(&[0xEE; 5]);
+    assert!(read(&no_moov, false).is_err());
+
+    // and the clip with a trailer is catalogued
+    let src = temp_dir("video-trailer");
+    let mut bytes = clip.clone();
+    bytes.extend_from_slice(&[0xEE; 7]);
+    std::fs::write(src.join("clip.mp4"), &bytes).unwrap();
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [src.to_string_lossy()]})).unwrap();
+    assert_eq!(ids(&r, "imported"), 1, "{r}");
+    assert!(s.catalog.photos().next().unwrap().is_video());
+    let _ = std::fs::remove_dir_all(&src);
+}
+
+/// A catalogued video (and an old VIDEO entry) gets no render, thumb, face or smart-preview job.
+#[test]
+fn a_catalogued_video_asks_the_renderer_for_nothing() {
+    use lightcraft_catalog::{MediaKind, Op, Photo, PhotoId, Source};
+    let lib = temp_dir("video-smart-previews");
+    let mut s = Session::new();
+    s.open_library(&lib, false).unwrap();
+    for (id, kind, name) in [(1u64, MediaKind::Video, "clip.mp4"), (2, MediaKind::Image, "photo.jpg")] {
+        let format = if kind == MediaKind::Video { "MP4" } else { "JPEG" };
+        let mut p =
+            Photo::new(PhotoId(id), Source::File { path: format!("/lightcraft-video-jobs/{name}") }, name, format, 1920, 1080, "2026-05-04T10:00:00");
+        p.kind = kind;
+        s.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
+    }
+    let video = PhotoId(1);
+    let still = PhotoId(2);
+    // an old entry (a Lightroom catalog's `VIDEO` format, kind Image) is a video too
+    let mut legacy =
+        Photo::new(PhotoId(3), Source::File { path: "/lightcraft-video-jobs/old.mov".into() }, "old.mov", "VIDEO", 1920, 1080, "2026-05-04T10:00:00");
+    legacy.kind = MediaKind::Image;
+    s.catalog.apply(Op::AddPhoto { photo: Box::new(legacy) }).unwrap();
+    let legacy = PhotoId(3);
+    assert!(s.catalog.photo(video).is_some(), "video remains catalogued in the open library");
+    // There is no frame decoder yet: nothing to render, and a job would read the whole file to
+    // fail (the UI draws its own video placeholder and card).
+    assert!(s.thumb_job(video, 512).is_none(), "no thumbnail decode of a video");
+    assert!(s.render_job(video, 1600, 1600, false, true).is_none(), "no loupe render of a video");
+    assert!(s.loupe_job(video, 1600, 1600, true).is_none());
+    assert!(s.quick_view_job(video, 1600, true).is_none());
+    assert!(s.variant_job(video, &lightcraft_develop::DevelopSettings::default(), 256).is_none());
+    let face = lightcraft_geom::Rect { x0: 0.2, y0: 0.2, x1: 0.8, y1: 0.8 };
+    assert!(s.face_job(video, face, 256).is_none(), "no face tile of a video");
+    assert_eq!(s.source_now(video, crate::media::SourceLevel::Thumb).unwrap_err(), "a video has no frame to sample");
+    assert_eq!(s.render_now(video, 64, 64).err().unwrap(), "a video has no frame to render");
+    assert_eq!(s.render_now(legacy, 64, 64).err().unwrap(), "a video has no frame to render");
+    assert_eq!(s.render_now(PhotoId(u64::MAX), 64, 64).err().unwrap(), "no such photo");
+    assert!(s.thumb_job(legacy, 512).is_none(), "an old VIDEO entry gets no thumbnail decode either");
+    assert!(s.render_job(legacy, 1600, 1600, false, true).is_none());
+    assert!(s.face_job(legacy, face, 256).is_none());
+    assert!(s.thumb_job(still, 512).is_some(), "a still still renders");
+
+    // Smart previews skip catalogued videos
+    let r = s.execute("library.smartPreviews", &json!({"ids": [video.0]})).unwrap();
+    assert_eq!(r["built"], 0, "smart previews skip video");
+    assert_eq!(r["failed"].as_array().map(|a| a.len()), Some(0));
+    let _ = std::fs::remove_dir_all(&lib);
+}
+
+/// Verify video duplicate detection by path and by content hash.
+#[test]
+fn video_duplicate_detection_by_path_and_content() {
+    let src = temp_dir("video-dup");
+    let clip = synthetic_mp4(1000, 30_000, 1920, 1080, 0);
+    std::fs::write(src.join("clip.mp4"), &clip).unwrap();
+    std::fs::write(src.join("copy_of_clip.mp4"), &clip).unwrap();
+
+    let mut s = Session::new().with_fs();
+    // First import: imports clip.mp4, finds copy_of_clip.mp4 is a duplicate by content
+    let r = s.execute("library.import", &json!({"paths": [src.to_string_lossy()]})).unwrap();
+    assert_eq!(ids(&r, "imported"), 1, "{r}");
+    assert_eq!(ids(&r, "duplicates"), 1, "{r}");
+    assert_eq!(r["duplicates"][0]["reason"], "content");
+
+    // Second import: both are duplicates by path or content
+    let r2 = s.execute("library.import", &json!({"paths": [src.to_string_lossy()]})).unwrap();
+    assert_eq!(ids(&r2, "imported"), 0, "{r2}");
+    assert_eq!(ids(&r2, "duplicates"), 2, "{r2}");
+
+    let _ = std::fs::remove_dir_all(&src);
 }

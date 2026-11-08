@@ -47,7 +47,7 @@ pub(crate) struct Metrics {
     dot: f32,
     label: f32,
     /// The marks row's height, its padding at each end and the gap between its two groups.
-    bar: f32,
+    pub(crate) bar: f32,
     pad: f32,
     gap: f32,
     /// How far the corner badges sit from the photo's corner, and how high they are.

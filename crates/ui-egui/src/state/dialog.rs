@@ -34,6 +34,41 @@ pub struct NameEdit {
     pub fresh: bool,
 }
 
+/// A photo that can't move into the folder it was dropped on (`photo.checkMove`).
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct MoveProblem {
+    pub id: u64,
+    pub name: String,
+    pub kind: MoveProblemKind,
+}
+
+/// Why a photo can't move into the folder it was dropped on (`photo.checkMove`'s `kind`).
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum MoveProblemKind {
+    /// A file of that name is in the folder already.
+    Clash,
+    /// Another photo of the same move has the name: only one of them can go in.
+    Twin,
+    /// The photo's file is missing or offline.
+    Missing,
+    /// The photo can't move as it is: a Local photo (until it is added to the library), one with
+    /// no file, or a library photo of the same file as such a photo.
+    Unmovable,
+}
+
+impl MoveProblemKind {
+    /// The kind of a `photo.checkMove` problem. A kind this build doesn't know is unmovable: it is
+    /// still listed, and still left out of the move.
+    pub fn from_check(problem: &serde_json::Value) -> Self {
+        match problem["kind"].as_str() {
+            Some("clash") if problem["twin"] == true => Self::Twin,
+            Some("clash") => Self::Clash,
+            Some("missing") => Self::Missing,
+            _ => Self::Unmovable,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Dialog {
@@ -340,12 +375,16 @@ pub enum Dialog {
     DeleteEffects {
         names: Vec<String>,
     },
+    /// Ask before photos' files go to the Trash, or (a disk without one) are erased.
+    TrashFiles(crate::panels::trash_files::TrashAsk),
     /// Confirm moving photos to Recently Deleted.
     ConfirmDelete {
         count: usize,
     },
     /// Confirm moving photos dropped on a Folders row into that folder on disk
-    /// (`photo.moveToFolder`). `name`: the folder's name, as the question says it.
+    /// (`photo.moveToFolder`). `name`: the folder's name, as the question says it. `problems`:
+    /// the photos found (`photo.checkMove`, when the photos were dropped) that can't go, and why;
+    /// the move leaves them out when the person chooses to (`movable`: how many photos then go).
     MovePhotos {
         ids: Vec<u64>,
         folder: String,
@@ -357,6 +396,10 @@ pub enum Dialog {
         /// The library the photos were dropped in (`Session::library_generation`): ids are
         /// numbered per library, so in another one they name other photos.
         library: u64,
+        #[serde(default)]
+        problems: Vec<MoveProblem>,
+        #[serde(default)]
+        movable: usize,
     },
     /// Confirm moving a Folders row dropped on another row: the folder `path` goes into `into` on
     /// disk (`folder.move`). `name` and `into_name` are as the question says them; `count` is
@@ -421,6 +464,25 @@ pub enum Dialog {
         #[serde(default)]
         library: u64,
     },
+    /// Only some of a folder's files are where the person said the folder is now: locate it
+    /// there anyway (`folder.locate` with `incomplete`; see [`crate::relocate`])?
+    LocateFolder {
+        /// The folder as the library knows it.
+        path: String,
+        /// Where it is said to be now.
+        to: String,
+        #[serde(default)]
+        disk: bool,
+        /// The question took the place of a waiting Synchronize Folder dialog, which opens again once the folder
+        /// is located (set from the request; a dialog an agent opens with it set does nothing more).
+        #[serde(default)]
+        synchronize: bool,
+        found: usize,
+        total: usize,
+        /// Files there of another size than the library recorded (not among `found`).
+        #[serde(default)]
+        different: usize,
+    },
     About,
     Shortcuts,
     /// View ▸ Loupe Overlay ▸ View Options… (⌘J): the info overlay and the lines of Info 1 and Info 2. Changes apply
@@ -451,23 +513,38 @@ pub struct SyncCounts {
     pub metadata: usize,
     #[serde(default)]
     pub moved: usize,
+    /// Photos of the folder whose check was skipped (the drive did not answer): the folder is not known to be up to date.
+    #[serde(default)]
+    pub unchecked: usize,
+    /// The scan ended early (the drive stopped answering): what it lists is only what it reached, and a run made from
+    /// it only imports the new files.
+    #[serde(default)]
+    pub stopped: bool,
 }
 
 impl SyncCounts {
-    /// The folder is there and the scan found nothing to bring in, relink, remove or read: the
-    /// dialog only says so (files it skipped are not changes). Files the library has elsewhere
+    /// The folder is there and the scan found nothing to bring in, relink, remove or read: there is nothing to choose,
+    /// so the dialog only says what it found (files it skipped are not changes). Files the library has elsewhere
     /// ([`SyncCounts::copies`]) can be brought in by unticking "Don't import files already in the
-    /// library", so the dialog keeps that choice for them.
+    /// library", so the dialog keeps that choice for them. A scan that stopped ([`SyncCounts::stopped`]) only offers
+    /// Import new photos, so with no new photo it has nothing to choose either.
+    pub fn nothing_to_choose(&self) -> bool {
+        !self.offline && self.new == 0 && self.copies == 0 && (self.stopped || (self.moved == 0 && self.missing == 0 && self.metadata == 0))
+    }
+
+    /// [`SyncCounts::nothing_to_choose`], the scan ran to its end and every photo of the folder was checked: a photo
+    /// whose check was skipped, or a scan that stopped, is not known to be fine, so the dialog doesn't say the library
+    /// is up to date then.
     pub fn up_to_date(&self) -> bool {
-        !self.offline && self.new == 0 && self.copies == 0 && self.moved == 0 && self.missing == 0 && self.metadata == 0
+        self.nothing_to_choose() && !self.stopped && self.unchecked == 0
     }
     /// Whether Synchronize, with Import new photos as `import_new` says and the box under it as
-    /// `import_duplicates` says, would bring in, relink, remove or read nothing: [`SyncCounts::up_to_date`],
+    /// `import_duplicates` says, would bring in, relink, remove or read nothing: like [`SyncCounts::nothing_to_choose`],
     /// but new files count only when Import new photos is ticked, and files the library has elsewhere
-    /// only when it is and that box brings them in.
+    /// only when it is and that box brings them in. (A scan that stopped hands over only its new files.)
     pub fn nothing_to_do(&self, import_new: bool, import_duplicates: bool) -> bool {
         let has_incoming = import_new && (self.new != 0 || (import_duplicates && self.copies != 0));
-        !self.offline && !has_incoming && self.moved == 0 && self.missing == 0 && self.metadata == 0
+        !self.offline && !has_incoming && (self.stopped || (self.moved == 0 && self.missing == 0 && self.metadata == 0))
     }
 }
 

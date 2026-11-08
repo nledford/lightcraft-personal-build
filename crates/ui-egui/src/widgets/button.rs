@@ -96,6 +96,7 @@ pub enum State {
     Disabled,
 }
 
+
 /// The colours a button of `kind` takes in `state`: fill (if any), border (if any), and what is
 /// drawn on it (text and icon).
 #[derive(Clone, Copy, Debug, PartialEq)]

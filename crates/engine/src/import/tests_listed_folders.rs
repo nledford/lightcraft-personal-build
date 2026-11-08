@@ -126,6 +126,7 @@ fn sidecars_in_the_listing_are_read_in_any_case() {
         found.sort();
         assert_eq!(found, expect, "{naming:?}");
         assert_eq!(job.listed.asked.load(Relaxed), 5, "{naming:?}: the five with a sidecar are asked about, f.jpg is not");
+        assert_eq!(job.listed.asked_own.load(Relaxed), 0, "{naming:?}: the listing shows no `<file>.xmp` of the ones under the shared name");
         let _ = std::fs::remove_dir_all(&root);
     }
 }
@@ -292,7 +293,7 @@ fn a_batch_looks_at_each_of_its_folders_once() {
 /// Given photos named one by one (no listing to rule a sidecar out), when a batch of them is
 /// handled, then their sidecars are not looked up one after another by the thread that plans the
 /// batch: each is a few names asked of the disk, a round trip apiece on a network share, so the
-/// lookups of a batch run together (`sidecars_of`).
+/// lookups of a batch run together (on the readers' threads, `import::reads`).
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn a_batchs_sidecars_are_looked_up_off_the_thread_that_plans_it() {
@@ -312,6 +313,39 @@ fn a_batchs_sidecars_are_looked_up_off_the_thread_that_plans_it() {
     assert!(!lookers.is_empty(), "no lookups were made");
     assert!(!lookers.contains(&std::thread::current().id()), "a lookup was made by the thread that plans the batch, one after another");
     drop(lookers);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Given a file whose content the library has (a duplicate, skipped without reading its sidecar), when a batch is
+/// read, then the readers do not look its sidecar up: each name asked is a round trip on a network share, and a
+/// folder of mostly known photos would pay them all for nothing.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn a_known_duplicates_sidecar_is_not_looked_up() {
+    let root = scratch("known-duplicate");
+    let files: Vec<String> = ["IMG_0001.jpg", "IMG_0002.jpg"]
+        .iter()
+        .map(|name| {
+            let f = root.join(name);
+            std::fs::write(&f, b"x").unwrap();
+            std::fs::write(f.with_extension("xmp"), xmp(3)).unwrap();
+            f.to_string_lossy().to_string()
+        })
+        .collect();
+    let mut job = job(SidecarNaming::Stem);
+    job.probe = Some(std::sync::Arc::new(|p: &str| {
+        let content = if p.ends_with("IMG_0001.jpg") { "in-the-library" } else { "new" };
+        Ok(ProbeInfo { format: "JPEG".into(), content_hash: Some(content.into()), ..ProbeInfo::default() })
+    }));
+    job.by_hash.insert("in-the-library".into(), Some(PhotoId(1)));
+    let prepared = job.prepare_files(files, &AtomicBool::new(false));
+    assert_eq!(prepared.items.len(), 2);
+    assert_eq!(job.listed.asked.load(Relaxed), 1, "only the new photo's sidecar is asked of the disk");
+    let rated = prepared.items.iter().find_map(|i| match i {
+        PreparedItem::Ready(r) if r.path.ends_with("IMG_0002.jpg") => Some(r.sidecar.as_ref().and_then(|sc| sc.rating)),
+        _ => None,
+    });
+    assert_eq!(rated, Some(Some(3)), "and the new photo's sidecar is read");
     let _ = std::fs::remove_dir_all(&root);
 }
 
@@ -390,5 +424,199 @@ fn a_folder_without_a_listed_time_costs_no_look() {
     l.note(&root, vec![("a.jpg".into(), crate::walk::EntryKind::File)], true, None);
     assert!(!l.is_known_file(&root.join("a.jpg")));
     assert_eq!(l.looked.load(Relaxed), 0);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Given a raw and a JPEG of one name (the raw owns the shared `IMG_0001.xmp`, issue #1905), named one by one, when
+/// the batch is handled, then the JPEG's own `IMG_0001.JPG.xmp` is looked up and read by the readers, as every file's
+/// is that may need it (who owns the stem is only known once all are read), and the planning only chooses between
+/// what they found: it asks the disk nothing, so a share that stalls holds up a reader, never the thread that plans.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn a_files_own_sidecar_is_looked_up_and_read_by_the_readers_not_the_planner() {
+    let root = scratch("own-sidecar");
+    let files: Vec<String> = ["IMG_0001.NEF", "IMG_0001.JPG"]
+        .iter()
+        .map(|name| {
+            let f = root.join(name);
+            std::fs::write(&f, b"x").unwrap();
+            f.to_string_lossy().to_string()
+        })
+        .collect();
+    std::fs::write(root.join("IMG_0001.xmp"), xmp(5)).unwrap();
+    std::fs::write(root.join("IMG_0001.JPG.xmp"), xmp(2)).unwrap();
+    let mut job = job(SidecarNaming::Stem);
+    job.probe = Some(std::sync::Arc::new(|p: &str| {
+        let kind = if p.ends_with(".NEF") { MediaKind::Raw } else { MediaKind::Image };
+        Ok(ProbeInfo { format: "JPEG".into(), kind, ..ProbeInfo::default() })
+    }));
+    let prepared = job.prepare_files(files, &AtomicBool::new(false));
+    assert_eq!(
+        ratings(prepared),
+        [("IMG_0001.NEF".to_string(), Some(5)), ("IMG_0001.JPG".to_string(), Some(2))],
+        "the raw reads the shared sidecar, the JPEG its own"
+    );
+    // (each file's lookup, and the own lookup of each whose shared sidecar was found: all before the planning)
+    assert_eq!(job.listed.asked.load(Relaxed), 2, "each file's sidecar is asked of the disk");
+    assert_eq!(job.listed.asked_own.load(Relaxed), 2, "the own lookups are the readers' too");
+    let lookers = job.listed.lookers.lock().unwrap();
+    assert!(!lookers.contains(&std::thread::current().id()), "the thread that plans the batch asked the disk for a sidecar");
+    drop(lookers);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Given two files whose reads each wait for the other to be under way (a share answers a round trip at a time),
+/// when a batch is read, then both run at once, on a machine of any size: lookups on a share are latency, not work for
+/// a core, so the readers are not held to the cores.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn two_reads_run_at_once() {
+    let root = scratch("two-at-once");
+    let files: Vec<String> = (0..2)
+        .map(|n| {
+            let f = root.join(format!("IMG_{n:04}.jpg"));
+            std::fs::write(&f, b"x").unwrap();
+            f.to_string_lossy().to_string()
+        })
+        .collect();
+    let inside = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let met = std::sync::Arc::new(AtomicBool::new(true));
+    let mut job = job(SidecarNaming::Stem);
+    let (waiting, together) = (inside.clone(), met.clone());
+    job.probe = Some(std::sync::Arc::new(move |_: &str| {
+        waiting.fetch_add(1, Relaxed);
+        let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while waiting.load(Relaxed) < 2 {
+            if std::time::Instant::now() > until {
+                together.store(false, Relaxed);
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        Ok(ProbeInfo { format: "JPEG".into(), ..ProbeInfo::default() })
+    }));
+    let prepared = job.prepare_files(files, &AtomicBool::new(false));
+    assert_eq!(prepared.items.len(), 2);
+    assert!(met.load(Relaxed), "the second read did not start while the first was waiting");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// The readers of a batch are as many as it has files up to sixteen, and never fewer than the machine's workers: a
+/// machine with one core still has them overlap their round trips.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn the_readers_are_not_held_to_the_cores() {
+    use super::commit::{read_threads_with, workers_with};
+    assert_eq!(read_threads_with(1, 40), 16);
+    assert_eq!(read_threads_with(1, 3), 3);
+    assert_eq!(read_threads_with(1, 1), 1);
+    assert_eq!(read_threads_with(64, 40), 16);
+    assert_eq!(read_threads_with(4, 0), 1);
+    assert_eq!(workers_with(64, 40), 8, "copies and probes of other jobs keep the cores' bound");
+}
+
+/// A sidecar over the cap ([`crate::sync::MAX_SIDECAR_BYTES`]) is skipped, not read whole into memory; one at the cap is
+/// read, and the import goes on without it, saying so in its report.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn an_oversized_sidecar_is_skipped() {
+    use super::files::{SidecarText, read_text};
+    let root = scratch("oversized");
+    let cap = crate::sync::MAX_SIDECAR_BYTES;
+    let sparse = |name: &str, len: u64| {
+        let f = root.join(name);
+        std::fs::File::create(&f).unwrap().set_len(len).unwrap();
+        f
+    };
+    assert!(matches!(read_text(&sparse("at.xmp", cap)), SidecarText::Text(_)), "a sidecar at the cap is read");
+    assert_eq!(read_text(&sparse("over.xmp", cap + 1)), SidecarText::TooLarge, "a sidecar over the cap is skipped");
+    // (cut in the middle of a character: still too large, not merely unreadable)
+    let cut = root.join("cut.xmp");
+    let mut bytes = vec![b'a'; usize::try_from(cap).unwrap() - 1];
+    bytes.extend("é".as_bytes());
+    std::fs::write(&cut, &bytes).unwrap();
+    assert_eq!(read_text(&cut), SidecarText::TooLarge, "a sidecar over the cap whose cap falls inside a character");
+    assert_eq!(read_text(&root.join("none.xmp")), SidecarText::Unreadable);
+
+    // in an import: the photo comes in, without what the oversized sidecar would have said, and the report says so
+    let photo = root.join("IMG_0001.jpg");
+    std::fs::write(&photo, b"x").unwrap();
+    sparse("IMG_0001.xmp", cap + 1);
+    let mut s = Session::new();
+    let mut job = ImportJob::new(&mut s, ImportOptions { mode: ImportMode::Add, ..ImportOptions::default() }).unwrap();
+    job.probe = Some(std::sync::Arc::new(|_: &str| Ok(ProbeInfo { format: "JPEG".into(), ..ProbeInfo::default() })));
+    let prepared = job.prepare_files(vec![photo.to_string_lossy().to_string()], &AtomicBool::new(false));
+    let report = super::commit::commit_prepared(&mut s, &job.opts, job.now(), prepared).unwrap();
+    assert_eq!(report.imported.len(), 1, "the photo comes in");
+    assert_eq!(report.sidecars, 0);
+    let warnings: Vec<_> = report.warnings.iter().map(|w| (w.path.as_str(), &w.code)).collect();
+    assert_eq!(warnings, [(photo.to_str().unwrap(), &super::ImportWarningCode::SidecarTooLarge)]);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Given a file's sidecars read by the readers, when the planning thread picks one with `choose`, then it asks the disk
+/// for nothing: the files are gone by then, and the lookup counters and the threads that looked do not change.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn choosing_a_sidecar_needs_no_disk() {
+    use super::files::{SidecarText, Sidecars};
+    let root = scratch("choose");
+    let raw = root.join("IMG_0001.NEF");
+    let jpg = root.join("IMG_0001.JPG");
+    for f in [&raw, &jpg] {
+        std::fs::write(f, b"x").unwrap();
+    }
+    let (shared, own) = (root.join("IMG_0001.xmp"), root.join("IMG_0001.JPG.xmp"));
+    std::fs::write(&shared, xmp(5)).unwrap();
+    std::fs::write(&own, xmp(2)).unwrap();
+    let job = job(SidecarNaming::Stem);
+    let (listed, path) = (job.listed.clone(), jpg.to_string_lossy().to_string());
+    let read = std::thread::spawn(move || Sidecars::read(&path, SidecarNaming::Stem, &listed)).join().unwrap();
+    let own_read = std::thread::spawn({
+        let (listed, path) = (job.listed.clone(), jpg.to_string_lossy().to_string());
+        move || Sidecars::read(&path, SidecarNaming::Stem, &listed)
+    })
+    .join()
+    .unwrap();
+    std::fs::remove_file(&shared).unwrap();
+    std::fs::remove_file(&own).unwrap();
+    let (asked, asked_own, lookers) = (job.listed.asked.load(Relaxed), job.listed.asked_own.load(Relaxed), job.listed.lookers.lock().unwrap().len());
+    let owner = read.choose(true).expect("the owner's sidecar");
+    assert_eq!(owner.path, shared);
+    assert!(matches!(owner.text, SidecarText::Text(_)), "its text was read before");
+    let theirs = own_read.choose(false).expect("the file's own sidecar");
+    assert_eq!(theirs.path, own);
+    assert!(matches!(theirs.text, SidecarText::Text(_)), "its text was read before");
+    assert_eq!(
+        (job.listed.asked.load(Relaxed), job.listed.asked_own.load(Relaxed), job.listed.lookers.lock().unwrap().len()),
+        (asked, asked_own, lookers),
+        "choosing looked at the disk"
+    );
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Given many readers asking about one folder at once, when its time is looked at, then it is looked at once: the
+/// answers of the other folders do not wait for it, but each folder's is still a single look.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn a_folders_time_is_looked_at_once_whoever_asks() {
+    let root = scratch("looked-once");
+    let names: Vec<String> = (0..8).map(|n| format!("IMG_{n}.jpg")).collect();
+    for n in &names {
+        std::fs::write(root.join(n), b"x").unwrap();
+    }
+    let mut l = ListedFolders::default();
+    l.note(&root, names.iter().map(|n| (n.into(), crate::walk::EntryKind::File)).collect(), true, modified(&root));
+    std::thread::scope(|scope| {
+        for n in &names {
+            let (l, path) = (&l, root.join(n));
+            scope.spawn(move || {
+                for _ in 0..50 {
+                    assert!(l.is_known_file(&path));
+                }
+            });
+        }
+    });
+    assert_eq!(l.looked.load(Relaxed), 1, "one folder, one look");
     let _ = std::fs::remove_dir_all(&root);
 }

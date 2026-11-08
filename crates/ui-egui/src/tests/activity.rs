@@ -82,6 +82,7 @@ fn info(label: &str, done: u64, total: u64) -> TaskInfo {
         place: 0,
         lane: None,
         facts: String::new(),
+        stalled: None,
     }
 }
 
@@ -434,13 +435,13 @@ fn stale_cancel_is_harmless() {
     let r = h.request("engine.execute", json!({"command": "activity.cancel", "params": {"id": id}}), T);
     assert_eq!(r["ok"], false, "an error result, not a panic: {r}");
     h.step();
-    assert!(h.app.ui.toast.is_none(), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_none(), "{:?}", h.app.ui.toast);
     // the same through the row's ✕ (clicked in the frame the task ended): no message in the status bar either
     h.app.ui.status = "Ready".into();
     crate::panels::activity::cancel(&mut h.app, id);
     h.step();
     assert_eq!(h.app.ui.status, "Ready");
-    assert!(h.app.ui.toast.is_none(), "{:?}", h.app.ui.toast);
+    assert!(h.app.ui.toast().is_none(), "{:?}", h.app.ui.toast);
 }
 
 #[test]
@@ -964,7 +965,7 @@ fn final_merge_shows_a_row_and_cancels() {
     assert!(h.app.merge.last_result.is_none(), "nothing merged");
     assert_eq!(h.app.session.catalog.len(), before, "no photo added");
     assert!(h.app.session.activity.list().is_empty());
-    let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    let toast = h.app.ui.toast().map(|t| t.text.clone()).unwrap_or_default();
     assert_eq!(toast, "HDR merge cancelled");
     let row = h.app.session.activity.last_finished().expect("a stopped merge leaves a row");
     assert_eq!((row.ending, row.summary.as_str()), (Ending::Stopped, "HDR merge cancelled"));
@@ -1169,9 +1170,9 @@ fn immediate_library_commands_and_auto_sync_show_completion() {
 
     // This demo has no on-disk library to optimize. A failed command must not
     // report completion (or accidentally keep its preceding success toast).
-    h.app.ui.toast = None;
+    h.app.ui.clear_toasts();
     assert!(h.app.run("library.compact", json!({})).is_err());
-    assert!(h.app.ui.toast.is_none());
+    assert!(h.app.ui.toast().is_none());
 }
 
 /// A task that ended `ending`, kept in the list whatever time it took. Its id.
@@ -1745,4 +1746,490 @@ fn a_row_that_only_waits_does_not_keep_the_stack_polling() {
     assert!(needs_poll(&[wait]), "a young one is about to be shown");
     assert!(!needs_poll(&[]), "nothing to look at");
     drop((waiting, running));
+}
+
+
+/// A read that does not answer until `open`.
+#[derive(Clone, Default)]
+pub(crate) struct Gate(std::sync::Arc<(std::sync::Mutex<bool>, std::sync::Condvar)>);
+
+impl Gate {
+    pub(crate) fn wait(&self) {
+        let (open, bell) = &*self.0;
+        let mut open = open.lock().unwrap();
+        while !*open {
+            open = bell.wait(open).unwrap();
+        }
+    }
+
+    pub(crate) fn open(&self) {
+        *self.0.0.lock().unwrap() = true;
+        self.0.1.notify_all();
+    }
+}
+
+/// A folder of four stand-in JPEGs and one (`IMG_hang.jpg`) whose read never answers, and an app that calls a read
+/// stalled after 500 ms (a network drive that dropped its connection).
+fn hanging_import(tag: &str) -> (Headless, std::path::PathBuf, Gate) {
+    hanging(tag, &["IMG_hang.jpg"])
+}
+
+/// [`hanging_import`] with the files that never answer named.
+fn hanging(tag: &str, hangs: &[&str]) -> (Headless, std::path::PathBuf, Gate) {
+    let dir = std::env::temp_dir().join(format!("lc-activity-{tag}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    for name in ["IMG_000.jpg", "IMG_001.jpg", "IMG_002.jpg", "IMG_003.jpg"].iter().chain(hangs) {
+        std::fs::write(dir.join(name), format!("not really a jpeg {name}")).unwrap();
+    }
+    let gate = Gate::default();
+    let mut s = lightcraft_engine::Session::new();
+    s.import_stall_after = Duration::from_millis(500);
+    // (its own count of blocked readers: tests share the process)
+    s.stuck_readers = std::sync::Arc::new(lightcraft_engine::import::StuckReaders::new(lightcraft_engine::import::MAX_STUCK_READERS));
+    let in_probe = gate.clone();
+    s.media.file_probe = Some(std::sync::Arc::new(move |p: &str| {
+        if p.contains("IMG_hang") {
+            in_probe.wait();
+        }
+        Ok(lightcraft_engine::media::ProbeInfo {
+            width: 60,
+            height: 40,
+            format: "JPEG".into(),
+            content_hash: Some(p.to_string()),
+            ..Default::default()
+        })
+    }));
+    let mut h = Headless::new(LightcraftApp::new(s, Services { png: None, ..Default::default() }), [1200.0, 800.0], 1.0);
+    h.settle(T);
+    (h, dir, gate)
+}
+
+/// The import's row once it says it waits for a file.
+fn stalled_row(h: &mut Headless) -> TaskInfo {
+    assert!(h.step_until(Duration::from_secs(30), |h| h.app.session.activity.list().first().is_some_and(|t| t.stalled.is_some())), "no stall");
+    h.app.session.activity.list().remove(0)
+}
+
+#[test]
+fn the_row_words_what_a_task_waits_for() {
+    let mut t = TaskInfo {
+        id: 1,
+        kind: "import",
+        label: "Importing".into(),
+        done: 3,
+        total: 25,
+        unit: Unit::Count,
+        detail: "IMG_0001.jpg".into(),
+        cancellable: true,
+        cancelling: false,
+        age_ms: 600,
+        waiting: false,
+        place: 0,
+        lane: None,
+        facts: String::new(),
+        stalled: Some(lightcraft_engine::activity::Stalled { what: "IMG_0457.jpg".into(), secs: 14 }),
+    };
+    assert_eq!(crate::panels::activity::detail_line(&t), "Waiting for IMG_0457.jpg · 14 s");
+    assert!(crate::panels::activity::offers_skip(&t), "a task that waits for a file offers Skip");
+    t.cancelling = true;
+    assert_eq!(crate::panels::activity::detail_line(&t), "Stopping…", "✕ comes first");
+    assert!(!crate::panels::activity::offers_skip(&t), "no Skip once ✕ was clicked");
+    (t.cancelling, t.stalled) = (false, None);
+    assert_eq!(crate::panels::activity::detail_line(&t), "3 of 25 · IMG_0001.jpg");
+    assert!(!crate::panels::activity::offers_skip(&t), "no Skip while nothing is waited for");
+}
+
+/// Given an import with a file whose read does not answer,
+/// When the row shows that file and Skip is clicked,
+/// Then that file counts as not readable and the other four are added.
+#[test]
+fn skip_on_a_stalled_import_row_fails_that_file_and_goes_on() {
+    let (mut h, dir, gate) = hanging_import("skip");
+    crate::import::start_paths(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
+    let row = stalled_row(&mut h);
+    assert_eq!(row.kind, "import");
+    assert_eq!(row.stalled.as_ref().map(|s| s.what.as_str()), Some("IMG_hang.jpg"));
+    open_list(&mut h);
+    assert!(h.step_until(T, |h| has(h, &format!("activity:skip:{}", row.id))), "the row offers Skip");
+    assert!(has(&h, &format!("activity:cancel:{}", row.id)), "next to ✕");
+    click(&mut h, &format!("activity:skip:{}", row.id));
+    assert!(h.step_until(Duration::from_secs(30), |h| h.app.import.is_none()), "the import goes on");
+    gate.open();
+    assert_eq!(h.app.session.catalog.len(), 4, "the other files are added");
+    assert!(
+        h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("Imported 4 photos") && t.text.contains("1 not readable")),
+        "{:?}",
+        h.app.ui.toast
+    );
+    assert!(h.app.session.activity.list().is_empty());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Given an import whose read does not answer,
+/// When ✕ is pressed,
+/// Then the import ends within a second or two, "Stopping…" does not last.
+#[test]
+fn cancel_ends_an_import_whose_read_hangs() {
+    let (mut h, dir, gate) = hanging_import("cancel-hang");
+    crate::import::start_paths(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
+    let row = stalled_row(&mut h);
+    h.app.session.activity.cancel(row.id).unwrap();
+    let pressed = std::time::Instant::now();
+    assert!(h.step_until(Duration::from_secs(10), |h| h.app.import.is_none()), "still stopping");
+    assert!(pressed.elapsed() < Duration::from_millis(2500), "took {:?}", pressed.elapsed());
+    gate.open();
+    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.starts_with("Import cancelled")), "{:?}", h.app.ui.toast);
+    assert!(h.app.session.activity.list().is_empty());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// `activity.skip` through the control channel: an unknown id is an error, and for the stalled import it skips the
+/// file.
+#[test]
+fn activity_skip_command_skips_the_stalled_file() {
+    let (mut h, dir, gate) = hanging_import("skip-command");
+    assert_eq!(h.request("engine.execute", json!({"command": "activity.skip", "params": {"id": 999}}), T)["ok"], false);
+    crate::import::start_paths(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
+    let row = stalled_row(&mut h);
+    let listed = h.request("engine.execute", json!({"command": "activity.list", "params": {}}), T);
+    assert_eq!(listed["result"]["tasks"][0]["stalled"]["what"], "IMG_hang.jpg", "{listed}");
+    let r = h.request("engine.execute", json!({"command": "activity.skip", "params": {"id": row.id}}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    assert!(h.step_until(Duration::from_secs(30), |h| h.app.import.is_none()));
+    gate.open();
+    assert_eq!(h.app.session.catalog.len(), 4);
+    assert!(h.app.ui.toast.as_ref().is_some_and(|t| t.text.contains("1 not readable")), "{:?}", h.app.ui.toast);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The text of the toast on screen, if any.
+fn toast_text(h: &Headless) -> String {
+    h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default()
+}
+
+/// Given four files of an import that never answer and four that do,
+/// When each hung file is skipped as the row names it,
+/// Then at the fourth the import ends by itself with an error that the drive is not answering, the files readied
+/// before it stay, and its row goes.
+#[test]
+fn an_import_ends_with_an_error_at_the_fourth_skipped_read() {
+    let (mut h, dir, gate) = hanging("cap", &["IMG_hang0.jpg", "IMG_hang1.jpg", "IMG_hang2.jpg", "IMG_hang3.jpg"]);
+    crate::import::start_paths(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
+    let ended = h.step_until(Duration::from_secs(60), |h| {
+        if let Some(row) = h.app.session.activity.list().first()
+            && row.stalled.is_some()
+        {
+            let _ = h.app.session.activity.skip(row.id);
+        }
+        h.app.import.is_none()
+    });
+    gate.open();
+    assert!(ended, "the import never ended");
+    let toast = toast_text(&h);
+    assert!(toast.contains("Import failed:") && toast.contains("not answering") && toast.contains("IMG_hang"), "{toast}");
+    assert!(h.app.session.activity.list().is_empty(), "the row goes");
+    assert!(h.app.session.catalog.len() <= 4, "no more than the files that answered");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Given the import review's scan of a folder with a file that never answers,
+/// When its row names the file and Skip is clicked,
+/// Then the review opens and lists that file as unreadable, with the skip as its reason.
+#[test]
+fn skip_on_the_review_scans_row_lists_the_file_as_unreadable() {
+    let (mut h, dir, gate) = hanging_import("scan-skip");
+    crate::import::open(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
+    let row = stalled_row(&mut h);
+    assert_eq!(row.kind, "scan", "{row:?}");
+    assert_eq!(row.stalled.as_ref().map(|s| s.what.as_str()), Some("IMG_hang.jpg"));
+    open_list(&mut h);
+    assert!(h.step_until(T, |h| has(h, &format!("activity:skip:{}", row.id))), "the row offers Skip");
+    click(&mut h, &format!("activity:skip:{}", row.id));
+    assert!(h.step_until(Duration::from_secs(30), |h| h.app.scan.is_none()), "the scan goes on");
+    gate.open();
+    let Some(crate::state::Dialog::Import { opts }) = &h.app.ui.dialog else { panic!("no review: {:?}", h.app.ui.dialog.is_some()) };
+    let hung = opts.candidates.iter().find(|c| c.name == "IMG_hang.jpg").expect("the file is listed");
+    assert!(hung.error.as_deref().is_some_and(|e| e.starts_with("skipped: no answer after ")), "{hung:?}");
+    assert_eq!(opts.candidates.iter().filter(|c| c.error.is_none()).count(), 4, "the others were read");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The same for the Local view's reading of a folder (the browse): its scan reads no files (PERF-CULL-1), the import
+/// that follows reads them, so that import's row names the file and offers Skip, and the import goes on with the others.
+#[test]
+fn skip_on_the_browse_scans_row_goes_on_with_the_other_files() {
+    let (mut h, dir, gate) = hanging_import("browse-skip");
+    crate::import::browse(&mut h.app, &dir.to_string_lossy(), None).unwrap();
+    let row = stalled_row(&mut h);
+    assert_eq!(row.kind, "import", "{row:?}");
+    assert_eq!(row.stalled.as_ref().map(|s| s.what.as_str()), Some("IMG_hang.jpg"));
+    let r = h.request("engine.execute", json!({"command": "activity.skip", "params": {"id": row.id}}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    assert!(h.step_until(Duration::from_secs(30), |h| h.app.scan.is_none() && h.app.import.is_none()));
+    gate.open();
+    assert!(h.app.session.catalog.len() >= 4, "the files that answered are in Local: {}", h.app.session.catalog.len());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Given the Local view's reading of a folder (the import after the browse's scan) whose files stop answering one
+/// after another,
+/// When the fourth is skipped,
+/// Then an error toast says the drive is not answering.
+#[test]
+fn a_browse_that_stops_at_the_cap_says_so() {
+    let (mut h, dir, gate) = hanging("browse-cap", &["IMG_hang0.jpg", "IMG_hang1.jpg", "IMG_hang2.jpg", "IMG_hang3.jpg"]);
+    crate::import::browse(&mut h.app, &dir.to_string_lossy(), None).unwrap();
+    let ended = h.step_until(Duration::from_secs(60), |h| {
+        if let Some(row) = h.app.session.activity.list().first()
+            && row.stalled.is_some()
+        {
+            let _ = h.app.session.activity.skip(row.id);
+        }
+        h.app.scan.is_none() && h.app.import.is_none() && h.app.ui.toast.is_some()
+    });
+    gate.open();
+    assert!(ended, "no toast: {:?}", toast_text(&h));
+    let toast = toast_text(&h);
+    assert!(toast.starts_with("Import failed:") && toast.contains("not answering"), "{toast}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Given the import review's scan of a folder whose files stop answering one after another, and another dialog open
+/// when the scan ends (so the review waits, and a toast made then would be gone by the time it opens),
+/// When that dialog is closed and the review opens,
+/// Then an error toast says the folder was read only as far as the drive answered.
+#[test]
+fn a_review_that_waits_for_a_dialog_says_the_scan_stopped_when_it_opens() {
+    let (mut h, dir, gate) = hanging("review-cap", &["IMG_hang0.jpg", "IMG_hang1.jpg", "IMG_hang2.jpg", "IMG_hang3.jpg"]);
+    crate::import::open(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
+    h.app.ui.dialog = Some(crate::state::Dialog::WhatsNew);
+    let ended = h.step_until(Duration::from_secs(60), |h| {
+        if let Some(row) = h.app.session.activity.list().first()
+            && row.stalled.is_some()
+        {
+            let _ = h.app.session.activity.skip(row.id);
+        }
+        h.app.scan.is_none()
+    });
+    gate.open();
+    assert!(ended, "the scan never ended");
+    // (a toast made at the scan's end, if there was one, is over by now)
+    h.app.ui.toast = None;
+    h.step();
+    assert!(h.app.review_pending.is_some(), "the review waits for the open dialog");
+    h.app.ui.dialog = None;
+    h.step();
+    assert!(matches!(h.app.ui.dialog, Some(crate::state::Dialog::Import { .. })), "the review opened");
+    let toast = toast_text(&h);
+    assert!(toast.starts_with("Stopped:") && toast.contains("not answering"), "{toast}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// What `services.keep_awake` was told, in order.
+type Told = std::rc::Rc<std::cell::RefCell<Vec<Option<String>>>>;
+
+fn demo_keeping_awake() -> (Headless, Told) {
+    let told = Told::default();
+    let sink = told.clone();
+    let keep_awake: crate::KeepAwakeFn = Box::new(move |reason| sink.borrow_mut().push(reason.map(str::to_owned)));
+    let app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services { png: None, keep_awake: Some(keep_awake), ..Default::default() });
+    let mut h = Headless::new(app, [1200.0, 800.0], 1.0);
+    h.settle(T);
+    told.borrow_mut().clear();
+    (h, told)
+}
+
+#[test]
+fn a_running_job_is_told_to_the_host_once_and_its_end_too() {
+    let (mut h, told) = demo_keeping_awake();
+    for _ in 0..3 {
+        h.step();
+    }
+    assert!(told.borrow().is_empty(), "nothing runs: the host hears nothing");
+
+    let g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    for _ in 0..4 {
+        h.step();
+    }
+    assert_eq!(*told.borrow(), [Some("Exporting".to_string())], "told once, not on every frame");
+
+    drop(g);
+    for _ in 0..4 {
+        h.step();
+    }
+    assert_eq!(*told.borrow(), [Some("Exporting".to_string()), None]);
+}
+
+#[test]
+fn a_cancelled_job_is_released_before_it_stops() {
+    let (mut h, told) = demo_keeping_awake();
+    let g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    h.step();
+    h.app.session.activity.cancel(g.id()).unwrap();
+    h.step();
+    assert_eq!(*told.borrow(), [Some("Exporting".to_string()), None]);
+}
+
+#[test]
+fn a_window_with_no_host_service_ignores_jobs() {
+    let mut h = demo();
+    let _g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    h.step();
+    assert_eq!(h.app.awake_told, None);
+}
+
+/// What `services.dock_badge` was told, in order.
+type Badges = std::rc::Rc<std::cell::RefCell<Vec<usize>>>;
+
+fn demo_with_dock_badge() -> (Headless, Badges) {
+    let badges = Badges::default();
+    let sink = badges.clone();
+    let dock_badge: crate::DockBadgeFn = Box::new(move |count| sink.borrow_mut().push(count));
+    let app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services { png: None, dock_badge: Some(dock_badge), ..Default::default() });
+    let mut h = Headless::new(app, [1200.0, 800.0], 1.0);
+    h.settle(T);
+    badges.borrow_mut().clear();
+    (h, badges)
+}
+
+#[test]
+fn the_dock_badge_follows_the_number_of_running_jobs_and_clears_when_idle() {
+    let (mut h, badges) = demo_with_dock_badge();
+    for _ in 0..3 {
+        h.step();
+    }
+    assert!(badges.borrow().is_empty(), "nothing runs: the host hears nothing");
+
+    let export = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    h.step();
+    let import = h.app.session.activity.start("import", "Importing", Cancel::Yes);
+    h.step();
+    h.step();
+    assert_eq!(*badges.borrow(), [1, 2], "told on each change, not on every frame");
+
+    drop(export);
+    h.step();
+    drop(import);
+    h.step();
+    assert_eq!(*badges.borrow(), [1, 2, 1, 0]);
+}
+
+#[test]
+fn a_job_asked_to_stop_stays_in_the_dock_count_until_it_has_stopped() {
+    let (mut h, badges) = demo_with_dock_badge();
+    let g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    h.step();
+    h.app.session.activity.cancel(g.id()).unwrap();
+    h.step();
+    assert_eq!(*badges.borrow(), [1]);
+    drop(g);
+    h.step();
+    assert_eq!(*badges.borrow(), [1, 0]);
+}
+
+/// What `services.notify` was shown, in order.
+type Notices = std::rc::Rc<std::cell::RefCell<Vec<crate::Notice>>>;
+
+fn demo_with_notifications() -> (Headless, Notices) {
+    let shown = Notices::default();
+    let sink = shown.clone();
+    let notify: crate::NotifyFn = Box::new(move |n| sink.borrow_mut().push(n.clone()));
+    let app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services { png: None, notify: Some(notify), ..Default::default() });
+    let mut h = Headless::new(app, [1200.0, 800.0], 1.0);
+    h.settle(T);
+    shown.borrow_mut().clear();
+    (h, shown)
+}
+
+/// A job runs in front, then another app takes the keyboard (the window reports it unfocused) and the job ends.
+fn end_in_the_background(h: &mut Headless, kind: &'static str, label: &str) {
+    let g = h.app.session.activity.start(kind, label, Cancel::Yes);
+    h.step();
+    h.step();
+    h.window_focused = false;
+    drop(g);
+    h.step();
+}
+
+#[test]
+fn a_job_that_ends_in_the_background_is_announced() {
+    let (mut h, shown) = demo_with_notifications();
+    end_in_the_background(&mut h, "export", "Exporting");
+    assert!(h.step_until(T, |_| !shown.borrow().is_empty()), "the announcement is made once the toast had its moment");
+    let shown = shown.borrow();
+    assert_eq!(shown.len(), 1, "{shown:?}");
+    assert_eq!((shown[0].title.as_str(), shown[0].body.as_str()), ("LightCraft", "Exporting finished"));
+}
+
+#[test]
+fn the_toast_that_reports_the_end_is_what_the_notification_says() {
+    let (mut h, shown) = demo_with_notifications();
+    let g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    h.step();
+    h.step();
+    h.window_focused = false;
+    drop(g);
+    h.app.toast_for(&h.view.ctx.clone(), "Exported 24 photos", 15.0);
+    assert!(h.step_until(T, |_| !shown.borrow().is_empty()));
+    assert_eq!(shown.borrow()[0].body, "Exported 24 photos");
+}
+
+#[test]
+fn a_job_that_ends_while_the_window_is_in_front_is_not_announced() {
+    let (mut h, shown) = demo_with_notifications();
+    let g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    h.step();
+    h.step();
+    drop(g);
+    // (the simulated clock runs well past the grace the announcement would wait for)
+    for _ in 0..120 {
+        h.step();
+    }
+    assert!(shown.borrow().is_empty(), "{:?}", shown.borrow());
+}
+
+/// Frames enough for the simulated clock to run well past the grace an announcement would wait for.
+fn past_the_grace(h: &mut Headless) {
+    for _ in 0..120 {
+        h.step();
+    }
+}
+
+#[test]
+fn a_job_that_was_asked_to_stop_makes_no_notification() {
+    let (mut h, shown) = demo_with_notifications();
+    let g = h.app.session.activity.start("export", "Exporting", Cancel::Yes);
+    h.step();
+    h.app.session.activity.cancel(g.id()).unwrap();
+    h.step();
+    h.window_focused = false;
+    drop(g);
+    h.step();
+    past_the_grace(&mut h);
+    assert!(shown.borrow().is_empty(), "{:?}", shown.borrow());
+}
+
+#[test]
+fn work_that_starts_by_itself_makes_no_notification() {
+    let (mut h, shown) = demo_with_notifications();
+    end_in_the_background(&mut h, "cache", "Tidying the thumbnail cache");
+    past_the_grace(&mut h);
+    assert!(shown.borrow().is_empty(), "{:?}", shown.borrow());
+}
+
+#[test]
+fn with_the_setting_off_a_job_that_ends_in_the_background_makes_no_notification() {
+    let (mut h, shown) = demo_with_notifications();
+    h.app.ui.settings.notify_when_done = false;
+    end_in_the_background(&mut h, "import", "Importing");
+    past_the_grace(&mut h);
+    assert!(shown.borrow().is_empty(), "{:?}", shown.borrow());
+}
+
+#[test]
+fn notifications_are_on_for_settings_saved_before_they_existed() {
+    let old: crate::state::AppSettings = serde_json::from_value(json!({"libraryPath": "/somewhere"})).unwrap();
+    assert!(old.notify_when_done);
+    assert_eq!(serde_json::to_value(&old).unwrap()["notifyWhenDone"], true);
 }

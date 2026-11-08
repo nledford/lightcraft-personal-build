@@ -37,6 +37,25 @@ pub type ScreenProfileFn = Box<dyn FnMut() -> Option<Vec<u8>>>;
 
 /// Whether the system asks for reduced motion (`None`: not known).
 pub type SystemReduceMotionFn = Box<dyn FnMut() -> Option<bool>>;
+/// Told when the work that should keep the machine awake changes: `Some(reason)` while a job the person started runs
+/// (the reason names it), `None` once nothing needs it. Called only on a change, always from the UI thread.
+pub type KeepAwakeFn = Box<dyn FnMut(Option<&str>)>;
+
+/// Told how many jobs the person started are running, for the Dock badge: the count, `0` once none is. Called only on
+/// a change, always from the UI thread.
+pub type DockBadgeFn = Box<dyn FnMut(usize)>;
+
+/// A system notification: what to say to a person who is in another app.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Notice {
+    pub title: String,
+    pub body: String,
+}
+
+/// Show a system notification (a job that was started has ended while the window is not in front). The host asks
+/// for the system's permission the first time and does nothing where notifications are not available. Called from the
+/// UI thread.
+pub type NotifyFn = Box<dyn FnMut(&Notice)>;
 
 /// Whether the system asks for increased contrast (`None`: not known).
 pub type SystemIncreaseContrastFn = Box<dyn FnMut() -> Option<bool>>;
@@ -122,6 +141,13 @@ pub struct Services {
     pub write_new: Option<WriteFn>,
     /// Thread-safe writer: with it, UI-started exports run in the background (desktop only).
     pub write_shared: Option<SharedWrite>,
+    /// Copy an unchanged Original video without buffering it (including location verification).
+    pub original_copy: Option<Box<lightcraft_engine::export::OriginalCopier<'static>>>,
+    /// Thread-safe Original copier for background exports.
+    pub original_copy_shared: Option<lightcraft_engine::export::SharedOriginalCopier>,
+    /// Check (without copying) that a streamed Original is ready and may be published. The browser
+    /// uses it so an unloaded clip or a location check refusal happens before a download starts.
+    pub original_check: Option<Box<dyn Fn(&str, bool) -> Result<(), String>>>,
     /// PNG encoder (the host links an image encoder; the UI crate stays codec-free).
     pub png: Option<PngEncode>,
     /// Show a file in the system file manager (desktop only).
@@ -154,4 +180,10 @@ pub struct Services {
     pub restore_library: Option<HostAction>,
     /// The system appearance for Appearance Mode ▸ Auto, ahead of egui's own report.
     pub system_theme: Option<SystemThemeFn>,
+    /// Keep the system from sleeping or throttling the app while a long job runs (macOS App Nap and idle sleep).
+    pub keep_awake: Option<KeepAwakeFn>,
+    /// Show how many jobs are running on the app's Dock icon (macOS).
+    pub dock_badge: Option<DockBadgeFn>,
+    /// Tell the person a job has ended while LightCraft is in the background (macOS notification).
+    pub notify: Option<NotifyFn>,
 }

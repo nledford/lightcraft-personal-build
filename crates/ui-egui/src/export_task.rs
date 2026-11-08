@@ -3,7 +3,7 @@
 //! row in the activity stack: the photos are prepared over the next frames
 //! ([`lightcraft_engine::export::BatchPrep`]: cheap per photo but it needs the session, so it stays on
 //! this thread, a few milliseconds a frame), then rendered, encoded and written on the worker
-//! (several side by side: [`run_batch`]). The row shows the count, the file in progress and ✕
+//! (several side by side: [`run_batch_with_copy`]). The row shows the count, the file in progress and ✕
 //! (issue #345), which also stops the preparing.
 //!
 //! Needs [`crate::Services::write_shared`] (a thread-safe writer); without it (web) the batch runs
@@ -15,7 +15,7 @@ use std::sync::{Arc, Mutex};
 
 use lightcraft_catalog::PhotoId;
 use lightcraft_engine::activity::{Cancel, Ending, Failure, Outcome, TaskGuard};
-use lightcraft_engine::export::{AfterExport, BatchPrep, Destination, DestinationMode, ExportOptions, run_batch};
+use lightcraft_engine::export::{AfterExport, BatchPrep, Destination, DestinationMode, ExportOptions, run_batch_with_copy};
 use serde_json::{Value, json};
 
 use crate::LightcraftApp;
@@ -68,6 +68,8 @@ struct Preparing {
     to: Destination,
     after: AfterExport,
     write: crate::SharedWrite,
+    /// The host's copier of Original videos, when it has one.
+    copy: Option<lightcraft_engine::export::SharedOriginalCopier>,
     tx: Sender<Result<(Vec<Value>, Option<Value>, bool), String>>,
     /// The settings Export with Previous is to repeat, kept once the worker has started.
     remember: Option<Value>,
@@ -121,6 +123,7 @@ pub fn start(
         return Err("an export is already running".into());
     }
     let write = app.services.write_shared.clone().ok_or("no background writer")?;
+    let copy = app.services.original_copy_shared.clone();
     let total = ids.len();
     let progress = Arc::new(Mutex::new((0, String::new())));
     let cancel = Arc::new(AtomicBool::new(false));
@@ -130,14 +133,14 @@ pub fn start(
     guard.progress(0, total as u64);
     guard.detail(crate::i18n::tr("Preparing photos…"));
     let library = app.session.library_generation();
-    let preparing = Some(Preparing { library, batch: BatchPrep::new(ids), opts, to, after, write, tx, remember: Some(remember) });
+    let preparing = Some(Preparing { library, batch: BatchPrep::new(ids), opts, to, after, write, copy, tx, remember: Some(remember) });
     app.export = Some(ExportTask { total, progress, cancel, rx, guard, folder, preparing });
     Ok(json!({"background": true, "total": total}))
 }
 
 /// Run the prepared photos (none when `stopped`) on a worker; its result reaches `task.rx`.
 fn launch(task: &ExportTask, prep: Preparing, stopped: bool) -> Result<(), String> {
-    let Preparing { batch, opts, to, after, write, tx, .. } = prep;
+    let Preparing { batch, opts, to, after, write, copy, tx, .. } = prep;
     let items = if stopped { Vec::new() } else { batch.into_items() };
     let (p, c) = (task.progress.clone(), task.cancel.clone());
     let row = task.guard.handle();
@@ -145,12 +148,23 @@ fn launch(task: &ExportTask, prep: Preparing, stopped: bool) -> Result<(), Strin
     let adding = crate::i18n::tr("Adding to Apple Photos…").to_string();
     let work = move || {
         let mut w = |path: &str, bytes: &[u8]| write(path, bytes);
-        let r = run_batch(items, &opts, &to, &mut w, &|path| std::path::Path::new(path).exists(), false, &mut |done, name| {
-            if let Ok(mut g) = p.lock() {
-                *g = (done, name.to_string());
-            }
-            !c.load(Ordering::Relaxed)
-        });
+        let mut copier = |from: &str, to: &str, remove: bool| copy.as_ref().ok_or("no Original copier")?(from, to, remove);
+        let can_copy = copy.is_some();
+        let r = run_batch_with_copy(
+            items,
+            &opts,
+            &to,
+            &mut w,
+            &|path| std::path::Path::new(path).exists(),
+            false,
+            &mut |done, name| {
+                if let Ok(mut g) = p.lock() {
+                    *g = (done, name.to_string());
+                }
+                !c.load(Ordering::Relaxed)
+            },
+            if can_copy { Some(&mut copier) } else { None },
+        );
         let r = r.map(|files| {
             if !after.is_none() {
                 // Photos can't be stopped once asked: no ✕ from here, before the last look at
@@ -234,6 +248,7 @@ pub fn start_contact_sheet(app: &mut LightcraftApp, params: &Value) -> Result<Va
     let guard = app.session.original_guard();
     let prepared = lightcraft_engine::contact_sheet::prepare(&mut app.session, params)?;
     let total = prepared.len();
+    let skipped: Vec<Value> = prepared.skipped().iter().map(|(file, warning)| json!({"file": file, "warning": warning})).collect();
     let write = app.services.write_shared.clone();
     let progress = Arc::new(Mutex::new((0, String::new())));
     let cancel = Arc::new(AtomicBool::new(false));
@@ -258,7 +273,7 @@ pub fn start_contact_sheet(app: &mut LightcraftApp, params: &Value) -> Result<Va
                     Some(write) => write(&path, &doc.bytes)?,
                     None => lightcraft_engine::export::write_file(&path, &doc.bytes)?,
                 }
-                Ok(vec![json!({"path": path, "pages": doc.pages, "photos": doc.photos, "bytes": doc.bytes.len(), "contactSheet": true})])
+                Ok(vec![json!({"path": path, "pages": doc.pages, "photos": doc.photos, "bytes": doc.bytes.len(), "contactSheet": true, "skipped": skipped})])
             });
         // a PDF isn't something Photos imports: contact sheets never add to Apple Photos
         let _ = tx.send(result.map(|files| (files, None, c.load(Ordering::Relaxed))));
@@ -287,13 +302,14 @@ pub fn start_print(app: &mut LightcraftApp, params: &Value) -> Result<Value, Str
     let ids = app.session.targets(params).map_err(|e| e.to_string())?;
     let prepared = compose::prepare(&mut app.session, &settings, &ids)?;
     let total = prepared.len();
+    let skipped: Vec<Value> = prepared.skipped().iter().map(|(file, warning)| json!({"file": file, "warning": warning})).collect();
     let title = std::path::Path::new(&path).file_stem().and_then(|n| n.to_str()).unwrap_or("Print").to_string();
     let write = app.services.write_shared.clone();
     let progress = Arc::new(Mutex::new((0, String::new())));
     let cancel = Arc::new(AtomicBool::new(false));
     let (p, c) = (progress.clone(), cancel.clone());
     let (tx, rx) = channel();
-    let photos = ids.len();
+    let photos = prepared.photos();
     // (where the PDF went, for the row the print leaves when it ends)
     let folder = folder_of(&path);
     let work = move || {
@@ -314,7 +330,7 @@ pub fn start_print(app: &mut LightcraftApp, params: &Value) -> Result<Value, Str
                     Some(write) => write(&path, &bytes)?,
                     None => lightcraft_engine::export::write_file(&path, &bytes)?,
                 }
-                Ok(vec![json!({"path": path, "pages": pages.len(), "photos": photos, "bytes": bytes.len(), "print": true})])
+                Ok(vec![json!({"path": path, "pages": pages.len(), "photos": photos, "bytes": bytes.len(), "print": true, "skipped": skipped})])
             });
         let _ = tx.send(result.map(|files| (files, None, c.load(Ordering::Relaxed))));
     };
@@ -375,23 +391,30 @@ pub fn poll_photos(app: &mut LightcraftApp, ctx: &egui::Context) {
 #[cfg(target_arch = "wasm32")]
 pub fn poll_photos(_: &mut LightcraftApp, _: &egui::Context) {}
 
+/// The first part of an export's account: what was done (photos exported, a contact sheet or a PDF printed).
+fn export_headline(files: &[Value], ok: usize, total: usize) -> String {
+    if let Some(sheet) = files.first().filter(|f| f["contactSheet"] == true) {
+        crate::i18n::tr_format!("Exported contact sheet: {photos} photos, {pages} pages", photos = sheet["photos"], pages = sheet["pages"])
+    } else if let Some(pdf) = files.first().filter(|f| f["print"] == true) {
+        crate::i18n::tr_format!("Printed to PDF: {photos} photos, {pages} pages", photos = pdf["photos"], pages = pdf["pages"])
+    } else {
+        crate::i18n::tr_format!("Exported {ok} of {total} photo{}", if total == 1 { "" } else { "s" }, ok = ok, total = total)
+    }
+}
+
 /// What a finished export says: how many files were written, skipped or failed, and the Apple Photos note; and
 /// its first part, what was done, which is the headline of the row the export leaves (translated like the toast).
 fn export_summary(files: &[Value], photos: Option<&Value>, total: usize, cancelled: bool) -> (String, String) {
-    let sheet = files.first().filter(|f| f["contactSheet"] == true);
     let failed: Vec<&Value> = files.iter().filter(|f| f.get("error").is_some()).collect();
     let ok = files.iter().filter(|f| f.get("path").is_some()).count();
-    let skipped = files.iter().filter(|f| f.get("skipped").is_some()).count();
-    let mut m = crate::i18n::tr_format!("Exported {ok} of {total} photo{}", if total == 1 { "" } else { "s" }, ok = ok, total = total);
-    if let Some(sheet) = sheet {
-        m = crate::i18n::tr_format!("Exported contact sheet: {photos} photos, {pages} pages", photos = sheet["photos"], pages = sheet["pages"]);
-    }
-    if let Some(pdf) = files.first().filter(|f| f["print"] == true) {
-        m = crate::i18n::tr_format!("Printed to PDF: {photos} photos, {pages} pages", photos = pdf["photos"], pages = pdf["pages"]);
-    }
+    let (skipped, warned) = not_written(files);
+    let mut m = export_headline(files, ok, total);
     let summary = m.clone();
     if skipped > 0 {
         m += &crate::i18n::tr_format!(" · {skipped} skipped (file exists)", skipped = skipped);
+    }
+    if warned > 0 {
+        m += &format!(" · {warned} {}", crate::i18n::tr("not exported"));
     }
     if let Some(first) = failed.first() {
         m += &crate::i18n::tr_format!(" · {} failed: {}", failed.len(), first["error"].as_str().unwrap_or("error"));
@@ -407,16 +430,28 @@ fn export_summary(files: &[Value], photos: Option<&Value>, total: usize, cancell
     (m, summary)
 }
 
+/// How many of an export's files were skipped (a name that exists keeps the taken path as `skipped`) and how many were
+/// not written with a warning (a clip a rendered export cannot make, a contact sheet's or print's skipped photos, which
+/// come as an array of {file, warning}).
+fn not_written(files: &[Value]) -> (usize, usize) {
+    let skipped = files.iter().filter(|f| f.get("skipped").is_some_and(|v| !v.is_array())).count();
+    let warned = files.iter().filter(|f| f.get("warning").is_some()).count()
+        + files.iter().filter_map(|f| f.get("skipped").and_then(Value::as_array)).map(Vec::len).sum::<usize>();
+    (skipped, warned)
+}
+
 /// How an export that ran ended, for the activity stack. Photos taking only some of the files is a warning, and
 /// Photos not asked at all (`skipped`: the export wrote no files, an earlier request still running…) is not an error
-/// either: not all went well in both cases.
-fn export_ending(cancelled: bool, ok: usize, failed: usize, photos: Option<&Value>) -> Ending {
+/// either: not all went well in both cases. Neither did an export that could not write some files without failing
+/// (`unwritten`: a rendered export of clips only ends with no file and no failure). A name that exists is not a
+/// problem: the person chose to skip it (the Skip collision policy).
+fn export_ending(cancelled: bool, ok: usize, failed: usize, unwritten: usize, photos: Option<&Value>) -> Ending {
     let photos_short = photos.is_some_and(|p| ["error", "warning", "skipped"].iter().any(|k| p.get(k).is_some()));
     if cancelled {
         Ending::Stopped
     } else if failed > 0 && ok == 0 {
         Ending::Failed
-    } else if failed > 0 || photos_short {
+    } else if failed > 0 || unwritten > 0 || photos_short {
         Ending::Problems
     } else {
         Ending::Done
@@ -429,7 +464,8 @@ fn export_ending(cancelled: bool, ok: usize, failed: usize, photos: Option<&Valu
 fn finished_outcome(files: &[Value], photos: Option<&Value>, cancelled: bool, folder: Option<String>, msg: &str, summary: String) -> Outcome {
     let failed: Vec<&Value> = files.iter().filter(|f| f.get("error").is_some()).collect();
     let ok = files.iter().filter(|f| f.get("path").is_some()).count();
-    let ending = export_ending(cancelled, ok, failed.len(), photos);
+    let (_, warned) = not_written(files);
+    let ending = export_ending(cancelled, ok, failed.len(), warned, photos);
     let path = files.iter().find_map(|f| f["path"].as_str()).map(str::to_string).or(folder);
     let failures = failed
         .iter()
@@ -686,12 +722,26 @@ mod tests {
     #[test]
     fn export_ending_counts_an_uncancelled_photos_skip_as_a_problem() {
         let skipped = json!({"skipped": "the export wrote no files"});
-        assert_eq!(export_ending(false, 3, 0, Some(&skipped)), Ending::Problems);
-        assert_eq!(export_ending(false, 3, 0, Some(&json!({"warning": "added 1 of 3"}))), Ending::Problems);
-        assert_eq!(export_ending(false, 3, 0, Some(&json!({"imported": 3}))), Ending::Done);
-        assert_eq!(export_ending(false, 3, 0, None), Ending::Done);
-        assert_eq!(export_ending(false, 0, 2, None), Ending::Failed);
-        assert_eq!(export_ending(true, 3, 0, Some(&json!({"skipped": "cancelled", "cancelled": true}))), Ending::Stopped);
+        assert_eq!(export_ending(false, 3, 0, 0, Some(&skipped)), Ending::Problems);
+        assert_eq!(export_ending(false, 3, 0, 0, Some(&json!({"warning": "added 1 of 3"}))), Ending::Problems);
+        assert_eq!(export_ending(false, 3, 0, 0, Some(&json!({"imported": 3}))), Ending::Done);
+        assert_eq!(export_ending(false, 3, 0, 0, None), Ending::Done);
+        assert_eq!(export_ending(false, 0, 2, 0, None), Ending::Failed);
+        assert_eq!(export_ending(true, 3, 0, 0, Some(&json!({"skipped": "cancelled", "cancelled": true}))), Ending::Stopped);
+    }
+
+    /// A rendered export of clips only writes nothing: each clip comes back as a warning, so it did not go well,
+    /// however few files failed (review of #2822). A name that exists is skipped by the person's choice: no problem.
+    #[test]
+    fn an_export_that_warned_files_ends_with_problems() {
+        let ending = |files: Vec<Value>| finished_outcome(&files, None, false, None, "", String::new()).ending;
+        let clip = json!({"photo": 1, "file": "a.mp4", "warning": "a video is not rendered"});
+        assert_eq!(ending(vec![clip.clone(), clip.clone()]), Ending::Problems);
+        assert_eq!(ending(vec![json!({"path": "/out/a.jpg"}), clip]), Ending::Problems);
+        assert_eq!(ending(vec![json!({"path": "/out/a.jpg"}), json!({"skipped": "/out/b.jpg"})]), Ending::Done);
+        // (a contact sheet's skipped photos are an array of warnings)
+        assert_eq!(ending(vec![json!({"path": "/out/s.pdf", "skipped": [{"file": "a.mp4", "warning": "no frame"}]})]), Ending::Problems);
+        assert_eq!(ending(vec![json!({"path": "/out/a.jpg"})]), Ending::Done);
     }
 
     /// The row of an export points at the folder its files go to, not at one it does not use.

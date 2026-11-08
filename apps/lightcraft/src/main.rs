@@ -33,15 +33,21 @@ mod appkit_defaults;
 mod colord;
 mod control_server;
 mod dialog_filter;
+#[cfg(target_os = "macos")]
+mod dock_badge;
 mod editors;
 #[cfg(any(target_os = "macos", test))]
 mod file_sheet;
 mod hdr_display;
 #[cfg(target_os = "macos")]
 mod increase_contrast;
+#[cfg(target_os = "macos")]
+mod keep_awake;
 mod logging;
 #[cfg(target_os = "macos")]
 mod native_menu;
+#[cfg(target_os = "macos")]
+mod notify;
 #[cfg(any(target_os = "linux", windows))]
 mod profile_file;
 #[cfg(target_os = "macos")]
@@ -206,11 +212,16 @@ impl eframe::App for App {
         self.0.ui(ui);
     }
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        // a finished move's result is waiting for a frame that won't come: the library follows it now
+        self.0.finish_ready_move();
         // (a size the window was just given is remembered too)
         self.0.ui.window = self.1.window_at_exit(self.0.ui.window);
         if let Err(e) = self.1.save(&self.0) {
             log::error!("{e}");
         }
+        // a Move Files to Trash at work stops after the file in hand, and its photos whose files
+        // moved leave the library before it is saved
+        self.0.finish_background_file_work();
         if let Err(e) = self.0.session.close_library() {
             log::error!("saving the library failed: {e}");
         }

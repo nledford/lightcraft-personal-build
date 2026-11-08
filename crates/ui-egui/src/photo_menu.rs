@@ -330,6 +330,14 @@ fn nodes_with(app: &LightcraftApp, photo: PhotoId, infos: &[CommandInfo], preset
     for id in ["photo.delete", "photo.restore", "photo.deletePermanently"] {
         v.push(menu("Photo").iter().find(|n| matches!(n, MenuNode::Item { id: i, .. } if i == id)).cloned());
     }
+    // the files too: always asks first, in the library and in Recently Deleted alike (there also all of them at once)
+    if app.session.source == lightcraft_engine::LibrarySource::RecentlyDeleted && crate::panels::trash_files::available() {
+        v.push(with(row("dialog.trashFiles"), |l, p, _, _| {
+            *l = "Move All Files in Recently Deleted to Trash…".into();
+            *p = json!({"recentlyDeleted": true});
+        }));
+    }
+    v.push(row("dialog.trashFiles"));
     menubar::tidy(v.into_iter().flatten().collect())
 }
 
@@ -518,18 +526,17 @@ fn exported(app: &mut LightcraftApp, ctx: &egui::Context, r: &Value) {
 }
 
 /// Move to Folder…: the folder dialog goes through the shared picker (off the UI thread where the
-/// host has one: then `photo.moveToFolder` runs when it closes).
+/// host has one: then `photo.moveToFolder` runs when it closes); the move itself runs in the background.
 fn move_to_folder(app: &mut LightcraftApp, ctx: &egui::Context) {
     let req = crate::pick::PickRequest::folder(crate::i18n::tr("Move to Folder…"));
-    let picked =
-        crate::pick::ask(app, "photo.moveToFolder", &json!({}), "folder", req, |s| s.pick_folder.as_mut().and_then(|f| f()).map(|x| vec![x]));
+    let picked = crate::pick::ask(app, "photo.moveToFolder", &json!({"background": true}), "folder", req, |s| {
+        s.pick_folder.as_mut().and_then(|f| f()).map(|x| vec![x])
+    });
     if let crate::pick::Picked::Now(v) = picked
         && let Some(into) = v.into_iter().next()
     {
-        match app.run("photo.moveToFolder", json!({"folder": into})) {
-            Ok(r) => app.toast(ctx, crate::i18n::tr_format!("Moved {} photo(s)", r["moved"])),
-            Err(e) => app.toast_error(ctx, e),
-        }
+        // (a refusal is told in a toast by `start`)
+        let _ = crate::move_task::start(app, ctx, &json!({"folder": into}), false);
     }
 }
 

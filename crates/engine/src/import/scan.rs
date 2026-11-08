@@ -1,6 +1,6 @@
-use super::files::{Seen, expand, expand_report_knowing, is_supported, probe_all, reusable_probes};
+use super::files::{BrowsedFile, ReadJob, browsed_files_changed, expand, expand_report_knowing, is_supported, read_files};
 use super::types::ImportCandidate;
-use super::{HashMap, ListedFolders, Path, PathBuf, PhotoId, ProbeInfo, Session, Source};
+use super::{HashMap, ListedFolders, Path, PathBuf, PhotoId, ProbeInfo, ReadWatch, Session, Source, StuckReaders};
 
 /// What a [`scan`] needs from the session, so it can run on another thread (a folder on a network
 /// share can take minutes to read).
@@ -19,7 +19,7 @@ pub struct ScanInput {
 /// The library's photos of `files`: path → (photo, its summary as a candidate that is there
 /// already). One pass over the library, and a record only for a file that was found: a folder of
 /// a hundred files in a library of millions costs a hundred records.
-pub(super) fn library_files(library: &lightcraft_catalog::Catalog, files: &[String]) -> HashMap<PathBuf, (PhotoId, ImportCandidate)> {
+pub(super) fn library_files(library: &lightcraft_catalog::Catalog, files: &[String]) -> HashMap<PathBuf, (PhotoId, ImportCandidate, Option<String>)> {
     let found: std::collections::HashSet<&Path> = files.iter().map(Path::new).collect();
     let mut by_path = HashMap::new();
     if found.is_empty() {
@@ -37,11 +37,15 @@ pub(super) fn library_files(library: &lightcraft_catalog::Catalog, files: &[Stri
                 height: p.height,
                 file_size: p.file_size,
                 captured: p.captured.clone(),
-                duplicate: Some("path".into()),
+                // a file that was only browsed (Local) is not in the library: importing it promotes it
+                // (a trashed browse record still counts as the path's)
+                duplicate: (!p.local || p.deleted).then(|| "path".into()),
                 existing: Some(p.id.0),
+                local: p.local && !p.deleted,
+                duration: p.duration,
                 ..Default::default()
             };
-            by_path.insert(PathBuf::from(path), (p.id, c));
+            by_path.insert(PathBuf::from(path), (p.id, c, p.content_hash.clone()));
         }
     }
     by_path
@@ -64,8 +68,8 @@ pub(super) fn note_content<V>(by_hash: &mut HashMap<String, (bool, V)>, key: &st
 }
 
 /// Which photo of the library has each of the contents `hashes` (the one with the content's own
-/// key where several have it, else the later one). One pass over the library, and an entry only
-/// for a content that was asked about.
+/// key where several have it, else the later one; a copy that was only browsed in Local isn't in the
+/// library). One pass over the library, and an entry only for a content that was asked about.
 pub(super) fn library_hashes<'a>(library: &lightcraft_catalog::Catalog, hashes: impl Iterator<Item = &'a str>) -> HashMap<String, PhotoId> {
     let wanted: std::collections::HashSet<&str> = hashes.collect();
     let mut by_hash = HashMap::new();
@@ -73,7 +77,8 @@ pub(super) fn library_hashes<'a>(library: &lightcraft_catalog::Catalog, hashes: 
         return HashMap::new();
     }
     for p in library.photos() {
-        if let Some(h) = &p.content_hash
+        if !p.local
+            && let Some(h) = &p.content_hash
             && wanted.contains(crate::sync::base_hash(h))
         {
             note_content(&mut by_hash, h, p.id);
@@ -90,6 +95,29 @@ pub struct ScanProgress {
     pub done: std::sync::atomic::AtomicUsize,
     /// Shared with the scan's row in the activity stack (its ✕ sets it).
     pub cancel: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    /// Which file the probes wait for, and Skip for it (the scan's row shows it; see [`ReadWatch`]).
+    pub reads: std::sync::Arc<ReadWatch>,
+}
+
+impl ScanProgress {
+    /// Progress of a scan whose probes count as stalled after `stall_after` ([`Session::import_stall_after`]) and
+    /// whose abandoned reads are counted in `stuck` ([`Session::stuck_readers`]).
+    pub fn new(stall_after: std::time::Duration, stuck: std::sync::Arc<StuckReaders>) -> Self {
+        ScanProgress { reads: std::sync::Arc::new(ReadWatch::with_stuck(stall_after, stuck)), ..Default::default() }
+    }
+}
+
+/// A probe a review scan kept still holds for the scan that follows while the file is as big as it was (or can't be
+/// looked at: it is then probed again, or fails there).
+fn cache_holds_for_scan(path: &str, info: &ProbeInfo) -> bool {
+    let size = std::fs::metadata(path).map(|m| m.len()).ok();
+    size.is_none() || size == Some(info.file_size)
+}
+
+/// A probe a scan kept still holds for the import while the file is still there, as it was (the web's files are not
+/// `std::fs` files: kept as probed).
+pub(super) fn cache_holds_for_import(path: &str, info: &ProbeInfo) -> bool {
+    cfg!(target_arch = "wasm32") || std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.len() == info.file_size)
 }
 
 /// The result of [`scan_with`]: the candidates, and the probes to keep for the import that follows.
@@ -104,6 +132,9 @@ pub struct ScanOutput {
     pub unsupported: usize,
     /// The folders the scan listed (kept with the probes, for the import that follows).
     pub listed: ListedFolders,
+    /// Why the scan ended early for a reason of its own, if it did: the drive stopped answering (the fourth read was
+    /// skipped). The candidates not reached say so as their error.
+    pub stopped: Option<String>,
 }
 
 impl ScanInput {
@@ -322,8 +353,9 @@ pub fn scan(s: &mut Session, paths: &[String]) -> Vec<ImportCandidate> {
 /// [`scan`] keeping what the walks left out. The probes are already kept in the session for the
 /// import that follows, so `probes` of the output is empty.
 pub fn scan_report(s: &mut Session, paths: &[String]) -> ScanOutput {
+    let progress = ScanProgress::new(s.import_stall_after, s.stuck_readers.clone());
     let (input, paths) = ScanInput::new(s, paths);
-    let mut out = scan_with(input, &paths, &ScanProgress::default());
+    let mut out = scan_with(input, &paths, &progress);
     s.import_probes = std::mem::take(&mut out.probes);
     out
 }
@@ -357,34 +389,74 @@ pub fn scan_with(mut input: ScanInput, paths: &[String], progress: &ScanProgress
 /// them ([`expand_report`](super::files::expand_report)).
 pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &ScanProgress) -> ScanOutput {
     use std::sync::atomic::Ordering::Relaxed;
-    let by_path = library_files(&input.library, &files);
+    let mut by_path = library_files(&input.library, &files);
+    // a browsed file that was replaced since is not the one its record describes: it is read again like a new file
+    // (the record's stored content, kept from the browse, would give the wrong answer against the library), and
+    // its candidate still names the record and says it was only browsed, unless the library has that content.
+    // Their sizes are looked at together; ✕ while that goes on leaves the files not reached to be read (and so
+    // reported as not probed) like the ones after them, never vouched for as the record's own.
+    let mut replaced: HashMap<PathBuf, PhotoId> = HashMap::new();
+    let browsed: Vec<(&str, u64)> =
+        files.iter().filter_map(|f| by_path.get(Path::new(f)).filter(|(_, c, _)| c.local).map(|(_, c, _)| (f.as_str(), c.file_size))).collect();
+    for ((f, _), checked) in browsed.iter().zip(browsed_files_changed(&browsed, &progress.cancel, &progress.reads)) {
+        match checked {
+            BrowsedFile::Unchanged => {}
+            BrowsedFile::Changed => {
+                if let Some((id, ..)) = by_path.remove(Path::new(f)) {
+                    replaced.insert(PathBuf::from(f), id);
+                }
+            }
+            // (✕, or a look that was given up: the file is read like the ones after it, and reported as not probed)
+            BrowsedFile::Unchecked | BrowsedFile::Failed(_) => {
+                by_path.remove(Path::new(f));
+            }
+        }
+    }
     let todo: Vec<String> = files.iter().filter(|f| !by_path.contains_key(Path::new(f))).cloned().collect();
     progress.total.store(todo.len(), Relaxed);
-    // probes from a preceding `scan` are reused when the file is unchanged (same size); a file that
-    // can't be looked at counts as unchanged (✕ set while they are checked: no more round trips to the
-    // disk; what is not reached counts as not probed, like the files after it)
-    let cached = reusable_probes(&todo, &mut input.cache, &progress.cancel, |seen, info| match seen {
-        Seen::At { len, .. } => len == info.file_size,
-        Seen::Gone => true,
-        Seen::Unchecked => false,
-    });
-    let missing: Vec<String> = todo.iter().zip(&cached).filter(|(_, c)| c.is_none()).map(|(f, _)| f.clone()).collect();
-    progress.done.store(todo.len() - missing.len(), Relaxed);
-    let mut fresh = probe_all(input.probe.as_ref(), &missing, &progress.done, &progress.cancel).into_iter();
+    // probes from a preceding `scan` are reused when the file is unchanged (same size): checked by the readers
+    let jobs: Vec<ReadJob> = todo.iter().map(|f| ReadJob { path: f.clone(), cached: input.cache.remove(f) }).collect();
     let probed: Vec<Result<ProbeInfo, String>> =
-        cached.into_iter().map(|c| c.map(Ok).unwrap_or_else(|| fresh.next().unwrap_or_else(|| Err("not probed".into())))).collect();
+        read_files(input.probe.as_ref(), jobs, cache_holds_for_scan, None, &progress.done, &progress.cancel, &progress.reads)
+            .into_iter()
+            .map(|r| r.info)
+            .collect();
     crate::memory::release();
     let mut probes: HashMap<String, Result<ProbeInfo, String>> = todo.into_iter().zip(probed).collect();
     // (who in the library has a content that was probed: asked once the probes are in)
-    let probed_hashes = probes.values().filter_map(|r| r.as_ref().ok()).filter_map(|info| info.content_hash.as_deref());
+    let probed_hashes = probes
+        .values()
+        .filter_map(|r| r.as_ref().ok())
+        .filter_map(|info| info.content_hash.as_deref())
+        // (and the browsed files the library has by path: they are offered unless it has the content too)
+        .chain(by_path.values().filter(|(_, c, _)| c.local).filter_map(|(_, _, h)| h.as_deref()));
     let mut seen_hash: HashMap<String, Option<u64>> =
         library_hashes(&input.library, probed_hashes).into_iter().map(|(h, id)| (h, Some(id.0))).collect();
     let mut out = Vec::with_capacity(files.len());
     let mut kept = HashMap::new();
+    // (a content's browsed first copy: its path, until the first file of its own with that content stands in for it)
+    let mut browsed_first: HashMap<String, String> = HashMap::new();
     for f in files {
-        if let Some((_, c)) = by_path.get(Path::new(&f)) {
+        if let Some((_, c, hash)) = by_path.get(Path::new(&f)) {
             let mut c = c.clone();
             c.name = Path::new(&f).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| f.clone());
+            // a browsed file the library has the content of (or an earlier file here promotes) is a duplicate
+            if c.local
+                && let Some(h) = hash
+            {
+                match seen_hash.get(h) {
+                    Some(existing) => {
+                        c.duplicate = Some("content".into());
+                        c.existing = *existing;
+                    }
+                    None => {
+                        // (the library doesn't have it: a browsed record isn't a library photo, and
+                        // the import looks the library up when it runs)
+                        seen_hash.insert(h.clone(), None);
+                        browsed_first.insert(h.clone(), f.clone());
+                    }
+                }
+            }
             out.push(c);
             continue;
         }
@@ -392,8 +464,8 @@ pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &Sc
         let mut c = ImportCandidate { path: f.clone(), name, ..Default::default() };
         match probes.remove(&f) {
             Some(Ok(info)) => {
-                (c.format, c.kind, c.width, c.height, c.file_size, c.captured) =
-                    (info.format.clone(), info.kind, info.width, info.height, info.file_size, info.captured.clone());
+                (c.format, c.kind, c.width, c.height, c.file_size, c.captured, c.duration) =
+                    (info.format.clone(), info.kind, info.width, info.height, info.file_size, info.captured.clone(), info.duration);
                 // as the import will date it (a sidecar's date, when there is one, still wins there)
                 c.captured = c.captured.or_else(|| info.file_modified.clone());
                 c.preview_only = info.preview_only.clone();
@@ -403,9 +475,25 @@ pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &Sc
                         Some(existing) => {
                             c.duplicate = Some("content".into());
                             c.existing = *existing;
+                            // (the first copy of a browsed photo that is a file of its own stands in for it when
+                            // copying leaves the browsed one out: said once per content; a browsed file doesn't)
+                            if existing.is_none() && !replaced.contains_key(Path::new(&f)) {
+                                c.browsed_twin = browsed_first.remove(h);
+                            }
                         }
                         None => {
                             seen_hash.insert(h.clone(), None);
+                        }
+                    }
+                }
+                if let Some(id) = replaced.get(Path::new(&f)) {
+                    // still the browsed record's file, as for one that is as browsed: Copy and Move leave it out, and the
+                    // first twin of its own stands in for it there
+                    c.local = true;
+                    if c.duplicate.is_none() {
+                        c.existing = Some(id.0);
+                        if let Some(h) = &info.content_hash {
+                            browsed_first.insert(h.clone(), f.clone());
                         }
                     }
                 }
@@ -417,5 +505,13 @@ pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &Sc
         out.push(c);
     }
     // (the walks' diagnostics are [`scan_with`]'s: these files were found already)
-    ScanOutput { candidates: out, probes: kept, truncated: false, unreadable: 0, unsupported: 0, listed: input.listed }
+    ScanOutput {
+        candidates: out,
+        probes: kept,
+        truncated: false,
+        unreadable: 0,
+        unsupported: 0,
+        listed: input.listed,
+        stopped: progress.reads.ended(),
+    }
 }

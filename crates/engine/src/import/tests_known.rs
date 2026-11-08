@@ -28,7 +28,7 @@ fn a_scan_knows_the_library_photos_of_the_files_it_found() {
     let files: Vec<String> = ["/pics/007/a.jpg", "/pics/007/b.jpg", "/pics/007/new.jpg", "/pics/007//c.jpg"].map(String::from).to_vec();
     let known = library_files(&c, &files);
     assert_eq!(known.len(), 3, "the three the library has (a path is compared as a path, not as text)");
-    let (id, as_found) = known.get(Path::new("/pics/007/b.jpg")).expect("b");
+    let (id, as_found, _) = known.get(Path::new("/pics/007/b.jpg")).expect("b");
     let p = c.photo(*id).unwrap();
     assert_eq!((as_found.path.as_str(), as_found.existing, as_found.duplicate.as_deref()), ("/pics/007/b.jpg", Some(id.0), Some("path")));
     assert_eq!((as_found.format.as_str(), as_found.width, as_found.height, as_found.file_size), (p.format.as_str(), p.width, p.height, p.file_size));
@@ -39,7 +39,7 @@ fn a_scan_knows_the_library_photos_of_the_files_it_found() {
     let copy = c.alloc_photo_id();
     c.apply(Op::AddPhoto { photo: Box::new(Photo::new(copy, Source::File { path: "/pics/007/a.jpg".into() }, "a.jpg", "JPEG", 6, 4, "2026-01-02")) })
         .unwrap();
-    assert_eq!(library_files(&c, &files).get(Path::new("/pics/007/a.jpg")).map(|(id, _)| *id), Some(copy));
+    assert_eq!(library_files(&c, &files).get(Path::new("/pics/007/a.jpg")).map(|(id, _, _)| *id), Some(copy));
 }
 
 /// Given a library and a folder on disk that holds a file the library has by its path, one it
@@ -129,6 +129,33 @@ fn a_trashed_photo_is_not_looked_up_when_imports_replace_it() {
         job.prepare_files(Vec::new(), &std::sync::atomic::AtomicBool::new(false));
         assert_eq!(job.by_path.len(), expected, "{on_deleted:?}");
         let its_content = s.catalog.photo(id).and_then(|p| p.content_hash.clone()).unwrap();
-        assert_eq!(job.by_hash.contains_key(&its_content), on_deleted == OnDeleted::Skip, "{on_deleted:?}");
+        assert_eq!(job.by_hash.contains(&its_content), on_deleted == OnDeleted::Skip, "{on_deleted:?}");
     }
+}
+
+/// Given a Cancel that is set when a batch of files the library already has is prepared (they
+/// need no work, so the Cancel came after the last file that had any), when the batch ends,
+/// then it says it was not cut short: every file has its item, whatever the flag says by then.
+#[test]
+fn a_batch_prepared_to_its_end_is_not_cut_short_by_a_later_cancel() {
+    let mut s = Session::new();
+    s.catalog = library(50);
+    let mut job = ImportJob::new(&mut s, ImportOptions { mode: ImportMode::Add, ..ImportOptions::default() }).unwrap();
+    let cancel = std::sync::atomic::AtomicBool::new(true);
+    let out = job.prepare_files(vec!["/pics/007/a.jpg".into(), "/pics/007/b.jpg".into()], &cancel);
+    assert_eq!(out.items.len(), 2, "both files have their item");
+    assert!(!out.cut_short, "nothing was left undone");
+}
+
+/// Given a Cancel that comes before a file of the batch is prepared, when the batch ends, then
+/// it says it was cut short, and that file has no item.
+#[test]
+fn a_batch_cancel_stopped_before_a_file_is_cut_short() {
+    let mut s = Session::new();
+    s.catalog = library(50);
+    let mut job = ImportJob::new(&mut s, ImportOptions { mode: ImportMode::Add, ..ImportOptions::default() }).unwrap();
+    let cancel = std::sync::atomic::AtomicBool::new(true);
+    let out = job.prepare_files(vec!["/pics/007/a.jpg".into(), "/pics/007/new.jpg".into()], &cancel);
+    assert_eq!(out.items.len(), 1, "only the known file has its item");
+    assert!(out.cut_short, "the new file was left undone");
 }

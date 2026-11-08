@@ -61,7 +61,7 @@ fn opening_a_library_rechecks_stale_preview_only_raws_in_the_background() {
     assert_eq!(p.preview_only, None);
     assert!(app.ui.toast.as_ref().is_some_and(|t| t.text == "1 raw can now be developed from its raw data"), "{:?}", app.ui.toast);
     // once per opened library
-    app.ui.toast = None;
+    app.ui.clear_toasts();
     crate::recheck::tick(&mut app);
     assert!(app.tasks.is_empty());
 }
@@ -75,7 +75,7 @@ fn recheck_result_is_dropped_after_switching_libraries() {
     crate::recheck::tick(&mut app);
     app.run("app.openLibrary", json!({"path": dir.0.join("other").to_string_lossy()})).unwrap();
     assert!(crate::tasks::wait(&mut app, &ctx, Duration::from_secs(10)));
-    assert!(app.ui.toast.is_none(), "{:?}", app.ui.toast);
+    assert!(app.ui.toast().is_none(), "{:?}", app.ui.toast);
     assert!(app.session.catalog.photo(id).is_none(), "the other library is untouched");
     // the user did not stop it: no row asks for attention
     assert!(app.session.activity.finished().iter().all(|r| !r.ending.needs_attention()), "{:?}", app.session.activity.finished());
@@ -290,7 +290,7 @@ fn a_cancelled_reload_reports_only_what_it_did() {
             // a read the cancel stopped comes back as an error, as a file not reached does
             if read { native(path) } else { Err(format!("{path}: cancelled")) }
         }));
-        app.ui.toast = None;
+        app.ui.clear_toasts();
         app.run("photo.reload", json!({"ids": [id.0]})).unwrap();
         let (state, _) = gate.1.wait_timeout_while(gate.0.lock().unwrap(), Duration::from_secs(5), |s| !s.0).unwrap();
         assert!(state.0, "the reload started reading");
@@ -311,7 +311,7 @@ fn a_cancelled_reload_reports_only_what_it_did() {
             assert!(app.ui.toast.as_ref().is_some_and(|t| t.text == "This raw is now developed from its raw data"), "{:?}", app.ui.toast);
         } else {
             assert!(app.session.catalog.photo(id).unwrap().preview_only.is_some());
-            assert!(app.ui.toast.is_none(), "a cancelled reload reported {:?}", app.ui.toast);
+            assert!(app.ui.toast().is_none(), "a cancelled reload reported {:?}", app.ui.toast);
         }
     }
 }

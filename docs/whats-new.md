@@ -23,6 +23,12 @@
   time: a command chosen while a sheet is open waits and opens its dialog when the first has closed. Local ▸ Browse
   Folder… and the buttons inside dialogs open their dialogs as before.
 
+### Undo takes back the whole of a large Synchronize Folder
+- Edit ▸ Undo after a Synchronize Folder that made more than 1,000 steps (each step adds 8 to 16 photos, so a folder of
+  some 8,000 to 16,000 new photos or more) used to take back only the last 1,000 steps and leave the photos of the
+  first ones imported. It now takes back the whole synchronize, as it always did for a smaller folder, and Redo does it
+  all again. An edit or an Undo made between the synchronize's own steps still keeps it from being one step, as before.
+
 ### Colour noise reduction (process V6)
 - Colour noise reduction removes colour noise at the raw default 25, where it used to leave most of it, and keeps
   colour edges at high values instead of bleeding them into fringes (issue #815). It filters the colour differences
@@ -210,6 +216,22 @@
   is unchanged.
 - In the Keyword List of the Keywords panel, pointing at a tick box says what a click does: "Add … to the selected
   photos (3)", or "Take … off …" once all of them have it. With no photo selected it says "Select photos to tick".
+
+### A synchronize canceled at the very end says it finished
+- Canceling Synchronize Folder when it had already handed over its last piece of work still showed "Stopped · Imported N",
+  although every photo had come in. "Stopped" now appears only when something was left undone; a Cancel that
+  arrives too late to stop anything shows the normal result.
+
+### Scrolling through a very large library takes far less memory
+- LightCraft keeps a note of which photos' files are on disk, so the grid never waits for a slow or unplugged drive. It
+  kept a note for every photo you scrolled past, and another for each one's smart preview, a file most photos don't
+  have, until the library was closed: scrolling through a library of 1.6 million photos added about 0.4 GB. It now
+  keeps up to 65,536 notes of files that are there (the last ones found or looked at), a few tens of MB at most, and
+  the grid asks about a smart preview only when the photo's original is offline. The note of a missing file is kept for
+  as long as it is missing, so scrolling through the photos of an unplugged drive still adds notes for each. In a
+  library of up to 65,536 photos nearly every note is kept; in a larger one, a note that was dropped is made again when
+  its photo is next looked at. For a photo whose original has just gone offline, the Info panel can say "no smart
+  preview" until it has checked, which takes longer when a drive is slow.
 
 ## 2026-11-02
 
@@ -607,6 +629,21 @@
 - Help opens with LightCraft Help, then What's New and Keyboard Shortcuts, then Send Feedback… and the ArtCraft Discord, the websites, and System Info, Open Log Folder and Debug. Join the ArtCraft Discord… no longer leads the menu, and LightCraft Help is no longer the last row.
 - LightCraft Help is ⇧⌘? on macOS, where F1 needs the fn key. Windows, Linux and the web keep F1.
 
+### On macOS, a long job keeps the Mac awake
+- While an export, import, preview build, merge or other job you started is running, the Mac no longer goes to sleep
+  on its own and macOS no longer slows the app down when its window is hidden or minimized. Both end as soon as the
+  last job finishes or is canceled.
+
+### On macOS, the Dock icon shows how many jobs are running
+- The Dock icon of LightCraft carries a badge with the number of jobs you started that are running (an export, an
+  import, a preview build…). It goes away when the last one ends, so a job in a minimized window can still be seen.
+
+### On macOS, a notification tells you when a job has finished
+- When a job you started (an export, an import, a preview build…) ends while LightCraft is in the background, macOS
+  shows a notification. It says what the job reported ("Exported 24 photos"), or names it, or says how many ended
+  when several did. The first time, macOS asks whether LightCraft may notify you. Turn it off in Settings ▸ General ▸
+  Notifications.
+
 ### A folder made with New Folder on Disk… appears in Folders at once
 - Right-click a folder, choose New Folder on Disk…, name it and Create: the new folder now has its own row in Folders
   straight away, with 0 photos, and the sidebar scrolls to it (it is not chosen, so the photos you selected to move
@@ -746,7 +783,32 @@
   `library.removeFolder` and `folder.label` take `paths`, as one undo step each; `album.reorder` takes `with`, the
   albums chosen beside the one it places, which come to the same folder in the same step.
 
+### A move cut short is followed at the next open
+- If LightCraft is force-quit or crashes part-way through a move, or you choose Quit Anyway, the next time the
+  library opens, the photos whose files reached the new folder point there (their sidecars follow), the others stay,
+  and an "Unfinished moves" window says what was found. Edits made while the files were moving reach their XMP
+  sidecars then too. A file that was half copied to another disk leaves a hidden `.lc-partial` file in the new folder,
+  which that open removes; a copy that reached the new folder while the original stayed is removed only when it is the
+  same file or holds the same bytes. In a library that was opened without its lock (some network shares can't lock
+  it), nothing is followed or removed, because another program may be making the move: use File ▸ Find Missing
+  Photos… to relink files that moved.
+
 ## 2026-10-25
+
+### Import from Folder… offers the photos you browsed in Local
+- A folder you browsed in Local no longer shows its photos as "In library" and out of reach in the Import review:
+  they are offered, checked, and importing them brings the browsed photos (with their edits) into the library where
+  they are. Copy and Move still leave them out, since they can't be copied from where they already are, and the
+  review says keywords and presets apply to new files only when they are set for such photos.
+- A copy you only browsed in Local (another path with the same content) no longer makes the import report "already in
+  the library", even after the library photo was permanently deleted and the library reopened, and a library photo
+  with the same content is matched before a browsed copy is promoted. Several browsed copies of one file import once.
+- Files with the same content as a browsed photo are listed as identical copies in the folder, not as already in the
+  library, which doesn't have them. With Copy or Move, which leave the browsed photo out, the first of those files
+  that isn't browsed itself is offered and checked instead, so that content can still be copied in from the folder.
+- A browsed file that another application replaced since (its size on disk is no longer the one that was browsed) is
+  read again: it is compared with the library by what it is now, and importing it brings its record up to date (size,
+  dimensions, content) as it joins the library.
 
 ### A one-field white balance edit no longer shifts the other one
 - Settings that name only a white balance temperature, or only a tint — `develop.merge`,
@@ -809,7 +871,53 @@
 - A disk's row now offers Show in Finder and New Folder on Disk…, and a folder in Local offers New Folder on Disk…,
   whose new folder is listed in Local.
 
-## 2026-10-25
+### Move Files to Trash
+- **Photo ▸ Move Files to Trash…** (also in a photo's menu in the grid) takes the selected photos out of the library
+  and moves their files to the system Trash, with their XMP sidecars. It always asks first and lists the files.
+  It works on photos in the library and in Recently Deleted; from Recently Deleted all of them can go at once
+  (right-click a photo there ▸ Move All Files in Recently Deleted to Trash…). Not on Windows or in the browser yet.
+- With "Confirm before moving photos to Recently Deleted" on, the Delete question now has Move Files to Trash… as a second answer. Delete
+  itself still moves photos to Recently Deleted and leaves their files.
+- Once the question is answered it closes at once, and the files move in the background under **Moving files to
+  the Trash** in the activity stack. Its ✕ stops after the file in hand: the photos not reached stay in the library,
+  and the notice says how many. Choosing hundreds of photos on a network share no longer freezes the window.
+- On a disk without a Trash (many network shares) a second question asks whether their files may be erased for
+  good (its button waits a moment before it can be pressed). Where the disk says so beforehand, as on macOS, that
+  question comes before any file moves, and what goes to the Trash and what is erased is one undo step; Cancel there
+  keeps those photos and their files, the others still go, and nothing more is asked. A disk found to have no Trash
+  only as its files are tried (as on Linux) gets the question afterwards, as a step of its own, once no other dialog
+  is open. Only those files are erased; sidecars beside them stay. That cannot be undone as far as the files go;
+  Undo brings the photos back, shown as missing, with their edits and keywords.
+- While files move, renaming or moving files, Locate Missing File…, Convert to DNG, Duplicate, Create Virtual Copy,
+  Edit in PhotoCraft, Edit in Other Editor, Undo and Redo wait (they say why), and so does a second Move Files to
+  Trash…. Quitting waits for the file in hand and keeps what moved.
+
+### Move Files to Trash: the command for agents
+- `photo.trashFiles {ids?, noTrash?: keep|delete}` takes the photos (the selection, or `ids`; in the library or in
+  Recently Deleted) out of the library for good and moves their files, with their XMP sidecars, to the system Trash.
+  `library.emptyRecentlyDeleted {files: "trash"}` does it for everything in Recently Deleted. The app asks first
+  (see above); this is the command itself, for the control channel and MCP.
+- Nothing else changed: Delete still moves photos to Recently Deleted, and Delete Permanently, Empty Recently
+  Deleted and Remove Folder from Library still leave every file where it is.
+- Undo brings the photos back and moves the files back out of the Trash, as long as they are still there. It
+  never replaces a file that is at their place now, and says what it could not put back.
+- A file that another photo in the same folder uses (another spelling of its name, or that folder reached through a
+  link) stays until the last of them goes. Before a file is erased, every photo of that name in the library is
+  checked, links included. A sidecar goes only when it is that photo's alone: `IMG_1.xmp` stays while a raw, a
+  video or anything else called `IMG_1` is beside it, or a photo of that name stays in the library.
+- Photos whose folder can't be reached (a disk that is not connected) stay in the library: nothing says their
+  files are gone. A file that is gone from a folder that is there just lets its photo leave.
+- On a disk without a Trash (many network shares) the photos stay and the answer names them (`noTrash`), unless
+  `noTrash: "delete"` says their files may be erased; trash and erase are then one undo step, and undo brings
+  the erased photos back, shown as missing, with their edits and keywords. Sidecars beside erased files stay.
+- Nothing records a run while it is under way: if the app is killed while files move, those already moved stay in the
+  Trash (or are erased) and their photos show as missing.
+- Files are checked against the photos in each file's own folder, not against every photo of that name in the
+  library, so a call for hundreds of photos on a network share costs no comparison with every photo of that name.
+- A disk's own Trash (`.Trash-<uid>` at its top) is used only when it is a plain folder of the user that others can't enter; a link, a file, someone else's folder or an open one is refused and counted as `failed`, with how to put it right. A disk whose top folder others could replace our Trash folders in (writable by group or others, no sticky bit, whoever owns it, or owned by neither the user nor root) counts as having no Trash too when it has no `.Trash-<uid>` (a share or external disk mounted with a world-writable, non-sticky mode gets no Trash); with one there, even a private folder of the user's, the files are counted as `failed` and never offered for erasing, with the fix named: make the top folder owned by the user or root and sticky or not writable by others, or move the Trash's files out and remove it. A disk that can't hold such a folder counts as having no Trash, but only when LightCraft just made the folder; one that was already there is never counted as no Trash: remove it or make it private (`chmod 700`).
+- macOS, Linux and the other Unix systems for now. On Windows and in the browser the command says it is not available and changes
+  nothing. The answer has the counts `removed`, `trashed`, `erased`, `missing`, `shared`, `sidecarsLeft`, `skipped`
+  and `stopped` (always 0 here), `noTrash` (the photos on a disk without a Trash) and `failed` (what could not move, and why).
 
 ### `>=` and `<=` work in the search box
 - Fielded search tokens now take inclusive comparisons: `rating:>=3`, `iso:<=400`, `f:>=2.8`, `focal:<=50`. Before,
@@ -867,6 +975,32 @@
   copied keywords are text you can paste in a keyword box. Paste is grayed out where it can't work, such as a
   folder inside itself, and one Edit ▸ Undo takes back a paste.
 - For agents: the new `album.duplicate` takes `id` or `ids` and an optional `parent` (null: the top level).
+
+### Video exports respect memory and location privacy
+- Original video exports stream to disk without loading the clip into memory or imposing a
+  clip-size limit. Remove location info accepts verified location-free clips, but refuses clips
+  with native QuickTime or XMP GPS, or unverifiable metadata; it does not strip GPS from a video.
+- The browser stores and downloads videos as Blobs, hashes them in chunks and reads only bounded
+  metadata into WASM. Imports run one at a time and appear in the activity stack. Whole-buffer
+  originals and byte-returning APIs are independent of the cache budget: `app.memoryBudget`
+  controls cache retention and scheduling, not file admission. Platform buffer capacity, known
+  physical RAM and allocation failures are checked explicitly instead of imposing a cache-based
+  file-size restriction. The browser cache takes ownership without another full-buffer copy.
+  Image originals also use Blob storage, avoiding IndexedDB's serialized-buffer size ceiling.
+- Native video probing follows the container's contents, not its extension, so a clip named
+  `.jpg` or `.dng` also uses bounded metadata reads. The CLI reports a rendered video as an
+  explicit error without claiming that it wrote an output; Original copies still work.
+- The Videos filter, `kind:video` search and smart album rules also find legacy video records.
+  Direct rendering of a clip reports that it has no frame, rather than saying the photo is missing.
+
+### Videos join the library
+- MP4, MOV and M4V clips are found by folder import and catalogued like photos: LightCraft reads the container's
+  duration, display size (including a phone's rotation), capture date, camera and GPS from the movie header and
+  QuickTime metadata, and the grid's Videos filter lists them with their length and container. The loupe shows a card
+  naming the clip instead of a broken-photo error, and Info lists its Duration.
+- A clip cannot be played, trimmed or edited yet, and it has no still to render: a JPEG, print, contact sheet or
+  rendered slideshow leaves it out and says so per file (Original format still copies the clip). Edits to a
+  catalogued clip are kept, but nothing decodes its frames until the player lands.
 
 ## 2026-10-24
 
@@ -1154,6 +1288,53 @@
   names them; after a switch that dropped them, a message says how many ("Waiting tasks dropped: 2").
 - A full waiting line is refused in the window's language ("Too many tasks are waiting (100): wait for some to finish").
 
+### Stop a move that is under way
+- ✕ on the "Moving photos" row stops the move after the file in hand. The photos that moved stay moved, as one step
+  Edit ▸ Undo takes back, and the rest stay where they were. A toast says how far it got.
+
+### ✕ ends an import or scan at once when a file stops answering
+- ✕ now ends an import within about a second while files are being read or copied, however long a read has been waiting; a copy that was under way is taken back. While folders are being listed, ✕ still waits for the listing.
+- Synchronize Folder reads the same way: ✕ ends its scan and the import of its run at once, and when the drive stops answering the scan says so, lists only what it reached and offers only Import new photos.
+- After four skipped files the import or scan stops with an error that the drive is not answering. Agents use `activity.skip {id}`; `activity.list` shows `stalled` for the task.
+- While 32 or more given-up reads are still blocked on a drive that stopped answering, a new import or scan ends at once with an error saying so, even from another drive: try again later, or restart LightCraft.
+
+### Skip a file that stops answering during an import or scan
+- When a file on a network drive stops answering while an import, the Add Photos review, a Local folder or Synchronize Folder reads it, the task's row in the activity stack says "Waiting for IMG_0457.jpg" with the seconds it has gone without progress, and offers Skip next to ✕. A big file that is slow but still being read is not reported.
+- Skip gives up that one file: an import lists it as not readable ("skipped: no answer after 14 s"), the review and Synchronize Folder list it as unreadable, and the work goes on with the next files. When several files wait, Skip takes the one that is named, then the next is named.
+
+### The Missing Photos count no longer checks the whole library after every change
+- The Missing Photos count used to check every file of the library again every few seconds and after every
+  change, which kept a library on a network share busy. Each file is now checked once when the library opens and
+  again five minutes after the last round of checks ended, one at a time and after what the window asks about; the
+  files of photos that come in or move are checked as they do. Edits that change no file (a rating, an album, a
+  keyword) check nothing. Opening another library drops the check of the one that was open.
+  While an import, an import review scan, a Synchronize Folder or a Local folder listing is reading the same
+  files, the check waits and then goes on where it stopped, so it no longer slows them down.
+  The count follows each file found gone or back by itself instead of going through every photo again, so the
+  window stays smooth on a library of hundreds of thousands of photos while a share is being checked.
+
+### Locate a folder that moved
+- A folder of the library that is somewhere else now can be pointed at its new place (issue #1112): it was moved or
+  renamed outside LightCraft, its disk is mounted under another name, or its catalog came from another computer (a
+  Lightroom catalog from Windows names `D:\Photos\…`, which is nowhere on Linux or macOS). **Synchronize Folder…**
+  on a folder that isn't there now offers **Locate Missing Folder…**, and every Folders row has **Update Folder
+  Location…**. Choose the folder: its photos, those in the folders inside it too, point at the same places below it,
+  colour labels follow, and when you started from Synchronize Folder, it then scans the folder there. Only the
+  library changes, no file is touched, and it is one undo step.
+- The photos' files are looked for in the chosen folder first, in the background (a row in the activity stack; ✕
+  stops it). A folder with none of them is not taken; one with only some asks before going on. A file counts when
+  it is the size the library recorded; files of another size are said in the question. A file that is another
+  photo's of the same folder (the chosen folder is inside the old one, or the reverse) is never taken for it, unless
+  its content is the photo's.
+- Agents and the CLI: `folder.updateLocation {folder, path}`. In the running app it looks for the files in the
+  background too and answers at once; `ui.inspect` → `relocate` says how it went.
+
+### A change that could only be partly taken back is saved and can be undone
+- When a change made of several steps (such as deleting photos that sit in stacks) failed part-way and LightCraft
+  could not put everything back, what it had changed stayed in the open library but was neither saved nor undoable,
+  so a restart brought back the old state and Undo could not finish the job. Such a change is now saved as it
+  stands, the error says it was only partly taken back, and Undo finishes taking it back.
+
 ### Relative-date filters and smart albums follow the clock
 - A current view or source count using “in the last” rules now refreshes when the session clock moves into a new
   minute, even when no catalog edit occurred. This fixes stale photos remaining in the grid and stale counts for
@@ -1354,6 +1535,11 @@
   Monitor tab, the model installation messages) are in every language now. "(library default)" and "starting…" are
   translated too.
 
+### Messages no longer hide each other
+- The short messages at the bottom of the photo view used to replace one another: a label set right after an export
+  ended hid the export's message. Now a new message appears where they always did and the ones still showing move up
+  above it, up to three, each going at its own time (at the top during a slideshow, the newest on top).
+
 ### Tab leaves the name field in New Album, New Smart Album and the name prompts
 - In New Album, New Smart Album, Save Metadata Preset and the other dialogs with one name field, the field has the
   keyboard focus when the dialog opens, and Tab now moves on to the check box, Cancel and OK (Shift+Tab goes back).
@@ -1422,6 +1608,21 @@
   Still refused: a file with no picture data yet, a cut JPEG of a kind only the slower decoder reads (CMYK, 12-bit,
   lossless, separate scans per colour), arithmetic-coded JPEGs, and cut files of other formats. The catalog
   remembers that such a photo was cut short; Reload clears that once the file is whole.
+
+### A refused move to another folder says what is wrong
+- When photos can't be moved into another folder, the message now names the photos and what to do (rename them,
+  reconnect the disk, or leave them out of the move), in plain words, instead of an "invalid parameters" error that
+  named an internal command. Moving the photos you chose with Move Selected Photos Here still stops as a whole when one
+  of them can't go, and then nothing is moved.
+- Agents get the same details: `photo.checkMove` lists, without moving anything, the photos that can go, the ones
+  already in the folder, and those that can't go: a name taken there, a file that is missing or offline, or a photo
+  that can't move as it is (a Local photo, until it is added to the library, or one with no file).
+  `photo.moveToFolder` takes `skip`, the ids of photos to leave where they are while the rest move (a Local photo
+  can be skipped too), and reports each skipped photo with the reason.
+- Dropping photos on a folder in the sidebar now checks the move first. The question names the photos that can't go
+  (up to five, then a count) and why: the name is taken in the folder, two photos being moved share a name, the file is
+  missing or offline, or the photo has no file. It says what to do and offers to move the rest, and it asks even when
+  you turned off the confirmation. Dropping a Local photo is still refused on the row, with its own reason.
 
 ### Choose where a Lightroom catalog goes
 - File ▸ Import Lightroom Catalog… now asks first: merge the catalog's photos, collections and edits into the
@@ -1686,6 +1887,18 @@
   one thing that still floats in the top-left corner is the notice that a Synchronize Folder scan finished in the
   background; it is no task, so it is not in the list.
 - The bell used to open History. History is in the Window menu and on the tool strip, as before.
+
+### Moving photos to a NAS no longer freezes the window
+- Moving photos to another folder (dropping them on a Folders row, Move Selected Photos Here, Move to Folder…) now
+  runs in the background. The activity stack shows "Moving photos" with how many have moved and the file in hand,
+  and a toast says how it ended. The photos move as one step Edit ▸ Undo takes back.
+- While a move runs, editing, rating and keywording go on as usual; the moving photos' XMP sidecars are written once
+  they arrive. Another move, a rename, Undo or Redo of a file move and opening another library are refused until it
+  ends, and so is anything that would take a moving photo out of the library or point it at another file: Delete
+  Permanently, Empty Recently Deleted, importing a file again as a new photo over its trashed record, Convert to DNG,
+  Find Missing Photos, Locate and the Undo of those steps. A message pops up saying how many photos are moving, and
+  nothing is changed; try again once the move is done.
+- Quitting while photos are moving asks first, also while a stopped move is finishing its file.
 
 ### Settings window
 - Settings is one size on every tab and stays where it is as you go through them; before, each tab made its own

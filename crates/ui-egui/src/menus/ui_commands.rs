@@ -245,6 +245,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     ("file.backupLibrary", "Back Up Library…", None, "File"),
     ("file.restoreLibrary", "Restore Library from Backup…", None, "File"),
     ("photo.locate", "Locate Missing File…", None, ""),
+    ("folder.locate", "Locate Missing Folder…", None, ""),
     ("dialog.saveMetadataPreset", "Save Metadata Preset…", None, ""),
     // the keywords ⇧K adds or removes, typed with commas between them
     ("dialog.keywordShortcut", "Set Keyword Shortcut…", Some("Cmd+Alt+Shift+K"), ""),
@@ -291,6 +292,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     ("photo.copyPath", "Copy File Path", None, ""),
     ("app.openSamModelFolder", "Show in File Manager", None, ""),
     ("dialog.rename", "Rename Photos…", Some("F2"), "Photo"),
+    ("dialog.trashFiles", "Move Files to Trash…", None, "Photo"),
     ("dialog.labelNames", "Edit Color Label Names…", None, ""),
     ("dialog.captureTime", "Edit Capture Time…", None, "Photo>Metadata"),
     ("photo.tagFromTracklog", "Auto-Tag from Tracklog…", None, "Photo>Metadata"),

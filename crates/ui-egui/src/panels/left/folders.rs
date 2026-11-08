@@ -668,16 +668,10 @@ fn folder_drop_target(
     // (the label, the confirmation and the toast say which folder when another row has the name)
     let name = crate::destination::folder(&app.caches.folder_tree(&app.session.catalog, app.session.library_generation()), &n.path);
     let photos: Vec<_> = ids.iter().filter_map(|id| app.session.catalog.photo(lightcraft_catalog::PhotoId(*id))).collect();
-    let refused = if !n.selectable {
-        Some(crate::i18n::tr("This row covers more than one disk: drop on a folder inside it"))
-    } else if photos.iter().any(|p| p.local) {
-        Some(crate::i18n::tr("Local photos aren't in the library yet: Add to My Photos first, then move them"))
-    } else if photos.iter().any(|p| !matches!(p.source, lightcraft_catalog::Source::File { .. })) {
-        // `photo.moveToFolder` refuses a photo with no file
-        Some(crate::i18n::tr("Demo photos have no file on disk, so they can't be moved"))
-    } else {
-        None
-    };
+    let any_local = photos.iter().any(|p| p.local);
+    // (`photo.moveToFolder` refuses a photo with no file)
+    let any_fileless = photos.iter().any(|p| !matches!(p.source, lightcraft_catalog::Source::File { .. }));
+    let refused = drop_refusal(n.selectable, any_local, any_fileless);
     let count = files_moved(&photos, &n.path);
     let all_here = !photos.is_empty() && photos.iter().all(|p| is_in_folder(p, &n.path));
     let released = ui.input(|i| i.pointer.primary_released());
@@ -701,13 +695,32 @@ fn folder_drop_target(
     ui.painter().rect_stroke(resp.rect.shrink2(vec2(8.0, 1.0)), 4.0, egui::Stroke::new(1.5, t.accent), egui::StrokeKind::Inside);
     if released {
         app.ui.dragging_photos = None;
+        // problems the move would stop at (a name taken there, a file offline) are found now and
+        // shown in the question, so they aren't met after Move
+        let (problems, movable) = match app.run("photo.checkMove", json!({"folder": n.path, "ids": ids})) {
+            Ok(r) => move_problems(&r),
+            Err(e) => {
+                app.toast(ui.ctx(), e);
+                return;
+            }
+        };
         // a drop moves files on disk: asked first (as Lightroom Classic does), unless the person
-        // said not to; the menu's Move Selected Photos Here is asked for by name and goes at once
-        if app.ui.settings.ask_before_move {
+        // said not to (a move with problems asks anyway: it needs a decision); the menu's Move
+        // Selected Photos Here is asked for by name and goes at once
+        if app.ui.settings.ask_before_move || !problems.is_empty() {
             let library = app.session.library_generation();
-            app.ui.dialog = Some(crate::state::Dialog::MovePhotos { ids, folder: n.path.clone(), name, files: count, dont_ask: false, library });
+            app.ui.dialog = Some(crate::state::Dialog::MovePhotos {
+                ids,
+                folder: n.path.clone(),
+                name,
+                files: count,
+                dont_ask: false,
+                library,
+                problems,
+                movable,
+            });
         } else {
-            move_photos_here(app, ui.ctx(), Some(&ids), &n.path, &name);
+            move_photos_here(app, ui.ctx(), Some(&ids), &n.path);
         }
     }
 }
@@ -863,6 +876,20 @@ pub fn folder_drag_feedback(app: &mut LightcraftApp, ctx: &egui::Context) {
     );
 }
 
+/// Why photos can't be dropped on a Folders row, when they can't: the row covers several disks, a photo is Local (not
+/// in the library yet), or has no file on disk.
+fn drop_refusal(selectable: bool, any_local: bool, any_fileless: bool) -> Option<&'static str> {
+    if !selectable {
+        Some(crate::i18n::tr("This row covers more than one disk: drop on a folder inside it"))
+    } else if any_local {
+        Some(crate::i18n::tr("Local photos aren't in the library yet: Add to My Photos first, then move them"))
+    } else if any_fileless {
+        Some(crate::i18n::tr("Demo photos have no file on disk, so they can't be moved"))
+    } else {
+        None
+    }
+}
+
 /// Photos dragged over the closed row `n` for [`SPRING_OPEN_SECONDS`] open it (a row with folders
 /// inside it). Restarts on each row the pointer comes to, and when it comes back to one after
 /// leaving it (or after another drag).
@@ -888,24 +915,6 @@ fn spring_open(ui: &egui::Ui, n: &FolderNode, open: &mut bool) -> bool {
     false
 }
 
-/// Move photos (`ids`, else the selection) into the folder `path` on disk (`photo.moveToFolder`).
-/// Photos that leave the view leave the selection, so nothing done next (Delete, an edit) reaches
-/// photos no longer on screen. How many moved, or why none did.
-pub(crate) fn move_photos(app: &mut LightcraftApp, ids: Option<&[u64]>, path: &str) -> Result<u64, String> {
-    let mut params = json!({"folder": path});
-    if let Some(ids) = ids {
-        params["ids"] = json!(ids);
-    }
-    let r = app.run("photo.moveToFolder", params)?;
-    let visible: std::collections::HashSet<lightcraft_catalog::PhotoId> = app.session.visible_cloned().into_iter().collect();
-    let sel = &mut app.session.selection;
-    sel.ids.retain(|id| visible.contains(id));
-    if sel.active.is_some_and(|a| !visible.contains(&a)) {
-        sel.active = sel.ids.first().copied();
-    }
-    Ok(r["moved"].as_u64().unwrap_or(0))
-}
-
 /// What a move of `n` photos into the folder `name` says: how many moved and that Undo moves them
 /// back, or that they were there already.
 pub(crate) fn moved_text(n: u64, name: &str) -> String {
@@ -923,13 +932,43 @@ pub(crate) fn created_text(path: &str, parent: &str) -> String {
     crate::i18n::tr_format!("Created folder “{name}” in “{parent}”", name = name, parent = lightcraft_catalog::folders::folder_label(parent))
 }
 
-/// [`move_photos`], saying how it went in a toast.
-fn move_photos_here(app: &mut LightcraftApp, ctx: &egui::Context, ids: Option<&[u64]>, path: &str, name: &str) {
-    match move_photos(app, ids, path) {
-        Ok(n) if n > 0 => app.toast_undoable(ctx, moved_text(n, name)),
-        Ok(n) => app.toast(ctx, moved_text(n, name)),
-        Err(e) => app.toast_error(ctx, e),
+/// Move photos (`ids`, else the selection) into the folder `path` on disk, in the background
+/// (`move_task`: a toast says how it went once it ends); a toast says why when it can't begin.
+fn move_photos_here(app: &mut LightcraftApp, ctx: &egui::Context, ids: Option<&[u64]>, path: &str) {
+    let mut params = json!({"folder": path});
+    if let Some(ids) = ids {
+        params["ids"] = json!(ids);
     }
+    // (a refusal is told in a toast by `start`)
+    let _ = crate::move_task::start(app, ctx, &params, false);
+}
+
+/// The problems and the number of photos that can go in a `photo.checkMove` answer.
+fn move_problems(r: &serde_json::Value) -> (Vec<crate::state::MoveProblem>, usize) {
+    let problems = r["problems"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|p| {
+            Some(crate::state::MoveProblem {
+                id: p["id"].as_u64()?,
+                name: p["name"].as_str()?.to_string(),
+                kind: crate::state::MoveProblemKind::from_check(p),
+            })
+        })
+        .collect();
+    (problems, r["movable"].as_u64().unwrap_or(0) as usize)
+}
+
+/// [`moved_text`] for a move that left `skipped` photos out.
+pub(crate) fn moved_skipping_text(n: u64, skipped: u64, name: &str) -> String {
+    crate::i18n::tr_format!(
+        "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.",
+        if n == 1 { "" } else { "s" },
+        name,
+        n = n,
+        skipped = skipped
+    )
 }
 
 /// What moving the folder `name` into the folder `into` says: where it went, how many library
@@ -1156,6 +1195,27 @@ fn export_folder_item(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode
     });
 }
 
+/// Update Folder Location… of a Folders row (widget `folderLocate`; `folder.locate`): say where
+/// the folder is now when it was moved or renamed outside LightCraft, or its disk is mounted
+/// somewhere else. Offered always: whether the folder is there is not asked of the disk for a
+/// menu (the sidebar never waits on a network).
+fn locate_item(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode) {
+    if app.services.pick_folder.is_none() && app.services.picker.is_none() {
+        return;
+    }
+    let r = ui
+        .button(crate::i18n::tr("Update Folder Location…"))
+        .on_hover_text(crate::i18n::tr("Choose where this folder is now, after it was moved or renamed outside LightCraft or its disk changed; its photos follow, no file is touched"));
+    crate::widgets::register(ui, "folderLocate", r.rect);
+    if r.clicked() {
+        // a disk, or a folder holding disks, was chosen as such
+        if let Err(e) = app.run("folder.locate", json!({"folder": n.path, "disk": n.volume || !n.selectable})) {
+            app.toast(ui.ctx(), e);
+        }
+        ui.close();
+    }
+}
+
 /// Set Color Label ▸ of a Folders row (`folder.label`; the submenu is widget `folderLabelMenu`,
 /// its colours `folderLabel:<colour>`).
 fn folder_label_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, n: &FolderNode) {
@@ -1188,6 +1248,8 @@ enum FolderItem {
     AddToMyPhotos,
     Synchronize,
     LocateMissing,
+    /// Update Folder Location…: say where the folder is now (`folder.locate`).
+    UpdateLocation,
     ExportFolder,
     ExportFolderWithPreset,
     NewFolder,
@@ -1214,14 +1276,14 @@ fn folder_menu_groups(row: FolderRow) -> &'static [&'static [FolderItem]] {
     use FolderItem::*;
     match row {
         FolderRow::Library => &[
-            &[ImportHere, Synchronize, LocateMissing, ExportFolder, ExportFolderWithPreset],
+            &[ImportHere, Synchronize, LocateMissing, UpdateLocation, ExportFolder, ExportFolderWithPreset],
             &[NewFolder, Rename, Move, MovePhotosHere],
             &[ColorLabel, Parents],
             &[Reveal, CopyPath],
             &[RemoveFromLibrary],
         ],
         FolderRow::Disk => {
-            &[&[Synchronize, LocateMissing, ExportFolder, ExportFolderWithPreset], &[NewFolder], &[ColorLabel], &[Reveal, CopyPath], &[RemoveDisk]]
+            &[&[Synchronize, LocateMissing, UpdateLocation, ExportFolder, ExportFolderWithPreset], &[NewFolder], &[ColorLabel], &[Reveal, CopyPath], &[RemoveDisk]]
         }
         FolderRow::Local { .. } => &[&[AddToMyPhotos, Synchronize], &[NewFolder, Rename, Move], &[Reveal, CopyPath], &[KeepInLocal, RemoveFromLocal]],
     }
@@ -1289,6 +1351,7 @@ fn folder_item_available(
         FolderItem::ImportHere => app.services.picker.is_some() || app.services.pick_folder.is_some(),
         FolderItem::Reveal => app.services.reveal.is_some(),
         FolderItem::Parents => node.is_some() && (parents.above.is_some() || parents.asked_for),
+        FolderItem::UpdateLocation => node.is_some() && (app.services.pick_folder.is_some() || app.services.picker.is_some()),
         FolderItem::LocateMissing
         | FolderItem::ExportFolder
         | FolderItem::ExportFolderWithPreset
@@ -1336,6 +1399,11 @@ fn folder_item(
                 locate_missing_item(app, ui, n);
             }
         }
+        FolderItem::UpdateLocation => {
+            if let Some(n) = node {
+                locate_item(app, ui, n);
+            }
+        }
         FolderItem::ExportFolder | FolderItem::ExportFolderWithPreset => {
             if let Some(n) = node {
                 export_folder_item(app, ui, n, item == FolderItem::ExportFolderWithPreset);
@@ -1379,8 +1447,7 @@ fn folder_item(
                 .show(ui);
             let r = hint_while(r, any, crate::i18n::tr("Moves the files and their XMP sidecars into this folder; never overwrites"));
             if r.clicked() {
-                let named = crate::destination::folder(&app.caches.folder_tree(&app.session.catalog, app.session.library_generation()), path);
-                move_photos_here(app, ui.ctx(), None, path, &named);
+                move_photos_here(app, ui.ctx(), None, path);
                 ui.close();
             }
         }

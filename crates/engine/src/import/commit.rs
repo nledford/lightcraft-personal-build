@@ -1,9 +1,13 @@
 use super::defaults::apply_import_defaults_beside;
 use super::files::copy_into;
+#[cfg(not(target_arch = "wasm32"))]
+use super::files::shown;
 use super::job::{Prepared, PreparedItem, ReadyFile};
+#[cfg(not(target_arch = "wasm32"))]
+use super::reads;
 use super::scan::note_content;
 use super::types::{Duplicate, ImportOptions, ImportReport, Kept, Moved, OnDeleted};
-use super::{HashMap, Op, Path, PathBuf, Photo, PhotoId, ProbeInfo, Session, Source};
+use super::{HashMap, Op, Path, PathBuf, Photo, PhotoId, ProbeInfo, ReadWatch, Session, Source, progressed};
 
 /// A batch's items in file order while its transfers are pending ([`ImportJob::run_plan`]).
 #[derive(Default)]
@@ -27,6 +31,8 @@ pub(super) struct Transfer {
     pub(super) path: String,
     pub(super) info: ProbeInfo,
     pub(super) sidecar: Option<crate::sidecar::SidecarData>,
+    /// Its sidecar was over [`crate::sync::MAX_SIDECAR_BYTES`] and was left unread ([`ReadyFile::sidecar_too_large`]).
+    pub(super) sidecar_too_large: bool,
     pub(super) dir: PathBuf,
     pub(super) how: How,
     /// Copy as DNG.
@@ -63,8 +69,31 @@ pub(super) fn name_family(name: &str) -> String {
 /// Threads for `jobs` file reads (probes, copies) at once.
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn workers(jobs: usize) -> usize {
-    std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4).clamp(1, 8).min(jobs.max(1))
+    workers_with(std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4), jobs)
 }
+
+/// [`workers`] on a machine with `cores` cores.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn workers_with(cores: usize, jobs: usize) -> usize {
+    cores.clamp(1, 8).min(jobs.max(1))
+}
+
+/// Threads for `jobs` reads of a drive that may be a network share: a read there is a round trip or several, not
+/// work for a core, so up to [`READ_THREADS`] go at once whatever the machine's cores (never fewer than [`workers`]).
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn read_threads(jobs: usize) -> usize {
+    read_threads_with(std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4), jobs)
+}
+
+/// [`read_threads`] on a machine with `cores` cores.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn read_threads_with(cores: usize, jobs: usize) -> usize {
+    READ_THREADS.min(jobs).max(workers_with(cores, jobs))
+}
+
+/// The most threads that read files of an import or scan at once.
+#[cfg(not(target_arch = "wasm32"))]
+const READ_THREADS: usize = 16;
 
 /// Files per batch for a caller that prepares an import in batches ([`ImportJob::prepare_files`]):
 /// enough to keep every probe and copy thread busy (a batch waits for its slowest file), few
@@ -81,68 +110,79 @@ pub fn batch_size() -> usize {
 }
 
 /// Run `transfers` (several at once where threads exist); their outcomes in order, `None` for one
-/// not started because `cancel` was set. `done` counts each one finished.
+/// not started because `cancel` was set, or cut off by it. `done` counts each one finished. A transfer that stops
+/// answering is reported by `watch` and given up when it is asked to, like a read ([`ReadWatch`]): its item is
+/// `Failed` then, and whatever it writes later is taken back.
 pub(super) fn run_transfers(
     transfers: Vec<Transfer>,
-    file_bytes: Option<&crate::merge::ByteReader>,
+    file_bytes: Option<crate::merge::ByteReader>,
     cancel: &std::sync::atomic::AtomicBool,
     done: &std::sync::atomic::AtomicUsize,
+    watch: &ReadWatch,
 ) -> Vec<Option<PreparedItem>> {
     use std::sync::atomic::Ordering::Relaxed;
-    let one = |t: Transfer| {
-        if cancel.load(Relaxed) {
-            return None;
-        }
-        let path = t.path.clone();
-        // last-resort guard: a panic is this file's failure, not the import's
-        let item = crate::guard::catch("import", || run_transfer(t, file_bytes)).unwrap_or_else(|e| PreparedItem::Failed(path, e));
-        done.fetch_add(1, Relaxed);
-        Some(item)
-    };
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let n = workers(transfers.len());
-        if n > 1 {
-            let mut results: Vec<Option<PreparedItem>> = std::iter::repeat_with(|| None).take(transfers.len()).collect();
-            let queue = std::sync::Mutex::new(transfers.into_iter().enumerate());
-            let out = std::sync::Mutex::new(&mut results);
-            // (the tests' injected faults hold for the workers too)
-            #[cfg(test)]
+        use std::sync::Arc;
+        let paths: Vec<String> = transfers.iter().map(|t| t.path.clone()).collect();
+        let pool = reads::Pool { watch, cancel, name: "lc-import-copy", threads: workers(transfers.len()) };
+        let work: Arc<dyn Fn(Transfer) -> PreparedItem + Send + Sync> = Arc::new(move |t| run_transfer(t, file_bytes.as_ref()));
+        // (the tests' injected faults hold for the workers too)
+        #[cfg(test)]
+        let init: Arc<dyn Fn() + Send + Sync> = {
             let fault = crate::import_move::injected_fault();
-            let work = &|| {
-                #[cfg(test)]
-                crate::import_move::inject(fault);
-                loop {
-                    let next = queue.lock().unwrap_or_else(std::sync::PoisonError::into_inner).next();
-                    let Some((i, t)) = next else { break };
-                    let r = one(t);
-                    if let Some(slot) = out.lock().unwrap_or_else(std::sync::PoisonError::into_inner).get_mut(i) {
-                        *slot = r;
-                    }
-                }
-            };
-            std::thread::scope(|sc| {
-                let handles: Vec<_> =
-                    (0..n).filter_map(|i| std::thread::Builder::new().name(format!("lc-import-copy-{i}")).spawn_scoped(sc, work).ok()).collect();
-                if handles.is_empty() {
-                    // no thread to be had: copy here, one after another
-                    work();
-                }
-                for h in handles {
-                    if h.join().is_err() {
-                        log::error!("import: a copy worker stopped unexpectedly");
-                    }
-                }
-            });
-            return results;
-        }
+            Arc::new(move || crate::import_move::inject(fault))
+        };
+        #[cfg(not(test))]
+        let init: Arc<dyn Fn() + Send + Sync> = Arc::new(|| {});
+        let outcomes = pool.run(transfers, &|i| paths.get(i).map(|p| shown(p)).unwrap_or_default(), work, Arc::new(discard), init, &|_| {
+            done.fetch_add(1, Relaxed);
+        });
+        outcomes
+            .into_iter()
+            .zip(paths)
+            .map(|(o, path)| match o {
+                reads::Outcome::Done(item) => Some(item),
+                reads::Outcome::Failed(why) => Some(PreparedItem::Failed(path, why)),
+                reads::Outcome::Unreached => None,
+            })
+            .collect()
     }
-    transfers.into_iter().map(one).collect()
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = watch;
+        transfers
+            .into_iter()
+            .map(|t| {
+                if cancel.load(Relaxed) {
+                    return None;
+                }
+                let path = t.path.clone();
+                // last-resort guard: a panic is this file's failure, not the import's
+                let item = crate::guard::catch("import", || run_transfer(t, file_bytes.as_ref())).unwrap_or_else(|e| PreparedItem::Failed(path, e));
+                done.fetch_add(1, Relaxed);
+                Some(item)
+            })
+            .collect()
+    }
+}
+
+/// What a transfer made after it was given up is not wanted: a placed file is taken back (its source was never
+/// touched), a copy removed.
+pub(super) fn discard(item: PreparedItem) {
+    let PreparedItem::Ready(ready) = item else { return };
+    match &ready.placed {
+        Some(placed) => crate::import_move::rollback(placed),
+        None if ready.stored != ready.path => {
+            let _ = std::fs::remove_file(&ready.stored);
+        }
+        None => {}
+    }
 }
 
 /// Copy or move one planned file (and Copy as DNG); its item.
 fn run_transfer(t: Transfer, file_bytes: Option<&crate::merge::ByteReader>) -> PreparedItem {
-    let Transfer { path, mut info, sidecar, dir, how, dng, bring_sidecar, .. } = t;
+    let Transfer { path, mut info, sidecar, sidecar_too_large, dir, how, dng, bring_sidecar, .. } = t;
     let mut placed = None;
     let mut stored = match how {
         How::Place { name } => match crate::import_move::place(Path::new(&path), &dir, &name) {
@@ -162,7 +202,10 @@ fn run_transfer(t: Transfer, file_bytes: Option<&crate::merge::ByteReader>) -> P
         // decoding the raw twice and encoding it takes several times the file's size in memory
         let weight = usize::try_from(info.file_size).unwrap_or(usize::MAX).saturating_mul(6);
         let _permit = crate::memory::work_gate().acquire(weight);
-        match crate::cmd::convert::write_dng_with(file_bytes, &stored, String::new()) {
+        progressed();
+        let made = crate::cmd::convert::write_dng_with(file_bytes, &stored, String::new());
+        progressed();
+        match made {
             Ok(dng) => {
                 let _ = std::fs::remove_file(&stored);
                 stored = dng;
@@ -178,7 +221,7 @@ fn run_transfer(t: Transfer, file_bytes: Option<&crate::merge::ByteReader>) -> P
         let _ = std::fs::remove_file(&stored);
         return PreparedItem::Failed(path, e);
     }
-    PreparedItem::Ready(Box::new(ReadyFile { path, stored, info, sidecar, placed }))
+    PreparedItem::Ready(Box::new(ReadyFile { path, stored, info, sidecar, sidecar_too_large, placed }))
 }
 
 /// A trashed photo's file is not where the library had it (never on the web, where paths are
@@ -213,7 +256,8 @@ fn contents_already_held(cat: &lightcraft_catalog::Catalog, opts: &ImportOptions
         return held;
     }
     let fresh = opts.on_deleted == OnDeleted::Fresh;
-    for p in cat.photos().filter(|p| !(fresh && p.deleted)) {
+    // (a browsed copy, Local, is not in the library: it holds no content)
+    for p in cat.photos().filter(|p| !p.local && !(fresh && p.deleted)) {
         if let Some(h) = p.content_hash.as_deref().map(crate::sync::base_hash)
             && batch.contains(h)
         {
@@ -221,6 +265,27 @@ fn contents_already_held(cat: &lightcraft_catalog::Catalog, opts: &ImportOptions
         }
     }
     held
+}
+
+/// The content hash a new photo is stored under. Imported although another photo has this content (`import_duplicates`):
+/// a Duplicate's hash (`:dup<id>`), so the two photos can be told apart and neither is mistaken for the other.
+fn hash_of_import(
+    hash: Option<String>,
+    opts: &ImportOptions,
+    id: PhotoId,
+    new_hash: &HashMap<String, PhotoId>,
+    held: &std::collections::HashSet<String>,
+) -> Option<String> {
+    let h = hash?;
+    let again = opts.import_duplicates && (new_hash.get(h.as_str()).is_some_and(|first| *first != id) || held.contains(h.as_str()));
+    Some(if again { format!("{h}:dup{}", id.0) } else { h })
+}
+
+/// The orientation a sidecar's regions are turned by: the file's own, else the sidecar's. (A clip's boxes are never
+/// turned: [`crate::sidecar::merge_into`] leaves them as written, whatever orientation they come with, so re-read and
+/// sync agree with import.)
+fn upright_by(info: &ProbeInfo, sidecar: Option<lightcraft_meta::Orientation>) -> Option<lightcraft_meta::Orientation> {
+    info.orientation.or(sidecar)
 }
 
 /// The catalog half of an import: add the photos [`ImportJob::prepare`] readied (one undoable op;
@@ -254,15 +319,29 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
     let mut purged: std::collections::HashSet<PhotoId> = Default::default();
     for it in prepared.items {
         match it {
-            PreparedItem::Promote(id) => {
+            PreparedItem::Promote(id, fresh) => {
+                // the file was replaced since it was browsed: the record takes what it is now before it joins the library
+                if let Some(info) = &fresh {
+                    crate::cmd::convert::reload_ops(&s.catalog, id, info, &mut ops, &mut Vec::new());
+                }
                 let promoted = s.catalog.photo(id);
                 if promoted.is_some_and(|p| p.local) {
                     ops.push(Op::SetLocal { id, local: false });
                 }
-                if let Some(p) = promoted.filter(|p| p.truncated)
+                // (a JPEG cut short is reported: the record as it will be, which is the fresh probe's when the file was replaced)
+                if let Some(p) = promoted.filter(|p| fresh.as_ref().map_or(p.truncated, |i| i.truncated))
                     && let Source::File { path } = &p.source
                 {
                     report.truncated.push(path.clone());
+                }
+                // "Import as new": a trashed photo with the same content is replaced, as for a new file
+                let content =
+                    fresh.as_ref().and_then(|i| i.content_hash.clone()).or_else(|| s.catalog.photo(id).and_then(|p| p.content_hash.clone()));
+                if let Some((_, old)) = content.as_ref().and_then(|h| trash_content.get(h))
+                    && *old != id
+                    && purged.insert(*old)
+                {
+                    purge.push(*old);
                 }
                 report.imported.push(id.0);
             }
@@ -273,11 +352,11 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                     new_hash
                         .get(&h)
                         .copied()
-                        .or_else(|| s.catalog.photos().find(|p| p.content_hash.as_deref() == Some(h.as_str())).map(|p| p.id))
+                        .or_else(|| s.catalog.photos().find(|p| !p.local && p.content_hash.as_deref() == Some(h.as_str())).map(|p| p.id))
                         .or_else(|| {
                             s.catalog
                                 .photos()
-                                .find(|p| p.content_hash.as_deref().is_some_and(|k| crate::sync::base_hash(k) == h.as_str()))
+                                .find(|p| !p.local && p.content_hash.as_deref().is_some_and(|k| crate::sync::base_hash(k) == h.as_str()))
                                 .map(|p| p.id)
                         })
                 });
@@ -289,7 +368,11 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                             ops.push(Op::SetDeleted { id, deleted: false });
                             // matched by content from another path, and the file the record
                             // points at is gone (moved, renamed): the photo follows the file
-                            if reason == "content" && trashed_file_is_gone(&s.catalog, id) {
+                            // (not onto a path another record holds, a file only browsed in Local)
+                            if reason == "content"
+                                && trashed_file_is_gone(&s.catalog, id)
+                                && !s.catalog.photos().any(|p| matches!(&p.source, Source::File { path: held } if *held == path))
+                            {
                                 ops.push(crate::cmd::missing::relink_op(id, &path));
                             }
                             report.restored.push(id.0);
@@ -303,7 +386,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
             PreparedItem::Failed(path, e) => report.failed.push((path, e)),
             PreparedItem::Kept(k) => report.kept.push(k),
             PreparedItem::Ready(r) => {
-                let ReadyFile { path, stored, info, sidecar, placed: pl } = *r;
+                let ReadyFile { path, stored, info, sidecar, sidecar_too_large, placed: pl } = *r;
                 placed.extend(pl);
                 let id = s.catalog.alloc_photo_id();
                 if let Some(h) = &info.content_hash {
@@ -315,15 +398,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                         purge.push(*old);
                     }
                 }
-                // imported although another photo has this content: a Duplicate's hash (`:dup<id>`),
-                // so the two photos can be told apart and neither is mistaken for the other
-                let mut hash = info.content_hash.clone();
-                if opts.import_duplicates
-                    && let Some(h) = &mut hash
-                    && (new_hash.get(h.as_str()).is_some_and(|first| *first != id) || held.contains(h.as_str()))
-                {
-                    *h = format!("{h}:dup{}", id.0);
-                }
+                let hash = hash_of_import(info.content_hash.clone(), opts, id, &new_hash, &held);
                 // the photo's own copyright and creator, read or not: the library's defaults are
                 // for photos that have none
                 let stated = |file: &str, sidecar: Option<&String>| !file.trim().is_empty() || sidecar.is_some_and(|s| !s.trim().is_empty());
@@ -335,11 +410,12 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 let sidecar =
                     sidecar.map(|sc| read.of_the_sidecar(sc).resolve_label(&s.catalog)).filter(|sc| *sc != crate::sidecar::SidecarData::default());
                 // the photo is upright as the file's own orientation turns it, when the file states one
-                let sidecar = sidecar.map(|sc| crate::sidecar::SidecarData { orientation: info.orientation.or(sc.orientation), ..sc });
+                let sidecar = sidecar.map(|sc| crate::sidecar::SidecarData { orientation: upright_by(&info, sc.orientation), ..sc });
                 // a copy is catalogued under its new name
                 let name = Path::new(&stored).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.clone());
                 let mut p = Photo::new(id, Source::File { path: stored }, &name, &info.format, info.width, info.height, &now);
                 p.kind = info.kind;
+                p.duration = info.duration;
                 p.file_size = info.file_size;
                 p.captured = info.captured;
                 p.meta = info.meta;
@@ -359,6 +435,15 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                         warning.path = path.clone();
                         warning
                     }));
+                }
+                if sidecar_too_large {
+                    report.warnings.push(crate::import::ImportWarning {
+                        path: path.clone(),
+                        code: crate::import::ImportWarningCode::SidecarTooLarge,
+                        profile: None,
+                        mode: None,
+                        fields: Vec::new(),
+                    });
                 }
                 if let Some(mp) = opts.metadata_preset.as_ref().and_then(|n| s.metadata_presets.iter().find(|m| m.name.eq_ignore_ascii_case(n))) {
                     crate::cmd::metadata::apply_to(&mut p.meta, &mp.fields);
