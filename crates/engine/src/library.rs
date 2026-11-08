@@ -764,6 +764,14 @@ impl Session {
         }
     }
 
+    /// A library was just loaded: the tasks waiting in line go when `drop` (they are the old library's).
+    fn drop_waiting_tasks(&mut self, drop: bool) {
+        let dropped = if drop { self.activity.library_changed() } else { 0 };
+        if dropped > 0 {
+            log::info!("library: {dropped} task(s) waiting in line were dropped with the old library");
+        }
+    }
+
     /// Open `stores`; the new library takes `lock` once nothing can fail any more. `folder` is the
     /// folder they write to, when they write to one: the thumbnail cache asks it too. `drop_waiting`: the
     /// tasks waiting in line are the old library's and go with it.
@@ -818,12 +826,7 @@ impl Session {
         catalog.revision = LOADS.fetch_add(1, std::sync::atomic::Ordering::Relaxed).wrapping_add(1) << 32;
         self.catalog = catalog;
         // nor do tasks waiting in line carry over: they name the old library's photos and folders
-        if drop_waiting {
-            let dropped = self.activity.library_changed();
-            if dropped > 0 {
-                log::info!("library: {dropped} task(s) waiting in line were dropped with the old library");
-            }
-        }
+        self.drop_waiting_tasks(drop_waiting);
         // (nothing of the list the last library showed is this one's)
         self.refresh_view();
         self.library_generation = crate::LIBRARY_GEN.fetch_add(1, std::sync::atomic::Ordering::Relaxed);

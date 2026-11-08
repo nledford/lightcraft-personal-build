@@ -804,37 +804,48 @@ pub(crate) fn toast_created_folder(app: &mut LightcraftApp, ctx: &egui::Context,
     }
 }
 
+/// A dialog that stays open when its confirm is refused, so the choices aren't lost: the import review (e.g. an
+/// unusable folder template), Export (e.g. no folder chosen), Edit Capture Time (a time that isn't a date, or a shift
+/// it refuses), the lens database offer (a download that can't start: Download again or Not Now) and the others here.
+fn stays_open_on_error(dlg: &Dialog) -> bool {
+    matches!(
+        dlg,
+        Dialog::Import { .. }
+            | Dialog::Export { .. }
+            | Dialog::ContactSheet { .. }
+            | Dialog::SlideshowExport { .. }
+            | Dialog::Print
+            | Dialog::NewAlbum { .. }
+            | Dialog::NewSmartAlbum { .. }
+            | Dialog::SmartRules { .. }
+            | Dialog::KeywordTag { .. }
+            | Dialog::KeywordSet { .. }
+            | Dialog::SynchronizeFolder { .. }
+            | Dialog::SynchronizeFolders { .. }
+            | Dialog::SaveEffect { .. }
+            | Dialog::CaptureTime { .. }
+            | Dialog::LensDatabase { .. }
+            | Dialog::LocateFolder { .. }
+    )
+}
+
+/// The answer says some photos of the selection stayed out (`skipped`).
+fn left_out(r: &serde_json::Value) -> bool {
+    r.get("skipped").and_then(serde_json::Value::as_u64).is_some_and(|n| n > 0)
+}
+
+/// What the SAM 3 dialog shows of a download that can't start (nothing, once one does); other dialogs have none.
+fn set_sam_error(dlg: &mut Dialog, why: Option<String>) {
+    if let Dialog::SamModel { error, .. } = dlg {
+        *error = why;
+    }
+}
+
 /// The dialog's confirm was pressed: do it. Whether the dialog closes.
 fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> bool {
     let mut closed = false;
     match confirm_dialog(app, dlg) {
-        // the import review stays open on an error (e.g. an unusable folder template), and so
-        // does Export (e.g. no folder chosen) so the choices aren't lost, and Edit Capture Time
-        // (a time that isn't a date, or a shift it refuses), and the lens database offer (a download that can't
-        // start: Download again or Not Now)
-        Err(e)
-            if matches!(
-                dlg,
-                Dialog::Import { .. }
-                    | Dialog::Export { .. }
-                    | Dialog::ContactSheet { .. }
-                    | Dialog::SlideshowExport { .. }
-                    | Dialog::Print
-                    | Dialog::NewAlbum { .. }
-                    | Dialog::NewSmartAlbum { .. }
-                    | Dialog::SmartRules { .. }
-                    | Dialog::KeywordTag { .. }
-                    | Dialog::KeywordSet { .. }
-                    | Dialog::SynchronizeFolder { .. }
-                    | Dialog::SynchronizeFolders { .. }
-                    | Dialog::SaveEffect { .. }
-                    | Dialog::CaptureTime { .. }
-                    | Dialog::LensDatabase { .. }
-                    | Dialog::LocateFolder { .. }
-            ) =>
-        {
-            app.toast_error(ctx, e)
-        }
+        Err(e) if stays_open_on_error(dlg) => app.toast_error(ctx, e),
         // the list of backups stays too, as the folder now is (the backup may be gone since)
         Err(e) if matches!(dlg, Dialog::RestoreBackup { .. }) => {
             refresh_backups(app, dlg);
@@ -849,11 +860,7 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
             closed = true;
         }
         // the SAM 3 dialog stays open to show the download (or why it can't start)
-        Err(e) if matches!(dlg, Dialog::SamModel { .. }) => {
-            if let Dialog::SamModel { error, .. } = dlg {
-                *error = Some(e);
-            }
-        }
+        Err(e) if matches!(dlg, Dialog::SamModel { .. }) => set_sam_error(dlg, Some(e)),
         // a one-line prompt that is refused stays open with its text, so the name can be fixed
         Err(e) if matches!(dlg, Dialog::TextPrompt { .. }) => app.toast_error(ctx, e),
         // a folder made on disk says so (the new folder holds no photos yet)
@@ -861,7 +868,7 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
             toast_created_folder(app, ctx, dlg, &r);
             closed = true;
         }
-        Ok(r) if matches!(dlg, Dialog::NewAlbum { .. }) && r.get("skipped").and_then(serde_json::Value::as_u64).is_some_and(|n| n > 0) => {
+        Ok(r) if matches!(dlg, Dialog::NewAlbum { .. }) && left_out(&r) => {
             // albums hold library photos (issue #684): say which part of the selection stayed out
             crate::panels::grid::toast_skipped(app, ctx, &r);
             closed = true;
@@ -887,11 +894,7 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
             closed = !crate::lightroom_destination::keeps_open_on_error(app, dlg);
             app.toast_error(ctx, e);
         }
-        Ok(_) if keeps_open(app, dlg) => {
-            if let Dialog::SamModel { error, .. } = dlg {
-                *error = None;
-            }
-        }
+        Ok(_) if keeps_open(app, dlg) => set_sam_error(dlg, None),
         _ => closed = true,
     }
 

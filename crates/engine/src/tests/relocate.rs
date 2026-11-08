@@ -246,7 +246,7 @@ fn the_filter_follows_the_located_folder() {
 
     relocate(&mut s, &dir.path("trip"), &now);
     assert_eq!(s.filter().library_folder, Some(dir.path("archive/journey/day1")));
-    assert_eq!(s.filter().library_folders, [now.clone()]);
+    assert_eq!(s.filter().library_folders, std::slice::from_ref(&now));
 
     s.undo_step().unwrap();
     assert_eq!(s.filter().library_folder, Some(dir.path("trip/day1")));

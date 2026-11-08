@@ -328,12 +328,8 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 if promoted.is_some_and(|p| p.local) {
                     ops.push(Op::SetLocal { id, local: false });
                 }
-                // (a JPEG cut short is reported: the record as it will be, which is the fresh probe's when the file was replaced)
-                if let Some(p) = promoted.filter(|p| fresh.as_ref().map_or(p.truncated, |i| i.truncated))
-                    && let Source::File { path } = &p.source
-                {
-                    report.truncated.push(path.clone());
-                }
+                // (a JPEG cut short is reported)
+                report.truncated.extend(promoted_cut_short(promoted.map(|p| &**p), fresh.as_ref().map(|i| i.truncated)));
                 // "Import as new": a trashed photo with the same content is replaced, as for a new file
                 let content =
                     fresh.as_ref().and_then(|i| i.content_hash.clone()).or_else(|| s.catalog.photo(id).and_then(|p| p.content_hash.clone()));
@@ -475,9 +471,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                     p.history.push(lightcraft_catalog::HistoryStep { label: "Import adjustments".into(), settings: d });
                 }
                 report.imported.push(id.0);
-                if p.truncated {
-                    report.truncated.push(path.clone());
-                }
+                report.truncated.extend(p.truncated.then(|| path.clone()));
                 p.local = opts.local;
                 if opts.local {
                     // the state as browsed: a later change keeps the record from being forgotten
@@ -508,6 +502,16 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
         finish_moves(s, placed, log0, &mut report);
     }
     Ok(report)
+}
+
+/// The file of a photo that joins the library as it is, when it is a JPEG cut short: as the record will be, which
+/// is the fresh probe's (`fresh`, `truncated`) when the file was replaced since it was browsed.
+fn promoted_cut_short(promoted: Option<&Photo>, fresh: Option<bool>) -> Option<String> {
+    let p = promoted.filter(|p| fresh.unwrap_or(p.truncated))?;
+    match &p.source {
+        Source::File { path } => Some(path.clone()),
+        _ => None,
+    }
 }
 
 /// Move, after the commit: save the library, then remove each source whose destination is
