@@ -1,6 +1,7 @@
 use super::scan::{drop_refusal, import_request, subject_of, wait_in_line};
 use super::{
-    ImportDialog, ImportUprightMode, ImportWarning, ImportWarningCode, LightcraftApp, Ordering, Request, Value, json, library_busy, recipe_items,
+    ImportDialog, ImportUprightMode, ImportWarning, ImportWarningCode, LightcraftApp, Ordering, Remembered, Request, Value, json,
+    library_busy, recipe_items,
     remember_read,
 };
 
@@ -333,9 +334,15 @@ pub fn start(app: &mut LightcraftApp, d: &ImportDialog) -> Result<Value, String>
     let listed = app.review_listed.take();
     // the Read row opens next time as it was used now
     remember_read(app, lightcraft_engine::import::ReadDialog::Import, d.read);
+    // (what a folder queued without a review is asked: the way these files come in, never the batch's own choices;
+    // kept once the import is taken, not when the line is full)
+    let how = Remembered::of(&params);
     if waits {
-        return wait_in_line(app, import_request(&queue, &params, &d.sources, false, &d.sources, true));
+        let queued = wait_in_line(app, import_request(&queue, &params, &d.sources, false, &d.sources, true))?;
+        app.last_import = Some(how);
+        return Ok(queued);
     }
+    app.last_import = Some(how);
     let total = queue.len();
     let mut task = ImportTask::new(queue, params, undo0, false).named_below(d.sources.clone()).about(subject_of(&d.sources));
     task.listed = listed;

@@ -346,16 +346,18 @@ impl LightcraftApp {
         // (a row's id in the last library may name another row in this one)
         self.ui.sidebar_cursor = None;
         panels::side_keys::forget_rows(ctx);
+        // (how a review of another library was confirmed is no guide for this one)
+        self.last_import = None;
         if let Some(l) = self.session.library.as_ref().filter(|l| l.on_disk) {
-            let path = l.dir.to_string_lossy().into_owned();
-            panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);
-            // it is open: whatever an earlier check said about it is over
-            self.recent_checks.opened(&path);
-            // when, for the launch window (issue #1290); only the listed libraries keep a time
-            let settings = &mut self.ui.settings;
-            settings.recent_opened.insert(path, (self.session.clock)());
-            settings.recent_opened.retain(|p, _| settings.recent_libraries.contains(p));
-        }
+        let path = l.dir.to_string_lossy().into_owned();
+        panels::settings::remember_library(&mut self.ui.settings.recent_libraries, &path);
+        // it is open: whatever an earlier check said about it is over
+        self.recent_checks.opened(&path);
+        // when, for the launch window (issue #1290); only the listed libraries keep a time
+        let settings = &mut self.ui.settings;
+        settings.recent_opened.insert(path, (self.session.clock)());
+        settings.recent_opened.retain(|p, _| settings.recent_libraries.contains(p));
+    }
         ctx.send_viewport_cmd(egui::ViewportCommand::Title(self.window_title()));
     }
 

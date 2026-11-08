@@ -96,6 +96,7 @@ mod profile_menu;
 mod profiles_layout;
 mod progress;
 mod queue_ux;
+mod queue_no_review;
 mod quit_unsaved;
 mod rating;
 mod recheck;
