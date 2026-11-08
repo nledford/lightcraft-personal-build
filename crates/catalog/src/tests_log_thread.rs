@@ -104,12 +104,24 @@ fn a_failed_write_is_held_reported_and_retried() {
     store.append(LOG, b"0\n").unwrap();
     store.flush().unwrap();
     let fail = Arc::new(AtomicBool::new(true));
-    let f = fail.clone();
+    // The thread retries every RETRY on its own: it cuts the file back and writes again, so a
+    // fragment put in the file meanwhile can land between its cut and its write. While `hold`
+    // is set the hook parks the thread before it touches the file (`parked`), and the fragment
+    // goes in then.
+    let hold = Arc::new(AtomicBool::new(false));
+    let parked = Arc::new(AtomicBool::new(false));
+    let (f, h, p) = (fail.clone(), hold.clone(), parked.clone());
     fault::install(
         &dir,
-        Arc::new(
-            move |step| if f.load(Ordering::SeqCst) && step == fault::Step::Sync { Err(std::io::Error::other("disk full (test)")) } else { Ok(()) },
-        ),
+        Arc::new(move |step| {
+            if step == fault::Step::Write && h.load(Ordering::SeqCst) {
+                p.store(true, Ordering::SeqCst);
+                while h.load(Ordering::SeqCst) {
+                    std::thread::sleep(Duration::from_millis(1));
+                }
+            }
+            if f.load(Ordering::SeqCst) && step == fault::Step::Sync { Err(std::io::Error::other("disk full (test)")) } else { Ok(()) }
+        }),
     );
     // (one append: the log thread can fail the first before a second arrives, and then refuses it)
     store.append(LOG, b"1\n2\n").unwrap();
@@ -125,13 +137,17 @@ fn a_failed_write_is_held_reported_and_retried() {
     // a cut within what is held keeps it (the journal cuts back to its own length on an error)
     store.truncate(LOG, 6).unwrap();
     assert_eq!(store.read(LOG).unwrap().unwrap(), b"0\n1\n2\n");
-    // a fragment of a failed write left in the file is cut before the retry
+    // a fragment of a failed write left in the file is cut before the retry (put in while the
+    // thread is parked before its next try, so it can't be mid-retry)
+    hold.store(true, Ordering::SeqCst);
+    wait_until("the thread is parked before its retry", || parked.load(Ordering::SeqCst));
     {
         use std::io::Write;
         let mut file = std::fs::OpenOptions::new().append(true).open(dir.join(LOG)).unwrap();
         file.write_all(b"{\"seq\":").unwrap();
     }
     fail.store(false, Ordering::SeqCst);
+    hold.store(false, Ordering::SeqCst);
     wait_until("retried on its own", || store.unwritten().is_none());
     store.append(LOG, b"3\n").unwrap();
     store.flush().unwrap();
