@@ -164,7 +164,7 @@ pub fn inspect(app: &LightcraftApp, ctx: &egui::Context) -> Value {
         "activityOpen": app.activity_open,
         // the tasks that ended and left a row (`activity.finished`)
         "activityFinished": app.session.activity.finished(),
-        // commands waiting on a native file dialog shown off the UI thread (`pick`)
+        // commands waiting on a native file dialog, up or waiting for its turn (`pick`)
         "fileDialogs": app.pending_picks.iter().map(|p| p.command.clone()).collect::<Vec<_>>(),
         "memory": memory(app),
     })

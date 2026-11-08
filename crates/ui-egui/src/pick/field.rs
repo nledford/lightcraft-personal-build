@@ -151,15 +151,19 @@ pub fn choose(app: &mut LightcraftApp, field: Field) -> Option<String> {
 pub fn choose_all(app: &mut LightcraftApp, field: Field) -> Vec<String> {
     match super::start(app, field.id(), field.request(), Then::Field(field.clone())) {
         super::Started::Later => Vec::new(),
-        super::Started::No => {
-            let mut paths = field.sync_dialog(&mut app.services).unwrap_or_default();
-            // only the template imports take several files, as the dialogs of the other fields always chose one
-            if !matches!(field, Field::PrintTemplateImport | Field::SlideshowTemplateImport) {
-                paths.truncate(1);
-            }
-            paths
-        }
+        super::Started::No => ask_synchronously(app, &field).unwrap_or_default(),
     }
+}
+
+/// The synchronous dialog's answer for `field` (an empty list: cancelled); `None` when this host
+/// has no such dialog.
+pub(super) fn ask_synchronously(app: &mut LightcraftApp, field: &Field) -> Option<Vec<String>> {
+    let mut paths = field.sync_dialog(&mut app.services)?;
+    // only the template imports take several files, as the dialogs of the other fields always chose one
+    if !matches!(field, Field::PrintTemplateImport | Field::SlideshowTemplateImport) {
+        paths.truncate(1);
+    }
+    Some(paths)
 }
 
 /// [`choose`] for a field outside a dialog's own state (the import, export and Lightroom dialogs

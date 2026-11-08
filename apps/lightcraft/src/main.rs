@@ -34,6 +34,8 @@ mod colord;
 mod control_server;
 mod dialog_filter;
 mod editors;
+#[cfg(any(target_os = "macos", test))]
+mod file_sheet;
 mod hdr_display;
 #[cfg(target_os = "macos")]
 mod increase_contrast;

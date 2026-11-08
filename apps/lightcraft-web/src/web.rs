@@ -247,6 +247,7 @@ fn services(
     Services {
         local_places: None,
         picker: None,
+        picker_one_at_a_time: false,
         pick_display_profile: None,
         screen_profile: None,
         system_reduce_motion: None,
