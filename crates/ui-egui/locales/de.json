@@ -3642,5 +3642,6 @@
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Zeigt die Fotos dieses Ordners zur Überprüfung und fügt sie dann der Bibliothek hinzu, wo sie liegen; keine Datei wird angefasst",
   "Keywords and presets apply to new files only, not to photos already in Local": "Stichwörter und Vorgaben gelten nur für neue Dateien, nicht für Fotos, die schon in „Lokal“ sind",
   "Copy Path": "Pfad kopieren",
-  "Path copied": "Pfad kopiert"
+  "Path copied": "Pfad kopiert",
+  "Check for updates at start": "Beim Start nach Updates suchen"
 }

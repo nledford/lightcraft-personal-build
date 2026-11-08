@@ -2579,5 +2579,6 @@
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "このフォルダの写真をレビューしてから、そのままの場所でライブラリに追加します。ファイルには触れません",
   "Keywords and presets apply to new files only, not to photos already in Local": "キーワードとプリセットは新しいファイルにのみ適用され、すでにローカルにある写真には適用されません",
   "Copy Path": "パスをコピー",
-  "Path copied": "パスをコピーしました"
+  "Path copied": "パスをコピーしました",
+  "Check for updates at start": "起動時に更新を確認"
 }

@@ -2501,5 +2501,6 @@
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "Pokazuje zdjęcia z tego folderu do przejrzenia, po czym dodaje je do biblioteki tam, gdzie są; żaden plik nie jest ruszany",
   "Keywords and presets apply to new files only, not to photos already in Local": "Słowa kluczowe i ustawienia predefiniowane dotyczą tylko nowych plików, nie zdjęć, które już są w Lokalnych",
   "Copy Path": "Kopiuj ścieżkę",
-  "Path copied": "Skopiowano ścieżkę"
+  "Path copied": "Skopiowano ścieżkę",
+  "Check for updates at start": "Sprawdzaj aktualizacje przy uruchomieniu"
 }

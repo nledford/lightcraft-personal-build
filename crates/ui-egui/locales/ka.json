@@ -3826,5 +3826,6 @@
   "Reviews the photos in this folder, then adds them to the library where they are; no file is touched": "ამ საქაღალდის ფოტოებს გადაამოწმებ და ბიბლიოთეკაში იქვე დაამატებ; არცერთ ფაილს არ ეხება",
   "Keywords and presets apply to new files only, not to photos already in Local": "საკვანძო სიტყვები და პრესეტები მხოლოდ ახალ ფაილებზე მოქმედებს და არა იმ ფოტოებზე, რომლებიც უკვე ლოკალშია",
   "Copy Path": "მისამართის კოპირება",
-  "Path copied": "მისამართი დაკოპირდა"
+  "Path copied": "მისამართი დაკოპირდა",
+  "Check for updates at start": "გაშვებისას განახლებების შემოწმება"
 }
