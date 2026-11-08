@@ -135,8 +135,8 @@ fn open_and_scan(h: &mut Headless, folder: &str) {
     );
     let r = h.request("ui.click", json!({"x": c.x, "y": c.y, "button": "right"}), T);
     assert_eq!(r["ok"], true, "{r}");
-    h.step();
-    h.step();
+    // the menu is drawn a frame or more after the click (a slow runner needs more than two): wait for its row
+    assert!(h.step_until(T, |h| h.app.widgets.iter().any(|(w, _)| *w == "folderSynchronize")), "no row folderSynchronize in the menu");
     let r = h.request("ui.clickWidget", json!({"id": "folderSynchronize"}), T);
     assert_eq!(r["ok"], true, "{r}");
     h.step();
@@ -849,8 +849,8 @@ fn local_menu_synchronizes(h: &mut Headless, folder: &str) -> bool {
     let c = rect.center();
     let r = h.request("ui.click", json!({"x": c.x, "y": c.y, "button": "right"}), T);
     assert_eq!(r["ok"], true, "{r}");
-    h.step();
-    h.step();
+    // the menu is drawn a frame or more after the click (a slow runner needs more than two): wait for its row
+    assert!(h.step_until(T, |h| h.app.widgets.iter().any(|(w, _)| *w == "folderSynchronize")), "no row folderSynchronize in the menu");
     let r = h.request("ui.clickWidget", json!({"id": "folderSynchronize"}), T);
     assert_eq!(r["ok"], true, "the row is listed: {r}");
     h.step();
@@ -1395,8 +1395,11 @@ fn open_many_and_scan(h: &mut Headless, folders: &[String]) {
     let c = h.app.widgets.iter().find(|(w, _)| *w == row).map(|(_, r)| r.center()).unwrap();
     let r = h.request("ui.click", json!({"x": c.x, "y": c.y, "button": "right"}), T);
     assert_eq!(r["ok"], true, "{r}");
-    h.step();
-    h.step();
+    // the menu is drawn a frame or more after the click (a slow runner needs more than two): wait for its row
+    assert!(
+        h.step_until(T, |h| h.app.widgets.iter().any(|(w, _)| *w == "sideMenu:folders:synchronize")),
+        "no row sideMenu:folders:synchronize in the menu"
+    );
     let r = h.request("ui.clickWidget", json!({"id": "sideMenu:folders:synchronize"}), T);
     assert_eq!(r["ok"], true, "{r}");
     h.step();
