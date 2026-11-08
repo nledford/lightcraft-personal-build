@@ -1171,13 +1171,15 @@ fn skip_on_the_review_scans_row_lists_the_file_as_unreadable() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// The same for the Local view's reading of a folder (the browse): the row names the file and offers Skip.
+/// The same for the Local view's reading of a folder (the browse): its scan reads no files (PERF-CULL-1), the import
+/// that follows reads them, so that import's row names the file and offers Skip, and the import goes on with the others.
 #[test]
 fn skip_on_the_browse_scans_row_goes_on_with_the_other_files() {
     let (mut h, dir, gate) = hanging_import("browse-skip");
     crate::import::browse(&mut h.app, &dir.to_string_lossy(), None).unwrap();
     let row = stalled_row(&mut h);
-    assert_eq!(row.kind, "scan", "{row:?}");
+    assert_eq!(row.kind, "import", "{row:?}");
+    assert_eq!(row.stalled.as_ref().map(|s| s.what.as_str()), Some("IMG_hang.jpg"));
     let r = h.request("engine.execute", json!({"command": "activity.skip", "params": {"id": row.id}}), T);
     assert_eq!(r["ok"], true, "{r}");
     assert!(h.step_until(Duration::from_secs(30), |h| h.app.scan.is_none() && h.app.import.is_none()));
@@ -1186,9 +1188,10 @@ fn skip_on_the_browse_scans_row_goes_on_with_the_other_files() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Given the Local view's reading of a folder whose files stop answering one after another,
+/// Given the Local view's reading of a folder (the import after the browse's scan) whose files stop answering one
+/// after another,
 /// When the fourth is skipped,
-/// Then an error toast says the folder was read only as far as the drive answered.
+/// Then an error toast says the drive is not answering.
 #[test]
 fn a_browse_that_stops_at_the_cap_says_so() {
     let (mut h, dir, gate) = hanging("browse-cap", &["IMG_hang0.jpg", "IMG_hang1.jpg", "IMG_hang2.jpg", "IMG_hang3.jpg"]);
@@ -1199,12 +1202,12 @@ fn a_browse_that_stops_at_the_cap_says_so() {
         {
             let _ = h.app.session.activity.skip(row.id);
         }
-        h.app.scan.is_none() && h.app.ui.toast.is_some()
+        h.app.scan.is_none() && h.app.import.is_none() && h.app.ui.toast.is_some()
     });
     gate.open();
     assert!(ended, "no toast: {:?}", toast_text(&h));
     let toast = toast_text(&h);
-    assert!(toast.starts_with("Stopped:") && toast.contains("not answering"), "{toast}");
+    assert!(toast.starts_with("Import failed:") && toast.contains("not answering"), "{toast}");
     let _ = std::fs::remove_dir_all(&dir);
 }
 
