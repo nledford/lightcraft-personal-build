@@ -199,6 +199,12 @@ fn the_watched_folder_dialog_does_not_block_and_its_answer_is_watched() {
     let (mut h, asked, blocked) = app();
     h.app.ui.dialog = Some(Dialog::Settings { tab: "import".into() });
     h.settle(T);
+    // (Import's page is longer than the dialog: Auto Import is at its foot)
+    assert_eq!(h.request("ui.hoverWidget", json!({"id": "settings:pageRoom"}), T)["ok"], true);
+    h.request("ui.scroll", json!({"dy": -3000.0}), T);
+    for _ in 0..4 {
+        h.step();
+    }
     assert_up(&mut h, &asked, &blocked, "button:settingsAutoFolder", PickKind::Folder);
     answer(&mut h, &asked, 0, &dir.to_string_lossy());
     // (JSON escapes a Windows path's backslashes: compare with the folder as JSON text)

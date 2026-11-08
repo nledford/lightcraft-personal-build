@@ -161,7 +161,9 @@ fn a_word_people_type_for_a_section_finds_it_though_the_section_does_not_say_it(
     // And the start of such a word finds it, as part of any word does: the section stays found
     // while the word is typed
     filter(&mut h, "tras");
-    assert_eq!(found(&h), ["general:Culling"]);
+    // (and Appearance, which has "Increase contrast", for the same letters inside a word: it says
+    // them, so it is the better match and comes first)
+    assert_eq!(found(&h), ["interface:Appearance", "general:Culling"]);
     // And a section that says the word comes before one that is only given it
     filter(&mut h, "metadata");
     let found = found(&h);
