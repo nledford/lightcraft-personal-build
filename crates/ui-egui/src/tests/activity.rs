@@ -1748,6 +1748,25 @@ fn a_row_that_only_waits_does_not_keep_the_stack_polling() {
     drop((waiting, running));
 }
 
+/// A row that only waits has no "0 %": the line beside the bell names it alone, and its ring sweeps (its total is a count
+/// of photos, not work to finish); beside a running task the mean is that task's alone.
+#[test]
+fn a_row_that_only_waits_shows_no_percent() {
+    use crate::panels::activity::{overall, readout_text};
+    let s = lightcraft_engine::Session::new();
+    let waiting = s.activity.start("xmpWaiting", "Waiting to write XMP sidecars", Cancel::No);
+    waiting.progress(0, 2);
+    let running = s.activity.start("export", "Exporting", Cancel::Yes);
+    running.progress(1, 2);
+    let rows = s.activity.list();
+    let of = |kind: &str| rows.iter().find(|t| t.kind == kind).cloned().unwrap();
+    let (wait, run) = (of("xmpWaiting"), of("export"));
+    assert_eq!(readout_text(std::slice::from_ref(&wait), 0), "Waiting to write XMP sidecars");
+    assert_eq!(overall(std::slice::from_ref(&wait)), None);
+    assert_eq!(overall(&[wait, run]), Some(0.5));
+    drop((waiting, running));
+}
+
 /// A read that does not answer until `open`.
 #[derive(Clone, Default)]
 pub(crate) struct Gate(std::sync::Arc<(std::sync::Mutex<bool>, std::sync::Condvar)>);

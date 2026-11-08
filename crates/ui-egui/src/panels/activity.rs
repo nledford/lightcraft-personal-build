@@ -112,7 +112,7 @@ fn readout_parts(tasks: &[TaskInfo], waiting: usize) -> (String, String) {
         [one] => {
             let value = if one.cancelling {
                 tr("Stopping…").to_string()
-            } else if one.total > 0 {
+            } else if one.total > 0 && !only_waits(one) {
                 tr_format!("{pct} %", pct = percent(one))
             } else {
                 String::new()
@@ -137,10 +137,13 @@ pub fn readout_text(tasks: &[TaskInfo], waiting: usize) -> String {
     }
 }
 
-/// How far along the tasks are together, 0 to 1: the mean of those whose amount of work is known. `None` while none
-/// is, and the ring sweeps.
+/// How far along the tasks are together, 0 to 1: the mean of those whose amount of work is known (not a row that
+/// only waits: its total is a count of photos, not work to finish, so such a stack falls back to the
+/// unknown-work arc, which stands still — the stack asks for no repaints). `None` while none is,
+/// and the ring sweeps.
 pub fn overall(tasks: &[TaskInfo]) -> Option<f32> {
-    let known: Vec<f32> = tasks.iter().filter(|t| t.total > 0).map(|t| (t.done.min(t.total) as f64 / t.total as f64) as f32).collect();
+    let known: Vec<f32> =
+        tasks.iter().filter(|t| t.total > 0 && !only_waits(t)).map(|t| (t.done.min(t.total) as f64 / t.total as f64) as f32).collect();
     if known.is_empty() {
         return None;
     }
