@@ -45,6 +45,8 @@ use std::sync::Arc;
 
 pub use dates::{DateRun, GroupBy};
 pub use folders::{FolderNode, FolderRecord};
+use index::file_path;
+pub use index::{file_name_index_key, folder_index_key, photo_folder_index_key};
 pub use journal::{Journal, LoadReport, PersistStats, SnapshotPolicy, SnapshotTiming};
 pub use keywords::KeywordNode;
 use lightcraft_develop::DevelopSettings;
@@ -1031,6 +1033,7 @@ impl Catalog {
                 let id = photo.id;
                 self.next_photo = self.next_photo.max(id.0.saturating_add(1));
                 shared::photo(&mut photo);
+                self.index.file_changed(id, None, file_path(&photo.source));
                 self.photos.insert(id, Arc::new(*photo));
                 self.index.text_changed(id, self.photos.get(&id).map(|p| &**p));
                 Op::RemovePhoto { id }
@@ -1038,6 +1041,7 @@ impl Catalog {
             Op::RemovePhoto { id } => {
                 let p = self.photos.remove(&id).ok_or(CatalogError::NoPhoto(id))?;
                 self.index.text_changed(id, None);
+                self.index.file_changed(id, file_path(&p.source), None);
                 // album membership is restored by the batch the engine builds (see `delete_permanently`)
                 Op::AddPhoto { photo: Box::new((*p).clone()) }
             }
@@ -1255,6 +1259,9 @@ impl Catalog {
                 Op::SetCaptured { id, captured: std::mem::replace(&mut p.captured, captured) }
             }
             Op::Relink { id, file_name, source, format } => {
+                if let Some(p) = self.photos.get(&id) {
+                    self.index.file_changed(id, file_path(&p.source), file_path(&source));
+                }
                 let p = self.photo_mut(id)?;
                 let old_name = std::mem::replace(&mut p.file_name, file_name);
                 let old_format = format.map(|f| std::mem::replace(&mut p.format, f));
@@ -1288,6 +1295,9 @@ impl Catalog {
             Op::SetFile { id, file_name, source } => {
                 if file_name.trim().is_empty() {
                     return Err(CatalogError::Invalid("empty file name".into()));
+                }
+                if let Some(p) = self.photos.get(&id) {
+                    self.index.file_changed(id, file_path(&p.source), file_path(&source));
                 }
                 let p = self.photo_mut(id)?;
                 let old_name = std::mem::replace(&mut p.file_name, file_name);
@@ -1844,6 +1854,8 @@ mod tests_background;
 mod tests_backup;
 #[cfg(test)]
 mod tests_folder_patch;
+#[cfg(test)]
+mod tests_folder_index;
 #[cfg(test)]
 mod tests_folder_records;
 #[cfg(test)]
