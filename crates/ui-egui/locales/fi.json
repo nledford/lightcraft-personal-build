@@ -2538,5 +2538,6 @@
   "Locate Anyway": "Paikanna silti",
   "Locate the folder there anyway?": "Paikannetaanko kansio silti sieltä?",
   "Photos with no file there stay missing, and photos whose file there is another size are linked to that file. Synchronize Folder can find them again or remove them from the library. No file is touched.": "Kuvat, joilla ei ole tiedostoa siellä, jäävät puuttuviksi, ja kuvat, joiden tiedosto siellä on erikokoinen, linkitetään siihen tiedostoon. Synkronoi kansio voi löytää ne uudelleen tai poistaa ne kirjastosta. Tiedostoihin ei kosketa.",
-  "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "Muut kuvat jäävät sinne puuttuviksi; Synkronoi kansio voi löytää ne uudelleen tai poistaa ne kirjastosta. Tiedostoihin ei kosketa."
+  "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "Muut kuvat jäävät sinne puuttuviksi; Synkronoi kansio voi löytää ne uudelleen tai poistaa ne kirjastosta. Tiedostoihin ei kosketa.",
+  "Keywords and presets apply to new files only, not to photos already in Local": "Avainsanat ja esiasetukset koskevat vain uusia tiedostoja, eivät kuvia, jotka ovat jo Paikallisessa"
 }

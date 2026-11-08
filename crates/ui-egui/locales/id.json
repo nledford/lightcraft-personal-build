@@ -2555,5 +2555,6 @@
   "Locate Anyway": "Tetap temukan",
   "Locate the folder there anyway?": "Tetap temukan folder di sana?",
   "Photos with no file there stay missing, and photos whose file there is another size are linked to that file. Synchronize Folder can find them again or remove them from the library. No file is touched.": "Foto tanpa file di sana tetap hilang, dan foto yang filenya di sana berukuran lain ditautkan ke file itu. Sinkronkan folder dapat menemukannya lagi atau menghapusnya dari pustaka. Tidak ada file yang diubah.",
-  "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "Foto lainnya tetap hilang di sana; Sinkronkan folder dapat menemukannya lagi atau menghapusnya dari pustaka. Tidak ada file yang diubah."
+  "The other photos stay missing there; Synchronize Folder can find them again or remove them from the library. No file is touched.": "Foto lainnya tetap hilang di sana; Sinkronkan folder dapat menemukannya lagi atau menghapusnya dari pustaka. Tidak ada file yang diubah.",
+  "Keywords and presets apply to new files only, not to photos already in Local": "Kata kunci dan prasetel hanya berlaku untuk berkas baru, bukan foto yang sudah ada di Lokal"
 }

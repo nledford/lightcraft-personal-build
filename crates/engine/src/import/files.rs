@@ -594,6 +594,56 @@ pub(super) fn read_files(
     }
 }
 
+/// What looking at the file of a browsed (Local) record found ([`browsed_files_changed`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum BrowsedFile {
+    /// As it was browsed, or not to be told: a record without a size, and a file that can't be read (one that is
+    /// gone is the record's own business) count as unchanged.
+    Unchanged,
+    /// Its size on disk is not the recorded one: another application replaced it since it was browsed (the check the
+    /// probes kept from a scan go by).
+    Changed,
+    /// Not looked at: `cancel` was set first.
+    Unchecked,
+}
+
+/// Look at the file of each of `files` (path, the size its browsed record has), several at once on the readers' pool
+/// ([`pooled`]: one at a time, each is a round trip to a network share, and thousands of browsed photos waited minutes
+/// for them; a file that stops answering is reported and skipped like any other read). The answers come in the order
+/// of `files`; a record with no size is not asked about, and one whose reader was skipped counts as unchanged.
+pub(super) fn browsed_files_changed(files: &[(&str, u64)], cancel: &std::sync::atomic::AtomicBool, watch: &ReadWatch) -> Vec<BrowsedFile> {
+    // (the web's files are not std::fs files)
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = (cancel, watch);
+        vec![BrowsedFile::Unchanged; files.len()]
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let asked: Vec<(String, u64)> = files.iter().filter(|(_, recorded)| *recorded > 0).map(|(path, recorded)| (path.to_string(), *recorded)).collect();
+        let names: Vec<String> = asked.iter().map(|(path, _)| shown(path)).collect();
+        let work = |(path, recorded): (String, u64)| match std::fs::metadata(&path) {
+            Ok(meta) if meta.is_file() && meta.len() != recorded => BrowsedFile::Changed,
+            // (a file that is gone is the record's own business, and one that can't be read is told as unchanged)
+            _ => BrowsedFile::Unchanged,
+        };
+        let mut seen = pooled(watch, cancel, "lc-import-stat", asked, &|i| names.get(i).cloned().unwrap_or_default(), work, &|| {}).into_iter();
+        files
+            .iter()
+            .map(|(_, recorded)| {
+                if *recorded == 0 {
+                    return BrowsedFile::Unchanged;
+                }
+                match seen.next() {
+                    Some(Pooled::Done(found)) => found,
+                    Some(Pooled::Failed(_)) => BrowsedFile::Unchanged,
+                    Some(Pooled::Unreached) | None => BrowsedFile::Unchecked,
+                }
+            })
+            .collect()
+    }
+}
+
 /// Copy `src` into `dir` as `name` (default: its own name), made unique with -1, -2…; returns the
 /// new path. The copy is verified ([`crate::import_move::copy_new`]: a new file, synced and
 /// checked against `probe_hash`, the content hash the probe computed — or compared byte for byte
@@ -831,6 +881,33 @@ mod prepared_tests {
         // at most the files the readers (up to 16, `read_threads`) had already started
         assert!(seen.load(Relaxed) <= read_threads(400), "read {} files after cancel", seen.load(Relaxed));
         assert!(prepared.items.is_empty());
+    }
+
+    /// The files of browsed records are looked at together, and only a file of another size than its record has is changed:
+    /// a record with no size, a file that is gone and a folder in its place count as unchanged, and ✕ leaves them all unchecked.
+    #[test]
+    fn browsed_files_are_told_changed_by_their_size() {
+        let dir = temp_dir("browsed-sizes");
+        let name = |n: &str| dir.join(n).to_string_lossy().into_owned();
+        std::fs::write(dir.join("same.jpg"), [0u8; 10]).unwrap();
+        std::fs::write(dir.join("bigger.jpg"), [0u8; 20]).unwrap();
+        std::fs::write(dir.join("unsized.jpg"), [0u8; 5]).unwrap();
+        std::fs::create_dir(dir.join("folder.jpg")).unwrap();
+        let names = ["same.jpg", "bigger.jpg", "unsized.jpg", "gone.jpg", "folder.jpg"].map(name);
+        let files: Vec<(&str, u64)> = names.iter().map(String::as_str).zip([10, 10, 0, 10, 10]).collect();
+        let cancel = std::sync::atomic::AtomicBool::new(false);
+        let watch = ReadWatch::default();
+        let found = browsed_files_changed(&files, &cancel, &watch);
+        use BrowsedFile::{Changed, Unchanged, Unchecked};
+        assert_eq!(found, [Unchanged, Changed, Unchanged, Unchanged, Unchanged]);
+        cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+        let found = browsed_files_changed(&files, &cancel, &watch);
+        assert_eq!(
+            found,
+            [Unchecked, Unchecked, Unchanged, Unchecked, Unchecked],
+            "a record with no size isn't asked about, so ✕ doesn't matter to it"
+        );
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     /// A probe a scan left is used again for a file that is as it was, and only for it: a file that
