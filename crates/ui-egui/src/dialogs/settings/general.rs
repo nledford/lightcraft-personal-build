@@ -422,7 +422,7 @@ fn backups(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
 
     // (a folder or a choice that was refused: why. What was set shows in the rows above.)
     if let Some(Err(e)) = result {
-        app.toast(ui.ctx(), crate::i18n::refusal_text(&e));
+        app.toast_error(ui.ctx(), crate::i18n::refusal_text(&e));
     }
     hint(
         ui,

@@ -849,7 +849,7 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
         // the list of backups stays too, as the folder now is (the backup may be gone since)
         Err(e) if matches!(dlg, Dialog::RestoreBackup { .. }) => {
             refresh_backups(app, dlg);
-            app.toast(ctx, e)
+            app.toast_error(ctx, e)
         }
         // several rows: one that can't be deleted or removed refuses them all; `several_run`
         // already toasted the reason, which says which
