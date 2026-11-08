@@ -230,6 +230,11 @@ fn samsung_sef_trailer_without_eoi() {
     // an FF D9 inside the SEF data is not the image's end
     let eoi_in_data = sef_file(scan, block, b"SEFH", 0x08E0, &[0xFF, 0xC0, 0, 0x11, 0xFF, 0xD9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], None);
     assert_eq!(read_header(&eoi_in_data).unwrap().width, 160);
+    assert!(!read_header(&eoi_in_data).unwrap().truncated, "the image's end marker is before the trailer");
+    // the same with its end marker before the trailer: whole
+    assert!(!read_header(&with_sef_trailer(&jpeg, block, b"SEFH")).unwrap().truncated);
+    // a file cut short is for the general decode: the fast display decode leaves it alone
+    assert!(lightcraft_codecs::decode_jpeg_srgb8_fit(&jpeg[..jpeg.len() * 2 / 3], 32, 32).unwrap().is_none());
     let small = decode(&eoi_in_data, DecodeOptions::fit(32, 32)).unwrap();
     assert_eq!((small.source_width, small.source_height), (160, 96));
     // no SEF image: no trailer, offsets outside the file or past `SEFH`, no `SEFH`, an empty

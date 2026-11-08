@@ -40,7 +40,7 @@ pub(super) fn raf_preview_extent(prefix: &[u8]) -> Option<u64> {
 /// when they are a JPEG that stops before its end (a pointer that lies about the preview's length,
 /// or a window whose last range wasn't read): the caller's whole-file fallback decodes the real one.
 pub(super) fn quick_image_srgb(header: &[u8], window: &[u8], adobe_rgb: bool, max_edge: usize) -> Option<lightcraft_raster::Rgba8> {
-    if lightcraft_codecs::read_header(window).is_ok_and(|h| h.truncated) {
+    if !window.ends_with(&[0xFF, 0xD9]) && lightcraft_codecs::read_header(window).is_ok_and(|h| h.truncated) {
         return None;
     }
     // a plain sRGB camera JPEG (nearly all of them) straight to 8-bit (PERF-CULL-3: 45 MP preview
@@ -50,10 +50,10 @@ pub(super) fn quick_image_srgb(header: &[u8], window: &[u8], adobe_rgb: bool, ma
         return Some(image.oriented(preview_orientation(header, orientation)));
     }
     let decoded = if adobe_rgb && window.starts_with(&[0xff, 0xd8]) {
-    lightcraft_codecs::decode_jpeg_with_fallback(window, fit_box(max_edge), lightcraft_codecs::NamedSpace::AdobeRgb)
-} else {
-    lightcraft_codecs::decode(window, fit_box(max_edge))
-};
+        lightcraft_codecs::decode_jpeg_with_fallback(window, fit_box(max_edge), lightcraft_codecs::NamedSpace::AdobeRgb)
+    } else {
+        lightcraft_codecs::decode(window, fit_box(max_edge))
+    };
     let mut d = decoded.ok()?;
     if d.image.width.max(d.image.height) > max_edge {
         d.image = fit(&d.image, max_edge, max_edge, Filter::Box);

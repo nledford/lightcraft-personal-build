@@ -1087,6 +1087,10 @@ pub(crate) fn srgb8_fit(bytes: &[u8], max_w: u32, max_h: u32) -> Result<Option<(
     // (a Samsung SEF trailer read as the file it stands for, as the general decode does: CodeRabbit on #3583)
     let bytes = &*without_sef_trailer(bytes);
     let Some(m) = parse_markers(bytes) else { return Ok(None) };
+    // (a file cut short is for the general decode, which reads what is there: a fast path would take the end for the image)
+    if cut_short(bytes, &m).is_some() {
+        return Ok(None);
+    }
     let plain = matches!(m.components, 1 | 3)
         && m.precision == 8
         && matches!(m.sof, 0xC0..=0xC2)

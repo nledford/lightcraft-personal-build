@@ -1606,6 +1606,7 @@ fn a_quick_preview_window_cut_short_is_left_to_the_whole_file_fallback() {
     assert!(quick_image_srgb(&[], &jpeg, false, 64).is_some());
     assert!(quick_image_srgb(&[], &jpeg[..jpeg.len() * 3 / 4], false, 64).is_none());
     assert!(quick_image_srgb(&[], &jpeg[..jpeg.len() * 3 / 4], true, 64).is_none());
+    assert!(quick_image_srgb(&[], &jpeg[..jpeg.len() * 2 / 3], false, 64).is_none());
 }
 
 /// A JPEG cut short is charged to the work gate for its file and its whole frame together,
