@@ -197,9 +197,11 @@ pub(crate) fn shown_in(app: &LightcraftApp, section: SidebarSection) -> Option<S
             let browsed = s.browse.as_ref().filter(|_| s.source == LibrarySource::Folder);
             browsed.map(|b| folder_label(&b.path))
         }
-        // several folders chosen at once: counted as the grid's title counts them
-        SidebarSection::Folders if s.source == LibrarySource::LibraryFolder && s.library_folder.is_some() => Some(crate::i18n::source_title(s)),
-        SidebarSection::Folders => None,
+        // several folders chosen at once: counted as the grid's title counts them; one by its own name, as its row
+        SidebarSection::Folders if s.source == LibrarySource::LibraryFolder && s.library_folder.is_some() && !s.also_library_folders.is_empty() => {
+            Some(crate::i18n::source_title(s))
+        }
+        SidebarSection::Folders => s.library_folder.as_deref().filter(|_| s.source == LibrarySource::LibraryFolder).map(folder_label),
         // the date in its dated form ("September 2026", as the Date chip and the grid header say it), not `2026-09`:
         // the year and month rows that give a short label its context are folded away; several are counted
         SidebarSection::ByDate => match s.filter.dates_wanted().as_slice() {

@@ -148,7 +148,6 @@ fn folder_paths(v: &Value, c: &str) -> Result<Vec<String>> {
     Ok(out)
 }
 
-
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         // ---- view source / filter / sort
