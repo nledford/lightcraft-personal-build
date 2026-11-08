@@ -314,6 +314,7 @@ pub fn merge_into(p: &mut Photo, sc: &SidecarData, now: &str) -> bool {
     if let Some(l) = sc.label {
         p.label = l;
     }
+    let video = p.is_video();
     let m = &mut p.meta;
     for (src, dst) in [
         (&sc.title, &mut m.title),
@@ -341,8 +342,9 @@ pub fn merge_into(p: &mut Photo, sc: &SidecarData, now: &str) -> bool {
     }
     if let Some(r) = &sc.regions {
         m.regions = r.clone();
-        // (the photo's size is the upright one)
-        if let (Some(drawn_on), Some(o)) = (sc.regions_drawn_on, sc.orientation) {
+        // (the photo's size is the upright one; a clip's is as filmed and a sidecar's `tiff:Orientation` would take a
+        // portrait clip for a photo stored sideways, so its boxes stay as written, on import, re-read and sync alike)
+        if !video && let (Some(drawn_on), Some(o)) = (sc.regions_drawn_on, sc.orientation) {
             let stored = if o.swaps_axes() { (p.height, p.width) } else { (p.width, p.height) };
             lightcraft_meta::upright_regions(&mut m.regions, drawn_on, o, stored);
         }

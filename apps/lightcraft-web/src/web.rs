@@ -904,18 +904,7 @@ impl WebApp {
                 Incoming::Cmd { id, params } => {
                     // queued with the page's own commands, so an export waiting for its videos holds the
                     // host's commands too, in order (`run_inbox`); the answer goes back as a `lightcraft:response`
-                    let reply = |ok: bool| {
-                        let bridge = bridge.clone();
-                        let id = id.clone();
-                        Closure::once_into_js(move |v: JsValue| {
-                            let response = Outgoing::Response { ok, value: v.as_string().unwrap_or_default() };
-                            if !bridge.post(&response) {
-                                log::warn!("lightcraft: the answer to {id} could not reach the page");
-                            }
-                        })
-                        .unchecked_into::<js_sys::Function>()
-                    };
-                    PENDING_COMMANDS.with(|q| q.borrow_mut().push_back((id.clone(), params, (reply(true), reply(false)))));
+                    PENDING_COMMANDS.with(|q| q.borrow_mut().push_back((id, params, Reply::Host)));
                     ctx.request_repaint();
                 }
             }
@@ -1100,7 +1089,38 @@ impl WebApp {
     }
 }
 
-type Reply = (js_sys::Function, js_sys::Function);
+/// Who a queued command answers, and how.
+enum Reply {
+    /// JavaScript's [`command`]: settles its promise.
+    Js(js_sys::Function, js_sys::Function),
+    /// The host page (`lightcraft:cmd`): a `lightcraft:response` through the bridge. Responses carry no request
+    /// id, so they must go out in the order the commands came in (`run_inbox` holds them all behind a waiting
+    /// export). Nothing is allocated per command: a closure per answer would leak the one that never fires.
+    Host,
+}
+
+impl Reply {
+    /// Answer with the command's result (JSON text), or its error.
+    fn settle(&self, bridge: Option<&crate::host::Bridge>, id: &str, result: Result<String, String>) {
+        match self {
+            Reply::Js(resolve, reject) => {
+                let _ = match result {
+                    Ok(v) => resolve.call1(&JsValue::NULL, &v.into()),
+                    Err(e) => reject.call1(&JsValue::NULL, &e.into()),
+                };
+            }
+            Reply::Host => {
+                let (ok, value) = match result {
+                    Ok(v) => (true, v),
+                    Err(e) => (false, e),
+                };
+                if !bridge.is_some_and(|b| b.post(&Outgoing::Response { ok, value })) {
+                    log::warn!("lightcraft: the answer to {id} could not reach the page");
+                }
+            }
+        }
+    }
+}
 
 thread_local! {
     /// Commands from JavaScript ([`command`]), run on the next frame.
@@ -1118,7 +1138,7 @@ thread_local! {
 #[wasm_bindgen]
 pub fn command(id: String, params: String) -> js_sys::Promise {
     js_sys::Promise::new(&mut |resolve, reject| {
-        INBOX.with(|q| q.borrow_mut().push((id.clone(), params.clone(), (resolve, reject))));
+        INBOX.with(|q| q.borrow_mut().push((id.clone(), params.clone(), Reply::Js(resolve, reject))));
         CTX.with(|c| c.borrow().as_ref().map(|c| c.request_repaint()));
     })
 }
@@ -1203,21 +1223,29 @@ impl WebApp {
         // Exports whose Originals are loading keep their order between themselves and with the
         // commands that could change what they copy (`photo.deletePermanently` after the export
         // must not remove a clip before it is copied), but a query such as `web.stats` must not
-        // wait for a storage read to settle. The wait is bounded by `EXPORT_WAIT_MS`.
+        // wait for a storage read to settle. The wait is bounded by `EXPORT_WAIT_MS`. The host page's
+        // commands are all held behind a waiting export, queries too: its responses carry no request id
+        // and pair by send order (`host.rs`), so none may overtake an earlier one.
         let mut export_waiting = false;
         let now = lightcraft_ui_egui::monotonic_ms();
-        for (mut id, mut params, (resolve, reject)) in queue {
+        let bridge = self.bridge.clone();
+        for (mut id, mut params, reply) in queue {
             let parsed = crate::automation::params(&params);
             let mut p = match parsed {
                 Ok(p) => p,
                 Err(e) => {
-                    let _ = reject.call1(&JsValue::NULL, &format!("{id}: {e}").into());
+                    // a refusal for the host is a response too: it keeps its place behind a waiting export
+                    if export_waiting && matches!(reply, Reply::Host) {
+                        retry.push_back((id, params, reply));
+                        continue;
+                    }
+                    reply.settle(bridge.as_ref(), &id, Err(format!("{id}: {e}")));
                     continue;
                 }
             };
             let is_export = matches!(id.as_str(), "app.export" | "app.exportPrevious");
-            if export_waiting && !is_export && crate::automation::waits_behind_export(&id) {
-                retry.push_back((id, params, (resolve, reject)));
+            if export_waiting && !is_export && crate::automation::held_behind_export(&id, matches!(reply, Reply::Host)) {
+                retry.push_back((id, params, reply));
                 continue;
             }
             if is_export {
@@ -1240,7 +1268,7 @@ impl WebApp {
                     params = p.to_string();
                 }
                 if export_waiting {
-                    retry.push_back((id, params, (resolve, reject)));
+                    retry.push_back((id, params, reply));
                     continue;
                 }
                 if must_wait {
@@ -1250,7 +1278,7 @@ impl WebApp {
                         since
                     });
                     if now - since < crate::automation::EXPORT_WAIT_MS {
-                        retry.push_back((id, params, (resolve, reject)));
+                        retry.push_back((id, params, reply));
                         export_waiting = true;
                         ctx.request_repaint();
                         continue;
@@ -1260,10 +1288,7 @@ impl WebApp {
                 EXPORT_WAITING_SINCE.with(|w| w.set(None));
             }
             let r = if id == "web.stats" { Ok(self.web_stats()) } else { self.app.run(&id, p) };
-            let _ = match r {
-                Ok(v) => resolve.call1(&JsValue::NULL, &v.to_string().into()),
-                Err(e) => reject.call1(&JsValue::NULL, &e.into()),
-            };
+            reply.settle(bridge.as_ref(), &id, r.map(|v| v.to_string()));
         }
         PENDING_COMMANDS.with(|q| *q.borrow_mut() = retry);
     }

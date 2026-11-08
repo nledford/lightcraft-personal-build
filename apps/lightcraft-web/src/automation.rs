@@ -30,6 +30,15 @@ pub fn waits_behind_export(id: &str) -> bool {
     lightcraft_engine::find_command(id).is_none_or(|spec| spec.journal)
 }
 
+/// Whether a command queued behind an Original export that is still waiting is held with it. The
+/// host page's commands (`from_host`) always are, queries included: their `lightcraft:response`s
+/// carry no request id and the page pairs them by send order, so none may be answered before an
+/// earlier one. The page's own commands answer through their own promises, so for them
+/// [`waits_behind_export`] decides.
+pub fn held_behind_export(id: &str, from_host: bool) -> bool {
+    from_host || waits_behind_export(id)
+}
+
 /// The `app.export` params an export that has to wait runs with later: its `resolved` settings
 /// (a preset expanded, or the previous export's), with the targets frozen in `params`. A preset or
 /// a previous export changed during the wait no longer changes what this export writes.
@@ -69,6 +78,15 @@ mod tests {
         for id in ["library.info", "photo.allMetadata", "web.stats"] {
             assert!(!waits_behind_export(id), "{id}");
         }
+    }
+
+    #[test]
+    fn the_hosts_commands_all_wait_behind_a_waiting_export_so_replies_keep_their_order() {
+        for id in ["library.info", "photo.allMetadata", "web.stats", "photo.delete"] {
+            assert!(held_behind_export(id, true), "{id} from the host");
+        }
+        assert!(!held_behind_export("web.stats", false));
+        assert!(held_behind_export("photo.delete", false));
     }
 
     #[test]

@@ -281,11 +281,11 @@ fn hash_of_import(
     Some(if again { format!("{h}:dup{}", id.0) } else { h })
 }
 
-/// The orientation a sidecar's regions are turned by: the file's own, else the sidecar's. A clip is never turned (its
-/// size is as filmed; a sidecar's `tiff:Orientation` would take a portrait clip for a photo stored sideways), so its
-/// boxes stay as written.
+/// The orientation a sidecar's regions are turned by: the file's own, else the sidecar's. (A clip's boxes are never
+/// turned: [`crate::sidecar::merge_into`] leaves them as written, whatever orientation they come with, so re-read and
+/// sync agree with import.)
 fn upright_by(info: &ProbeInfo, sidecar: Option<lightcraft_meta::Orientation>) -> Option<lightcraft_meta::Orientation> {
-    if info.kind == super::MediaKind::Video { None } else { info.orientation.or(sidecar) }
+    info.orientation.or(sidecar)
 }
 
 /// The catalog half of an import: add the photos [`ImportJob::prepare`] readied (one undoable op;

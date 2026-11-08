@@ -446,6 +446,7 @@ pub(crate) fn follow_reads(guard: &lightcraft_engine::activity::TaskGuard, reads
 /// Skip on task `id`'s row: give up the file it waits for. The task may have just got its answer: nothing to tell the
 /// user then, so the command goes to the engine directly, as ✕ does.
 pub(crate) fn skip(app: &mut LightcraftApp, id: u64) {
+    // refusal expected: the task may have just got its answer, and there is nothing to tell the user then
     let _ = app.session.execute("activity.skip", &json!({"id": id}));
 }
 
