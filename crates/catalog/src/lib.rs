@@ -1455,6 +1455,8 @@ impl Catalog {
     /// Give a catalog read without its photos the photos read from its segments.
     pub(crate) fn set_photos(&mut self, photos: BTreeMap<PhotoId, Arc<Photo>>) {
         self.photos = photos;
+        // (the folder and name lookups were built from whatever photos it held: built again when asked)
+        self.index = index::Indexes::default();
     }
 
     /// Full snapshot as JSON.

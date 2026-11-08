@@ -899,6 +899,49 @@ fn a_second_job_is_refused_while_one_holds_the_lease() {
     assert!(!exists(&b));
 }
 
+/// A background move puts a photo's file at a path the catalog may still give to another photo:
+/// a Trash (or an erase) planned meanwhile would take that file instead.
+fn a_move_in_flight(dir: &Scratch, s: &mut Session, id: u64) -> (crate::move_job::MoveWork, crate::move_job::MoveFinish) {
+    std::fs::create_dir_all(dir.0.join("share")).unwrap();
+    let folder = dir.0.join("share").to_string_lossy().to_string();
+    crate::move_job::start(s, &json!({"ids": [id], "folder": folder}), true).unwrap().unwrap()
+}
+
+#[test]
+fn trash_files_refused_while_a_move_runs() {
+    let dir = Scratch::new("trash-while-moving");
+    let (a, b) = (dir.file("a.jpg", "A"), dir.file("b.jpg", "B"));
+    let mut s = session(&dir);
+    let (ia, ib) = (add(&mut s, &a), add(&mut s, &b));
+    let (work, finish) = a_move_in_flight(&dir, &mut s, ia);
+    let err = run(&mut s, "photo.trashFiles", &[ib], json!({})).unwrap_err();
+    assert_eq!(err.kind(), crate::ErrorKind::MoveInProgress, "{err}");
+    let err = run(&mut s, "photo.trashFiles", &[ib], json!({"noTrash": "delete"})).unwrap_err();
+    assert_eq!(err.kind(), crate::ErrorKind::MoveInProgress, "{err}");
+    assert!(exists(&b) && has(&s, ib) && in_bin(&dir).is_empty(), "nothing was taken, and no lease is left held");
+    let out = work.run();
+    s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
+    trash(&mut s, &[ib]);
+    assert!(!exists(&b), "once the move has ended the Trash works again");
+}
+
+#[test]
+fn emptying_recently_deleted_into_the_trash_is_refused_while_a_move_runs() {
+    let dir = Scratch::new("empty-while-moving");
+    let (a, b) = (dir.file("a.jpg", "A"), dir.file("b.jpg", "B"));
+    let mut s = session(&dir);
+    let (ia, ib) = (add(&mut s, &a), add(&mut s, &b));
+    run(&mut s, "photo.delete", &[ib], json!({})).unwrap();
+    let (work, finish) = a_move_in_flight(&dir, &mut s, ia);
+    let err = s.execute("library.emptyRecentlyDeleted", &json!({"files": "trash", "noTrash": "delete"})).unwrap_err();
+    assert_eq!(err.kind(), crate::ErrorKind::MoveInProgress, "{err}");
+    assert!(exists(&b) && s.catalog.photo(PhotoId(ib)).is_some_and(|p| p.deleted), "the photo is still in Recently Deleted, with its file");
+    let out = work.run();
+    s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
+    let r = s.execute("library.emptyRecentlyDeleted", &json!({"files": "trash"})).unwrap();
+    assert_eq!(r["trashed"].as_u64(), Some(1), "{r}");
+}
+
 #[test]
 fn a_file_that_did_not_come_back_is_tried_again_at_the_next_undo() {
     let dir = Scratch::new("retry");
