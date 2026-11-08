@@ -116,6 +116,10 @@ fn a_rating_or_an_album_asks_about_no_file_and_a_photo_moved_to_a_missing_file_i
     // a photo nobody has asked about since the cache was cleared: its file is not known to be fresh
     let log = Arc::new(Mutex::new(Vec::new()));
     h.app.session.media.availability.set_probe(logging(&log));
+    // (the grid asks about the files of its cells in the frames that follow: they are in `seen`, and are not the quiet photo)
+    for _ in 0..5 {
+        h.step();
+    }
     assert!(h.step_until(T, |h| h.file_checks_done()));
     let seen: std::collections::HashSet<String> = log.lock().unwrap_or_else(PoisonError::into_inner).iter().cloned().collect();
     let quiet = h
@@ -168,6 +172,19 @@ fn a_batch_into_a_large_library_with_a_file_gone_is_followed_without_a_walk_over
     assert!(h.step_until(T, |h| h.file_checks_done()));
     let more = h.app.caches.missing.walks() - passes;
     assert_eq!(more, 0, "no walk over every photo for a batch, or for a file found gone: {more} walks in 10 batches");
+}
+
+/// The checks' list of files is made on a worker from a copy of the catalog: a photo that comes in while it is being
+/// made is not on it, and its file is found gone all the same (it is asked about at once).
+#[test]
+fn a_photo_that_comes_in_while_the_list_of_files_is_made_is_counted() {
+    let mut h = app(600, 1, Arc::new(there));
+    // (one frame starts the list; the batch lands before the checks of it are done)
+    h.step();
+    batch(&mut h, 1, "LG/007", 1);
+    assert_eq!(reach(&mut h, 2), 2, "the file that came in is found gone, as is the one that was there");
+    assert!(h.step_until(T, |h| h.file_checks_done()));
+    assert_eq!(reach(&mut h, 2), 2);
 }
 
 #[test]

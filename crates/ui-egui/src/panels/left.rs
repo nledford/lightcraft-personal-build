@@ -30,7 +30,7 @@ pub(crate) use folders::follow_shown;
 pub(crate) use folders::{FolderPlace, created_text, folder_place, folder_row_of, moved_text};
 use folders::{folder_rows, reveal_chosen};
 use keywords::keyword_rows;
-pub(crate) use local::{fs_cached, fs_cached_running, is_builtin_place, fs_running_counter, same_folder};
+pub(crate) use local::{fs_cached, fs_cached_running, fs_running_counter, is_builtin_place, same_folder};
 use local::{local_now, local_rows};
 pub(crate) use rows::disclosure_name;
 #[cfg(test)]
