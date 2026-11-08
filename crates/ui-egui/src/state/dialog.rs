@@ -399,22 +399,37 @@ pub struct SyncCounts {
     pub metadata: usize,
     #[serde(default)]
     pub moved: usize,
+    /// Photos of the folder whose check was skipped (the drive did not answer): the folder is not known to be up to date.
+    #[serde(default)]
+    pub unchecked: usize,
+    /// The scan ended early (the drive stopped answering): what it lists is only what it reached, and a run made from
+    /// it only imports the new files.
+    #[serde(default)]
+    pub stopped: bool,
 }
 
 impl SyncCounts {
-    /// The folder is there and the scan found nothing to bring in, relink, remove or read: the
-    /// dialog only says so (files it skipped are not changes). Files the library has elsewhere
+    /// The folder is there and the scan found nothing to bring in, relink, remove or read: there is nothing to choose,
+    /// so the dialog only says what it found (files it skipped are not changes). Files the library has elsewhere
     /// ([`SyncCounts::copies`]) can be brought in by unticking "Don't import files already in the
-    /// library", so the dialog keeps that choice for them.
+    /// library", so the dialog keeps that choice for them. A scan that stopped ([`SyncCounts::stopped`]) only offers
+    /// Import new photos, so with no new photo it has nothing to choose either.
+    pub fn nothing_to_choose(&self) -> bool {
+        !self.offline && self.new == 0 && self.copies == 0 && (self.stopped || (self.moved == 0 && self.missing == 0 && self.metadata == 0))
+    }
+
+    /// [`SyncCounts::nothing_to_choose`], the scan ran to its end and every photo of the folder was checked: a photo
+    /// whose check was skipped, or a scan that stopped, is not known to be fine, so the dialog doesn't say the library
+    /// is up to date then.
     pub fn up_to_date(&self) -> bool {
-        !self.offline && self.new == 0 && self.copies == 0 && self.moved == 0 && self.missing == 0 && self.metadata == 0
+        self.nothing_to_choose() && !self.stopped && self.unchecked == 0
     }
     /// Whether Synchronize, with Import new photos as `import_new` says and the box under it as
-    /// `import_duplicates` says, would bring in, relink, remove or read nothing: [`SyncCounts::up_to_date`],
+    /// `import_duplicates` says, would bring in, relink, remove or read nothing: like [`SyncCounts::nothing_to_choose`],
     /// but new files count only when Import new photos is ticked, and files the library has elsewhere
-    /// only when it is and that box brings them in.
+    /// only when it is and that box brings them in. (A scan that stopped hands over only its new files.)
     pub fn nothing_to_do(&self, import_new: bool, import_duplicates: bool) -> bool {
         let has_incoming = import_new && (self.new != 0 || (import_duplicates && self.copies != 0));
-        !self.offline && !has_incoming && self.moved == 0 && self.missing == 0 && self.metadata == 0
+        !self.offline && !has_incoming && (self.stopped || (self.moved == 0 && self.missing == 0 && self.metadata == 0))
     }
 }
