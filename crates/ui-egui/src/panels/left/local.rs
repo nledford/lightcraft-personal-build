@@ -99,17 +99,8 @@ pub(super) fn local_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, now: &Local
         let resp = Row::new("local:browse", Icon::Plus, crate::i18n::tr("Browse Folder…")).command().show(app, ui);
         super::side_keys::chosen(ui, &resp)
     } {
-        let picked = app.services.pick_folder.as_mut().and_then(|f| f());
-        if let Some(path) = picked {
-            match app.run("library.browse", json!({"path": path})) {
-                // the picked folder stays in Local (and comes back if it was hidden)
-                Ok(r) => {
-                    let dir = r["path"].as_str().unwrap_or(&path).to_string();
-                    app.act("local.addRoot", json!({"path": dir}));
-                }
-                Err(e) => app.toast_error(ui.ctx(), e),
-            }
-        }
+        // the dialog runs off the UI thread; the folder is added to Local when it closes
+        crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::BrowseFolder);
     }
     // the way back for hidden places: one comes back from the row itself; several are listed, so
     // each comes back on its own, or all at once (issue #2114: the row used to bring every one back)

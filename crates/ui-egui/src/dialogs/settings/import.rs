@@ -174,11 +174,9 @@ fn auto_import(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
             }
             let can = app.services.pick_folder.is_some();
             let r = Button::new("Choose…").small().enabled(can).widget("button:settingsAutoFolder").show(ui);
-            if r.clicked()
-                && let Some(f) = app.services.pick_folder.as_mut().and_then(|f| f())
-                && let Err(e) = app.run("library.autoImport", json!({"folder": f}))
-            {
-                app.toast_error(ui.ctx(), e);
+            if r.clicked() {
+                // the dialog runs off the UI thread; the folder is watched when it closes
+                crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::AutoImportFolder);
             }
             if d.auto_folder.is_some() && Button::new("Turn Off").small().show(ui).clicked() {
                 app.act("library.autoImport", json!({"folder": null}));
