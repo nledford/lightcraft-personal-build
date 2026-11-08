@@ -103,8 +103,8 @@ fn switch_library(app: &mut LightcraftApp, path: &str) -> Result<Value, String> 
     // that appear in it)
     app.samples_present = None;
     if app.ui.view == crate::state::ViewMode::Reference {
-    app.ui.view = crate::state::ViewMode::PhotoGrid;
-}
+        app.ui.view = crate::state::ViewMode::PhotoGrid;
+    }
     app.ui.settings.library_path = path.clone();
     if let Some(prev) = previous.filter(|p| p != &path && !app.ui.settings.recent_libraries.contains(p)) {
         remember_library(&mut app.ui.settings.recent_libraries, &prev);
