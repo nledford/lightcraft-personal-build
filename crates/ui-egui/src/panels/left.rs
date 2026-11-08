@@ -27,7 +27,7 @@ use albums::{albums_rows, drag_auto_scroll};
 pub(crate) use dates::browse_all_photos;
 use dates::date_rows;
 pub(crate) use folders::follow_shown;
-pub(crate) use folders::{FolderPlace, created_text, folder_place, folder_row_of, moved_text};
+pub(crate) use folders::{FolderPlace, created_text, folder_place, folder_row_of, moved_skipping_text, moved_text};
 use folders::{folder_rows, reveal_chosen};
 use keywords::keyword_rows;
 pub(crate) use local::{fs_cached, fs_cached_running, fs_running_counter, is_builtin_place, same_folder};

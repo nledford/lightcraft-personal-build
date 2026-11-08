@@ -375,5 +375,13 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "{n}個は移動できず、ライブラリに残ります: {why}",
   "Photos whose file was already gone: {n}": "ファイルがすでになかった写真: {n}枚",
   "Sidecars left in place: {n}": "そのまま残したサイドカー: {n}個",
-  "Files other photos still use, kept: {n}": "ほかの写真が使っているため残したファイル: {n}個"
+  "Files other photos still use, kept: {n}": "ほかの写真が使っているため残したファイル: {n}個",
+  "These can't be moved to “{}”:": "「{0}」に移動できない写真:",
+  "{} is already in “{}”": "{0} はすでに「{1}」にあります",
+  "{} is missing or offline": "{0} が見つからないか、オフラインです",
+  "and {n} more": "ほか{n}枚",
+  "Move {n}, skip {m}": "{n}枚を移動、{m}枚をスキップ",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n}枚を「{1}」に移動し、{skipped}枚をスキップしました。編集 → 取り消す で元に戻せます。{0:.0}",
+  "{} can't be moved": "{0} は移動できません",
+  "{} has the same name as another photo being moved": "{0} は、移動する別の写真と名前が同じです"
 }

@@ -77,7 +77,9 @@ fn start_inner(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value, sto
     let started = lightcraft_engine::move_job::start(&mut app.session, params, true).map_err(|e| e.to_string())?;
     let Some((work, finish)) = started else {
         app.toast(ctx, crate::panels::left::moved_text(0, &name));
-        return Ok(json!({"moved": 0, "of": 0, "folder": path, "stopped": false}));
+        // (the photos told to be skipped are the ones left out: `start` doesn't say which of them it found)
+        let skipped = params.get("skip").filter(|s| s.is_array()).cloned().unwrap_or_else(|| json!([]));
+        return Ok(json!({"moved": 0, "of": 0, "folder": path, "stopped": false, "skipped": skipped}));
     };
     let files = finish.files();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -161,9 +163,13 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
             if run.stop_asking && moved > 0 {
                 app.ui.settings.ask_before_move = false;
             }
+            let skipped = r["skipped"].as_array().map_or(0, |s| s.len() as u64);
             let text = if r["stopped"].as_bool() == Some(true) {
                 stopped_text(moved, of, &run.name)
+            } else if moved > 0 && skipped > 0 {
+                crate::panels::left::moved_skipping_text(moved, skipped, &run.name)
             } else {
+                // (nothing moved, as those that could go had reached the folder meanwhile: no undo step to point at)
                 crate::panels::left::moved_text(moved, &run.name)
             };
             app.toast(ctx, text);

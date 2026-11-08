@@ -675,11 +675,21 @@ fn folder_drop_target(
     ui.painter().rect_stroke(resp.rect.shrink2(vec2(8.0, 1.0)), 4.0, egui::Stroke::new(1.5, t.accent), egui::StrokeKind::Inside);
     if released {
         app.ui.dragging_photos = None;
+        // problems the move would stop at (a name taken there, a file offline) are found now and
+        // shown in the question, so they aren't met after Move
+        let (problems, movable) = match app.run("photo.checkMove", json!({"folder": n.path, "ids": ids})) {
+            Ok(r) => move_problems(&r),
+            Err(e) => {
+                app.toast(ui.ctx(), e);
+                return;
+            }
+        };
         // a drop moves files on disk: asked first (as Lightroom Classic does), unless the person
-        // said not to; the menu's Move Selected Photos Here is asked for by name and goes at once
-        if app.ui.settings.ask_before_move {
+        // said not to (a move with problems asks anyway: it needs a decision); the menu's Move
+        // Selected Photos Here is asked for by name and goes at once
+        if app.ui.settings.ask_before_move || !problems.is_empty() {
             let library = app.session.library_generation();
-            app.ui.dialog = Some(crate::state::Dialog::MovePhotos { ids, folder: n.path.clone(), name, files: count, dont_ask: false, library });
+            app.ui.dialog = Some(crate::state::Dialog::MovePhotos { ids, folder: n.path.clone(), name, files: count, dont_ask: false, library, problems, movable });
         } else {
             move_photos_here(app, ui.ctx(), Some(&ids), &n.path);
         }
@@ -737,6 +747,34 @@ fn move_photos_here(app: &mut LightcraftApp, ctx: &egui::Context, ids: Option<&[
     }
     // (a refusal is told in a toast by `start`)
     let _ = crate::move_task::start(app, ctx, &params, false);
+}
+
+/// The problems and the number of photos that can go in a `photo.checkMove` answer.
+fn move_problems(r: &serde_json::Value) -> (Vec<crate::state::MoveProblem>, usize) {
+    let problems = r["problems"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|p| {
+            Some(crate::state::MoveProblem {
+                id: p["id"].as_u64()?,
+                name: p["name"].as_str()?.to_string(),
+                kind: crate::state::MoveProblemKind::from_check(p),
+            })
+        })
+        .collect();
+    (problems, r["movable"].as_u64().unwrap_or(0) as usize)
+}
+
+/// [`moved_text`] for a move that left `skipped` photos out.
+pub(crate) fn moved_skipping_text(n: u64, skipped: u64, name: &str) -> String {
+    crate::i18n::tr_format!(
+        "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.",
+        if n == 1 { "" } else { "s" },
+        name,
+        n = n,
+        skipped = skipped
+    )
 }
 
 /// The context menu of a Folders row: a folder's own, a disk's (remove it), none for the

@@ -374,5 +374,13 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Nie udało się przenieść ({n}), zostają w bibliotece: {why}",
   "Photos whose file was already gone: {n}": "Zdjęcia, których plik już nie istniał: {n}",
   "Sidecars left in place: {n}": "Pliki pomocnicze pozostawione na miejscu: {n}",
-  "Files other photos still use, kept: {n}": "Pliki nadal używane przez inne zdjęcia, zachowane: {n}"
+  "Files other photos still use, kept: {n}": "Pliki nadal używane przez inne zdjęcia, zachowane: {n}",
+  "These can't be moved to “{}”:": "Nie można ich przenieść do „{0}”:",
+  "{} is already in “{}”": "{0} jest już w „{1}”",
+  "{} is missing or offline": "Brakuje {0} lub jest niedostępny",
+  "and {n} more": "i {n} więcej",
+  "Move {n}, skip {m}": "Przenieś: {n}, pomiń: {m}",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Przeniesiono do „{1}” — zdjęcia: {n}{0:.0}, pominięto: {skipped}. Edytuj → Cofnij przywróci je.",
+  "{} can't be moved": "{0} nie można przenieść",
+  "{} has the same name as another photo being moved": "{0} ma tę samą nazwę co inne przenoszone zdjęcie"
 }

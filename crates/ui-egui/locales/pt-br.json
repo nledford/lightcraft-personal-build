@@ -2428,5 +2428,8 @@
   "Moving was stopped by an error (see the log). The library may not follow every file that had moved: Find Missing Photos relinks the ones it lost.": "Um erro interrompeu a movimentação (veja o registro). A biblioteca pode não acompanhar todos os arquivos que já tinham sido movidos: Localizar fotos ausentes vincula de novo os que ela perdeu.",
   "This library is open without its lock, so moves that were cut short are left as they are until it opens with the lock; Find Missing Photos relinks files that moved.": "Esta biblioteca está aberta sem o bloqueio, então as movimentações interrompidas ficam como estão até que ela seja aberta com o bloqueio; Localizar fotos ausentes vincula de novo os arquivos que foram movidos.",
   "Unfinished moves": "Movimentações inacabadas",
-  "Keywords and presets apply to new files only, not to photos already in Local": "Palavras-chave e predefinições valem só para arquivos novos, não para fotos que já estão em Local"
+  "Keywords and presets apply to new files only, not to photos already in Local": "Palavras-chave e predefinições valem só para arquivos novos, não para fotos que já estão em Local",
+  "Rename a clashing photo, or choose another folder, to move it too.": "Renomeie a foto com nome repetido ou escolha outra pasta para movê-la.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "Reconecte o disco ou use Arquivo → Localizar fotos ausentes… e tente de novo.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "Uma foto sem arquivo não pode ser movida. Uma foto local pode, depois de usar Adicionar às Minhas fotos."
 }

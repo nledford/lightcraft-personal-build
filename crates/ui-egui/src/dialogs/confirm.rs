@@ -235,16 +235,18 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
         Dialog::Merge { opts } => crate::merge::start_final(app, opts),
         Dialog::Import { opts } => crate::import::start(app, opts),
         Dialog::ConfirmDelete { .. } => app.run("photo.delete", json!({})),
-        Dialog::MovePhotos { ids, folder, dont_ask, library, .. } => {
+        Dialog::MovePhotos { ids, folder, dont_ask, library, problems, .. } => {
             // another library opened meanwhile (from the menu bar, an agent): these numbers are
             // other photos there
             if *library != app.session.library_generation() {
                 return Err(crate::i18n::tr("Another library was opened since the photos were dropped: nothing was moved").to_string());
             }
             let ctx = app.tasks.repaint.clone().unwrap_or_default();
+            // the photos found to have a problem stay where they are, the rest move
+            let skip: Vec<u64> = problems.iter().map(|p| p.id).collect();
             // Don't ask again turns the question off when the move ends with a file moved (`move_task::poll`): one
             // refused (the `?` above, or by the worker: a name taken), or that found the photos there already, leaves it on
-            crate::move_task::start(app, &ctx, &json!({"ids": ids, "folder": folder}), *dont_ask)
+            crate::move_task::start(app, &ctx, &json!({"ids": ids, "folder": folder, "skip": skip}), *dont_ask)
         }
         Dialog::TrashFiles(ask) => crate::panels::trash_files::run(app, ask),
         // the catalog found: no file dialog; none: File ▸ Import Lightroom Catalog… asks for it

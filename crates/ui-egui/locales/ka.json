@@ -3848,5 +3848,8 @@
   "This cannot be undone: the files are not kept anywhere.": "ამის დაბრუნება შეუძლებელია: ფაილები არსად შეინახება.",
   "Only these files are erased; XMP sidecars beside them stay.": "იშლება მხოლოდ ეს ფაილები; მათ გვერდით არსებული XMP თანმხლები ფაილები რჩება.",
   "Cancel leaves these photos in the library and their files where they are.": "„გაუქმება“ ამ ფოტოებს ბიბლიოთეკაში დატოვებს, მათ ფაილებს კი — თავის ადგილას.",
-  "Keywords and presets apply to new files only, not to photos already in Local": "საკვანძო სიტყვები და პრესეტები მხოლოდ ახალ ფაილებზე მოქმედებს და არა იმ ფოტოებზე, რომლებიც უკვე ლოკალშია"
+  "Keywords and presets apply to new files only, not to photos already in Local": "საკვანძო სიტყვები და პრესეტები მხოლოდ ახალ ფაილებზე მოქმედებს და არა იმ ფოტოებზე, რომლებიც უკვე ლოკალშია",
+  "Rename a clashing photo, or choose another folder, to move it too.": "გადაარქვით სახელი დუბლირებულ ფოტოს ან აირჩიეთ სხვა საქაღალდე, რომ გადავიდეს.",
+  "Reconnect the disk or use File → Find Missing Photos…, then try again.": "ხელახლა შეაერთეთ დისკი ან გამოიყენეთ ფაილი → დაკარგული ფოტოების მოძებნა… და სცადეთ თავიდან.",
+  "A photo with no file can't be moved. A Local photo can, once you use Add to My Photos.": "ფაილის გარეშე ფოტო ვერ გადაიტანება. ლოკალური ფოტო გადაიტანება, თუ გამოიყენებთ: ჩემს ფოტოებში დამატება."
 }

@@ -375,5 +375,13 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "有 {n} 個無法移動，仍留在照片庫中：{why}",
   "Photos whose file was already gone: {n}": "檔案已不存在的照片：{n} 張",
   "Sidecars left in place: {n}": "保留在原處的附屬檔案：{n} 個",
-  "Files other photos still use, kept: {n}": "其他照片仍在使用而保留的檔案：{n} 個"
+  "Files other photos still use, kept: {n}": "其他照片仍在使用而保留的檔案：{n} 個",
+  "These can't be moved to “{}”:": "以下照片無法移到「{0}」：",
+  "{} is already in “{}”": "{0} 已在「{1}」中",
+  "{} is missing or offline": "{0} 遺失或處於離線狀態",
+  "and {n} more": "另有 {n} 張",
+  "Move {n}, skip {m}": "移動 {n} 張，略過 {m} 張",
+  "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "已將 {n} 張照片移到「{1}」{0:.0}，略過 {skipped} 張。編輯 → 復原 可移回。",
+  "{} can't be moved": "{0} 無法移動",
+  "{} has the same name as another photo being moved": "{0} 與另一張要移動的照片同名"
 }
