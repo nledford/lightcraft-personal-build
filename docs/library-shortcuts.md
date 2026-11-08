@@ -89,8 +89,8 @@ Fixed keys.
 
 Grid actions apply to all selected photos and support Undo / Redo. In Compare and Survey, culling
 actions apply to the active photo; a right-click on a selected photo there (or on its filmstrip
-thumbnail) makes it the active one, so the rating, flag and colour label rows of its menu act on
-that photo alone. Auto Advance moves forward
+thumbnail, except a photo Compare doesn't show) makes it the active one, so the rating, flag and
+colour label rows of its menu act on that photo alone. Auto Advance moves forward
 after an action, from the keys and from those menu rows alike; holding Shift with
 Auto Advance on still advances only once. The last photo stays selected. Text fields keep their
 keyboard input. With the Crop panel open `P` and `U` still pick and unflag (Auto Advance and the

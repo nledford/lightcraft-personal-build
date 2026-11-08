@@ -308,17 +308,6 @@ fn custom_cache_option(cur: u32) -> Option<(u32, String)> {
     Some((cur, label))
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn a_saved_cache_size_the_list_does_not_offer_is_an_option() {
-        assert_eq!(super::custom_cache_option(0), None, "Automatic");
-        assert_eq!(super::custom_cache_option(51_200), None, "offered");
-        assert_eq!(super::custom_cache_option(10_240), Some((10_240, "10 GB".to_string())));
-        assert_eq!(super::custom_cache_option(3000), Some((3000, "3000 MB".to_string())));
-    }
-}
-
 /// Where the "Existing previews" choice is kept between frames.
 #[cfg(not(target_arch = "wasm32"))]
 fn smart_existing_id() -> egui::Id {
@@ -353,5 +342,16 @@ pub(crate) fn smart_previews_changed(app: &mut LightcraftApp, ctx: &egui::Contex
             }
         }
         Err(e) => app.toast_error(ctx, e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn a_saved_cache_size_the_list_does_not_offer_is_an_option() {
+        assert_eq!(super::custom_cache_option(0), None, "Automatic");
+        assert_eq!(super::custom_cache_option(51_200), None, "offered");
+        assert_eq!(super::custom_cache_option(10_240), Some((10_240, "10 GB".to_string())));
+        assert_eq!(super::custom_cache_option(3000), Some((3000, "3000 MB".to_string())));
     }
 }
