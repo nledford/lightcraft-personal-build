@@ -1,5 +1,4 @@
 use super::albums::refuse_photos;
-use super::dates::browse_all_photos;
 use super::rows::{INDENT_STEP, Inside, Row, out_of_sight, tree_toggle};
 use super::{Branch, Icon, KeywordNode, LightcraftApp, Said, json};
 use crate::menu_item::MenuItem;
@@ -13,11 +12,12 @@ pub(super) fn keyword_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[
         let branch = (!n.children.is_empty()).then(|| Branch::keyword(&n.path));
         let mut open = branch.as_ref().is_some_and(|b| app.ui.sidebar_trees.is_open_under(b, above));
         let id = format!("keyword:{}", n.path);
-        let sel_of = |app: &LightcraftApp| app.session.filter.keyword.as_deref().is_some_and(|k| k.eq_ignore_ascii_case(&n.path));
+        let sel_of = |app: &LightcraftApp| crate::panels::side_select::keyword_shown(app, &n.path);
+        app.ui.side.keywords.saw(n.path.clone());
         if !out_of_sight(app, ui, &id, &n.name, Some(n.count), indent, false, || sel_of(app)) {
-            let sel = sel_of(app);
-            keyword_row(app, ui, n, &id, indent, branch.as_ref(), &mut open, sel);
-        }
+        let sel = sel_of(app);
+        keyword_row(app, ui, n, &id, indent, branch.as_ref(), &mut open, sel);
+    }
         if let Some(branch) = branch.as_ref().filter(|_| open) {
             let inside = app.ui.sidebar_trees.inside(branch, above);
             keyword_rows(app, ui, &n.children, indent + INDENT_STEP, inside);
@@ -37,6 +37,7 @@ fn keyword_row(
     open: &mut bool,
     sel: bool,
 ) {
+
     let resp = Row::new(id, Icon::Tag, &n.name).count(Some(n.count)).selected(sel).indent(indent).show(app, ui);
     refuse_photos(
         app,
@@ -51,9 +52,7 @@ fn keyword_row(
     }
     let resp = resp.on_hover_text(if n.children.is_empty() { n.path.clone() } else { format!("{} (includes the keywords below it)", n.path) });
     if super::side_keys::chosen(ui, &resp) {
-        let v = if sel { serde_json::Value::Null } else { json!(n.path) };
-        browse_all_photos(app, !sel);
-        app.act("library.filter", json!({"keyword": v}));
+        crate::panels::side_select::keyword_clicked(app, ui, &n.path);
     }
     crate::widgets::context_menu(&resp, |ui| {
         let has_sel = app.session.active().is_some();

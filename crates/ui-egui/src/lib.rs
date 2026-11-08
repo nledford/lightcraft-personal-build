@@ -38,6 +38,7 @@ pub mod loupe_timing;
 pub mod menus;
 mod missing_sweep;
 pub mod motion;
+pub mod multi_select;
 pub mod panels;
 pub mod pick;
 pub mod recheck;
