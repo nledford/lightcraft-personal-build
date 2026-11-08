@@ -77,11 +77,13 @@ fn a_drop_that_added_nothing_has_no_undo() {
     let row = rect(&h, &format!("source:album:{album}")).expect("the album row");
     let ids: Vec<u64> = h.app.session.visible_cloned().iter().take(2).map(|id| id.0).collect();
     drop_on(&mut h, &ids, row.center());
-    // (the toast of the first drop goes away before the second is told)
+    // (the toast of the first drop goes away before the second is made)
     h.app.ui.toast = None;
     h.step();
+    let steps = h.app.session.undo.len();
     drop_on(&mut h, &ids, row.center());
-    assert!(toast(&h).starts_with("Added 0 photos"), "{}", toast(&h));
+    // the album holds them all: a drop there does nothing (no command runs, no toast), so there is nothing to undo
+    assert_eq!(h.app.session.undo.len(), steps, "nothing was done");
     assert!(rect(&h, "button:toastUndo").is_none(), "nothing was done, so there is nothing to undo");
 }
 
@@ -149,7 +151,10 @@ fn the_undo_button_is_drawn_above_the_toast_not_under_its_backdrop() {
     let ids: Vec<u64> = h.app.session.visible_cloned().iter().take(2).map(|id| id.0).collect();
     drop_on(&mut h, &ids, row.center());
     let button = rect(&h, "button:toastUndo").expect("the toast offers Undo");
-    // a toast is a dark plate (alpha 200 black) with light ink: a label hidden under that plate would be no brighter than it
+    // a toast is a dark plate with light ink, and it fades in: once it has, a label hidden under that plate would be no brighter than it
+    for _ in 0..12 {
+        h.step();
+    }
     let image = h.paint();
     assert!(brightest(&image, button) > 450, "the button's label is as light as the toast's ink, so it is not under the plate");
 }
