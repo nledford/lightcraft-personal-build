@@ -150,7 +150,9 @@ fn unreadable_in(image: &egui::ColorImage, shapes: &[egui::epaint::ClippedShape]
             let own = Some(section.format.color).filter(|c| *c != Color32::PLACEHOLDER);
             let colour = text.override_text_color.or(own).unwrap_or(text.fallback_color);
             // (a count of nothing is fainter on purpose: the rows that hold photos stand out)
-            if colour == t.text_disabled || colour.a() == 0 || colour == t.text_dim.gamma_multiply(0.55) {
+            // (a disabled button is drawn faded as a whole: left out, like the rest of what is disabled)
+            let disabled_button = [t.text, Color32::WHITE].map(crate::widgets::button::faded).contains(&colour);
+            if colour == t.text_disabled || disabled_button || colour.a() == 0 || colour == t.text_dim.gamma_multiply(0.55) {
                 continue;
             }
             let shown = blend(colour, on);

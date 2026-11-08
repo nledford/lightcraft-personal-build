@@ -96,6 +96,12 @@ pub enum State {
     Disabled,
 }
 
+/// How a disabled button's fill, border and content are drawn: fainter as a whole, so the
+/// contrast test (which leaves out what is disabled) knows them by this.
+pub fn faded(c: Color32) -> Color32 {
+    c.gamma_multiply(0.45)
+}
+
 /// The colours a button of `kind` takes in `state`: fill (if any), border (if any), and what is
 /// drawn on it (text and icon).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -171,7 +177,7 @@ pub fn look(t: &Tokens, kind: Kind, state: State) -> Look {
         },
     };
     if state == State::Disabled {
-        let fade = |c: Color32| c.gamma_multiply(0.45);
+        let fade = faded;
         Look { fill: look.fill.map(fade), border: look.border.map(fade), content: fade(look.content) }
     } else {
         look
