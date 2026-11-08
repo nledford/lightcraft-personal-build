@@ -1242,9 +1242,19 @@ impl Session {
 
     /// Like [`Session::read_sidecar_op`], retaining transient diagnostics for the command report.
     pub fn read_sidecar_op_with_warnings(&self, id: PhotoId) -> Result<Option<(Op, PathBuf, Vec<crate::import::ImportWarning>)>> {
+        self.read_sidecar_op_named(id, self.sidecar_lookup(id))
+    }
+
+    /// [`Session::read_sidecar_op_with_warnings`] with the sidecar lookup already worked out ([`Session::sidecar_lookups`]): a
+    /// folder of photos knows its owners once, instead of one pass over the catalog per photo.
+    pub(crate) fn read_sidecar_op_named(
+        &self,
+        id: PhotoId,
+        lookup: SidecarLookup,
+    ) -> Result<Option<(Op, PathBuf, Vec<crate::import::ImportWarning>)>> {
         let p = self.catalog.photo(id).ok_or(lightcraft_catalog::CatalogError::NoPhoto(id))?;
         let Some(orig) = file_path(p) else { return Ok(None) };
-        let Some((packet, from)) = read_packet(orig, p.kind, self.sidecar_lookup(id)) else { return Ok(None) };
+        let Some((packet, from)) = read_packet(orig, p.kind, lookup) else { return Ok(None) };
         let sc = parse_sidecar(&packet, crate::crs::Target::for_photo(p)).map_err(|e| EngineError::Other(format!("{}: {e}", from.display())))?;
         let sc = sc.with_file_orientation(orig);
         let mut warnings = sc.warnings.clone();

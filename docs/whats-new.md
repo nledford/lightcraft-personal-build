@@ -423,6 +423,14 @@
   a second. On a Mac the window also holds one drawable less: its width × height × 4 bytes, 15–22 MB for a
   1200–1500-point-wide window on a Retina display.
 
+### Save or read the metadata of a whole folder from a script
+- `folder.saveMetadata {path}` and `folder.readMetadata {path}` (CLI and MCP) do what Save Metadata to File and Read
+  Metadata from File do for the selection, for every library photo imported from a folder and the folders inside it.
+  Each run shows a row in the activity stack. With `background: true` the work only advances while the caller runs
+  `folder.metadataPump` again and again (the app doesn't yet), and then the row's ✕ stops it between photos: a stopped
+  save keeps the sidecars it wrote, a stopped read commits what it read as one undo step. A photo whose file can't be
+  written or read is listed in `failed` and the rest go on. The Folders menu items that use them come later.
+
 ## 2026-10-24
 
 ### AI Denoise follows the photo's real noise

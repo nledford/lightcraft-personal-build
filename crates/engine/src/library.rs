@@ -758,7 +758,8 @@ impl Session {
             }
         }
         self.media.smart_dir = on_disk.then(|| crate::smart::dir(&dir));
-        // Photo ids belong to one library; denoise work must not carry into the next.
+        // Photo ids belong to one library; a folder's metadata job and denoise work must not carry into the next.
+        self.folder_metadata = None;
         self.denoise.library_changed();
         self.media.denoise.clear();
         // what was learned about the old library's faces is saved, and none of it carries over (photo ids are per library)
