@@ -308,6 +308,9 @@
   The catalog format is now version 15 (`FolderRecord.made` came with 13). Once this version has opened a library, older versions
   refuse it, as with every format change.
 
+### The Edit menu loses its Language submenu
+- Choose the interface language in Settings ▸ General ▸ Language, which already lists every language. Edit no longer carries 18 more rows for it, on any platform.
+
 ### The Edit menu groups Select Only Active Photo and Paste Settings from Previous with their kin
 - Select Only Active Photo now sits under Deselect All, and Paste Settings from Previous under Paste Selected Settings…, instead of both after Settings…, near the end of the Edit menu. On macOS, where Settings… lives in the application menu, the Edit menu no longer shows two separator lines in a row.
 
