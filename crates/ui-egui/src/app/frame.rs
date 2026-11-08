@@ -751,6 +751,7 @@ mod keep_awake_tests {
     use lightcraft_engine::activity::Cancel;
 
     use super::*;
+    use crate::Services;
 
     /// A context that records every delay it is asked to repaint after.
     fn recording_context() -> (egui::Context, Arc<Mutex<Vec<Duration>>>) {
