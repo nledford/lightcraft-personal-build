@@ -88,6 +88,14 @@ pub fn start(app: &mut LightcraftApp, request: Request) -> Result<Value, String>
     if app.sync_run.is_some() {
         return Err(crate::i18n::tr("A folder is being synchronized").to_string());
     }
+    // (a file on its way to another folder, or to the Trash, may be what the catalog still gives to
+    // another photo: the relink would point a photo at it)
+    if app.move_run.is_some() {
+        return Err(crate::i18n::tr("Photos are being moved to another folder").to_string());
+    }
+    if app.trash_run.is_some() {
+        return Err(crate::i18n::tr("Files are being moved to the Trash").to_string());
+    }
     let plan = Relocation::new(&app.session, &request.path, &request.to, request.disk).map_err(|e| e.to_string())?;
     let name = lightcraft_catalog::folders::folder_label(&plan.from);
     let progress = Arc::new(ScanProgress::default());

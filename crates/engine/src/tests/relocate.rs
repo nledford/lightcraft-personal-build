@@ -958,3 +958,52 @@ fn a_relative_place_with_dot_dot_is_told_to_be_written_in_full() {
     let e = refused(&mut s, json!({"folder": dir.path("trip"), "path": ".."}));
     assert!(e.contains("full path"), "{e}");
 }
+
+/// A background move (or Trash) puts a photo's file at a path the catalog may still give to another
+/// photo: relinking a folder meanwhile could point a photo at the file that is arriving for another.
+fn a_move_in_flight(dir: &Scratch, s: &mut Session) -> (crate::move_job::MoveWork, crate::move_job::MoveFinish) {
+    std::fs::create_dir_all(dir.0.join("share")).unwrap();
+    let id = s.catalog.photos().find(|p| p.file_name == "a.png").map(|p| p.id).unwrap();
+    crate::move_job::start(s, &json!({"ids": [id.0], "folder": dir.path("share")}), true).unwrap().unwrap()
+}
+
+#[test]
+fn locating_a_folder_is_refused_while_a_move_runs() {
+    let dir = Scratch::new("while-moving");
+    let mut s = library(&dir);
+    let now = moved_away(&dir);
+    // looked at before the move began, as the app does on a worker thread
+    let located = looked(&s, &dir, &now);
+    std::fs::rename(&now, dir.path("trip")).unwrap();
+    let (work, finish) = a_move_in_flight(&dir, &mut s);
+    let before = files(&s);
+    let err = Relocation::new(&s, &dir.path("trip"), &now, false).err().unwrap();
+    assert_eq!(err.kind(), crate::ErrorKind::MoveInProgress, "{err}");
+    let err = s.execute("folder.updateLocation", &json!({"folder": dir.path("trip"), "path": now})).unwrap_err();
+    assert_eq!(err.kind(), crate::ErrorKind::MoveInProgress, "{err}");
+    let err = located.commit(&mut s, false).unwrap_err();
+    assert_eq!(err.kind(), crate::ErrorKind::MoveInProgress, "{err}");
+    assert_eq!(files(&s), before, "nothing was relinked");
+    let out = work.run();
+    s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
+    std::fs::rename(dir.path("trip"), &now).unwrap();
+    assert!(s.execute("folder.updateLocation", &json!({"folder": dir.path("trip/day1"), "path": dir.path("archive/journey/day1")})).is_ok(), "once the move has ended Locate Folder works again");
+}
+
+#[test]
+fn locating_a_folder_is_refused_while_files_go_to_the_trash() {
+    let dir = Scratch::new("while-trashing");
+    let mut s = library(&dir);
+    let now = moved_away(&dir);
+    let located = looked(&s, &dir, &now);
+    let id = s.catalog.photos().find(|p| p.file_name == "a.png").map(|p| p.id).unwrap();
+    let lease = crate::trash_job::TrashPlan::new(&s, &[id], "photo.trashFiles").unwrap();
+    let before = files(&s);
+    let e = Relocation::new(&s, &dir.path("trip"), &now, false).err().unwrap().to_string();
+    assert!(e.contains("Trash"), "{e}");
+    let e = located.commit(&mut s, false).unwrap_err().to_string();
+    assert!(e.contains("Trash"), "{e}");
+    assert_eq!(files(&s), before, "nothing was relinked");
+    drop(lease);
+    relocate(&mut s, &dir.path("trip"), &now);
+}

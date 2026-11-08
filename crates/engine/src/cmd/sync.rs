@@ -50,7 +50,8 @@ pub fn specs() -> Vec<CommandSpec> {
                 let text = |key: &str| str_param(p, key).filter(|d| !d.trim().is_empty()).ok_or_else(|| bad(C, format!("missing `{key}`")));
                 let (folder, to) = (text("folder")?, text("path")?);
                 crate::relocate::relocate(s, folder, to, bool_or(p, "disk", false), bool_or(p, "incomplete", false))
-                    .map_err(|e| bad(C, e.to_string()))
+                    // (a move in progress keeps its own kind: callers wait on it, they don't fix parameters)
+                    .map_err(|e| if matches!(e, crate::EngineError::MoveInProgress(_)) { e } else { bad(C, e.to_string()) })
             }
         ),
     ]

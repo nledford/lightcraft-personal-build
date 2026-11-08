@@ -50,6 +50,7 @@ pub fn ui_enabled(app: &LightcraftApp, id: &str) -> bool {
         "dialog.trashFiles" => {
             crate::panels::trash_files::available()
                 && app.trash_run.is_none()
+                && app.move_run.is_none()
                 && app.session.selected().iter().any(|id| app.session.catalog.photo(*id).is_some_and(|p| !p.local))
         }
         "photo.editInPhotoCraft" | "photo.editInExternal" => app.session.active().is_some() && app.services.open_with.is_some(),

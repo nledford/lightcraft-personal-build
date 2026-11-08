@@ -781,6 +781,7 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
                     | Dialog::SaveEffect { .. }
                     | Dialog::CaptureTime { .. }
                     | Dialog::LensDatabase { .. }
+                    | Dialog::LocateFolder { .. }
             ) =>
         {
             app.toast_error(ctx, e)

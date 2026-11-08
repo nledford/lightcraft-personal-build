@@ -239,6 +239,10 @@ impl Relocation {
     /// library's own folder, and a place where a file is already another photo's (one not of
     /// this folder; two photos would share one file). No file-system access.
     pub fn new(s: &Session, path: &str, to: &str, disk: bool) -> Result<Relocation> {
+        // (a background move or Trash puts a photo's file where the catalog may still say another's:
+        // a relink meanwhile could point a photo at the file that is arriving for another)
+        s.refuse_while_moving()?;
+        s.refuse_while_trashing("folder.updateLocation")?;
         if cfg!(target_arch = "wasm32") {
             // (no disk to look at: every folder would be "not a folder")
             return Err(invalid("locating a folder is not supported in the web version: it has no disk to look for the photos' files on"));
@@ -523,6 +527,8 @@ impl Located {
     /// otherwise Synchronize Folder would offer every file as new); undo brings them back.
     /// → `{folder, path, relinked, found, unverified, different, notFound, replacedLocal}`.
     pub fn commit(self, s: &mut Session, incomplete: bool) -> Result<Value> {
+        s.refuse_while_moving()?;
+        s.refuse_while_trashing("folder.updateLocation")?;
         // (photo ids mean something else in another library)
         if !Arc::ptr_eq(&self.library, &s.library_identity) {
             return Err(invalid("another library was opened meanwhile: the folder was not located"));
