@@ -191,11 +191,11 @@ fn a_folder_chosen_inside_a_folded_branch_is_shown_and_stays_shown() {
 }
 
 /// Given a disk in Folders whose first folders only lead to the one where the library branches
-/// (rows that open by themselves), when the disk is folded with Option held, then everything
-/// inside it folds, those rows too; opened with a plain click it shows its first row only, and
-/// opened again with Option it opens down to the last folder, through the rows that lead on.
+/// (rows that are passed over), when the disk is folded with Option held, then everything inside
+/// it folds; opened with a plain click it shows its first row only, and opened again with Option
+/// it opens down to the last folder.
 #[test]
-fn option_click_folds_and_opens_the_folders_that_lead_on() {
+fn option_click_folds_and_opens_the_folders_below_a_disk() {
     use lightcraft_catalog::{Op, Photo, Source};
     let mut session = lightcraft_engine::Session::new();
     for path in ["/Users/me/Pictures/a/x/1.jpg", "/Users/me/Pictures/a/y/2.jpg", "/Users/me/Pictures/b/3.jpg"] {
@@ -205,23 +205,23 @@ fn option_click_folds_and_opens_the_folders_that_lead_on() {
     }
     let mut h = headless(session);
     assert!(
-        shown(&h, "source:libfolder:/Users") && shown(&h, "source:libfolder:/Users/me") && shown(&h, "source:libfolder:/Users/me/Pictures"),
-        "the folders that lead on open by themselves"
+        shown(&h, "source:libfolder:/Users/me/Pictures") && !shown(&h, "source:libfolder:/Users") && !shown(&h, "source:libfolder:/Users/me"),
+        "the folders that only lead on are passed over: the first row is where the library branches"
     );
     click(&mut h, "libraryFolderToggle:/Users/me/Pictures");
     click(&mut h, "libraryFolderToggle:/Users/me/Pictures/a");
     assert!(shown(&h, "source:libfolder:/Users/me/Pictures/a/x"));
 
     option_click(&mut h, "libraryFolderToggle:/");
-    assert!(!shown(&h, "source:libfolder:/Users"), "folded with all that is inside it");
+    assert!(!shown(&h, "source:libfolder:/Users/me/Pictures"), "folded with all that is inside it");
     click(&mut h, "libraryFolderToggle:/");
     assert!(
-        shown(&h, "source:libfolder:/Users") && !shown(&h, "source:libfolder:/Users/me"),
-        "opened alone: the folders inside it stay folded, those that lead on too"
+        shown(&h, "source:libfolder:/Users/me/Pictures") && !shown(&h, "source:libfolder:/Users/me/Pictures/a"),
+        "opened alone: the folders inside it stay folded"
     );
     option_click(&mut h, "libraryFolderToggle:/");
     option_click(&mut h, "libraryFolderToggle:/");
-    assert!(shown(&h, "source:libfolder:/Users/me/Pictures/a/x"), "opened with all that is inside it, through the folders that lead on");
+    assert!(shown(&h, "source:libfolder:/Users/me/Pictures/a/x"), "opened with all that is inside it");
 }
 
 /// Given keywords one inside another and the photos' dates, when a keyword's or a year's
