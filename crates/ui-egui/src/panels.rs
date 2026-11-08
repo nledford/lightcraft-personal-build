@@ -122,7 +122,7 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
     }
     shown.hovered = hovered;
     let alpha = toast_alpha(now, shown.shown_at, shown.until);
-    painter.rect_filled(r, 6.0, background.gamma_multiply(alpha));
+    painter.rect_filled(r, 6.0, crate::transparency::fade(ctx, background, alpha));
     painter.galley_with_override_text_color(r.center() - galley.size() / 2.0, galley, foreground.gamma_multiply(alpha));
     // a screen reader reads it out when it comes, without leaving what it was reading
     let words = &shown.text;

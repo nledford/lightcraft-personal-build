@@ -129,6 +129,8 @@ fn the_photo_grid_badges_are_solid_with_it_on() {
 #[test]
 fn detail_labels_the_navigator_and_the_filmstrip_are_solid_with_it_on() {
     let mut h = plain();
+    // the dimming of a rejected photo is the photo's own state and stays see-through (the demo's rejects: ids 4, 10, 16, 22)
+    run(&mut h, "photo.flag", json!({"flag": "none", "ids": [4, 10, 16, 22]}));
     h.request("ui.set", json!({"view": "detail", "right": "none"}), T);
     run(&mut h, "view.reduceTransparency", json!({"on": false}));
     h.settle(SETTLE);
@@ -159,7 +161,10 @@ fn a_toast_is_solid_with_it_on() {
         run(&mut h, "view.reduceTransparency", json!({"on": on}));
         let ctx = h.view.ctx.clone();
         h.app.toast(&ctx, "Saved");
-        h.step();
+        // past its fade-in (0.12 s): a toast still fading in is see-through by its own fade, not by this setting
+        for _ in 0..20 {
+            h.step();
+        }
         assert!(h.view.painted_text().iter().any(|t| t == "Saved"), "the toast is up");
         // the toast's rectangle is the one the text sits in
         let text_at = h.view.painted_shapes().into_iter().find_map(|s| match s {

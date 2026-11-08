@@ -36,7 +36,7 @@ fn a_filmstrip_thumbnail_is_named_with_its_rating_and_flag() {
         let Some(name) = cells.iter().find(|b| b.starts_with(photo.file_name.as_str())) else { continue };
         if photo.rating > 0 {
             rated += 1;
-            let stars = format!("{} star", photo.rating);
+            let stars = format!("rating {} of 5", photo.rating);
             assert!(name.contains(&stars), "{name:?} says its {stars}");
         }
         if photo.flag == Flag::Reject {
