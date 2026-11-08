@@ -901,7 +901,7 @@ fn demo_on_disk() -> Headless {
     h
 }
 
-/// A folder with a valid PNG and, in a subfolder, a JPEG cut short before its end-of-image marker (the real reason).
+/// A folder with a valid PNG and, in a subfolder, a JPEG cut short before its image data (the real reason).
 fn folder_with_a_truncated_jpeg(tag: &str) -> std::path::PathBuf {
     use lightcraft_codecs::{ChromaSubsampling, EncodeImage, EncodeMeta};
     let dir = std::env::temp_dir().join(format!("lc-activity-unreadable-{tag}-{}", std::process::id()));
@@ -911,7 +911,10 @@ fn folder_with_a_truncated_jpeg(tag: &str) -> std::path::PathBuf {
     let png = lightcraft_codecs::encode_png(&EncodeImage::rgba8(&img), &EncodeMeta::default()).unwrap();
     std::fs::write(dir.join("good.png"), png).unwrap();
     let mut jpeg = lightcraft_codecs::encode_jpeg(&EncodeImage::rgba8(&img), 90, ChromaSubsampling::S444, &EncodeMeta::default()).unwrap();
-    jpeg.truncate(jpeg.len() - 2);
+    // cut before the image data starts (a file cut inside its data imports as a damaged photo since the
+    // cut-short JPEG guard): nothing to show, so it is still unreadable, for the real reason
+    let sos = jpeg.windows(2).position(|w| w == [0xFF, 0xDA]).unwrap();
+    jpeg.truncate(sos);
     std::fs::write(dir.join("trip").join("bad.jpg"), jpeg).unwrap();
     dir
 }
