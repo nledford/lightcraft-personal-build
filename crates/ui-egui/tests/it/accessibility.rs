@@ -788,7 +788,11 @@ fn measure_off_screen<S>(h: &mut Harness<'_, S>, shows: &mut Shows) {
             node.scroll_to_me();
             h.run_steps(2);
         }
-        let Some((_, rect)) = find_control(h, id).filter(|(_, r)| r.width() > 0.0 && r.height() > 0.0) else { continue };
+        let Some((_, rect)) = find_control(h, id).filter(|(_, r)| r.width() > 0.0 && r.height() > 0.0) else {
+            // gone or without a box after the scroll: no focus can be seen, a gap like any other
+            shows.seen.insert(id, false);
+            continue;
+        };
         h.ctx.memory_mut(|m| m.request_focus(focus));
         h.run_steps(1);
         // still outside the window: nothing is painted, which `focus_shows` reads as no visible focus
