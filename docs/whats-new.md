@@ -420,6 +420,13 @@
 - A Folders row that holds other disks as well (such as a Volumes folder with a disk mounted below it) has no Import to
   This Folder…, as photos dropped on it are refused too.
 
+### A folder can be exported from its menu
+- Right-click a folder in Folders, or a disk's row, and choose Export Folder… or Export Folder with Preset ▸ a preset.
+  Like an album's, they show the folder as its row does (its photos and those of the folders inside it), select them
+  all, then open the Export dialog or start the preset's export in the background. They sit with Synchronize Folder…
+  and Locate Missing Files…, the items that act on the library's photos.
+- Both are grayed out, with the reason in the tooltip, for a row that covers more than one disk (open it and export a
+  folder inside it).
 
 ## 2026-10-25
 
