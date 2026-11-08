@@ -1,5 +1,5 @@
 //! A grid cell whose thumbnail is still on its way says so, quietly, and differs from one whose file
-//! can't be read (which says "!"): until the failure is known the two were the same plain skeleton.
+//! can't be read (which carries the failure mark, `badge:failed:{id}`): until the failure is known the two were the same plain skeleton.
 //! The cue is still (nothing to stop for a Reduce motion setting) and drawn from the theme's own colors.
 
 use std::cell::Cell;
@@ -44,6 +44,13 @@ fn ids(h: &Headless, prefix: &str) -> Vec<String> {
     h.app.widgets.iter().filter(|(w, _)| w.starts_with(prefix)).map(|(w, _)| w.clone()).collect()
 }
 
+/// The failure marks drawn (the shared thumbnail overlay's warning mark, registered `badge:failed:{id}` in the grids and `film:failed:{id}` in the filmstrip).
+fn failed(h: &Headless) -> Vec<String> {
+    let mut marks = ids(h, "badge:failed:");
+    marks.extend(ids(h, "film:failed:"));
+    marks
+}
+
 /// Frames until the grid has its cells.
 fn first_grid_frame(h: &mut Headless) {
     for _ in 0..20 {
@@ -64,12 +71,12 @@ fn a_cell_still_loading_differs_from_one_that_failed() {
         first_grid_frame(&mut h);
         let loading = ids(&h, "badge:loading:");
         assert!(loading.len() >= 6, "{view:?}: the cells on screen are loading: {loading:?}");
-        assert!(!h.painted_text().iter().any(|t| t == "!"), "{view:?}: none of them has failed yet");
+        assert!(failed(&h).is_empty(), "{view:?}: none of them has failed yet");
 
         open.set(true);
         assert!(h.settle(SETTLE));
         assert!(ids(&h, "badge:loading:").is_empty(), "{view:?}: the cue goes once the failure is known: {:?}", ids(&h, "badge:loading:"));
-        assert!(h.painted_text().iter().any(|t| t == "!"), "{view:?}: an unreadable cell says so");
+        assert!(!failed(&h).is_empty(), "{view:?}: an unreadable cell says so");
     }
 }
 
@@ -102,7 +109,7 @@ fn the_filmstrip_tells_loading_from_unreadable_too() {
 }
 
 /// A failure left by an earlier request is not this tile's verdict: the filmstrip asks for its
-/// thumbnail before it reads the failure, so its first frame says loading, not "!".
+/// thumbnail before it reads the failure, so its first frame says loading, not failed.
 #[test]
 fn a_filmstrip_tile_asks_for_its_thumbnail_before_it_reads_an_old_failure() {
     let (mut h, _open) = app_with_held_thumbnails(ViewMode::Detail);
@@ -119,7 +126,7 @@ fn a_filmstrip_tile_asks_for_its_thumbnail_before_it_reads_an_old_failure() {
         }
     }
     assert!(drawn, "the strip is drawn");
-    assert!(!h.painted_text().iter().any(|t| t == "!"), "no tile says it can't be opened on an old failure");
+    assert!(failed(&h).is_empty(), "no tile says it can't be opened on an old failure");
 }
 
 /// The smallest square cells still hold the cue: its size is judged against the cell, and the cue
@@ -151,7 +158,7 @@ fn a_video_placeholder_never_shows_the_loading_cue() {
         open.set(true);
         assert!(h.settle(SETTLE));
         assert!(ids(&h, "badge:loading:").is_empty(), "{view:?}: {:?}", ids(&h, "badge:loading:"));
-        assert!(!h.painted_text().iter().any(|t| t == "!"), "{view:?}: nothing failed: a video is never read as an image");
+        assert!(failed(&h).is_empty(), "{view:?}: nothing failed: a video is never read as an image");
     }
     let (mut h, _open) = app_with_held_files(ViewMode::PhotoGrid, "mp4", "MP4");
     let r = h.request("ui.set", serde_json::json!({"view": "detail"}), SETTLE);

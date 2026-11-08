@@ -157,8 +157,10 @@ fn ground(image: &egui::ColorImage, rect: Rect) -> Color32 {
 #[test]
 fn the_marks_on_a_thumbnail_stand_out_from_the_photo_in_every_theme() {
     for kind in ThemeKind::ALL {
-        // Given the grid in a theme, and a rated photo that is neither chosen nor under the pointer
+        // Given the grid in a theme with stars on every tile (the default shows them only on a hovered or selected one, #2163),
+        // and a rated photo that is neither chosen nor under the pointer
         let mut h = demo(kind);
+        h.app.ui.settings.grid_badges = crate::state::GridBadges::Always;
         run(&mut h, "view.photoGrid", json!({}));
         run(&mut h, "library.select", json!({"ids": [2]}));
         let r = h.request("ui.set", json!({"leftPanel": true, "right": "info", "thumbSize": 200}), T);
