@@ -114,3 +114,31 @@ fn settings_languages_are_choices() {
         assert_choice(&h, name);
     }
 }
+
+#[test]
+fn settings_use_the_system_setting_buttons_are_buttons() {
+    let services = Services {
+        png: None,
+        pick_folder: Some(Box::new(|| None)),
+        system_reduce_motion: Some(Box::new(|| Some(false))),
+        system_increase_contrast: Some(Box::new(|| Some(false))),
+        system_reduce_transparency: Some(Box::new(|| Some(false))),
+        ..Default::default()
+    };
+    let mut app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), services);
+    app.ui.settings.reduce_motion = Some(true);
+    app.ui.settings.increase_contrast = Some(true);
+    app.ui.settings.reduce_transparency = Some(true);
+    let mut h = Harness::builder().with_size(vec2(1500.0, 950.0)).build_ui_state(
+        |ui, app: &mut LightcraftApp| {
+            app.logic(&ui.ctx().clone());
+            app.ui(ui);
+        },
+        app,
+    );
+    h.run_steps(10);
+    h.state_mut().run("app.settings", serde_json::json!({"tab": "interface"})).expect("Settings opens");
+    h.run_steps(6);
+    assert_command(&h, "Use the system setting");
+    assert_eq!(named(&h, "Use the system setting").len(), 3, "one beside each of the three accessibility settings");
+}

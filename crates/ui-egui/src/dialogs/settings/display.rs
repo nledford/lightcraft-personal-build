@@ -92,7 +92,7 @@ pub(super) fn interface_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Toke
         }));
         if has_system
             && app.ui.settings.reduce_motion.is_some()
-            && crate::widgets::text_button(ui, "settings.reduceMotionFollow", "Use the system setting", false).clicked()
+            && crate::widgets::command_button(ui, "settings.reduceMotionFollow", "Use the system setting").clicked()
         {
             app.ui.settings.reduce_motion = None;
         }
@@ -112,7 +112,7 @@ pub(super) fn interface_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Toke
         }));
         if has_system
             && app.ui.settings.increase_contrast.is_some()
-            && crate::widgets::text_button(ui, "settings.increaseContrastFollow", "Use the system setting", false).clicked()
+            && crate::widgets::command_button(ui, "settings.increaseContrastFollow", "Use the system setting").clicked()
         {
             app.ui.settings.increase_contrast = None;
         }
@@ -132,7 +132,7 @@ pub(super) fn interface_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Toke
         }));
         if has_system
             && app.ui.settings.reduce_transparency.is_some()
-            && crate::widgets::text_button(ui, "settings.reduceTransparencyFollow", "Use the system setting", false).clicked()
+            && crate::widgets::command_button(ui, "settings.reduceTransparencyFollow", "Use the system setting").clicked()
         {
             app.ui.settings.reduce_transparency = None;
         }
