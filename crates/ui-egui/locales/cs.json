@@ -2625,5 +2625,6 @@
   "Opening other programs needs the desktop app": "Otevírání jiných programů vyžaduje desktopovou aplikaci",
   "Only a photo file LightCraft reads can be opened this way": "Takto lze otevřít jen soubor fotografie, který LightCraft umí načíst",
   "Recently Added always shows the newest imports first.": "Nedávno přidané vždy zobrazuje nejnovější importy jako první.",
-  "Recently Deleted shows no date groups.": "Nedávno odstraněné nezobrazuje skupiny podle data."
+  "Recently Deleted shows no date groups.": "Nedávno odstraněné nezobrazuje skupiny podle data.",
+  "Previous Shuffle": "Předchozí promíchání"
 }

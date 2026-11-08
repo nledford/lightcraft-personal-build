@@ -522,6 +522,13 @@
   Accessibility ▸ Display ▸ Reduce transparency until you change it in Settings; **Use the system setting** beside the
   tick box hands the choice back. On Windows, Linux and the web version it is manual for now (off by default).
 
+### Previous Shuffle brings back the order a Reshuffle replaced
+- Both Sort menus (the bottom bar's popup and View ▸ Sort) have a new Previous Shuffle row under Reshuffle. It goes back to
+  the exact random order the last Reshuffle replaced, and again for the one before, up to 32 steps in this session. It is
+  on only while you sort at random and a Reshuffle has replaced something; the steps are forgotten when you leave Random
+  or open another library, and are never saved with it. Reshuffle is now ⌘⌥⇧R (Ctrl+Alt+Shift+R) and Previous Shuffle ⌘⌥⇧P
+  (Ctrl+Alt+Shift+P); both rows show their keys.
+
 ## 2026-10-24
 
 ### AI Denoise follows the photo's real noise

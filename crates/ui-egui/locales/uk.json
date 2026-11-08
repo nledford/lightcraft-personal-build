@@ -2577,5 +2577,6 @@
   "Opening other programs needs the desktop app": "Відкривати інші програми можна лише в застосунку для комп’ютера",
   "Only a photo file LightCraft reads can be opened this way": "Так можна відкрити лише файл фото, який читає LightCraft",
   "Recently Added always shows the newest imports first.": "У «Нещодавно додані» завжди спершу показано найновіші імпорти.",
-  "Recently Deleted shows no date groups.": "У «Нещодавно видалені» немає груп за датою."
+  "Recently Deleted shows no date groups.": "У «Нещодавно видалені» немає груп за датою.",
+  "Previous Shuffle": "Попереднє перемішування"
 }

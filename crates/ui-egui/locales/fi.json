@@ -2536,5 +2536,6 @@
   "Opening other programs needs the desktop app": "Muiden ohjelmien avaaminen vaatii työpöytäsovelluksen",
   "Only a photo file LightCraft reads can be opened this way": "Näin voi avata vain kuvatiedoston, jonka LightCraft lukee",
   "Recently Added always shows the newest imports first.": "Äskettäin lisätyt näyttää aina uusimmat tuonnit ensin.",
-  "Recently Deleted shows no date groups.": "Äskettäin poistetut ei näytä päivämääräryhmiä."
+  "Recently Deleted shows no date groups.": "Äskettäin poistetut ei näytä päivämääräryhmiä.",
+  "Previous Shuffle": "Edellinen sekoitus"
 }

@@ -3659,5 +3659,6 @@
   "Opening other programs needs the desktop app": "Andere Programme lassen sich nur in der Desktop-App öffnen",
   "Only a photo file LightCraft reads can be opened this way": "So lässt sich nur eine Fotodatei öffnen, die LightCraft lesen kann",
   "Recently Added always shows the newest imports first.": "Zuletzt hinzugefügt zeigt immer die neuesten Importe zuerst.",
-  "Recently Deleted shows no date groups.": "Zuletzt gelöscht zeigt keine Datumsgruppen."
+  "Recently Deleted shows no date groups.": "Zuletzt gelöscht zeigt keine Datumsgruppen.",
+  "Previous Shuffle": "Vorheriges Mischen"
 }

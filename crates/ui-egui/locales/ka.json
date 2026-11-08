@@ -3844,5 +3844,6 @@
   "Opening other programs needs the desktop app": "სხვა პროგრამების გასახსნელად საჭიროა სამუშაო მაგიდის აპი",
   "Only a photo file LightCraft reads can be opened this way": "ასე მხოლოდ ისეთი ფოტოს ფაილი იხსნება, რომელსაც LightCraft კითხულობს",
   "Recently Added always shows the newest imports first.": "„ბოლოს დამატებული“ ყოველთვის ჯერ უახლეს იმპორტებს აჩვენებს.",
-  "Recently Deleted shows no date groups.": "„ახლახან წაშლილი“ თარიღის მიხედვით დაჯგუფებას არ აჩვენებს."
+  "Recently Deleted shows no date groups.": "„ახლახან წაშლილი“ თარიღის მიხედვით დაჯგუფებას არ აჩვენებს.",
+  "Previous Shuffle": "წინა არევა"
 }
