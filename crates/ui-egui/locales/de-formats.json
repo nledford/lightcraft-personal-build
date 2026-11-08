@@ -383,5 +383,7 @@
   "Move {n}, skip {m}": "{n} verschieben, {m} überspringen",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} Foto{0} nach „{1}“ verschoben, {skipped} übersprungen. Bearbeiten → Rückgängig holt sie zurück.",
   "{} can't be moved": "{0} lässt sich nicht verschieben",
-  "{} has the same name as another photo being moved": "{0} hat denselben Namen wie ein anderes Foto, das verschoben wird"
+  "{} has the same name as another photo being moved": "{0} hat denselben Namen wie ein anderes Foto, das verschoben wird",
+  "{label} finished": "Fertig: {label}",
+  "{n} jobs finished": "Abgeschlossene Aufträge: {n}"
 }

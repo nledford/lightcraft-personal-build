@@ -382,5 +382,7 @@
   "Move {n}, skip {m}": "Přesunout {n}, přeskočit {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Do „{1}“ přesunuto fotografií: {n}{0:.0}, přeskočeno: {skipped}. Úpravy → Zpět je vrátí.",
   "{} can't be moved": "{0} nelze přesunout",
-  "{} has the same name as another photo being moved": "{0} má stejný název jako jiná přesouvaná fotografie"
+  "{} has the same name as another photo being moved": "{0} má stejný název jako jiná přesouvaná fotografie",
+  "{label} finished": "Dokončeno: {label}",
+  "{n} jobs finished": "Dokončené úlohy: {n}"
 }

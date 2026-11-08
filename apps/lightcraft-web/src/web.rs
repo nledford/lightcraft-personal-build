@@ -337,6 +337,7 @@ fn services(
         system_theme: None,
         keep_awake: None,
         dock_badge: None,
+        notify: None,
     }
 }
 

@@ -383,5 +383,7 @@
   "Move {n}, skip {m}": "Перемістити {n}, пропустити {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "До «{1}» переміщено фото: {n}{0:.0}, пропущено: {skipped}. Редагування → Скасувати поверне їх.",
   "{} can't be moved": "{0} не можна перемістити",
-  "{} has the same name as another photo being moved": "{0} має таку саму назву, як інше фото, що переміщується"
+  "{} has the same name as another photo being moved": "{0} має таку саму назву, як інше фото, що переміщується",
+  "{label} finished": "Завершено: {label}",
+  "{n} jobs finished": "Завершено завдань: {n}"
 }

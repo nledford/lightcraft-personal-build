@@ -383,5 +383,7 @@
   "Move {n}, skip {m}": "{n}枚を移動、{m}枚をスキップ",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n}枚を「{1}」に移動し、{skipped}枚をスキップしました。編集 → 取り消す で元に戻せます。{0:.0}",
   "{} can't be moved": "{0} は移動できません",
-  "{} has the same name as another photo being moved": "{0} は、移動する別の写真と名前が同じです"
+  "{} has the same name as another photo being moved": "{0} は、移動する別の写真と名前が同じです",
+  "{label} finished": "完了: {label}",
+  "{n} jobs finished": "完了したジョブ: {n}"
 }

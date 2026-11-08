@@ -327,6 +327,12 @@
 - The Dock icon of LightCraft carries a badge with the number of jobs you started that are running (an export, an
   import, a preview build…). It goes away when the last one ends, so a job in a minimized window can still be seen.
 
+### On macOS, a notification tells you when a job has finished
+- When a job you started (an export, an import, a preview build…) ends while LightCraft is in the background, macOS
+  shows a notification. It says what the job reported ("Exported 24 photos"), or names it, or says how many ended
+  when several did. The first time, macOS asks whether LightCraft may notify you. Turn it off in Settings ▸ General ▸
+  Notifications.
+
 ### A folder made with New Folder on Disk… appears in Folders at once
 - Right-click a folder, choose New Folder on Disk…, name it and Create: the new folder now has its own row in Folders
   straight away, with 0 photos, and the sidebar scrolls to it (it is not chosen, so the photos you selected to move

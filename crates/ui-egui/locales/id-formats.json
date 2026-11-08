@@ -382,5 +382,7 @@
   "Move {n}, skip {m}": "Pindahkan {n}, lewati {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "{n} foto dipindahkan ke “{1}”{0:.0}, {skipped} dilewati. Pilih Edit → Urungkan untuk mengembalikannya.",
   "{} can't be moved": "{0} tidak dapat dipindahkan",
-  "{} has the same name as another photo being moved": "{0} memiliki nama yang sama dengan foto lain yang dipindahkan"
+  "{} has the same name as another photo being moved": "{0} memiliki nama yang sama dengan foto lain yang dipindahkan",
+  "{label} finished": "{label} selesai",
+  "{n} jobs finished": "Tugas selesai: {n}"
 }

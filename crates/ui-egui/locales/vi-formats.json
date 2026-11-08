@@ -379,5 +379,7 @@
   "Move {n}, skip {m}": "Chuyển {n}, bỏ qua {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Đã chuyển vào “{1}” — ảnh: {n}{0:.0}, bỏ qua: {skipped}. Chỉnh sửa → Hoàn tác sẽ chuyển chúng lại.",
   "{} can't be moved": "{0} không thể được chuyển",
-  "{} has the same name as another photo being moved": "{0} trùng tên với một ảnh khác đang được chuyển"
+  "{} has the same name as another photo being moved": "{0} trùng tên với một ảnh khác đang được chuyển",
+  "{label} finished": "Đã xong: {label}",
+  "{n} jobs finished": "Số tác vụ đã xong: {n}"
 }

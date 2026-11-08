@@ -379,5 +379,7 @@
   "Move {n}, skip {m}": "Siirrä {n}, ohita {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Siirretty kuvia kohteeseen ”{1}”: {n}{0:.0}, ohitettu: {skipped}. Muokkaa → Kumoa siirtää ne takaisin.",
   "{} can't be moved": "Kohdetta {0} ei voi siirtää",
-  "{} has the same name as another photo being moved": "{0} on samanniminen kuin toinen siirrettävä kuva"
+  "{} has the same name as another photo being moved": "{0} on samanniminen kuin toinen siirrettävä kuva",
+  "{label} finished": "Valmis: {label}",
+  "{n} jobs finished": "Valmistuneet työt: {n}"
 }

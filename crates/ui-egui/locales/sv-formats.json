@@ -382,5 +382,7 @@
   "Move {n}, skip {m}": "Flytta {n}, hoppa över {m}",
   "Moved {n} photo{} to “{}”, skipped {skipped}. Edit → Undo moves them back.": "Flyttade till ”{1}”: {n}{0:.0}, överhoppade: {skipped}. Redigera → Ångra flyttar tillbaka dem.",
   "{} can't be moved": "{0} kan inte flyttas",
-  "{} has the same name as another photo being moved": "{0} har samma namn som ett annat foto som flyttas"
+  "{} has the same name as another photo being moved": "{0} har samma namn som ett annat foto som flyttas",
+  "{label} finished": "Klart: {label}",
+  "{n} jobs finished": "Avslutade jobb: {n}"
 }
