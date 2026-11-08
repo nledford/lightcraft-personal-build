@@ -492,17 +492,17 @@ fn quit_anyway_gives_up_files_waiting_to_be_imported() {
     let mut h = demo();
     // the file waits behind an import that is still running
     crate::import::start_paths(&mut h.app, vec![dir.to_string_lossy().to_string()]).unwrap();
-    h.app.waiting_import.files = vec![dir.join("0.png").to_string_lossy().to_string()];
+    crate::import::start_paths(&mut h.app, vec![dir.join("0.png").to_string_lossy().to_string()]).unwrap();
     wait_visible(&mut h);
-    assert!(h.app.import.is_some() && !h.app.waiting_import.files.is_empty(), "still waiting");
+    assert!(h.app.import.is_some() && !h.app.session.activity.waiting().is_empty(), "still waiting");
     assert!(!crate::panels::notices::may_close(&mut h.app));
     assert!(matches!(h.app.quit_prompt, Some(crate::QuitPrompt::Tasks(_))), "{:?}", h.app.quit_prompt);
     h.step();
-    assert!(h.app.import.is_some() && !h.app.waiting_import.files.is_empty(), "still waiting at the click");
+    assert!(h.app.import.is_some() && !h.app.session.activity.waiting().is_empty(), "still waiting at the click");
     click(&mut h, "button:quitAnyway");
     assert!(h.app.quit_prompt.is_none(), "not asked again: {:?}", h.app.quit_prompt);
     assert!(h.quit_requested());
-    assert!(h.app.waiting_import.files.is_empty());
+    assert!(h.app.session.activity.waiting().is_empty());
     let _ = std::fs::remove_dir_all(&dir);
 }
 

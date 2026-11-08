@@ -808,6 +808,11 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
                 // (one that ended meanwhile has nothing left to stop)
                 let _ = app.session.activity.cancel(task.id);
             }
+            // tasks waiting in line would not run once the window closes (the question said so), and `may_close` would
+            // ask about them again; the backup this quit waits for is not in the line
+            for task in app.session.activity.waiting() {
+                let _ = app.session.activity.cancel(task.id);
+            }
             // files waiting for an import, and one handed its files but not started, are given up
             // too, or `may_close` would ask about them again
             app.waiting_import = Default::default();
