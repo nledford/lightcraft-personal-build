@@ -1,7 +1,7 @@
 use super::albums::pointer_over_row;
 use super::local::{is_builtin_place, same_folder, subfolders};
-use super::rows::{INDENT_STEP, LIBFOLDER_OPEN_ABOVE, LIBFOLDER_REVEALED, Row, out_of_sight, tree_toggle};
-use super::{Album, Branch, FolderNode, Icon, LibrarySource, LightcraftApp, Tokens, TreeState, json, vec2};
+use super::rows::{INDENT_STEP, Inside, LIBFOLDER_OPEN_ABOVE, LIBFOLDER_REVEALED, Row, out_of_sight, tree_toggle};
+use super::{Album, Branch, FolderNode, Icon, LibrarySource, LightcraftApp, Said, Tokens, TreeState, json, vec2};
 use crate::menu_item::MenuItem;
 
 /// A folder on disk with a disclosure triangle: click browses it, the triangle lists its
@@ -22,11 +22,12 @@ pub(super) fn folder_tree(
     current: Option<&str>,
     reveal: bool,
     transient: bool,
+    above: Option<Said>,
 ) {
     let branch = Branch::local(place, path);
     let sel = current.is_some_and(|c| same_folder(c, path));
     let on_the_way = !sel && current.is_some_and(|c| lightcraft_catalog::query::folder_within(c, path));
-    let mut open = app.ui.sidebar_trees.is_open(&branch);
+    let mut open = app.ui.sidebar_trees.is_open_under(&branch, above);
     if reveal && on_the_way {
         // opened once per browsed folder: collapsing it again afterwards sticks
         let revealed_id = egui::Id::unique(("folder-revealed", place.to_string(), path.to_string()));
@@ -36,19 +37,20 @@ pub(super) fn folder_tree(
             if target.is_some() && target == as_opened(ui.ctx()).local {
                 // what the library opened with: the tree is as it was left, a folded row stays
                 // folded (and this is no reveal to remember: coming back to the folder is one)
-                app.ui.sidebar_trees.show_unless_left(&branch);
+                app.ui.sidebar_trees.show_unless_left(&branch, above);
             } else {
-                app.ui.sidebar_trees.show(&branch);
+                app.ui.sidebar_trees.show(&branch, above);
                 ui.data_mut(|d| d.insert_temp(revealed_id, target));
             }
-            open = app.ui.sidebar_trees.is_open(&branch);
+            open = app.ui.sidebar_trees.is_open_under(&branch, above);
         }
     }
     if !out_of_sight(app, ui, &format!("local:{path}"), name, None, indent, false, || sel) {
         // at the tree's own indent, as in Albums and Folders: the triangle sits in the gutter and the
         // icon lines up with the rows above
         let resp = Row::new(&format!("local:{path}"), Icon::Folder, name).selected(sel).indent(indent).show(app, ui).on_hover_text(path);
-        let tr = tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, &branch, &mut open, format!("folderToggle:{path}"), name);
+        let tr =
+            tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, &branch, &mut open, format!("folderToggle:{path}"), name, Inside::Folds);
         if !tr.clicked()
             && super::side_keys::chosen(ui, &resp)
             && let Err(e) = app.run("library.browse", json!({"path": path}))
@@ -104,8 +106,9 @@ pub(super) fn folder_tree(
         });
     }
     if open && indent < INDENT_STEP * 8.0 {
+        let inside = app.ui.sidebar_trees.inside(&branch, above);
         for (n, p) in subfolders(ui, path).iter() {
-            folder_tree(app, ui, place, n, p, indent + INDENT_STEP, current, reveal, false);
+            folder_tree(app, ui, place, n, p, indent + INDENT_STEP, current, reveal, false, inside);
         }
     }
 }
@@ -339,23 +342,24 @@ fn as_opened(ctx: &egui::Context) -> AsOpened {
 /// The folder the library opened with is no change: a row above it that was left folded stays
 /// folded, unless `forced` (Show in Folders asked for it: a choice of now).
 pub(super) fn reveal_chosen(app: &mut LightcraftApp, ui: &egui::Ui, tree: &[FolderNode], forced: bool) {
-    fn open_above(trees: &mut TreeState, nodes: &[FolderNode], chosen: &str, as_left: bool) {
+    fn open_above(trees: &mut TreeState, nodes: &[FolderNode], chosen: &str, as_left: bool, above: Option<Said>) {
         for n in nodes {
             if lightcraft_catalog::query::folder_within(chosen, &n.path) && !same_folder(chosen, &n.path) {
                 let branch = folder_branch(n, &lightcraft_catalog::query::folder_key(&n.path));
                 if as_left {
-                    trees.show_unless_left(&branch);
+                    trees.show_unless_left(&branch, above);
                 } else {
-                    trees.show(&branch);
+                    trees.show(&branch, above);
                 }
-                open_above(trees, &n.children, chosen, as_left);
+                let inside = trees.inside(&branch, above);
+                open_above(trees, &n.children, chosen, as_left, inside);
             }
         }
     }
     // a folder to bring into view without choosing it (the one just made): its rows above open, once
     let pending = egui::Id::unique(LIBFOLDER_OPEN_ABOVE);
     if let Some(path) = ui.data_mut(|d| d.remove_temp::<String>(pending)) {
-        open_above(&mut app.ui.sidebar_trees, tree, &path, false);
+        open_above(&mut app.ui.sidebar_trees, tree, &path, false, None);
     }
     let shown = app.session.library_folder.clone().filter(|_| app.session.source == LibrarySource::LibraryFolder);
     let as_left = !forced && shown.is_some() && shown == as_opened(ui.ctx()).folder;
@@ -367,7 +371,7 @@ pub(super) fn reveal_chosen(app: &mut LightcraftApp, ui: &egui::Ui, tree: &[Fold
     }
     ui.data_mut(|d| d.insert_temp(seen, now));
     let Some(chosen) = chosen else { return };
-    open_above(&mut app.ui.sidebar_trees, tree, &chosen, as_left);
+    open_above(&mut app.ui.sidebar_trees, tree, &chosen, as_left, None);
 }
 
 /// A Folders row in the remembered trees (`key`: its [`lightcraft_catalog::query::folder_key`]).
@@ -453,18 +457,29 @@ pub(crate) fn folder_place<'a>(app: &LightcraftApp, tree: &'a [FolderNode], key:
 /// is left out and what it leads to takes its place — unless it was asked for (Show Parent
 /// Folder) or is what the grid shows. Below a row that is drawn, every folder is a row: the tree
 /// never shows a folder inside one it is not directly in. `above`: the folder passed over just
-/// above these rows, if any.
-pub(super) fn folder_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[FolderNode], indent: f32, leading: bool, above: Option<&FolderNode>) {
+/// above these rows, if any. `said`: what holds for these rows from the rows above them
+/// ([`TreeState::inside`]).
+pub(super) fn folder_rows(
+    app: &mut LightcraftApp,
+    ui: &mut egui::Ui,
+    nodes: &[FolderNode],
+    indent: f32,
+    leading: bool,
+    above: Option<&FolderNode>,
+    said: Option<Said>,
+) {
     for n in nodes {
         let key = lightcraft_catalog::query::folder_key(&n.path);
         let on_the_way = leading && only_leads_on(n);
         let asked_for = on_the_way && app.ui.folder_parents.contains(&key);
         if on_the_way && !asked_for && !shown_folder(app, &n.path) {
-            folder_rows(app, ui, &n.children, indent, true, Some(n));
+            // (a row passed over says what it says of the rows inside it, to these)
+            let inside = app.ui.sidebar_trees.inside(&folder_branch(n, &key), said);
+            folder_rows(app, ui, &n.children, indent, true, Some(n), inside);
             continue;
         }
         let branch = folder_branch(n, &key);
-        let mut open = app.ui.sidebar_trees.is_open(&branch);
+        let mut open = app.ui.sidebar_trees.is_open_under(&branch, said);
         // a row whose path would cover other disks' photos too only opens and closes
         let name = if n.selectable { n.name.clone() } else { crate::i18n::tr("This Computer").to_string() };
         let id = format!("libfolder:{}", n.path);
@@ -472,10 +487,11 @@ pub(super) fn folder_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[F
         let sel_of = |app: &LightcraftApp| n.selectable && shown_folder(app, &n.path);
         if !out_of_sight(app, ui, &id, &name, Some(n.count), indent, n.label.is_some(), || sel_of(app)) {
             let sel = sel_of(app);
-            folder_row(app, ui, n, &id, &name, indent, &branch, &mut open, FolderParents { above, asked_for }, sel);
+            folder_row(app, ui, n, &id, &name, indent, &branch, &mut open, FolderParents { above, asked_for }, sel, said);
         }
         if open && !n.children.is_empty() {
-            folder_rows(app, ui, &n.children, indent + INDENT_STEP, n.volume, None);
+            let inside = app.ui.sidebar_trees.inside(&branch, said);
+            folder_rows(app, ui, &n.children, indent + INDENT_STEP, n.volume, None, inside);
         }
     }
 }
@@ -493,6 +509,7 @@ fn folder_row(
     open: &mut bool,
     parents: FolderParents,
     sel: bool,
+    said: Option<Said>,
 ) {
     // the label is said with the name, as it is shown beside it
     let spoken = match n.label {
@@ -501,10 +518,20 @@ fn folder_row(
     };
     let mark = n.label.map(crate::theme::label_color);
     let resp = Row::new(id, Icon::Folder, name).spoken(&spoken).count(Some(n.count)).selected(sel).indent(indent).mark(mark).show(app, ui);
-    folder_drop_target(app, ui, &resp, n, branch, open);
+    folder_drop_target(app, ui, &resp, n, branch, open, said);
     let mut toggled = false;
     if !n.children.is_empty() {
-        let tr = tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, branch, open, format!("libraryFolderToggle:{}", n.path), name);
+        let tr = tree_toggle(
+            ui,
+            &mut app.ui.sidebar_trees,
+            &resp,
+            indent,
+            branch,
+            open,
+            format!("libraryFolderToggle:{}", n.path),
+            name,
+            Inside::OpensAndFolds,
+        );
         toggled = tr.clicked();
         // the triangle sits on the row and takes its clicks: the menu opens from it too
         row_menu(app, &tr, n, parents);
@@ -595,15 +622,23 @@ fn files_moved(photos: &[&std::sync::Arc<lightcraft_catalog::Photo>], folder: &s
 /// they will go, as the same gesture onto an album only adds them to it. Held over a closed row,
 /// it opens. Photos that can't go there leave it dark (a row covering several disks; Local photos,
 /// not in the library) and a release says why; photos already there say so.
-fn folder_drop_target(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::Response, n: &FolderNode, branch: &Branch, open: &mut bool) {
+fn folder_drop_target(
+    app: &mut LightcraftApp,
+    ui: &mut egui::Ui,
+    resp: &egui::Response,
+    n: &FolderNode,
+    branch: &Branch,
+    open: &mut bool,
+    said: Option<Said>,
+) {
     let Some(ids) = app.ui.dragging_photos.clone() else { return };
     // only where the row can be seen: not scrolled out of the sidebar or beneath the pinned header
     if !pointer_over_row(ui, resp.rect) {
         return;
     }
     if spring_open(ui, n, open) {
-        // open for the session, not a choice kept (as the folders above the browsed one); a row folded by hand opens for good
-        app.ui.sidebar_trees.show(branch);
+        // open for the session, not a choice kept (as the folders above the browsed one); a row folded by hand or with the rows above it opens for good
+        app.ui.sidebar_trees.show(branch, said);
     }
     // (the label, the confirmation and the toast say which folder when another row has the name)
     let name = crate::destination::folder(&app.caches.folder_tree(&app.session.catalog, app.session.library_generation()), &n.path);
