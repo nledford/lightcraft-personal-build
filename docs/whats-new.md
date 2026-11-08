@@ -433,6 +433,15 @@
   1200–1500-point-wide window on a Retina display.
 
 
+### Cut, Copy and Paste for albums and keywords
+- In the menus of albums and keywords in the left panel and the Keyword List, Cut and Copy take the rows (one or
+  several chosen) and Paste puts them down: cut albums move into the folder where you choose Paste (the Albums +
+  menu pastes at the top level), copied albums are duplicated there with their photos, a copied smart album keeps its
+  rules and a copied folder everything inside it; cut keywords are nested inside the keyword where you choose Paste;
+  copied keywords are text you can paste in a keyword box. Paste is grayed out where it can't work, such as a
+  folder inside itself, and one Edit ▸ Undo takes back a paste.
+- For agents: the new `album.duplicate` takes `id` or `ids` and an optional `parent` (null: the top level).
+
 ## 2026-10-24
 
 ### AI Denoise follows the photo's real noise
