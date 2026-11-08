@@ -181,15 +181,11 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
         // the stack, so a toast that moves down when a newer one arrives is not read again
         let words = &shown.text;
         let key = (shown_at.to_bits(), words.as_str(), shown.label);
-        egui::Area::new(egui::Id::unique("toast-words"))
-            .order(egui::Order::Foreground)
-            .fixed_pos(r.min)
-            .interactable(false)
-            .show(ctx, |ui| {
-                let resp = ui.interact(r, ui.scope_id().with(key), egui::Sense::hover());
-                resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, words));
-                ctx.accesskit_node_builder(resp.id, |node| node.set_live(egui::accesskit::Live::Polite));
-            });
+        egui::Area::new(egui::Id::unique("toast-words")).order(egui::Order::Foreground).fixed_pos(r.min).interactable(false).show(ctx, |ui| {
+            let resp = ui.interact(r, ui.scope_id().with(key), egui::Sense::hover());
+            resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, words));
+            ctx.accesskit_node_builder(resp.id, |node| node.set_live(egui::accesskit::Live::Polite));
+        });
         if offers {
             let ink = foreground;
             let button =

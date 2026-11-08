@@ -1748,7 +1748,6 @@ fn a_row_that_only_waits_does_not_keep_the_stack_polling() {
     drop((waiting, running));
 }
 
-
 /// A read that does not answer until `open`.
 #[derive(Clone, Default)]
 pub(crate) struct Gate(std::sync::Arc<(std::sync::Mutex<bool>, std::sync::Condvar)>);

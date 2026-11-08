@@ -46,12 +46,12 @@ mod probe;
 
 pub use colour::bin_factor;
 pub(crate) use colour::clipped_white;
-#[cfg(test)]
-use fs::{FRAME_PROBE, cut_jpeg_frame_weight, load_gated, quick_image_srgb};
 pub(crate) use fs::read_video_metadata_file;
 #[cfg(test)]
 pub(crate) use fs::read_video_metadata_from;
 pub(crate) use fs::read_video_metadata_from_with_fragments;
+#[cfg(test)]
+use fs::{FRAME_PROBE, cut_jpeg_frame_weight, load_gated, quick_image_srgb};
 pub use fs::{
     fs_hooks, fs_pair_loader, fs_reduced_loader, is_video_metadata_box, is_video_trailer, looks_like_video_container, video_box_header_len,
     video_box_info,

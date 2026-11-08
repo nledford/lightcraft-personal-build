@@ -1282,9 +1282,13 @@ fn folder_menu_groups(row: FolderRow) -> &'static [&'static [FolderItem]] {
             &[Reveal, CopyPath],
             &[RemoveFromLibrary],
         ],
-        FolderRow::Disk => {
-            &[&[Synchronize, LocateMissing, UpdateLocation, ExportFolder, ExportFolderWithPreset], &[NewFolder], &[ColorLabel], &[Reveal, CopyPath], &[RemoveDisk]]
-        }
+        FolderRow::Disk => &[
+            &[Synchronize, LocateMissing, UpdateLocation, ExportFolder, ExportFolderWithPreset],
+            &[NewFolder],
+            &[ColorLabel],
+            &[Reveal, CopyPath],
+            &[RemoveDisk],
+        ],
         FolderRow::Local { .. } => &[&[AddToMyPhotos, Synchronize], &[NewFolder, Rename, Move], &[Reveal, CopyPath], &[KeepInLocal, RemoveFromLocal]],
     }
 }
