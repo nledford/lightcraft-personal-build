@@ -3914,6 +3914,8 @@
   "By Keyword": "Par mot-clé",
   "Select photos to tick": "Sélectionnez des photos pour cocher",
   "An import is running": "Une importation est en cours",
+  "Wait for the import to finish": "Attendez la fin de l'importation",
+  "A folder is being synchronized": "Un dossier est en cours de synchronisation",
   "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Affichage → Incrustation de la loupe → Options d'affichage choisit les lignes que montrent Info 1 et Info 2.",
   "Damaged file: cut short, shown from the data present": "Fichier endommagé : tronqué, affiché à partir des données présentes",
   "Cut short, for example by an interrupted download or copy. LightCraft shows the data that is there and never changes the file.": "Le fichier a été tronqué, par exemple par un téléchargement ou une copie interrompus. LightCraft affiche les données présentes et ne modifie jamais le fichier.",

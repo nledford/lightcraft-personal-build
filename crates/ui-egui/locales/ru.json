@@ -2940,6 +2940,8 @@
   "By Keyword": "По ключевому слову",
   "Select photos to tick": "Выберите фото, чтобы отмечать",
   "An import is running": "Импорт уже выполняется",
+  "Wait for the import to finish": "Дождитесь завершения импорта",
+  "A folder is being synchronized": "Папка синхронизируется",
   "Loupe Overlay": "Накладка лупы",
   "View Options…": "Параметры вида…",
   "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Вид → Накладка лупы → Параметры вида выбирает строки, которые показывают Info 1 и Info 2.",

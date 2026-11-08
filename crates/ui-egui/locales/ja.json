@@ -2752,6 +2752,8 @@
   "By Keyword": "キーワード別",
   "Select photos to tick": "チェックするには写真を選択してください",
   "An import is running": "読み込み中です",
+  "Wait for the import to finish": "読み込みが終わるまでお待ちください",
+  "A folder is being synchronized": "フォルダを同期中です",
   "Loupe Overlay": "ルーペのオーバーレイ",
   "View Options…": "表示オプション…",
   "View Options": "表示オプション",

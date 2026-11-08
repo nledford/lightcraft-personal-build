@@ -2754,6 +2754,8 @@
   "By Keyword": "Por palabra clave",
   "Select photos to tick": "Selecciona fotos para marcar",
   "An import is running": "Hay una importación en curso",
+  "Wait for the import to finish": "Esperar a que termine la importación",
+  "A folder is being synchronized": "Se está sincronizando una carpeta",
   "Loupe Overlay": "Superposición de la lupa",
   "View Options…": "Opciones de vista…",
   "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Vista → Superposición de la lupa → Opciones de vista elige las líneas que muestran Info 1 e Info 2.",

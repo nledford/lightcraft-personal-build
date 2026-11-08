@@ -3999,6 +3999,8 @@
   "By Keyword": "საკვანძო სიტყვით",
   "Select photos to tick": "მონიშნეთ ფოტოები, რომ დაადოთ ნიშანი",
   "An import is running": "იმპორტი მიმდინარეობს",
+  "Wait for the import to finish": "დაელოდეთ იმპორტის დასრულებას",
+  "A folder is being synchronized": "საქაღალდე სინქრონიზდება",
   "View Options…": "ხედის პარამეტრები…",
   "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "ხედი → ლუპის ზედდება → ხედის პარამეტრები ირჩევს სტრიქონებს, რომლებსაც Info 1 და Info 2 აჩვენებს.",
   "Damaged file: cut short, shown from the data present": "დაზიანებული ფაილი: შეწყვეტილია, ნაჩვენებია არსებული მონაცემებიდან",

@@ -2694,6 +2694,8 @@
   "By Keyword": "Efter nyckelord",
   "Select photos to tick": "Markera foton för att kryssa i",
   "An import is running": "En import pågår",
+  "Wait for the import to finish": "Vänta tills importen är klar",
+  "A folder is being synchronized": "En mapp synkroniseras",
   "Shown in a random order. Reshuffle for a new one.": "Visas i slumpmässig ordning. Blanda om ger en ny.",
   "Shuffled": "Blandad ordning",
   "Preparing photos…": "Förbereder foton…",

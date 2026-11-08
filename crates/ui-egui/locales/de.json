@@ -3715,6 +3715,8 @@
   "By Keyword": "Nach Stichwort",
   "Select photos to tick": "Zum Anhaken Fotos auswählen",
   "An import is running": "Ein Import läuft",
+  "Wait for the import to finish": "Warte, bis der Import abgeschlossen ist",
+  "A folder is being synchronized": "Ein Ordner wird gerade synchronisiert",
   "Shown in a random order. Reshuffle for a new one.": "Wird in zufälliger Reihenfolge angezeigt. „Neu mischen“ ergibt eine neue.",
   "Shuffled": "Gemischt",
   "Blue label and advance": "Blaue Markierung und weiter",

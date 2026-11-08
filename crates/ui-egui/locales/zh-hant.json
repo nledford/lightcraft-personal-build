@@ -2754,6 +2754,8 @@
   "By Keyword": "依關鍵字",
   "Select photos to tick": "選取照片後即可勾選",
   "An import is running": "正在匯入",
+  "Wait for the import to finish": "請等待匯入完成",
+  "A folder is being synchronized": "正在同步資料夾",
   "Loupe Overlay": "放大鏡疊加",
   "View Options…": "檢視選項…",
   "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "檢視 → 放大鏡疊加 → 檢視選項 可選擇「資訊 1」和「資訊 2」顯示的行。",

@@ -2750,6 +2750,8 @@
   "By Keyword": "За ключовим словом",
   "Select photos to tick": "Виберіть фото, щоб ставити позначки",
   "An import is running": "Імпорт уже виконується",
+  "Wait for the import to finish": "Дочекайтеся завершення імпорту",
+  "A folder is being synchronized": "Тека синхронізується",
   "Loupe Overlay": "Накладання лупи",
   "View Options…": "Параметри перегляду…",
   "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Вигляд → Накладання лупи → Параметри перегляду вибирає рядки, які показують Info 1 та Info 2.",

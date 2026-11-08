@@ -2778,6 +2778,8 @@
   "By Keyword": "Podle klíčového slova",
   "Select photos to tick": "Chcete-li zaškrtávat, vyberte fotografie",
   "An import is running": "Import už běží",
+  "Wait for the import to finish": "Počkejte na dokončení importu",
+  "A folder is being synchronized": "Probíhá synchronizace složky",
   "Loupe Overlay": "Překrytí lupy",
   "View Options…": "Možnosti zobrazení…",
   "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "Zobrazení → Překrytí lupy → Možnosti zobrazení určuje, které řádky zobrazují Info 1 a Info 2.",

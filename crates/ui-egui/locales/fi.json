@@ -2590,6 +2590,8 @@
   "By Keyword": "Avainsanan mukaan",
   "Select photos to tick": "Valitse kuvia ruksataksesi",
   "An import is running": "Tuonti on käynnissä",
+  "Wait for the import to finish": "Odota tuonnin valmistumista",
+  "A folder is being synchronized": "Kansiota synkronoidaan",
   "Add Sample Photos": "Lisää esimerkkikuvat",
   "Preparing photos…": "Valmistellaan kuvia…",
   "Blue label and advance": "Sininen merkintä ja siirry eteenpäin",

@@ -2753,6 +2753,8 @@
   "By Keyword": "按关键字",
   "Select photos to tick": "选择照片后即可勾选",
   "An import is running": "正在导入",
+  "Wait for the import to finish": "请等待导入完成",
+  "A folder is being synchronized": "正在同步文件夹",
   "Loupe Overlay": "放大镜叠加",
   "View Options…": "视图选项…",
   "View → Loupe Overlay → View Options chooses the lines Info 1 and Info 2 show.": "视图 → 放大镜叠加 → 视图选项 用于选择“信息 1”和“信息 2”显示的行。",
