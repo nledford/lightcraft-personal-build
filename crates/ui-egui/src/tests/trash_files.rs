@@ -241,7 +241,12 @@ fn a_question_left_open_while_another_library_opens_trashes_and_erases_nothing()
         // another library opens meanwhile (the menu bar and agents reach past a dialog): the
         // numbers in the question are other photos there
         h.app.session.open_library(dir.0.join("other/lib"), false).unwrap();
-        h.settle(SETTLE);
+        if erase {
+            // the toast lasts seconds of the app's clock: read it the frame it comes, not after a slow settle
+            assert!(h.step_until(SETTLE, |h| toast(h).contains("Another library was opened")), "{:?}", toast(&h));
+        } else {
+            h.settle(SETTLE);
+        }
         if erase {
             // the run that asked closes its question itself
             assert!(!has(&h, "button:dialogOk"), "the Erase question closed");
@@ -250,8 +255,8 @@ fn a_question_left_open_while_another_library_opens_trashes_and_erases_nothing()
         }
         assert!(toast(&h).contains("Another library was opened"), "{:?}", toast(&h));
         assert!(paths.iter().all(|p| exists(p)), "no file went anywhere");
-        assert_eq!(h.app.ui.dialog, None);
-        assert!(h.app.trash_run.is_none());
+        assert!(h.step_until(SETTLE, |h| h.app.ui.dialog.is_none() && h.app.trash_run.is_none()), "{:?}", h.app.ui.dialog);
+        assert!(paths.iter().all(|p| exists(p)), "no file went anywhere");
     }
 }
 
