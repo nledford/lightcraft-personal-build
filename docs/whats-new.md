@@ -380,6 +380,14 @@
   and listed no window. macOS also adds its own window items there: Fill, Center, Move & Resize and Full Screen Tile
   on macOS 15 and later, and Minimize All, Zoom All and Arrange in Front while Option is held.
 
+### Screen readers name filmstrip thumbnails like the grid's and read thumbnails as selectable items
+- A thumbnail in the filmstrip is now named as the grid's cell for the same photo is: the file name, then its rating,
+  flag and color label ("LC01207.JPG, 3 stars, picked"), and it says whether it is selected. It was named with the
+  file name only, so VoiceOver told you less in Detail than in the grid.
+- A thumbnail, in the grid and in the filmstrip, is also a selectable item now, not a check box: on macOS VoiceOver
+  used to say "checked" or "unchecked" for it; it now reports the photos you have selected as selected and gives no
+  state for the others.
+
 ## 2026-10-29
 
 ### A dialog no longer dims the macOS title bar
