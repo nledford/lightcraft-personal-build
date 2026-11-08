@@ -318,6 +318,11 @@
 
 ## 2026-10-27
 
+### On macOS, a long job keeps the Mac awake
+- While an export, import, preview build, merge or other job you started is running, the Mac no longer goes to sleep
+  on its own and macOS no longer slows the app down when its window is hidden or minimized. Both end as soon as the
+  last job finishes or is canceled.
+
 ### A folder made with New Folder on Disk… appears in Folders at once
 - Right-click a folder, choose New Folder on Disk…, name it and Create: the new folder now has its own row in Folders
   straight away, with 0 photos, and the sidebar scrolls to it (it is not chosen, so the photos you selected to move
