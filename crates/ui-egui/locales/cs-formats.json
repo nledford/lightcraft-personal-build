@@ -358,5 +358,6 @@
   "Showing {what}": "Zobrazeno: {what}",
   "{title}, showing {what}": "{title}, zobrazeno: {what}",
   " · {} damaged": " · poškozené: {}",
-  "Copied {n} file paths": "Zkopírované cesty k souborům: {n}"
+  "Copied {n} file paths": "Zkopírované cesty k souborům: {n}",
+  "Photos waiting: {n}": "Čekající fotografie: {n}"
 }

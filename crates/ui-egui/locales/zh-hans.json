@@ -2582,5 +2582,6 @@
   "Only a photo file LightCraft reads can be opened this way": "只有 LightCraft 能读取的照片文件才能这样打开",
   "Recently Added always shows the newest imports first.": "“最近添加”始终先显示最新导入的照片。",
   "Recently Deleted shows no date groups.": "“最近删除”不显示日期分组。",
-  "Previous Shuffle": "上一次随机排序"
+  "Previous Shuffle": "上一次随机排序",
+  "Waiting to write XMP sidecars": "等待写入 XMP 附属文件"
 }

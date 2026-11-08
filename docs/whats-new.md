@@ -302,6 +302,12 @@
   that finishes sooner stays quiet, as the setting asks. With the message on, nothing changes: it still appears after half
   a second.
 
+### Waiting XMP writes show in the activity stack
+- When automatic XMP sidecar writes can't reach their folder (a network share that dropped out, a read-only or full
+  folder), the activity stack now has a row, "Waiting to write XMP sidecars", with "Photos waiting: N" under it (no
+  progress bar, as nothing counts up). The row
+  stays until they are written, and then goes. The one-time message and the retry every 10 seconds are unchanged.
+
 ## 2026-10-28
 
 ### The Sort menus offer only what the view uses

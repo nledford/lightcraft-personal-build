@@ -359,5 +359,6 @@
   "{title}, showing {what}": "{title}, mostrando {what}",
   "+{n} more": "+{n} más",
   " · {} damaged": " · dañadas: {}",
-  "Copied {n} file paths": "{n} rutas de archivo copiadas"
+  "Copied {n} file paths": "{n} rutas de archivo copiadas",
+  "Photos waiting: {n}": "Fotos en espera: {n}"
 }

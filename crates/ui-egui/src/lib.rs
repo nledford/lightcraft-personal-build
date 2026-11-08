@@ -533,8 +533,11 @@ pub struct LightcraftApp {
     /// The last answer of `services.system_reduce_transparency` and when it was read.
     pub(crate) system_reduce_transparency: Option<bool>,
     pub(crate) system_reduce_transparency_read: Option<f64>,
+    /// The activity row that says automatic XMP writes are waiting for their folder, held for as long as they wait.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) sidecars_row: Option<lightcraft_engine::activity::TaskGuard>,
     /// The library failed to open at launch: the blocking window, then the temporary-session
-    /// banner (issue #100). Cleared once a library opens.
+/// banner (issue #100). Cleared once a library opens.
     pub library_problem: Option<panels::library_problem::LibraryProblem>,
     /// First-frame focus/input state for a newly shown blocking library window.
     pub(crate) library_window_input: panels::library_problem::WindowBarrier,

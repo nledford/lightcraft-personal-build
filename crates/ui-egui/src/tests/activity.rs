@@ -1232,3 +1232,24 @@ fn import_message_counts_the_jpegs_cut_short() {
     assert_eq!(h.app.ui.toast.as_ref().map(|t| t.text.as_str()), Some("Imported 3 photos · 1 damaged"));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// A row that only waits on something outside the app (XMP writes waiting for their folder) doesn't keep the stack looking
+/// again every tenth of a second once it shows: it can stay for hours. Any other row, or a young one, does.
+#[test]
+fn a_row_that_only_waits_does_not_keep_the_stack_polling() {
+    use crate::panels::activity::{SHOW_AFTER_MS, needs_poll};
+    let s = lightcraft_engine::Session::new();
+    let waiting = s.activity.start("xmpWaiting", "Waiting to write XMP sidecars", Cancel::No);
+    let running = s.activity.start("export", "Exporting", Cancel::Yes);
+    let rows = s.activity.list();
+    let of = |kind: &str| rows.iter().find(|t| t.kind == kind).cloned().unwrap();
+    let (mut wait, mut run) = (of("xmpWaiting"), of("export"));
+    wait.age_ms = SHOW_AFTER_MS + 1;
+    run.age_ms = SHOW_AFTER_MS + 1;
+    assert!(!needs_poll(&[wait.clone()]), "an old waiting row is still");
+    assert!(needs_poll(&[wait.clone(), run]), "a running task moves");
+    wait.age_ms = 0;
+    assert!(needs_poll(&[wait]), "a young one is about to be shown");
+    assert!(!needs_poll(&[]), "nothing to look at");
+    drop((waiting, running));
+}

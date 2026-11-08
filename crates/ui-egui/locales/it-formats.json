@@ -358,5 +358,6 @@
   "Showing {what}": "Mostra {what}",
   "{title}, showing {what}": "{title}, mostra {what}",
   " · {} damaged": " · danneggiate: {}",
-  "Copied {n} file paths": "Percorsi dei file copiati: {n}"
+  "Copied {n} file paths": "Percorsi dei file copiati: {n}",
+  "Photos waiting: {n}": "Foto in attesa: {n}"
 }

@@ -2863,5 +2863,6 @@
   "Only a photo file LightCraft reads can be opened this way": "Chỉ mở được theo cách này tệp ảnh mà LightCraft đọc được",
   "Recently Added always shows the newest imports first.": "Mục Mới thêm luôn hiển thị các lần nhập mới nhất trước.",
   "Recently Deleted shows no date groups.": "Mục Đã xóa gần đây không hiển thị nhóm ngày.",
-  "Previous Shuffle": "Lần xáo trộn trước"
+  "Previous Shuffle": "Lần xáo trộn trước",
+  "Waiting to write XMP sidecars": "Đang chờ ghi sidecar XMP"
 }

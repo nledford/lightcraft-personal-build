@@ -359,5 +359,6 @@
   "{title}, showing {what}": "{title}, показано: {what}",
   "+{n} more": "ещё {n}",
   " · {} damaged": " · повреждено: {}",
-  "Copied {n} file paths": "Скопировано путей к файлам: {n}"
+  "Copied {n} file paths": "Скопировано путей к файлам: {n}",
+  "Photos waiting: {n}": "Фото в очереди: {n}"
 }
