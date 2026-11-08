@@ -24,10 +24,8 @@ pub(super) fn display_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens
     row(ui, t, "", |ui| {
         let can = app.services.pick_display_profile.is_some();
         let r = Button::new("Choose Profile…").enabled(can).widget("button:settingsDisplayProfile").show(ui);
-        if r.clicked()
-            && let Some(path) = app.services.pick_display_profile.as_mut().and_then(|pick| pick().into_iter().next())
-        {
-            app.ui.settings.display_profile = path;
+        if r.clicked() {
+            crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::MonitorProfile);
         }
         // with no profile chosen, previews follow the screen's own profile where the host knows it
         let none = if app.services.screen_profile.is_some() { "Use Screen Profile" } else { "Use sRGB" };

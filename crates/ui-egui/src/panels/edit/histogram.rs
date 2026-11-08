@@ -238,16 +238,16 @@ pub(super) fn soft_proofing(app: &mut LightcraftApp, ui: &mut egui::Ui, id: Phot
                 if let Some(n) = &device {
                     let _ = MenuItem::new(n).selected(true).inert().show(ui);
                 }
-                if app.services.pick_display_profile.is_some() && MenuItem::picker(crate::i18n::tr("Other…")).show(ui).clicked() {
+                if app.services.pick_display_profile.is_some()
+                    && MenuItem::picker(crate::i18n::tr("Other…")).widget("item:proofProfileOther").show(ui).clicked()
+                {
                     pick = true;
                 }
             });
             crate::widgets::name_combo(&combo.response, crate::i18n::tr("Profile"));
-            if pick
-                && let Some(path) = app.services.pick_display_profile.as_mut().and_then(|pick| pick().into_iter().next())
-                && let Err(e) = app.run("view.softProof", json!({"profile": path}))
-            {
-                app.toast_error(ui.ctx(), e);
+            register(ui, "combo:proofProfile", combo.response.rect);
+            if pick {
+                crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::ProofProfile);
             }
         });
         if app.ui.proof_profile.is_some() {
