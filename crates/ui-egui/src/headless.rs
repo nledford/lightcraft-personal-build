@@ -459,6 +459,7 @@ impl Headless {
             || self.app.caches.album_recount_running()
             || self.app.caches.library.busy()
             || self.app.merge.busy()
+            || self.app.caches.count_running(&self.view.ctx)
             || self.app.scan.is_some()
             || self.app.sync.is_some()
             || self.app.sync_run.is_some()

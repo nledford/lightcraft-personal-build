@@ -131,6 +131,7 @@ mod side_keys_sidebar;
 mod sidebar_folders_import;
 mod slider_reset;
 mod slideshow;
+mod smart_count;
 mod solo_sections;
 mod sort_menu;
 mod space_hand;

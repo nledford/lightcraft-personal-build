@@ -29,6 +29,14 @@
   first ones imported. It now takes back the whole synchronize, as it always did for a smaller folder, and Redo does it
   all again. An edit or an Undo made between the synchronize's own steps still keeps it from being one step, as before.
 
+### Smart album dialogs stay responsive during an import
+- With the New Smart Album, Edit Smart Album or Create Smart Album dialog open while photos are imported or synchronized
+  into a large library, the window no longer stalls on every change the library makes. How many photos match is
+  counted in the background: the dialog shows "Counting…" until the first count is made, keeps showing the last count
+  with an "updating…" mark under it while the library changes, and shows the new count once it is made. This holds
+  for the desktop app whenever it can start a background thread; the web version, and a desktop app that can't start
+  one, still count on the main thread, where a large library can stall the dialog while it changes.
+
 ### Colour noise reduction (process V6)
 - Colour noise reduction removes colour noise at the raw default 25, where it used to leave most of it, and keeps
   colour edges at high values instead of bleeding them into fringes (issue #815). It filters the colour differences
