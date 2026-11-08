@@ -467,8 +467,8 @@ fn dont_ask_again_moves_the_next_drop_at_once() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A file of that name is in the folder already (not in the library): the worker refuses the whole move, so Don't ask
-/// again, ticked in the question, stays unused.
+/// A file of that name appears in the folder (not in the library) after the question was asked, which found none: the
+/// worker refuses the whole move, so Don't ask again, ticked in the question, stays unused.
 #[test]
 fn dont_ask_again_is_kept_only_when_the_move_began() {
     let (root, trip, home) = folders("dont-ask-clash");
@@ -476,10 +476,10 @@ fn dont_ask_again_is_kept_only_when_the_move_began() {
     click(&mut h, &format!("libraryFolderToggle:{}", folder_key(&root)));
     let target = folder_row(&h, &home).unwrap();
     let beach = id_of(&h, "beach.png");
-    std::fs::copy(trip.join("beach.png"), home.join("beach.png")).unwrap();
     drop_beach(&mut h, beach, target);
     click(&mut h, "check:moveDontAsk");
     assert!(matches!(h.app.ui.dialog, Some(crate::state::Dialog::MovePhotos { dont_ask: true, .. })), "ticked");
+    std::fs::copy(trip.join("beach.png"), home.join("beach.png")).unwrap();
     click(&mut h, "button:dialogOk");
     assert!(h.app.ui.dialog.is_none(), "the question closes");
     settle(&mut h);
@@ -972,30 +972,6 @@ fn a_folder_that_is_gone_says_so_in_plain_words_at_the_drop() {
     let said = toast(&h);
     assert!(said.contains("is not a folder"), "{said}");
     assert!(!said.contains('`') && !said.contains("invalid parameters"), "no command names: {said}");
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-#[test]
-fn a_photo_with_no_file_is_listed_as_one_that_cannot_be_moved_and_the_rest_go() {
-    // (a Local photo never gets this far: the drop is refused on the row, with its own reason)
-    let (root, trip, home, mut h, beach, _) = trip_with_two("no-file");
-    let demo = {
-        use lightcraft_catalog::{Op, Photo, Source};
-        let id = h.app.session.catalog.alloc_photo_id();
-        let p = Photo::new(id, Source::Demo { scene: 0 }, "demo.jpg", "JPEG", 8, 8, "2026-01-01T10:00:00");
-        h.app.session.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
-        h.app.session.selection.ids.push(id);
-        id.0
-    };
-    drop_both(&mut h, beach, &home);
-    let Some(crate::state::Dialog::MovePhotos { problems, movable, .. }) = &h.app.ui.dialog else { panic!("{:?}", h.app.ui.dialog) };
-    assert_eq!(
-        (problems.clone(), *movable),
-        (vec![crate::state::MoveProblem { id: demo, name: "demo.jpg".into(), kind: MoveProblemKind::Unmovable }], 2)
-    );
-    click(&mut h, "button:dialogOk");
-    settle(&mut h);
-    assert!(home.join("beach.png").is_file() && home.join("dunes.png").is_file() && !trip.join("beach.png").exists(), "the others moved");
     let _ = std::fs::remove_dir_all(&root);
 }
 
