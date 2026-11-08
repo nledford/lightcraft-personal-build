@@ -492,6 +492,11 @@
   Accessibility ▸ Display ▸ Reduce transparency until you change it in Settings; **Use the system setting** beside the
   tick box hands the choice back. On Windows, Linux and the web version it is manual for now (off by default).
 
+## 2026-10-28
+
+### A stack badge's tooltip names the stack key as it is bound
+- Hovering a stack's badge in the grid said "(S)" even after you had remapped the key that expands and collapses stacks. It now shows the key you set for Expand/Collapse Stack, written as the menu bar writes it. With that unbound, it shows Soft Proofing's key (which a grid reads as the stack toggle) unless the native menu takes that key, and then no key. In the filmstrip, where S is Soft Proofing, the tooltip names a key only when Expand/Collapse Stack has one of its own.
+
 ## 2026-10-24
 
 ### AI Denoise follows the photo's real noise
