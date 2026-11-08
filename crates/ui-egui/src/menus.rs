@@ -33,6 +33,7 @@ pub fn ui_enabled(app: &LightcraftApp, id: &str) -> bool {
         "library.selectOnlyActive" => app.session.active().is_some(),
         "dialog.newSmartAlbum" => app.session.view_save_refusal().is_none(),
         "view.thumbSizeUp" | "view.thumbSizeDown" => thumb_size_view(app),
+        "view.tasks" => app.activity_open || crate::panels::activity::blocked(app).is_none(),
         "dialog.contactSheet" | "app.contactSheet" | "dialog.print" | "app.print" => {
             !cfg!(target_arch = "wasm32") && app.session.active().is_some() && app.export.is_none()
         }
