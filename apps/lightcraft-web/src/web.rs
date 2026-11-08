@@ -336,6 +336,7 @@ fn services(
         // the browser reports prefers-color-scheme to egui
         system_theme: None,
         keep_awake: None,
+        dock_badge: None,
     }
 }
 

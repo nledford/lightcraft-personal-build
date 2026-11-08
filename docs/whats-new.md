@@ -323,6 +323,10 @@
   on its own and macOS no longer slows the app down when its window is hidden or minimized. Both end as soon as the
   last job finishes or is canceled.
 
+### On macOS, the Dock icon shows how many jobs are running
+- The Dock icon of LightCraft carries a badge with the number of jobs you started that are running (an export, an
+  import, a preview build…). It goes away when the last one ends, so a job in a minimized window can still be seen.
+
 ### A folder made with New Folder on Disk… appears in Folders at once
 - Right-click a folder, choose New Folder on Disk…, name it and Create: the new folder now has its own row in Folders
   straight away, with 0 photos, and the sidebar scrolls to it (it is not chosen, so the photos you selected to move
