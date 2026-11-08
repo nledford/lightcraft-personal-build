@@ -616,6 +616,9 @@ impl Session {
     /// Nothing is created; a library folder that exists gets its lock taken and released again.
     /// Opening can still fail afterwards (a damaged catalog, a disk going away).
     pub fn check_library(&self, dir: impl AsRef<Path>) -> Result<PathBuf> {
+        // a switch checks first and only then closes this library: a move running in it is
+        // refused here, before anything is closed (closing itself stays open to quitting)
+        self.refuse_while_moving()?;
         let dir = dir.as_ref().to_path_buf();
         if let Some(place) = crate::lightroom_folder::lightroom_catalog_at(&dir) {
             return Err(EngineError::LightroomCatalog { path: dir, catalog: place.catalog });
@@ -655,6 +658,9 @@ impl Session {
     /// created ([`crate::lightroom_folder`]); a LightCraft library always opens, whatever else
     /// its folder holds.
     pub fn open_library(&mut self, dir: impl AsRef<Path>, seed_demo: bool) -> Result<&LoadReport> {
+        // a move in progress belongs to the open library: refused before the target is touched
+        // (no folder or lock file made, and a lock held elsewhere doesn't hide the reason)
+        self.refuse_while_moving()?;
         let dir = dir.as_ref().to_path_buf();
         if let Some(place) = crate::lightroom_folder::lightroom_catalog_at(&dir) {
             return Err(EngineError::LightroomCatalog { path: dir, catalog: place.catalog });
@@ -740,6 +746,8 @@ impl Session {
     fn open_stores(&mut self, stores: LibraryStores, seed_demo: bool, lock: &mut Option<LibraryLock>, folder: Option<OpenedFolder>) -> Result<()> {
         let LibraryStores { dir, catalog, files, on_disk } = stores;
         let mut files: Box<dyn Store> = Box::new(Listed(files));
+        // a move in progress belongs to the open library: it finishes first
+        self.refuse_while_moving()?;
         // the current library may be these same files: let its background snapshot land first, and
         // what its log's thread was handed reach the file before the new journal reads it. When
         // that can't be written, the open fails and the current library stays open with what its
@@ -785,6 +793,8 @@ impl Session {
         }
         self.undo.clear();
         self.redo.clear();
+        // photo ids are per library: none held back for a move carries over
+        self.held_sidecars.clear();
         self.interaction = None;
         self.pending_log.clear();
         self.selection = Selection::default();

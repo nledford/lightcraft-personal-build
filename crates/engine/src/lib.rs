@@ -61,6 +61,7 @@ pub mod media;
 pub mod memory;
 pub mod merge;
 mod model_download;
+pub mod move_job;
 pub mod open_path;
 pub mod originals;
 mod pdf;
@@ -127,6 +128,11 @@ pub enum EngineError {
     /// The work was cancelled (by the person, an agent or a newer request): not a failure.
     #[error("{0}")]
     Cancelled(String),
+    /// A background move of photos is running and this change would clash with it (open another
+    /// library, move other files, take a moving photo out of the library or point it at another
+    /// file): nothing was changed ([`ErrorKind::MoveInProgress`]).
+    #[error("{0}")]
+    MoveInProgress(String),
     /// The feature needs `model`, which is not installed (or still downloading): a frontend
     /// offers its download (terms first) on [`ErrorKind::ModelMissing`], not on the message.
     #[error("{msg}")]
@@ -359,6 +365,12 @@ pub struct Session {
     pub library: Option<library::Library>,
     /// Identity of current library opening; refreshed only after a successful open.
     pub(crate) library_identity: Arc<()>,
+    /// The move to another folder running in the background, if any ([`move_job`]): other file
+    /// moves wait for it, and its photos' sidecars are written once it ends.
+    pub(crate) moving: std::sync::Weak<move_job::MoveTicket>,
+    /// Photos whose automatic sidecar write waits for their file to arrive at the folder it is
+    /// being moved to ([`move_job`]); written when the move ends. Not a failure: no notice.
+    pub(crate) held_sidecars: std::collections::BTreeSet<PhotoId>,
     /// XMP sidecar preferences (persisted with the library).
     pub xmp: sidecar::XmpPrefs,
     /// Parameters of the last export (`app.export` params, minus targets), persisted in prefs.json.
@@ -569,6 +581,8 @@ impl Session {
             active_spot: None,
             library: None,
             library_identity: Arc::new(()),
+            moving: std::sync::Weak::new(),
+            held_sidecars: Default::default(),
             xmp: sidecar::XmpPrefs::default(),
             last_export: None,
             last_merge: Default::default(),
@@ -724,6 +738,7 @@ impl Session {
     /// undo, redo and opening a library bring back what was and are not held to that.
     pub fn commit(&mut self, label: &str, op: Op) -> Result<()> {
         self.not_stuck()?;
+        self.refuse_detaching(&self.detached_moving_photos(&op))?;
         let fwd = op.clone();
         let inv = self.apply_through(op, Catalog::apply_new)?;
         self.pending_log.push(fwd);
@@ -948,9 +963,12 @@ impl Session {
         // The entry is detached from self.undo/self.redo: include it before any global
         // repair can retire, then retry revalidates it before moving its own packets.
         rename::validate_sidecars(fs, &entry.retry_sidecars).map_err(|e| EngineError::Other(format!("can't move the files back: {e}")))?;
+        // A step that would take a moving photo out of the library or point it at another file says how many.
+        self.refuse_detaching(&self.detached_moving_photos(&entry.op))?;
         // Repair discarded file steps before another path change can stale their exact paths.
         // Unrelated metadata history must remain usable while a sidecar is still unwritable.
         if entry.folder.is_some() || !entry.retry_sidecars.is_empty() || !self.file_moves(&entry.op).is_empty() {
+            self.refuse_while_moving()?;
             self.repair_sidecars_with(fs).map_err(|e| EngineError::Other(format!("can't move the files back: {e}")))?;
         }
         rename::retry_sidecars(fs, &mut entry.retry_sidecars).map_err(|e| EngineError::Other(format!("can't move the files back: {e}")))?;

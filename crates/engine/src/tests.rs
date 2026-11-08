@@ -47,6 +47,7 @@ mod lightroom_folder;
 mod mask_effects;
 mod mask_geometry;
 mod merge;
+mod move_job;
 mod move_to_share;
 mod multi_source;
 #[cfg(unix)]

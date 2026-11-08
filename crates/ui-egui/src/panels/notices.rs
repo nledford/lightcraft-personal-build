@@ -196,6 +196,13 @@ fn tasks_quitting_would_stop(app: &LightcraftApp) -> Vec<lightcraft_engine::acti
         let awaited = lightcraft_engine::cmd::backup::status(&app.session).and_then(|b| app.session.activity.id_of(&b.cancel));
         running.retain(|t| Some(t.id) != awaited);
     }
+    // photos on their way to another folder can't be stopped, but quitting cuts the move short
+    if app.move_run.is_some()
+        && !app.quit_cuts_move
+        && let Some(task) = app.session.activity.list().into_iter().find(|t| t.kind == "move")
+    {
+        running.push(task);
+    }
     running
 }
 
@@ -259,6 +266,7 @@ fn backup_failed(app: &mut LightcraftApp, why: &str) {
 fn quit_called_off(app: &mut LightcraftApp) {
     app.quit_prompt = None;
     app.quit_backup = QuitBackup::Undecided;
+    app.quit_cuts_move = false;
 }
 
 /// Go on with a quit that waits for its backup ([`QuitBackup::Running`]) once the backup has
@@ -792,6 +800,8 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
                 // (one that ended meanwhile has nothing left to stop)
                 let _ = app.session.activity.cancel(task.id);
             }
+            // a move can't be stopped, so choosing to quit is what lets it be cut short
+            app.quit_cuts_move = true;
             // files waiting for an import, and one handed its files but not started, are given up
             // too, or `may_close` would ask about them again
             app.waiting_import = Default::default();
