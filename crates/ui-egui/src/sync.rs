@@ -442,14 +442,14 @@ pub fn body(app: &LightcraftApp, ui: &mut egui::Ui, dlg: &mut Dialog) {
         // the Import Photos review; widgets `check:syncRead.<kind>`)
         // (indented as a whole, so the kinds that wrap stay under the option they belong to)
         ui.indent("syncRead", |ui| {
-            ui.add_enabled_ui(*import_new, |ui| {
-                ui.horizontal_wrapped(|ui| {
-                    ui.label(egui::RichText::new(crate::i18n::tr("Read")).color(t.text_dim));
-                    for (kind, label, on) in crate::import::read_choices(read) {
-                        let r = ui.checkbox(on, crate::i18n::tr(label)).on_hover_text(crate::i18n::tr(crate::import::READ_HINT));
-                        crate::widgets::register(ui, format!("check:syncRead.{kind}"), r.rect);
-                    }
-                });
+            ui.horizontal_wrapped(|ui| {
+                ui.label(egui::RichText::new(crate::i18n::tr("Read")).color(t.text_dim));
+                for (kind, label, on) in crate::import::read_choices(read) {
+                    Check::new(&format!("syncRead.{kind}"), on, label)
+                        .tooltip(crate::i18n::tr(crate::import::READ_HINT))
+                        .enabled(*import_new)
+                        .show(ui);
+                }
             });
         });
     }
