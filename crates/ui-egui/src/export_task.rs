@@ -273,7 +273,6 @@ fn export_summary(files: &[Value], photos: Option<&Value>, total: usize, cancell
     if skipped > 0 {
         m += &crate::i18n::tr_format!(" · {skipped} skipped (file exists)", skipped = skipped);
     }
-    let had_failures = !failed.is_empty();
     if let Some(first) = failed.first() {
         m += &crate::i18n::tr_format!(" · {} failed: {}", failed.len(), first["error"].as_str().unwrap_or("error"));
     }
