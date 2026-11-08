@@ -393,6 +393,8 @@ fn alias(n: &MenuNode) -> Option<String> {
             "dialog.newAlbum" => Some("button:contextNewAlbum".into()),
             "photo.setMeta" if params.get("addKeywords").is_some() => Some("button:contextAddKeywordShortcut".into()),
             "photo.delete" => Some("button:contextDeletePhoto".into()),
+            "dialog.trashFiles" if params.get("recentlyDeleted").is_some() => Some("button:contextEmptyTrashFiles".into()),
+            "dialog.trashFiles" => Some("button:contextTrashFiles".into()),
             "photo.rate" => params["rating"].as_u64().map(|r| format!("button:contextRate:{r}")),
             "photo.flag" => params["flag"].as_str().map(|f| format!("button:contextFlag:{f}")),
             "photo.label" => params["label"].as_str().map(|l| format!("photoLabel:{l}")),
