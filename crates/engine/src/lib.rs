@@ -1067,7 +1067,7 @@ impl Session {
             photo.height.max(1) as usize,
             &d,
             true,
-            photo.embedded_lens.as_ref(),
+            photo.embedded_lens.as_deref(),
         );
         d.crop.geometry.rect = frame.crop.rect;
         d
@@ -1192,7 +1192,7 @@ impl Session {
             p.height.max(1) as usize,
             &d.effective(),
             false,
-            p.embedded_lens.as_ref(),
+            p.embedded_lens.as_deref(),
         ))
     }
 

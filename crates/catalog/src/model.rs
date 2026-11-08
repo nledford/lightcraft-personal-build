@@ -326,7 +326,7 @@ pub struct Photo {
     /// Lens corrections embedded in the file (DNG `WarpRectilinear` / `FixVignetteRadial`), applied when
     /// "Enable Profile Corrections" is on.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub embedded_lens: Option<lightcraft_develop::EmbeddedLens>,
+    pub embedded_lens: Option<Box<lightcraft_develop::EmbeddedLens>>,
     /// What of the photo's own was not read when it was imported and so is the file's still
     /// (see [`LeftInFile`]). Left out of the catalog JSON when it is nothing (most photos), so
     /// older catalogs read unchanged.
