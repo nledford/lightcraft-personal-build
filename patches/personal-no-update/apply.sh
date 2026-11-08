@@ -4,7 +4,8 @@
 #      and the update prompt never starts an installation (app.patch, or app-dialogs.patch for the layout where
 #      updates_ui.rs sits under crates/ui-egui/src/dialogs/);
 #   2. the library's prompt (craft-update, a git dependency) never offers UPDATE AND RESTART, so it shows DOWNLOAD
-#      (a link to the release page): craft-update.patch, applied to Cargo's own checkout of the dependency.
+#      (a link to the release page): craft-update.patch, or craft-update-translate.patch for the newer dialog.rs,
+#      applied to Cargo's own checkout of the dependency.
 # Releases don't read my catalog (format 11, the backup chain), so an installed release must never replace this build.
 # Fails loudly when a patch does not apply: the caller must not build without it. Help > Check for Updates still checks and
 # tells; only the install is gone.
@@ -33,12 +34,30 @@ root=$(cargo metadata --locked --format-version 1 | jq -r '.packages[] | select(
   echo "::error::cannot find Cargo's checkout of craft-update (root '$root')"
   exit 1
 }
-if (cd "$root" && git apply --reverse --check "$here/craft-update.patch" 2>/dev/null); then
-  echo "craft-update.patch already applied in $root"
-else
-  (cd "$root" && git apply "$here/craft-update.patch")
-  echo "applied craft-update.patch in $root"
+cu=""
+for p in craft-update craft-update-translate; do
+  if (cd "$root" && git apply --reverse --check "$here/$p.patch" 2>/dev/null); then
+    echo "$p.patch already applied in $root"
+    cu=$p
+    break
+  fi
+done
+if [ -z "$cu" ]; then
+  for p in craft-update craft-update-translate; do
+    if (cd "$root" && git apply --check "$here/$p.patch" 2>/dev/null); then
+      (cd "$root" && git apply "$here/$p.patch")
+      echo "applied $p.patch in $root"
+      cu=$p
+      break
+    fi
+  done
 fi
+[ -n "$cu" ] || {
+  echo "::error::no craft-update patch in $here applies to $root/crates/update/src/dialog.rs: StartupPrompt::new changed; add a variant (see README, Personal build: no update installs)"
+  (cd "$root" && git apply --check "$here/craft-update.patch") || true
+  (cd "$root" && git apply --check "$here/craft-update-translate.patch") || true
+  exit 1
+}
 
 # Prove the edits are in the files that will be compiled.
 case $app in app) file=crates/ui-egui/src/updates_ui.rs ;; *) file=crates/ui-egui/src/dialogs/updates_ui.rs ;; esac
