@@ -262,17 +262,16 @@ fn list_subfolders(path: &str) -> std::sync::Arc<Vec<(String, String)>> {
     v.into()
 }
 
-/// How many file-system answers for `ctx` are being worked out right now: [`fs_cached`]'s and the
-/// Missing Photos count's. Rows appear (and the sidebar below them moves) when they land, so the
-/// headless driver counts them as pending work and waits for them before acting on widget
-/// positions.
+/// How many file-system answers for `ctx` are being worked out right now ([`fs_cached`]'s). Rows
+/// appear (and the sidebar below them moves) when they land, so the headless driver counts them
+/// as pending work and waits for them before acting on widget positions.
 pub(crate) fn fs_cached_running(ctx: &egui::Context) -> usize {
     fs_running_counter(ctx).load(std::sync::atomic::Ordering::Acquire)
 }
 
 /// The counter behind [`fs_cached_running`]: a worker adds one before it starts and takes it off
 /// after its answer is stored.
-pub(super) fn fs_running_counter(ctx: &egui::Context) -> std::sync::Arc<std::sync::atomic::AtomicUsize> {
+pub(crate) fn fs_running_counter(ctx: &egui::Context) -> std::sync::Arc<std::sync::atomic::AtomicUsize> {
     ctx.data_mut(|d| d.get_temp_mut_or_default::<std::sync::Arc<std::sync::atomic::AtomicUsize>>(egui::Id::unique("fs-cached-running")).clone())
 }
 

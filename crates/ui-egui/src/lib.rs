@@ -39,6 +39,7 @@ pub mod menus;
 mod missing_sweep;
 pub mod motion;
 pub mod move_task;
+pub mod missing_count;
 pub mod panels;
 pub mod pick;
 pub mod recheck;
@@ -353,10 +354,6 @@ pub struct LightcraftApp {
     /// Test-only: how many times background preparation was advanced (once per logic pass).
     #[cfg(test)]
     pub(crate) prep_ticks: u32,
-    /// Test-only: a delay for the sidebar's Missing Photos count worker (a slow disk). Kept here,
-    /// not in `ui`, because `ui.set` rebuilds `ui` and would drop it.
-    #[cfg(test)]
-    pub(crate) missing_count_test_delay: Option<std::time::Duration>,
     /// Offscreen context for headless screenshots of the windowed app.
     shadow: Option<headless::HeadlessView>,
     /// The frame being laid out is the offscreen one of a headless screenshot: it has no pointer of
@@ -772,6 +769,15 @@ pub struct Caches {
     /// selection's keywords and that text.
     completions: Option<(u64, std::sync::Arc<panels::keywording::Offers>)>,
     date_groups: Option<(u64, std::sync::Arc<Vec<lightcraft_catalog::DateGroup>>)>,
+    /// When every library photo's file was last handed to the background checks for the Missing
+    /// Photos count: (library, catalog revision, egui time); and whether files came in that no
+    /// check was asked for ([`Caches::missing_count`]).
+    files_swept: Option<(u64, u64, f64)>,
+    files_unchecked: bool,
+    /// Whether the list of every file is being made for the checks.
+    files_listing: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    /// The Missing Photos count.
+    pub missing: missing_count::MissingCount,
     filter_values: Option<(u64, std::sync::Arc<FilterValues>)>,
     /// The albums' counts as the sidebar shows them, with the tally that follows edits.
     album_counts: Option<AlbumCounts>,

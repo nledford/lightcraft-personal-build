@@ -107,6 +107,8 @@ mod slider_reset;
 mod slideshow;
 mod solo_sections;
 mod space_hand;
+mod missing_count;
+mod sweep_yield;
 mod switch_library;
 mod sync;
 mod tallies;
