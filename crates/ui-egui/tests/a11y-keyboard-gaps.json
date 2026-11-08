@@ -6,7 +6,7 @@
     "Button \"5 ★\" not reached by Tab in Photos › Bottom bar": 1,
     "Button shows no focus in (top level)": 1,
     "Button shows no focus in Library": 23,
-    "Button shows no focus in Photos": 6,
+    "Button shows no focus in Photos": 9,
     "Button shows no focus in Photos › Bottom bar": 5,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
@@ -18,7 +18,7 @@
     "Button \"5 ★\" not reached by Tab in Photos › Bottom bar": 1,
     "Button shows no focus in (top level)": 1,
     "Button shows no focus in Library": 23,
-    "Button shows no focus in Photos": 6,
+    "Button shows no focus in Photos": 9,
     "Button shows no focus in Photos › Bottom bar": 5,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
@@ -31,14 +31,20 @@
   "Dialog Settings general": {},
   "Dialog Settings import": {},
   "Dialog Settings interface": {
-    "CheckBox shows no focus in Settings › Appearance": 1
+    "CheckBox shows no focus in Settings › Appearance": 1,
+    "RadioButton shows no focus in Settings › Appearance": 1
   },
   "Dialog Settings library": {},
   "Dialog Settings performance": {
-    "CheckBox shows no focus in Settings › Performance": 1
+    "CheckBox shows no focus in Settings › Performance": 1,
+    "RadioButton shows no focus in Settings › Performance": 1
   },
   "Dialog Settings slideshow": {
-    "Slider shows no focus in Settings › Slideshow": 2,
+    "Button shows no focus in Settings › Slideshow": 2,
+    "CheckBox shows no focus in Settings › Slideshow": 14,
+    "ColorWell shows no focus in Settings › Slideshow": 1,
+    "RadioButton shows no focus in Settings › Slideshow": 2,
+    "Slider shows no focus in Settings › Slideshow": 3,
     "SpinButton shows no focus in Settings › Slideshow": 2,
     "Unknown shows no focus in Settings › Slideshow": 5
   },
@@ -71,7 +77,7 @@
     "Button \"5 ★\" not reached by Tab in Photos › Bottom bar": 1,
     "Button shows no focus in (top level)": 1,
     "Button shows no focus in Library": 23,
-    "Button shows no focus in Photos": 6,
+    "Button shows no focus in Photos": 9,
     "Button shows no focus in Photos › Bottom bar": 5,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
@@ -83,7 +89,7 @@
     "Button \"5 ★\" not reached by Tab in Photos › Bottom bar": 1,
     "Button shows no focus in (top level)": 1,
     "Button shows no focus in Library": 23,
-    "Button shows no focus in Photos": 6,
+    "Button shows no focus in Photos": 9,
     "Button shows no focus in Photos › Bottom bar": 5,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
@@ -95,7 +101,7 @@
     "Button \"5 ★\" not reached by Tab in Photos › Bottom bar": 1,
     "Button shows no focus in (top level)": 1,
     "Button shows no focus in Library": 23,
-    "Button shows no focus in Photos": 6,
+    "Button shows no focus in Photos": 9,
     "Button shows no focus in Photos › Bottom bar": 5,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
@@ -108,10 +114,10 @@
     "Button \"Scroll menu down\" not reached by Tab in Top bar › Photo": 1,
     "Button shows no focus in (top level)": 1,
     "Button shows no focus in Library": 23,
-    "Button shows no focus in Photos": 6,
+    "Button shows no focus in Photos": 9,
     "Button shows no focus in Photos › Bottom bar": 5,
     "Button shows no focus in Top bar": 6,
-    "Button shows no focus in Top bar › Photo": 2,
+    "Button shows no focus in Top bar › Photo": 3,
     "DisclosureTriangle shows no focus in Library": 5
   },
   "Menu View": {
@@ -122,10 +128,11 @@
     "Button \"Scroll menu down\" not reached by Tab in Top bar › View": 1,
     "Button shows no focus in (top level)": 1,
     "Button shows no focus in Library": 23,
-    "Button shows no focus in Photos": 6,
+    "Button shows no focus in Photos": 9,
     "Button shows no focus in Photos › Bottom bar": 5,
     "Button shows no focus in Top bar": 6,
-    "Button shows no focus in Top bar › View": 1,
+    "Button shows no focus in Top bar › View": 10,
+    "CheckBox shows no focus in Top bar › View": 9,
     "DisclosureTriangle shows no focus in Library": 5
   },
   "Menu Window": {
@@ -135,7 +142,7 @@
     "Button \"5 ★\" not reached by Tab in Photos › Bottom bar": 1,
     "Button shows no focus in (top level)": 1,
     "Button shows no focus in Library": 23,
-    "Button shows no focus in Photos": 6,
+    "Button shows no focus in Photos": 9,
     "Button shows no focus in Photos › Bottom bar": 5,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
@@ -149,7 +156,7 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 3,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 12,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
   },
@@ -162,7 +169,7 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 3,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 12,
     "Button shows no focus in Tools": 16,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5,
@@ -177,7 +184,7 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 3,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 12,
     "Button shows no focus in Tools": 15,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5,
@@ -197,10 +204,11 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 3,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 12,
     "Button shows no focus in Tools": 5,
     "Button shows no focus in Top bar": 6,
-    "DisclosureTriangle shows no focus in Library": 5
+    "DisclosureTriangle shows no focus in Library": 5,
+    "TextInput shows no focus in Tools": 1
   },
   "Right panel Keywords": {
     "Button \"2 ★\" not reached by Tab in Photos › Bottom bar": 1,
@@ -211,8 +219,8 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 3,
-    "Button shows no focus in Photos › Filmstrip": 11,
-    "Button shows no focus in Tools": 52,
+    "Button shows no focus in Photos › Filmstrip": 12,
+    "Button shows no focus in Tools": 73,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
   },
@@ -225,7 +233,7 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 3,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 12,
     "Button shows no focus in Tools": 10,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
@@ -239,8 +247,8 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 3,
-    "Button shows no focus in Photos › Filmstrip": 11,
-    "Button shows no focus in Tools": 17,
+    "Button shows no focus in Photos › Filmstrip": 12,
+    "Button shows no focus in Tools": 27,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
   },
@@ -253,7 +261,7 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 3,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 12,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
   },
@@ -268,7 +276,7 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 3,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 12,
     "Button shows no focus in Tools": 6,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5,
@@ -283,7 +291,7 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 3,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 12,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
   },
@@ -296,7 +304,7 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 2,
     "Button shows no focus in Photos › Bottom bar": 5,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 14,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
   },
@@ -309,7 +317,7 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 5,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 14,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
   },
@@ -365,7 +373,7 @@
     "Button \"5 ★\" not reached by Tab in Photos › Bottom bar": 1,
     "Button shows no focus in (top level)": 1,
     "Button shows no focus in Library": 23,
-    "Button shows no focus in Photos": 6,
+    "Button shows no focus in Photos": 9,
     "Button shows no focus in Photos › Bottom bar": 5,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
@@ -378,7 +386,7 @@
     "Button shows no focus in (top level)": 1,
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos › Bottom bar": 5,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 14,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
   },
@@ -389,7 +397,7 @@
     "Button \"5 ★\" not reached by Tab in Photos › Bottom bar": 1,
     "Button shows no focus in (top level)": 1,
     "Button shows no focus in Library": 23,
-    "Button shows no focus in Photos": 6,
+    "Button shows no focus in Photos": 9,
     "Button shows no focus in Photos › Bottom bar": 5,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
@@ -403,7 +411,7 @@
     "Button shows no focus in Library": 23,
     "Button shows no focus in Photos": 1,
     "Button shows no focus in Photos › Bottom bar": 5,
-    "Button shows no focus in Photos › Filmstrip": 11,
+    "Button shows no focus in Photos › Filmstrip": 14,
     "Button shows no focus in Top bar": 6,
     "DisclosureTriangle shows no focus in Library": 5
   }

@@ -714,10 +714,8 @@ fn painted_near<S>(h: &Harness<'_, S>, rect: egui::Rect) -> Vec<egui::Shape> {
 /// Whether the frame looks different with the focus on `focus` (the control at `rect`), or `None` where
 /// the answer is not the focus alone. Leaves the focus on the control.
 fn focus_shows<S>(h: &mut Harness<'_, S>, focus: egui::Id, rect: egui::Rect) -> Option<bool> {
-    // a control scrolled out of the window paints nothing (the page does not scroll to it here): no verdict, not "no focus"
-    if !h.ctx.content_rect().intersects(rect) {
-        return None;
-    }
+    // No scrolling here: `visit` has already tried to bring the control into view. One that is still
+    // outside the window paints nothing, so it counts as showing no focus (a real gap).
     // a widget that drew itself before the focus reached it paints the focus a frame later
     h.run_steps(1);
     let focused = painted_near(h, rect);
@@ -752,17 +750,52 @@ fn find_control<S>(h: &Harness<'_, S>, id: u64) -> Option<(Role, egui::Rect)> {
 /// at an end is given up on.
 const MAX_ROW: usize = 100;
 
+/// What a round found out about the focus: for each control Tab reached whether the frame looked
+/// different with the focus, and the controls that were outside the window to be measured at the end.
+#[derive(Default)]
+struct Shows {
+    seen: BTreeMap<u64, bool>,
+    off_screen: Vec<egui::Id>,
+}
+
 /// Checks the focused control `focus` for a visible focus, and notes it as reached.
-fn visit<S>(h: &mut Harness<'_, S>, focus: egui::Id, order: &mut Vec<u64>, shows: &mut BTreeMap<u64, bool>) -> Option<Role> {
+fn visit<S>(h: &mut Harness<'_, S>, focus: egui::Id, order: &mut Vec<u64>, shows: &mut Shows) -> Option<Role> {
     let id = focus.value();
     let found = find_control(h, id);
+    // A control outside the window is measured after the round ([`measure_off_screen`]): scrolling it into
+    // view here would move the page under the rest of the round (rows that scroll away stop existing).
     if let Some((_, rect)) = found.filter(|(_, r)| r.width() > 0.0 && r.height() > 0.0) {
-        if let Some(shown) = focus_shows(h, focus, rect) {
-            shows.insert(id, shown);
+        if !h.ctx.content_rect().intersects(rect) {
+            shows.off_screen.push(focus);
+        } else if let Some(shown) = focus_shows(h, focus, rect) {
+            shows.seen.insert(id, shown);
         }
     }
     order.push(id);
     found.map(|(role, _)| role)
+}
+
+/// Tab does not scroll a page to the control it focuses (egui leaves the page where it is), so a control
+/// below the fold shows a keyboard user no focus at all. Measures each control that was outside the
+/// window when Tab reached it: it is scrolled into view first, as a screen reader's "scroll into view"
+/// would, and only a control that stays outside the window is a gap (it paints nothing, so it shows no
+/// focus). Run when the round is over, so the scrolling cannot change what the round reaches.
+fn measure_off_screen<S>(h: &mut Harness<'_, S>, shows: &mut Shows) {
+    for focus in std::mem::take(&mut shows.off_screen) {
+        let id = focus.value();
+        let node = h.root().children_recursive().find(|n| n.accesskit_node().locate().0.0 == id);
+        if let Some(node) = node {
+            node.scroll_to_me();
+            h.run_steps(2);
+        }
+        let Some((_, rect)) = find_control(h, id).filter(|(_, r)| r.width() > 0.0 && r.height() > 0.0) else { continue };
+        h.ctx.memory_mut(|m| m.request_focus(focus));
+        h.run_steps(1);
+        // still outside the window: nothing is painted, which `focus_shows` reads as no visible focus
+        if let Some(shown) = focus_shows(h, focus, rect) {
+            shows.seen.insert(id, shown);
+        }
+    }
 }
 
 /// The focus is on `entry`, a tab or a radio button. Where it is a member of a tab bar or a group of
@@ -773,7 +806,7 @@ fn visit<S>(h: &mut Harness<'_, S>, focus: egui::Id, order: &mut Vec<u64>, shows
 /// Where the arrow goes to anything but another control of the entry's role (a tab that is a stop of
 /// its own, a radio button of another kind: egui moves the focus to the nearest control there),
 /// there is no row to follow: the focus goes back to the last member and Tab goes on from there.
-fn visit_row<S>(h: &mut Harness<'_, S>, entry: Role, order: &mut Vec<u64>, shows: &mut BTreeMap<u64, bool>) {
+fn visit_row<S>(h: &mut Harness<'_, S>, entry: Role, order: &mut Vec<u64>, shows: &mut Shows) {
     h.key_press(egui::Key::Home);
     h.run_steps(2);
     for _ in 0..MAX_ROW {
@@ -797,9 +830,9 @@ fn visit_row<S>(h: &mut Harness<'_, S>, entry: Role, order: &mut Vec<u64>, shows
 /// that holds the focus and lets Tab go nowhere). Returns the focus order (egui's widget ids), and
 /// for each control focused whether the frame looked different with the focus. A tab bar or a group
 /// of radio buttons is one Tab stop: the arrow keys visit the rest of it ([`visit_row`]).
-fn tab_round<S>(h: &mut Harness<'_, S>) -> Result<(Vec<u64>, BTreeMap<u64, bool>), String> {
+fn tab_round<S>(h: &mut Harness<'_, S>) -> Result<(Vec<u64>, Shows), String> {
     let mut order: Vec<u64> = Vec::new();
-    let mut shows: BTreeMap<u64, bool> = BTreeMap::new();
+    let mut shows = Shows::default();
     let mut lost = 0;
     for _ in 0..MAX_TABS {
         h.key_press(egui::Key::Tab);
@@ -827,12 +860,13 @@ fn tab_round<S>(h: &mut Harness<'_, S>) -> Result<(Vec<u64>, BTreeMap<u64, bool>
 /// does not reach or that shows no focus, and how many controls Tab visited.
 fn keyboard_problems<S>(h: &mut Harness<'_, S>) -> Result<(Vec<(String, String)>, usize), String> {
     let all = controls(h);
-    let (order, shows) = tab_round(h)?;
+    let (order, mut shows) = tab_round(h)?;
+    measure_off_screen(h, &mut shows);
     let mut keys = Vec::new();
     for c in &all {
         if !order.contains(&c.id) {
             keys.push((c.key("not reached by Tab"), c.at.clone()));
-        } else if shows.get(&c.id) == Some(&false) {
+        } else if shows.seen.get(&c.id) == Some(&false) {
             // counted by role and place, not by name: most of the app's buttons share one painting, and a
             // name per button would list them all on every screen they are on
             keys.push((format!("{:?} shows no focus in {}", c.role, c.context), c.at.clone()));
