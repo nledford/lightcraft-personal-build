@@ -714,6 +714,10 @@ fn painted_near<S>(h: &Harness<'_, S>, rect: egui::Rect) -> Vec<egui::Shape> {
 /// Whether the frame looks different with the focus on `focus` (the control at `rect`), or `None` where
 /// the answer is not the focus alone. Leaves the focus on the control.
 fn focus_shows<S>(h: &mut Harness<'_, S>, focus: egui::Id, rect: egui::Rect) -> Option<bool> {
+    // a control scrolled out of the window paints nothing (the page does not scroll to it here): no verdict, not "no focus"
+    if !h.ctx.content_rect().intersects(rect) {
+        return None;
+    }
     // a widget that drew itself before the focus reached it paints the focus a frame later
     h.run_steps(1);
     let focused = painted_near(h, rect);
