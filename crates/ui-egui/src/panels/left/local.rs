@@ -98,8 +98,7 @@ pub(super) fn local_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, now: &Local
     if app.services.pick_folder.is_some() && {
         let resp = Row::new("local:browse", Icon::Plus, crate::i18n::tr("Browse Folder…")).command().show(app, ui);
         super::side_keys::chosen(ui, &resp)
-    }
-    {
+    } {
         let picked = app.services.pick_folder.as_mut().and_then(|f| f());
         if let Some(path) = picked {
             match app.run("library.browse", json!({"path": path})) {

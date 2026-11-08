@@ -163,7 +163,7 @@ pub(super) fn info(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
             let pretty = format!("{:.5}° {}, {:.5}° {}", la.abs(), if la >= 0.0 { "N" } else { "S" }, lo.abs(), if lo >= 0.0 { "E" } else { "W" });
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new(pretty).font(t.caption()).color(t.text_dim));
-                if  Button::new("Show on Map").small().widget("button:showOnMap").tooltip("Open the place in OpenStreetMap").show(ui).clicked() {
+                if Button::new("Show on Map").small().widget("button:showOnMap").tooltip("Open the place in OpenStreetMap").show(ui).clicked() {
                     let url = format!("https://www.openstreetmap.org/?mlat={la:.6}&mlon={lo:.6}#map=15/{la:.6}/{lo:.6}");
                     if let Err(e) = crate::links::open(app, &url) {
                         app.toast_error(ui.ctx(), e);
@@ -213,7 +213,7 @@ pub(super) fn info(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
             }
         }
         ui.add_space(10.0);
-        if  Button::new("All Metadata…").small().widget("button:allMetadata").tooltip("Every EXIF, GPS and XMP field in the file").show(ui).clicked()
+        if Button::new("All Metadata…").small().widget("button:allMetadata").tooltip("Every EXIF, GPS and XMP field in the file").show(ui).clicked()
         {
             app.act("dialog.allMetadata", json!({}));
         }

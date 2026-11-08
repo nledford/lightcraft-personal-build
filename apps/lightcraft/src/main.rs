@@ -48,10 +48,10 @@ mod reduce_motion;
 mod reduce_transparency;
 #[cfg(target_os = "macos")]
 mod screen_profile;
-#[cfg(windows)]
-mod win_screen_profile;
 #[cfg(target_os = "macos")]
 mod traffic_lights;
+#[cfg(windows)]
+mod win_screen_profile;
 mod window_gpu;
 
 use dialog_filter::FileDialogExt as _;

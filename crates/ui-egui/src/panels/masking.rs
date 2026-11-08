@@ -190,7 +190,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
                 // the bar takes what the Details button leaves
                 let details = ui.spacing().interact_size.x + 30.0;
                 sam_download_bar(ui, download.done, download.total, (ui.available_width() - details).max(96.0));
-                if  Button::new("Details").small().widget("button:maskSamDetails").show(ui).clicked() {
+                if Button::new("Details").small().widget("button:maskSamDetails").show(ui).clicked() {
                     app.offer_sam_download(None);
                 }
             });
@@ -376,11 +376,11 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
         // wraps: the five actions are wider than a narrow panel
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing.y = 6.0;
-            let add =  Button::new("Add").small().widget("button:maskAddComp").show(ui);
+            let add = Button::new("Add").small().widget("button:maskAddComp").show(ui);
             egui::Popup::menu(&add).show(|ui| component_menu(app, ui, "add"));
-            let sub =  Button::new("Subtract").small().widget("button:maskSubComp").show(ui);
+            let sub = Button::new("Subtract").small().widget("button:maskSubComp").show(ui);
             egui::Popup::menu(&sub).show(|ui| component_menu(app, ui, "subtract"));
-            let int =  Button::new("Intersect").small().widget("button:maskIntComp").show(ui);
+            let int = Button::new("Intersect").small().widget("button:maskIntComp").show(ui);
             egui::Popup::menu(&int).show(|ui| component_menu(app, ui, "intersect"));
             if text_button(ui, "maskInvert", crate::i18n::tr("Invert"), m.invert).clicked() {
                 app.act("mask.invert", json!({}));

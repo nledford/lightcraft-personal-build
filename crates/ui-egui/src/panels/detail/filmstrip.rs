@@ -212,6 +212,5 @@ pub(crate) fn film_spoken(name: &str, failed: bool) -> String {
         (_, false) => name.to_string(),
         (true, true) => crate::i18n::tr("This photo can't be opened").to_string(),
         (false, true) => format!("{name}, {}", crate::i18n::tr("This photo can't be opened")),
-
     }
 }

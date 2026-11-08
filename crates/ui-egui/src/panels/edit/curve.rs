@@ -455,7 +455,7 @@ fn curve_footer(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &DevelopSettings)
                 }
             });
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let r =  Button::new("Reset")
+                let r = Button::new("Reset")
                     .small()
                     .widget("button:curveReset")
                     .tooltip("Reset all curves: point curves (all channels) and parametric (double-click a channel to reset only that one)")

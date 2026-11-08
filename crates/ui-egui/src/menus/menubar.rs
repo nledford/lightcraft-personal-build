@@ -368,7 +368,6 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "app.github",
             "app.artcraft",
             "---",
-
             "app.systemInfo",
             "app.openLogFolder",
             "@Debug",
@@ -1165,7 +1164,7 @@ fn clicked_item<R>(
     let elsewhere =
         params.get("ids").and_then(Value::as_array).is_some_and(|ids| ids.len() == 1 && ids.first().and_then(Value::as_u64) != was.map(|p| p.0));
     let r = run(app, id, params);
-    if  culling_cmd && went(&r) && app.ui.auto_advance && !elsewhere {
+    if culling_cmd && went(&r) && app.ui.auto_advance && !elsewhere {
         crate::panels::compare::advance(app, was);
     }
     Some(r)
@@ -1422,14 +1421,7 @@ pub(crate) fn show_rows(ui: &mut egui::Ui, nodes: &[MenuNode], rows: &Rows) -> O
 }
 
 /// `depth` is 1 for a top-level menu's rows; `bar_bottom` is where the menu bar ends.
-fn nodes_ui(
-    ui: &mut egui::Ui,
-    nodes: &[MenuNode],
-    clicked: &mut Option<(String, Value)>,
-    depth: usize,
-    bar_bottom: Option<f32>,
-    rows: &Rows,
-) {
+fn nodes_ui(ui: &mut egui::Ui, nodes: &[MenuNode], clicked: &mut Option<(String, Value)>, depth: usize, bar_bottom: Option<f32>, rows: &Rows) {
     ui.set_min_width(220.0);
     // A long list of rows (a preset group can hold thousands) draws only the rows in view; the
     // rest only take their place, measured from the first row. Its rows stay on one line, so

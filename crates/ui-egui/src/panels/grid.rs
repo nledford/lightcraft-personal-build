@@ -1274,7 +1274,6 @@ pub fn toast_skipped(app: &mut LightcraftApp, ctx: &egui::Context, r: &serde_jso
     }
 }
 
-
 /// The colour label items of a menu (coloured dot + the label's name, then None and Edit Label
 /// Names…), `current` checked; each colour is widget `<widget>:<colour>` (`<widget>:none`) for
 /// the control channel. Returns the choice (`Some(None)`: None).
@@ -1304,12 +1303,10 @@ pub fn label_param(l: Option<ColorLabel>) -> String {
     l.map_or_else(|| "none".to_string(), |l| format!("{l:?}").to_lowercase())
 }
 
-
 /// A click on a stack badge (grid or filmstrip): expand / collapse that photo's stack, selected or
 /// not. The selection stays as it is (Compare keeps its pair).
 pub fn toggle_stack(app: &mut LightcraftApp, id: PhotoId) {
     app.act("stack.toggle", json!({"ids": [id.0]}));
-
 }
 
 #[cfg(test)]
