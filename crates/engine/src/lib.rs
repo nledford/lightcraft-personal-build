@@ -333,6 +333,7 @@ pub struct Session {
     /// Identifies the current `visible` list: a new value (unique in the process) every time it
     /// is recomputed, so frontends can key their per-view caches on it instead of hashing the ids.
     visible_gen: u64,
+    visible_copies: u64,
     /// Photos in the current source with no filter on: kept up to date from what each edit touched, like the view.
     total: Option<SourceTotal>,
     /// How many times [`Session::source_total`] followed an edit photo by photo, took the count from the pass that
@@ -656,6 +657,7 @@ impl Session {
             #[cfg(test)]
             never_follow: false,
             visible_gen: 0,
+            visible_copies: 0,
             total_followed: 0,
             total_from_view: 0,
             total_counted: 0,
@@ -2170,8 +2172,17 @@ impl Session {
         self.catalog.sample_photos() > 0
     }
 
+    /// A copy of the visible list. Costs what the view holds: a frame must take [`Self::visible_shared`]
+    /// (or the slice [`Self::visible`] lends) instead.
     pub fn visible_cloned(&mut self) -> Vec<PhotoId> {
+        self.visible_copies += 1;
         self.visible().to_vec()
+    }
+
+    /// How many times [`Self::visible_cloned`] copied the list in this session (a frame that
+    /// copies it each time shows here).
+    pub fn visible_copies(&self) -> u64 {
+        self.visible_copies
     }
 
     /// After the source changes, the active photo follows the rule every source shares: it stays

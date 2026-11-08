@@ -806,6 +806,7 @@ Latin stays upright. Advanced Japanese composition remains open. Regression cove
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-07 | patch | LRC-PERF-PREP: opening and stepping the loupe in a big library no longer freezes the window: the filmstrip, the look-ahead and the prefetch share the visible list instead of copying and searching it every frame, a view is hashed once per change, and the background preparation plans its photos a slice per frame (status unchanged) |
 | 2026-11-05 | patch | LR-PREF-PERFORMANCE: the grid's thumbnail textures are held to a quarter of the memory budget instead of 600 pictures, the failures remembered for photos off screen are dropped past 1,024, and thumbnail failures reach the log as warnings in a burst of 20, then one a second; `ui.inspect` and `library.memory` report the thumbnails and the catalog's records; status unchanged (✅) |
 | 2026-11-06 | patch | LRC-LIB-LIBFOLDERS: Move Selected Photos Here is left out of the menu of a Folders row that holds other disks as well (a Volumes folder with a disk mounted below it): dropping photos on that row is refused, and the menu no longer moves them there; status unchanged (✅) |
 | 2026-11-06 | minor | LR-LIB-KEYWORD, LRC-LIB-KEYWORDS, LR-BEHAV-SIDEBAR-COLLAPSE, LR-BEHAV-SIDEBAR-SECTIONS, LR-BEHAV-SIDEBAR-HIDE: the left sidebar's keyword section is headed By Keyword (it browses, like By Date; id and saved layouts unchanged) and the two keyword lists say what a click does in their tooltips; status unchanged |
