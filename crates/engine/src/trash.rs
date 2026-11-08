@@ -711,7 +711,8 @@ pub mod xdg {
     }
 }
 
-#[cfg(all(test, unix))]
+#[cfg(test)]
+#[cfg(unix)]
 mod tests {
     /// The limit is checked before anyone is asked, with the command's own words.
     #[test]

@@ -381,14 +381,14 @@ fn chain_through_folders(c: &mut Catalog, smarts: usize, park: bool) -> (AlbumId
     let album = |id: AlbumId| json!({"field": "album", "op": "is", "value": id.0});
     let folders: Vec<AlbumId> = (1..smarts).map(|_| c.alloc_album_id()).collect();
     for (i, f) in folders.iter().enumerate() {
-        c.apply(Op::AddAlbum { album: Album { folder: true, ..Album::new(*f, &format!("F{}", i + 1)) } }).unwrap();
+        c.apply(Op::AddAlbum { album: Album { folder: true, ..Album::new(*f, format!("F{}", i + 1)) } }).unwrap();
     }
     let mut last = None;
     for i in 1..=smarts {
         let id = c.alloc_album_id();
         let rules = folders.get(i - 1).map_or_else(|| json!({"match": "all", "rules": []}), |next| json!({"match": "all", "rules": [album(*next)]}));
         let parent = if i == 1 || (park && i == smarts) { None } else { folders.get(i - 2).copied() };
-        c.apply(Op::AddAlbum { album: Album { parent, smart: Some(Box::new(filter(rules))), ..Album::new(id, &format!("S{i}")) } }).unwrap();
+        c.apply(Op::AddAlbum { album: Album { parent, smart: Some(Box::new(filter(rules))), ..Album::new(id, format!("S{i}")) } }).unwrap();
         last = Some(id);
     }
     (last.unwrap(), folders[smarts - 2])

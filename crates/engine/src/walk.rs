@@ -665,6 +665,16 @@ pub fn files_in_parallel(
     truncated
 }
 
+/// What a folder's listing says an entry is, from its file type (a link is `Other`).
+fn entry_kind(file_type: Option<&std::fs::FileType>) -> EntryKind {
+    match file_type {
+        Some(t) if t.is_symlink() => EntryKind::Other,
+        Some(t) if t.is_dir() => EntryKind::Folder,
+        Some(t) if t.is_file() => EntryKind::File,
+        _ => EntryKind::Other,
+    }
+}
+
 /// The walk, with up to `workers` threads reading folders ahead of it (none: one folder at a
 /// time); the second value is how many folders they read that the walk used.
 ///
@@ -772,13 +782,7 @@ fn walk_with(
                     continue;
                 }
                 if let Some(listed) = listed.as_mut() {
-                    let kind = match &e.file_type {
-                        Some(t) if t.is_symlink() => EntryKind::Other,
-                        Some(t) if t.is_dir() => EntryKind::Folder,
-                        Some(t) if t.is_file() => EntryKind::File,
-                        _ => EntryKind::Other,
-                    };
-                    listed.push((e.name, kind));
+                    listed.push((e.name, entry_kind(e.file_type.as_ref())));
                 }
                 if e.hidden {
                     continue;
