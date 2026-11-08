@@ -292,7 +292,7 @@ fn a_batch_looks_at_each_of_its_folders_once() {
 /// Given photos named one by one (no listing to rule a sidecar out), when a batch of them is
 /// handled, then their sidecars are not looked up one after another by the thread that plans the
 /// batch: each is a few names asked of the disk, a round trip apiece on a network share, so the
-/// lookups of a batch run together (`sidecars_of`).
+/// lookups of a batch run together (on the readers' threads, `import::reads`).
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn a_batchs_sidecars_are_looked_up_off_the_thread_that_plans_it() {
@@ -312,6 +312,39 @@ fn a_batchs_sidecars_are_looked_up_off_the_thread_that_plans_it() {
     assert!(!lookers.is_empty(), "no lookups were made");
     assert!(!lookers.contains(&std::thread::current().id()), "a lookup was made by the thread that plans the batch, one after another");
     drop(lookers);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Given a file whose content the library has (a duplicate, skipped without reading its sidecar), when a batch is
+/// read, then the readers do not look its sidecar up: each name asked is a round trip on a network share, and a
+/// folder of mostly known photos would pay them all for nothing.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn a_known_duplicates_sidecar_is_not_looked_up() {
+    let root = scratch("known-duplicate");
+    let files: Vec<String> = ["IMG_0001.jpg", "IMG_0002.jpg"]
+        .iter()
+        .map(|name| {
+            let f = root.join(name);
+            std::fs::write(&f, b"x").unwrap();
+            std::fs::write(f.with_extension("xmp"), xmp(3)).unwrap();
+            f.to_string_lossy().to_string()
+        })
+        .collect();
+    let mut job = job(SidecarNaming::Stem);
+    job.probe = Some(std::sync::Arc::new(|p: &str| {
+        let content = if p.ends_with("IMG_0001.jpg") { "in-the-library" } else { "new" };
+        Ok(ProbeInfo { format: "JPEG".into(), content_hash: Some(content.into()), ..ProbeInfo::default() })
+    }));
+    job.by_hash.insert("in-the-library".into(), Some(PhotoId(1)));
+    let prepared = job.prepare_files(files, &AtomicBool::new(false));
+    assert_eq!(prepared.items.len(), 2);
+    assert_eq!(job.listed.asked.load(Relaxed), 1, "only the new photo's sidecar is asked of the disk");
+    let rated = prepared.items.iter().find_map(|i| match i {
+        PreparedItem::Ready(r) if r.path.ends_with("IMG_0002.jpg") => Some(r.sidecar.as_ref().and_then(|sc| sc.rating)),
+        _ => None,
+    });
+    assert_eq!(rated, Some(Some(3)), "and the new photo's sidecar is read");
     let _ = std::fs::remove_dir_all(&root);
 }
 

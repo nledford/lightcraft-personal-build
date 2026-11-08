@@ -84,15 +84,17 @@ pub fn fs_hooks() -> (FileLoader, FileProbe) {
     let loader: FileLoader =
         Arc::new(|path: &str, max_edge: usize, with: RawDecode<'_>| fs_load(path, max_edge, |bytes| load_vec(bytes, max_edge, with)));
     let probe: FileProbe = Arc::new(|path: &str| {
-        use std::io::Read;
         // one open, then everything from the open file: its size and modification time are not
         // round trips of their own (on a network share each of them is one)
         let mut file = std::fs::File::open(path).map_err(|e| format!("{path}: {e}"))?;
         let meta = file.metadata().ok();
         let len = meta.as_ref().map_or(0, |m| usize::try_from(m.len()).unwrap_or(usize::MAX));
         let _permit = crate::memory::work_gate().acquire(len);
+        // (the wait for memory is over, and each chunk read says the read goes on: see `import::progressed`)
+        crate::import::progressed();
         let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes).map_err(|e| format!("{path}: {e}"))?;
+        let _ = bytes.try_reserve_exact(len);
+        read_steps(&mut file, &mut bytes).map_err(|e| format!("{path}: {e}"))?;
         let mut info = probe_bytes(path, &bytes)?;
         info.file_modified = meta.as_ref().and_then(modified_iso);
         Ok(info)
@@ -116,6 +118,35 @@ fn fs_load<T>(path: &str, max_edge: usize, load: impl FnOnce(Vec<u8>) -> Result<
     // the file, the samples and the intermediate images are gone: give their pages back
     crate::memory::release();
     r
+}
+
+/// How much is read between two reports of progress: small enough that a slow but working share reports well inside
+/// [`crate::import::STALL_AFTER`].
+const READ_STEP: u64 = 64 << 10;
+
+/// [`std::fs::read`] in chunks, saying after each that the read goes on ([`crate::import::progressed`]).
+pub(crate) fn read_reporting(path: &str) -> std::io::Result<Vec<u8>> {
+    let mut file = std::fs::File::open(path)?;
+    let mut bytes = Vec::new();
+    // sized first, as `std::fs::read` does (growing by doubling would peak at twice the file); a file too big to
+    // reserve is read as it comes
+    if let Some(len) = file.metadata().ok().and_then(|m| usize::try_from(m.len()).ok()) {
+        let _ = bytes.try_reserve_exact(len);
+    }
+    read_steps(&mut file, &mut bytes)?;
+    Ok(bytes)
+}
+
+/// Everything `reader` has, appended to `bytes` in steps of [`READ_STEP`], each followed by a report of progress.
+pub(crate) fn read_steps(reader: &mut impl std::io::Read, bytes: &mut Vec<u8>) -> std::io::Result<()> {
+    use std::io::Read;
+    loop {
+        let n = reader.by_ref().take(READ_STEP).read_to_end(bytes)?;
+        crate::import::progressed();
+        if n == 0 {
+            return Ok(());
+        }
+    }
 }
 
 /// The modification time in `meta` as ISO 8601 (see [`ProbeInfo::file_modified`]); `None` when the

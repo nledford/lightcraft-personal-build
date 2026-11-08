@@ -58,6 +58,7 @@ pub(crate) use files::{expand_noting, probe_all, probe_paths, probe_with};
 use job::PreparedItem;
 pub use job::{ImportJob, Prepared, candidate_thumb_key, import, import_with};
 pub use reads::{MAX_SKIPPED, MAX_STUCK_READERS, ReadWatch, STALL_AFTER, StalledRead, StuckReaders};
+pub(crate) use reads::{abandon_flag, progressed};
 pub(crate) use scan::scan_files;
 pub use scan::{
     ScanInput, ScanOutput, ScanProgress, browse_files, browse_order, browse_path, browse_queue, browse_queue_until, browse_spelling, scan,

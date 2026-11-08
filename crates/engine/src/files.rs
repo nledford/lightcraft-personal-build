@@ -16,7 +16,7 @@ use lightcraft_raw::dcp::DcpProfile;
 use crate::media::{DenoiseSpec, FileLoader, FileProbe, PairLoader, PreviewLoader, ProbeInfo, ReducedLoader};
 
 mod colour;
-mod fs;
+pub(crate) mod fs;
 mod load;
 mod preview;
 mod probe;

@@ -31,12 +31,17 @@ fn feed_batches(
                 return;
             }
         };
+        let stopped = prepared.stopped().is_some();
         if let Err(unsent) = tx.send(prepared) {
             // the import was dropped: nothing will add these, so take back what a Move placed
             unsent.0.rollback();
             break;
         }
         ctx.request_repaint();
+        if stopped {
+            // the drive stopped answering: the files after it would only wait on it too
+            break;
+        }
     }
     ended.store(true, Ordering::Release);
     ctx.request_repaint();
@@ -83,6 +88,8 @@ pub struct ImportTask {
     pub cancelled: bool,
     /// The worker that readies the files died (a panic, logged) before it got to the last one.
     died: bool,
+    /// The import ended early with an error of its own (the drive stopped answering), not because of ✕.
+    stopped: Option<String>,
     /// Auto Import (the watched folder): the selection stays as it is, a short toast when done.
     auto: bool,
     /// Auto Import: the selection to keep.
@@ -156,6 +163,8 @@ struct ImportRun {
     cancel: std::sync::Arc<std::sync::atomic::AtomicBool>,
     total: std::sync::Arc<std::sync::atomic::AtomicUsize>,
     done: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    /// Which file the reads wait for, and Skip for it (shown on the import's row in the activity stack).
+    reads: std::sync::Arc<lightcraft_engine::import::ReadWatch>,
     opts: lightcraft_engine::import::ImportOptions,
     now: String,
     album: Option<u64>,
@@ -184,10 +193,10 @@ impl ImportRun {
         ctx: &egui::Context,
     ) -> Result<Self, String> {
         let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let (total, done) = (job.total.clone(), job.done.clone());
+        let (total, done, reads) = (job.total.clone(), job.done.clone(), job.reads.clone());
         let (opts, now) = (job.opts.clone(), job.now().to_string());
         let runner = Self::spawn(job, queue, cancel.clone(), ctx)?;
-        Ok(ImportRun { runner, cancel, total, done, opts, now, album, album_name })
+        Ok(ImportRun { runner, cancel, total, done, reads, opts, now, album, album_name })
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -408,6 +417,10 @@ pub fn tick(app: &mut LightcraftApp, ctx: &egui::Context) {
         if guard.is_cancelled() {
             task.cancelled = true;
         }
+        // a file that has stopped answering is named on the row, which then offers Skip (`activity.skip`)
+        if let Some(run) = &task.run {
+            crate::panels::activity::follow_reads(guard, &run.reads);
+        }
     }
     if !finished {
         app.import = Some(task);
@@ -418,6 +431,9 @@ pub fn tick(app: &mut LightcraftApp, ctx: &egui::Context) {
 
 /// Add one readied batch to the catalog (an undo step merged into the import's at the end).
 fn commit_batch(app: &mut LightcraftApp, task: &mut ImportTask, prepared: lightcraft_engine::import::Prepared) {
+    if let Some(why) = prepared.stopped() {
+        task.stopped = Some(why.to_string());
+    }
     let Some(run) = task.run.as_ref() else { return };
     let n = prepared.len();
     let (opts, now, album, album_name) = (&run.opts, run.now.as_str(), run.album, run.album_name.clone());
@@ -564,6 +580,7 @@ fn finish(app: &mut LightcraftApp, ctx: &egui::Context, mut task: ImportTask) {
         && task.refused.is_none()
         && task.warnings.is_empty()
         && !task.cancelled
+        && task.stopped.is_none()
         && show_existing(app, ctx, &task.existing);
     let (mut msg, summary, detail) = import_summary(app, &task);
     report(&mut task, summary, detail);
@@ -575,11 +592,11 @@ fn finish(app: &mut LightcraftApp, ctx: &egui::Context, mut task: ImportTask) {
         msg.push_str("\n\n");
         msg.push_str(&why);
     }
-    if task.warnings.is_empty() && refused {
+    if task.warnings.is_empty() && refused && task.stopped.is_none() {
         // as long as the refusal's own toast stays, so the reason can be read
         app.toast_for(ctx, msg, crate::REFUSAL_SECONDS);
     } else if task.warnings.is_empty() {
-        if task.failed > 0 {
+        if task.failed > 0 || task.stopped.is_some() {
             app.toast_error(ctx, msg);
         } else if task.refused.is_some() {
             app.toast_error_for(ctx, msg, 8.0);
@@ -609,9 +626,19 @@ fn quiet_finish(app: &mut LightcraftApp, ctx: &egui::Context, task: &mut ImportT
     } else {
         String::new()
     };
-    let detail = with_warnings(not_readable_text(task.failed), task);
+    let mut detail = not_readable_text(task.failed);
+    if let Some(line) = stopped_line(task) {
+        if !detail.is_empty() {
+            detail.push_str(" · ");
+        }
+        detail.push_str(&line);
+    }
+    let detail = with_warnings(detail, task);
     report(task, summary, detail);
-    if !task.warnings.is_empty() {
+    if let Some(msg) = stopped_text(task) {
+        // the drive stopped answering (the other kinds of import have a summary to add it to)
+        app.toast_error(ctx, msg);
+    } else if !task.warnings.is_empty() {
         app.toast_error_for(ctx, xmp_warnings_text(&task.warnings), 8.0);
     } else if task.auto && task.refused.is_some() {
         app.toast_for(ctx, task.refused.clone().unwrap_or_default(), 8.0);
@@ -662,7 +689,33 @@ fn import_summary(app: &LightcraftApp, task: &ImportTask) -> (String, String, St
         msg.push_str("\n\n");
         msg.push_str(why);
     }
+    if let Some(line) = stopped_line(task) {
+        // (the import ended on an error of its own: the drive stopped answering)
+        if !detail.is_empty() {
+            detail.push_str(" · ");
+        }
+        detail.push_str(&line);
+        msg.push_str("\n\n");
+        msg.push_str(&line);
+    }
     (msg, summary, with_warnings(detail, task))
+}
+
+/// What the row and the toast of an import that stopped on an error say: the error. `None` for an import that did not
+/// stop.
+fn stopped_line(task: &ImportTask) -> Option<String> {
+    task.stopped.as_ref().map(|why| crate::i18n::tr_format!("Import failed: {e}", e = why))
+}
+
+/// What the toast of an automatic import or a browse that stopped on an error says: the error, then the XMP warnings
+/// its photos gave before it stopped. `None` for an import that did not stop.
+fn stopped_text(task: &ImportTask) -> Option<String> {
+    let mut msg = stopped_line(task)?;
+    if !task.warnings.is_empty() {
+        msg.push_str("\n\n");
+        msg.push_str(&xmp_warnings_text(&task.warnings));
+    }
+    Some(msg)
 }
 
 /// How an import ended: stopped, failed to read every file, with problems, or well.
@@ -672,9 +725,9 @@ fn ending_of(task: &ImportTask) -> lightcraft_engine::activity::Ending {
         Ending::Stopped
     } else if task.died {
         Ending::Died
-    } else if task.failed > 0 && task.imported == 0 && task.restored == 0 {
+    } else if (task.failed > 0 || task.stopped.is_some()) && task.imported == 0 && task.restored == 0 {
         Ending::Failed
-    } else if task.failed > 0 || !task.warnings.is_empty() || task.refused.is_some() {
+    } else if task.failed > 0 || task.stopped.is_some() || !task.warnings.is_empty() || task.refused.is_some() {
         Ending::Problems
     } else {
         Ending::Done
@@ -912,5 +965,37 @@ mod tests {
         let rows = h.app.session.activity.finished();
         assert_eq!(rows.len(), 3, "{rows:?}");
         assert!(rows.iter().all(|r| r.detail.contains("1 import warning")), "{rows:?}");
+    }
+
+    /// Given an auto import that stopped because the drive stopped answering, after photos with XMP warnings,
+    /// When the toast of its end is made,
+    /// Then it names the error and the warnings, and an import that did not stop has no such toast.
+    #[test]
+    fn a_stopped_quiet_import_keeps_its_xmp_warnings_in_the_toast() {
+        let warning = ImportWarning { path: "a.jpg".into(), code: ImportWarningCode::UnmappedXmp, profile: None, mode: None, fields: vec!["crs:Foo".into()] };
+        let mut task = ImportTask::new(vec!["/share".into()], json!({}), 0, false);
+        assert_eq!(stopped_text(&task), None, "an import that did not stop");
+        task.stopped = Some("the drive is not answering".into());
+        assert_eq!(stopped_text(&task).as_deref(), Some("Import failed: the drive is not answering"));
+        task.warnings.push(warning);
+        let text = stopped_text(&task).unwrap();
+        assert!(text.starts_with("Import failed: the drive is not answering\n\n"), "{text}");
+        assert!(text.ends_with(&xmp_warnings_text(&task.warnings)), "{text}");
+    }
+
+    /// An import that stopped on an error says so in its row, with what it did before, and ends as a failure when it
+    /// imported nothing.
+    #[test]
+    fn an_import_that_stopped_on_an_error_says_so_in_its_row() {
+        use lightcraft_engine::activity::Ending;
+        let app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), crate::Services { png: None, ..Default::default() });
+        let mut task = ImportTask::new(vec![], json!({}), 0, false);
+        task.stopped = Some("the drive is not answering".into());
+        assert_eq!(ending_of(&task), Ending::Failed);
+        task.imported = 2;
+        assert_eq!(ending_of(&task), Ending::Problems);
+        let (msg, summary, detail) = import_summary(&app, &task);
+        assert_eq!(detail, "Import failed: the drive is not answering");
+        assert_eq!(msg, format!("{summary}\n\nImport failed: the drive is not answering"));
     }
 }

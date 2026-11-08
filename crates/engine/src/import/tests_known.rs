@@ -129,6 +129,6 @@ fn a_trashed_photo_is_not_looked_up_when_imports_replace_it() {
         job.prepare_files(Vec::new(), &std::sync::atomic::AtomicBool::new(false));
         assert_eq!(job.by_path.len(), expected, "{on_deleted:?}");
         let its_content = s.catalog.photo(id).and_then(|p| p.content_hash.clone()).unwrap();
-        assert_eq!(job.by_hash.contains_key(&its_content), on_deleted == OnDeleted::Skip, "{on_deleted:?}");
+        assert_eq!(job.by_hash.contains(&its_content), on_deleted == OnDeleted::Skip, "{on_deleted:?}");
     }
 }
