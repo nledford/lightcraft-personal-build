@@ -258,10 +258,16 @@ fn esc_during_a_drag_is_the_drags() {
     let mut h = app();
     let album = h.app.session.catalog.albums().find(|a| !a.folder).map(|a| a.id.0).expect("a demo album");
     toggle(&mut h);
+    // (the drag and its Esc come in one frame: with no button down a drag is over at the start of the next)
     h.app.ui.dragging_album = Some(album);
-    key(&mut h, "escape");
+    h.events.push(egui::Event::Key { key: egui::Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE });
+    h.step();
+    h.events.push(egui::Event::Key { key: egui::Key::Escape, physical_key: None, pressed: false, repeat: false, modifiers: egui::Modifiers::NONE });
+    h.step();
     assert_eq!(h.app.ui.dragging_album, None, "the drag saw its Esc");
     assert!(h.app.ui.sidebar_keys, "and the keys stay in the sidebar");
+    key(&mut h, "escape");
+    assert!(!h.app.ui.sidebar_keys, "the next Esc is the sidebar's");
 }
 
 /// Keys that come in one frame act one after the other: Down then Enter chooses the row the

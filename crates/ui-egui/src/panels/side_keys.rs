@@ -174,10 +174,11 @@ pub(crate) fn begin(app: &mut LightcraftApp, ui: &egui::Ui, panel: Rect) {
         app.ui.sidebar_keys = false;
         return;
     }
-    // a dialog or an open menu has the keys meanwhile, and so has a drag (Esc abandons it)
+    // a dialog or an open menu has the keys meanwhile, and so has a drag (Esc abandons it); the frame
+    // that Esc ended the drag in (`end_drags` runs first and takes the Esc) the drag is gone already
     let dragging = app.ui.dragging_album.is_some() || app.ui.dragging_section.is_some();
     let dragged = with(ctx, |n| std::mem::replace(&mut n.was_dragging, dragging));
-    if own_window || dragging || dragged {
+    if own_window || dragging || dragged || crate::widgets::escape_taken(ctx) {
         with(ctx, |n| n.had_window = own_window);
         return;
     }

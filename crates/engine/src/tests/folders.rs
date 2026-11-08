@@ -761,7 +761,7 @@ fn an_empty_made_folder_shown_beside_another_folder_stays_shown() {
     s.execute("library.source", &both).unwrap();
     assert_eq!(s.visible_cloned(), vec![photo]);
     assert_eq!(s.source_library_folders().len(), 2, "the made folder, empty, is still one of those shown");
-    // (the other order: the made folder is the one single-folder actions take)
+    // (the other order: the last path is the source's own folder, so now the one with the photo is the one single-folder actions take)
     let both = json!({"kind": "libraryFolder", "paths": [dir.path("made"), dir.path("f")]});
     s.execute("library.source", &both).unwrap();
     assert_eq!(s.visible_cloned(), vec![photo]);
