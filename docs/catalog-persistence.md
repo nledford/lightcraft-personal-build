@@ -134,8 +134,9 @@ one-way step, the upgrade first keeps the files the library was, byte for byte, 
   the session or when it is closed, upgrades it, keeps the files first and is not written when they can't be kept (a
   change that could not be appended to the log is still saved when the upgrade can't be done, whether the files can't
   be kept or the new snapshot can't be written: in the format on disk, in one file, so nothing is lost and nothing is
-  upgraded without its way back; the files kept before then go, since they are not the way back from what is on disk
-  now), and the next open tries again. The files that snapshot keeps are the library as it was when it opened (the
+  upgraded without its way back; the files this session kept then go, since they are not the way back from what is on disk
+  now, but a copy kept earlier stays, also one of the very same files: it was never this session's to remove), and the
+  next open tries again. The files that snapshot keeps are the library as it was when it opened (the
   snapshot, and the log up to where it ended then; where changes were saved in the old format meanwhile, that
   one-file snapshot, with no log): what was changed since is in the files that replace them, not in the kept ones. A snapshot that fails and is tried again keeps them once. When a snapshot during the session does
   that, LightCraft tells where the files are kept, as it does at open (a snapshot when the library is closed, or

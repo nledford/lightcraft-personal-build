@@ -414,9 +414,10 @@ pub struct Journal {
     /// changes were saved in the old format ([`Journal::save_in_old_format`]) it is the `seq`
     /// that snapshot holds and an empty log: its log was reset.
     behind_at: (u64, u64),
-    /// The files [`Journal::keep_before_upgrade`] kept for a snapshot that is not written yet,
-    /// and, once that snapshot is, the names for [`Journal::take_kept`].
-    kept_pending: Option<Vec<String>>,
+    /// The files [`Journal::keep_before_upgrade`] kept for a snapshot that is not written yet (all of
+    /// them, and which of those it wrote: a failed upgrade removes only those), and, once that snapshot
+    /// is written, the names for [`Journal::take_kept`].
+    kept_pending: Option<Kept>,
     kept_written: Vec<String>,
     head_bytes: u64,
     /// The segments `catalog.snap` lists, and the photos they hold (see [`crate::segments`]).
@@ -1321,7 +1322,7 @@ impl Journal {
         self.seq = at;
         let kept = kept.map_err(io)?;
         log::info!("catalog: the files of format v{from} are kept as {:?} before the upgrade", kept.names);
-        self.kept_pending = Some(kept.names);
+        self.kept_pending = Some(kept);
         Ok(())
     }
 
@@ -1330,7 +1331,7 @@ impl Journal {
     fn upgraded_later(&mut self) {
         self.behind = None;
         if let Some(kept) = self.kept_pending.take() {
-            self.kept_written.extend(kept);
+            self.kept_written.extend(kept.names);
         }
     }
 
@@ -1507,8 +1508,9 @@ impl Journal {
         self.snapshot_seq = seq;
         // (a header that states this build's defaults: records are compact again)
         self.header_incomplete = false;
+        // (only the files this session wrote: a copy that was there before is a way back from an earlier open, and stays)
         if let Some(kept) = self.kept_pending.take() {
-            self.forget_kept(&kept);
+            self.forget_kept(&kept.created);
         }
         self.behind_at = (seq, 0);
         let t2 = web_time::Instant::now();

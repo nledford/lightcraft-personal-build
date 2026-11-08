@@ -1150,6 +1150,31 @@ fn unlogged_changes_are_saved_in_the_old_format_where_the_upgrade_cannot_be_writ
     assert_same(&reopen(&store.files), &loaded);
 }
 
+/// Given a library put off whose old files are there already, byte for byte (kept by an earlier open of it), when the later
+/// snapshot reuses them, the upgrade then can't be written and the changes are saved in the old format, then that set is still
+/// there: it was never this session's to remove (only what a session wrote itself goes when its upgrade does not happen).
+#[test]
+fn a_kept_set_that_was_there_before_stays_when_the_upgrade_fails_and_the_old_format_is_saved() {
+    let old = include_str!("fixtures/v14-catalog.snap.json");
+    let log = include_str!("fixtures/v14-catalog.log.jsonl");
+    let store = Garbling::default();
+    store.files.set(SNAPSHOT, old.as_bytes().to_vec());
+    store.files.set(LOG, log.as_bytes().to_vec());
+    *store.garble.lock().unwrap() = true;
+    let (mut j, mut loaded, _) = Journal::open(Box::new(store.clone())).unwrap();
+    let seq = j.seq();
+    let (kept_snap, kept_log) = (format!("{SNAPSHOT}.v14-{seq}"), format!("{LOG}.v14-{seq}"));
+    store.files.set(&kept_snap, old.as_bytes().to_vec());
+    store.files.set(&kept_log, log.as_bytes().to_vec());
+    loaded.apply(Op::SetRating { id: PhotoId(8), rating: 4 }).unwrap();
+    j.snapshot_with_unlogged(&loaded, 1).unwrap();
+    assert_eq!(manifest(&store.files)["version"], 14, "not upgraded: saved in the old format");
+    assert_eq!(store.files.get(&kept_snap).as_deref(), Some(old.as_bytes()), "the snapshot kept before is still there");
+    assert_eq!(store.files.get(&kept_log).as_deref(), Some(log.as_bytes()), "and so is the log");
+    assert!(j.take_kept().is_empty(), "nothing was kept by that session to tell");
+    assert!(store.files.files.lock().unwrap().keys().filter(|k| k.contains(".v14-")).count() == 2, "and nothing else is kept");
+}
+
 /// Given a library whose upgrade was put off and whose old files can't be kept, when there is
 /// nothing unlogged, then the compaction fails and the files are as they were; and when there is
 /// but the old format can't be written either, it fails with the keeping error and changes nothing.
