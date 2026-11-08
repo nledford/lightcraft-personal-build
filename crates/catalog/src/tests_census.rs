@@ -2,7 +2,7 @@
 //! The data a user keeps most, the color labels and keywords of photos and folders, is what the comparison reports first.
 #![cfg(not(target_arch = "wasm32"))]
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
@@ -151,7 +151,8 @@ fn a_library_and_its_official_copy_have_no_must_keep_differences() {
         let (a, b) = (read(&library), read(&copy));
         let d = census::diff(&a, &b);
         assert!(!d.differs(), "{name}:\n{}", d.report(false));
-        assert!(d.other.is_empty(), "{name}:\n{}", d.report(false));
+        // (the only other difference is the smart album whose rules hold what official LightCraft has no field for: `album.rules.*` losses)
+        assert_eq!(d.other, BTreeMap::from([("album.rules", 1)]), "{name}:\n{}", d.report(false));
         assert!(a.totals.labeled_photos >= 3 && a.totals.keyworded_photos >= 2 && a.totals.labeled_folders == 2, "{name}: not an empty proof");
         // (what a conversion changes on purpose is context, not a difference: the format, and the record that only said when a
         // folder was made, which official LightCraft has no place for)

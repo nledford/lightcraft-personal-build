@@ -7,10 +7,12 @@ catalog.albums.*.parent
 catalog.albums.*.photos
 catalog.albums.*.photos[]
 catalog.albums.*.smart.album
+catalog.albums.*.smart.albums[]
 catalog.albums.*.smart.camera
 catalog.albums.*.smart.date
 catalog.albums.*.smart.dateFrom
 catalog.albums.*.smart.dateTo
+catalog.albums.*.smart.dates[]
 catalog.albums.*.smart.deleted
 catalog.albums.*.smart.edited
 catalog.albums.*.smart.flag
@@ -18,10 +20,12 @@ catalog.albums.*.smart.folder
 catalog.albums.*.smart.imported
 catalog.albums.*.smart.importedFrom
 catalog.albums.*.smart.keyword
+catalog.albums.*.smart.keywords[]
 catalog.albums.*.smart.kind
 catalog.albums.*.smart.label
 catalog.albums.*.smart.lens
 catalog.albums.*.smart.libraryFolder
+catalog.albums.*.smart.libraryFolders[]
 catalog.albums.*.smart.merged
 catalog.albums.*.smart.person
 catalog.albums.*.smart.rating
@@ -140,6 +144,10 @@ photo.id
 photo.imported
 photo.kind
 photo.label
+photo.left_in_file.descriptions
+photo.left_in_file.keywords
+photo.left_in_file.location
+photo.left_in_file.ratings
 photo.local
 photo.local_baseline
 photo.meta.alt_text

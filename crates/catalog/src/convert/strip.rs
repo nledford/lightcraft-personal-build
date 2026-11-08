@@ -12,18 +12,34 @@ use std::sync::Arc;
 use lightcraft_develop::{LensSource, Process};
 
 use super::{Loss, Target};
-use crate::{Catalog, FolderRecord, Photo};
+use crate::{Album, AlbumId, Catalog, Filter, FolderRecord, LeftInFile, Photo};
 
 /// The newest rendering process build 7248 has (it keeps a number it doesn't know, and renders it as its newest).
 const NEWEST_PROCESS_7248: Process = Process::V2;
 
+/// Who can't hold a kind of data.
+#[derive(Clone, Copy)]
+enum Lost {
+    /// Official LightCraft and build 7248 both lack it.
+    Both,
+    /// Only official LightCraft lacks it (build 7248 has it).
+    Official,
+    /// Only build 7248 lacks it (official LightCraft has it).
+    Build7248,
+}
+
 /// A kind of data a target can't hold.
 struct Drop {
     id: &'static str,
-    /// Official LightCraft can't hold it either (otherwise only build 7248 can't).
-    official: bool,
+    on: Lost,
     what: &'static str,
     effect: &'static str,
+}
+
+impl Drop {
+    fn lost_on(&self, target: Target) -> bool {
+        matches!((self.on, target), (Lost::Both, _) | (Lost::Official, Target::Official) | (Lost::Build7248, Target::Build7248))
+    }
 }
 
 const MADE: &str = "folder.made";
@@ -36,69 +52,106 @@ const LENS_SOURCE: &str = "embedded_lens.source";
 const NR_OUTLIERS: &str = "settings.detail.nr_outliers";
 const ON_PHOTO: &str = "settings.masks.on_photo";
 const TRUNCATED: &str = "photo.truncated";
+const LEFT_IN_FILE: &str = "photo.left_in_file";
+const RULE_ALBUMS: &str = "album.rules.albums";
+const RULE_DATES: &str = "album.rules.dates";
+const RULE_LIBRARY_FOLDERS: &str = "album.rules.library_folders";
+const RULE_KEYWORDS: &str = "album.rules.keywords";
 
 const DROPS: &[Drop] = &[
     Drop {
         id: MADE,
-        official: true,
+        on: Lost::Both,
         what: "a folder record's `made`: a folder created through LightCraft before it holds a photo",
         effect: "the folder has no row of its own until a photo's path is in it (an empty one is gone from the tree); \
                  its color label is kept, and a record that said only this is dropped; the folder on disk is not touched",
     },
     Drop {
         id: MAKE,
-        official: false,
+        on: Lost::Build7248,
         what: "a photo's camera maker (`meta.make`)",
         effect: "build 7248 has no field for it (the file still has it)",
     },
     Drop {
         id: LENS_MAKE,
-        official: false,
+        on: Lost::Build7248,
         what: "a photo's lens maker (`meta.lens_make`)",
         effect: "build 7248 has no field for it (the file still has it)",
     },
     Drop {
         id: FLASH,
-        official: false,
+        on: Lost::Build7248,
         what: "whether the flash fired (`meta.flash`)",
         effect: "build 7248 has no field for it (the file still has it)",
     },
     Drop {
         id: EXPOSURE_BIAS,
-        official: false,
+        on: Lost::Build7248,
         what: "the exposure compensation (`meta.exposure_bias`)",
         effect: "build 7248 has no field for it (the file still has it)",
     },
     Drop {
         id: SERIAL_NUMBER,
-        official: false,
+        on: Lost::Build7248,
         what: "the camera's serial number (`meta.serial_number`)",
         effect: "build 7248 has no field for it (the file still has it)",
     },
     Drop {
         id: LENS_SOURCE,
-        official: false,
+        on: Lost::Build7248,
         what: "where an embedded lens correction came from (`embedded_lens.source`: a lens database profile)",
         effect: "build 7248 reads the correction as the file's own; the correction itself is kept",
     },
     Drop {
         id: NR_OUTLIERS,
-        official: false,
+        on: Lost::Build7248,
         what: "the develop setting `detail.nr_outliers` (outlier photosites replaced before demosaicing), in the photo's edit, versions or history",
         effect: "build 7248 doesn't have the setting: the photo renders without it, as it did before the setting existed",
     },
     Drop {
         id: ON_PHOTO,
-        official: false,
+        on: Lost::Build7248,
         what: "a mask's `on_photo` (its coordinates are on the photo as shot, not on the corrected frame), in the photo's edit, versions or history",
         effect: "build 7248 reads every mask's coordinates as on the corrected frame: a mask stays where it is while no lens correction, Upright, \
                  Transform or Rotate moves the frame, and sits elsewhere when one does",
     },
     Drop {
         id: TRUNCATED,
-        official: true,
+        on: Lost::Official,
         what: "a photo's mark of a JPEG cut short (`truncated`: shown from the data present, \"Damaged file\")",
-        effect: "the copy doesn't say the file is cut short (the file on disk is not touched); official LightCraft refuses such a file as unreadable, and build 7248 has no field for it",
+        effect: "official LightCraft has no field for it, so the copy doesn't say the file is cut short (the file on disk is not touched); \
+                 official LightCraft refuses such a file as unreadable",
+    },
+    Drop {
+        id: LEFT_IN_FILE,
+        on: Lost::Official,
+        what: "a photo's note of what its file says that import left in the file (`left_in_file`: keywords, rating/flag/label, descriptions, location, develop settings)",
+        effect: "official LightCraft has no field for it, so it treats the file's keywords, ratings and labels, descriptions, location or settings that were \
+                 never read into the library as nothing, and a sidecar it writes for the photo can take them out of the file",
+    },
+    Drop {
+        id: RULE_ALBUMS,
+        on: Lost::Official,
+        what: "the albums a smart album's rules choose (`albums` beside `album`)",
+        effect: "official LightCraft has no such rule: the smart album keeps its other rules and matches more photos than it did",
+    },
+    Drop {
+        id: RULE_DATES,
+        on: Lost::Official,
+        what: "the dates a smart album's rules choose (`dates` beside `date`)",
+        effect: "official LightCraft has no such rule: the smart album keeps its other rules and matches more photos than it did",
+    },
+    Drop {
+        id: RULE_LIBRARY_FOLDERS,
+        on: Lost::Official,
+        what: "the library folders a smart album's rules choose (`libraryFolders` beside `libraryFolder`)",
+        effect: "official LightCraft has no such rule: the smart album keeps its other rules and matches more photos than it did",
+    },
+    Drop {
+        id: RULE_KEYWORDS,
+        on: Lost::Official,
+        what: "the keywords a smart album's rules choose (`keywords` beside `keyword`)",
+        effect: "official LightCraft has no such rule: the smart album keeps its other rules and matches more photos than it did",
     },
 ];
 
@@ -116,6 +169,9 @@ pub(crate) fn for_target(source: &Catalog, target: Target) -> Stripped {
     let mut tally: BTreeMap<&'static str, u64> = BTreeMap::new();
     let mut warnings = Vec::new();
     catalog.folder_records = folder_records(&source.folder_records, &mut tally);
+    if target == Target::Official {
+        catalog.albums = album_rules(&source.albums, &mut tally);
+    }
     let mut newer_process = 0u64;
     for (id, photo) in &source.photos {
         if target == Target::Build7248 {
@@ -141,7 +197,7 @@ pub(crate) fn for_target(source: &Catalog, target: Target) -> Stripped {
     let losses = tally
         .into_iter()
         .filter_map(|(id, records)| {
-            let d = DROPS.iter().find(|d| d.id == id && (d.official || target == Target::Build7248))?;
+            let d = DROPS.iter().find(|d| d.id == id && d.lost_on(target))?;
             Some(Loss { id: d.id.to_string(), what: d.what.to_string(), records, effect: d.effect.to_string() })
         })
         .collect();
@@ -164,12 +220,70 @@ fn folder_records(records: &BTreeMap<String, FolderRecord>, tally: &mut BTreeMap
     kept
 }
 
+/// The smart albums of a target that has no place for the rule fields this build added: each one found is counted and cleared
+/// (the album then matches more photos than it did).
+fn album_rules(albums: &BTreeMap<AlbumId, Album>, tally: &mut BTreeMap<&'static str, u64>) -> BTreeMap<AlbumId, Album> {
+    let mut kept = albums.clone();
+    for album in kept.values_mut() {
+        let Some(rules) = album.smart.as_mut() else { continue };
+        // (every field by name: a new one doesn't compile until it is classified here and in the field list)
+        let Filter {
+            text: _,
+            rating: _,
+            rating_op: _,
+            flag: _,
+            label: _,
+            only: _,
+            only_none: _,
+            labels: _,
+            flags: _,
+            kind: _,
+            edited: _,
+            album: _,
+            albums,
+            deleted: _,
+            date: _,
+            dates,
+            library_folder: _,
+            library_folders,
+            keyword: _,
+            keywords,
+            person: _,
+            camera: _,
+            lens: _,
+            date_from: _,
+            date_to: _,
+            imported: _,
+            imported_from: _,
+            merged: _,
+            folder: _,
+            subfolders: _,
+            rule_set: _,
+        } = rules.as_mut();
+        for (set, id) in [
+            (!albums.is_empty(), RULE_ALBUMS),
+            (!dates.is_empty(), RULE_DATES),
+            (!library_folders.is_empty(), RULE_LIBRARY_FOLDERS),
+            (!keywords.is_empty(), RULE_KEYWORDS),
+        ] {
+            if set {
+                *tally.entry(id).or_default() += 1;
+            }
+        }
+        albums.clear();
+        dates.clear();
+        library_folders.clear();
+        keywords.clear();
+    }
+    kept
+}
+
 /// What `target` can't hold of `p`, by [`DROPS`] id.
 pub(crate) fn found_in(p: &Photo, target: Target) -> Vec<&'static str> {
     let m = &p.meta;
     let mut found = Vec::new();
     let mut note = |has: bool, id: &'static str| {
-        if has && DROPS.iter().any(|d| d.id == id && (d.official || target == Target::Build7248)) {
+        if has && DROPS.iter().any(|d| d.id == id && d.lost_on(target)) {
             found.push(id);
         }
     };
@@ -182,13 +296,15 @@ pub(crate) fn found_in(p: &Photo, target: Target) -> Vec<&'static str> {
     note(p.settings_holders().any(|s| s.detail.nr_outliers), NR_OUTLIERS);
     note(p.settings_holders().any(|s| s.masks.iter().any(|m| m.on_photo)), ON_PHOTO);
     note(p.truncated, TRUNCATED);
+    note(!p.left_in_file.is_nothing(), LEFT_IN_FILE);
     found
 }
 
 /// `p` without what [`found_in`] finds for `target`.
 pub(crate) fn clear(p: &mut Photo, target: Target) {
-    p.truncated = false;
-    if target != Target::Build7248 {
+    if target == Target::Official {
+        p.truncated = false;
+        p.left_in_file = LeftInFile::default();
         return;
     }
     let m = &mut p.meta;

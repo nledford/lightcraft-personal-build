@@ -19,8 +19,8 @@ use crate::keywords::KeywordInfo;
 use crate::lock::LibraryLock;
 use crate::tests_stored::{edited, fixture_library, full, plain};
 use crate::{
-    Album, AlbumId, Catalog, ColorLabel, Filter, Flag, FolderRecord, HistoryStep, Journal, LoadReport, MemStore, Meta, Op, Photo, PhotoId, Stack,
-    StackId, Version, stored,
+    Album, AlbumId, Catalog, ColorLabel, Filter, Flag, FolderRecord, HistoryStep, Journal, LeftInFile, LoadReport, MemStore, Meta, Op, Photo, PhotoId,
+    Stack, StackId, Version, stored,
 };
 
 // ---- folders and files
@@ -314,6 +314,7 @@ fn maximal_photo() -> Photo {
         tracking: None,
     });
     p.truncated = true;
+    p.left_in_file = LeftInFile { keywords: true, ratings: true, descriptions: true, location: true, develop: true };
     p.preview_checked = "0.8.0".into();
     p.history_cursor = Some(1);
     p.embedded_lens = Some(Box::new(EmbeddedLens { vignette: Some(Default::default()), source: LensSource::Database, ..Default::default() }));
@@ -367,7 +368,14 @@ pub(crate) fn personal_ops() -> Vec<Op> {
         Op::AddAlbum {
             album: Album {
                 parent: Some(AlbumId(2)),
-                smart: Some(Box::new(Filter { keyword: Some("boats".into()), ..Filter::default() })),
+                smart: Some(Box::new(Filter {
+                    keyword: Some("boats".into()),
+                    keywords: vec!["sea".into()],
+                    albums: vec![AlbumId(1)],
+                    dates: vec!["2019-05".into()],
+                    library_folders: vec!["/pictures/2019".into()],
+                    ..Filter::default()
+                })),
                 ..Album::new(AlbumId(3), "Boats")
             },
         },
@@ -523,16 +531,44 @@ fn a_personal_library_converts_to_official_in_every_layout() {
         let library = scratch.join("library");
         personal_library(&library, one_file, per, tail);
         let report = run_lossy(&library, &scratch.join("copy"), Target::Official);
-        assert_eq!(loss_ids(&report), ["folder.made", "photo.truncated"], "{name}");
-        assert_eq!(report.losses[0].records, 2, "{name}: the records with a `made`");
-        assert_only_declared(&diffs_between(&library, &scratch.join("copy")), &["catalog.folder_records.*", "catalog.folder_records.*.made", "photo.truncated"]);
+        assert_eq!(
+            loss_ids(&report),
+            [
+                "album.rules.albums",
+                "album.rules.dates",
+                "album.rules.keywords",
+                "album.rules.library_folders",
+                "folder.made",
+                "photo.left_in_file",
+                "photo.truncated"
+            ],
+            "{name}"
+        );
+        let records = |id: &str| report.losses.iter().find(|l| l.id == id).map(|l| l.records);
+        assert_eq!(records("folder.made"), Some(2), "{name}: the records with a `made`");
+        for id in ["album.rules.albums", "album.rules.dates", "album.rules.keywords", "album.rules.library_folders", "photo.left_in_file", "photo.truncated"] {
+            assert_eq!(records(id), Some(1), "{name}: {id}");
+        }
+        assert_only_declared(
+            &diffs_between(&library, &scratch.join("copy")),
+            &[
+                "catalog.folder_records.*",
+                "catalog.folder_records.*.made",
+                "photo.truncated",
+                "photo.left_in_file",
+                "catalog.albums.*.smart.albums",
+                "catalog.albums.*.smart.dates",
+                "catalog.albums.*.smart.libraryFolders",
+                "catalog.albums.*.smart.keywords",
+            ],
+        );
     }
 }
 
 /// … and for build 7248, whose copy loses what that build has no place for: the metadata and settings this build added.
 #[test]
 fn a_personal_library_converts_to_7248_in_every_layout() {
-    const LOST: [&str; 11] = [
+    const LOST: [&str; 10] = [
         "catalog.folder_records.*",
         "catalog.folder_records.*.made",
         "photo.meta.make",
@@ -543,7 +579,6 @@ fn a_personal_library_converts_to_7248_in_every_layout() {
         "photo.embedded_lens.source",
         ".detail.nr_outliers",
         ".masks[].on_photo",
-        "photo.truncated",
     ];
     for (name, one_file, per, tail) in LAYOUTS {
         let scratch = Scratch::new("7248");
@@ -565,7 +600,7 @@ fn a_personal_library_converts_to_7248_in_every_layout() {
             ("embedded_lens.source", having(&|p| p["embedded_lens"]["source"] == "database")),
             ("settings.detail.nr_outliers", outliers),
             ("settings.masks.on_photo", on_photo),
-            ("photo.truncated", having(&|p| p["truncated"] == true)),
+        // (`truncated`, `left_in_file` and a smart album's `albums`, `dates`, `libraryFolders` and `keywords` are not here: build 7248 has them, so the diff below must not show them)
         ]
         .into();
         assert_eq!(ids, want, "{name}");
@@ -798,7 +833,7 @@ fn a_loss_is_refused_without_allow_loss_and_nothing_is_written() {
     let library = scratch.join("library");
     personal_library(&library, false, 4, true);
     let before = tree(&library);
-    for (target, ids) in [(Target::Official, 1), (Target::Build7248, 9)] {
+    for (target, ids) in [(Target::Official, 7), (Target::Build7248, 9)] {
         let out = scratch.join("copy");
         match run(&library, &out, target) {
             Err(ConvertError::Losses(report)) => {
@@ -824,8 +859,25 @@ fn a_loss_is_refused_without_allow_loss_and_nothing_is_written() {
 fn a_library_without_a_loss_needs_no_allow_loss() {
     let scratch = Scratch::new("none-lost");
     let library = scratch.join("library");
-    let ops: Vec<Op> =
-        personal_ops().into_iter().filter(|op| !matches!(op, Op::SetFolderRecord { record: Some(r), .. } if r.made.is_some())).collect();
+    // (a library of nothing official LightCraft lacks: no `made`, no cut-short JPEG, nothing left in a file, no smart rules it has no field for)
+    let ops: Vec<Op> = personal_ops()
+        .into_iter()
+        .filter(|op| !matches!(op, Op::SetFolderRecord { record: Some(r), .. } if r.made.is_some()))
+        .map(|op| match op {
+            Op::AddPhoto { mut photo } => {
+                photo.truncated = false;
+                photo.left_in_file = LeftInFile::default();
+                Op::AddPhoto { photo }
+            }
+            Op::AddAlbum { mut album } => {
+                if let Some(rules) = album.smart.as_mut() {
+                    (rules.albums, rules.dates, rules.library_folders, rules.keywords) = Default::default();
+                }
+                Op::AddAlbum { album }
+            }
+            op => op,
+        })
+        .collect();
     put_store(&library, &saved(&ops, &[], false, 4));
     // (official LightCraft holds all of what is left; build 7248 lacks some of it)
     assert!(run(&library, &scratch.join("official"), Target::Official).unwrap().losses.is_empty());
@@ -888,7 +940,7 @@ fn what_7248_lacks_is_found_where_a_photo_holds_it_and_cleared_in_the_copy_only(
             "a database lens",
             Box::new(|p| p.embedded_lens = Some(Box::new(EmbeddedLens { source: LensSource::Database, ..Default::default() }))),
         ),
-        ("photo.truncated", "a cut-short JPEG", Box::new(|p| p.truncated = true)),
+        // (`photo.truncated` is not here: build 7248 has the field)
     ];
     for (id, holder, set) in &cases {
         let mut p = plain(1);
@@ -904,6 +956,30 @@ fn what_7248_lacks_is_found_where_a_photo_holds_it_and_cleared_in_the_copy_only(
     p.embedded_lens = Some(Box::default());
     p.develop = edited(|s| s.masks = vec![Mask { on_photo: false, ..Mask::default() }]);
     assert!(found_in(&p, Target::Build7248).is_empty());
+}
+
+/// A photo's `truncated` and `left_in_file` are fields build 7248 has and official LightCraft lacks: found and cleared for
+/// official only, and the photo they came from is not changed by clearing the copy.
+#[test]
+fn what_only_official_lacks_is_found_and_cleared_for_official_only() {
+    let cases: Vec<(&str, Box<dyn Fn(&mut Photo)>)> = vec![
+        ("photo.truncated", Box::new(|p| p.truncated = true)),
+        ("photo.left_in_file", Box::new(|p| p.left_in_file = LeftInFile { keywords: true, ..Default::default() })),
+        ("photo.left_in_file", Box::new(|p| p.left_in_file = LeftInFile { develop: true, ..Default::default() })),
+    ];
+    for (id, set) in &cases {
+        let mut p = plain(1);
+        set(&mut p);
+        assert_eq!(found_in(&p, Target::Official), [*id]);
+        assert!(found_in(&p, Target::Build7248).is_empty(), "{id}: build 7248 has the field");
+        let mut kept = p.clone();
+        clear(&mut kept, Target::Build7248);
+        assert_eq!(kept, p, "{id}: the copy for build 7248 changed it");
+        let mut cleared = p.clone();
+        clear(&mut cleared, Target::Official);
+        assert!(found_in(&cleared, Target::Official).is_empty(), "{id} is still there after it is cleared");
+        assert_eq!(found_in(&p, Target::Official), [*id], "{id}: clearing the copy changed the photo it was made from");
+    }
 }
 
 // ---- what this build's reader can't see
@@ -923,28 +999,41 @@ fn put_owned(dir: &Path, files: &[(String, Vec<u8>)]) {
     put(dir, &files.iter().map(|(k, v)| (k.as_str(), v.as_slice())).collect::<Vec<_>>());
 }
 
-/// Build 7248 has fields this build's catalog has no place for: what a sync chose to leave in the file, a truncated video, the
-/// keywords, albums, dates and folders of a smart album's rules. This build's reader drops them, so each one found in the
-/// library is a loss the copy would hide: it is reported, and the copy is not made without `--allow-loss`.
+/// Build 7248 can hold fields this build's reader has never heard of (here a photo's `hologram` and a smart rule's `palette`).
+/// This build's reader drops them, so each one found in the library is a loss the copy would hide: it is reported, and the copy
+/// is not made without `--allow-loss`. Fields this build knows and official LightCraft lacks (what a sync left in the file, a
+/// cut-short JPEG, a smart album's keywords) are reported for official LightCraft only, under their own names.
 #[test]
 fn fields_this_build_has_no_place_for_are_reported_as_losses() {
     let scratch = Scratch::new("unknown");
     let library = scratch.join("library");
-    let smart = r#""9":{"id":9,"name":"Boats and more","parent":null,"folder":false,"photos":[],"cover":null,"smart":{"keywords":["boats","sea"]}},"#;
-    put_owned(&library, &b7248_edited(|s| *s = s.replacen(r#""id":1,"#, r#""id":1,"left_in_file":{"keywords":true},"truncated":true,"#, 1), smart));
+    let smart = r#""9":{"id":9,"name":"Boats and more","parent":null,"folder":false,"photos":[],"cover":null,"smart":{"keywords":["boats","sea"],"palette":["red"]}},"#;
+    let photo = r#""id":1,"hologram":{"on":true},"left_in_file":{"keywords":true},"truncated":true,"#;
+    put_owned(&library, &b7248_edited(|s| *s = s.replacen(r#""id":1,"#, photo, 1), smart));
     let before = tree(&library);
     let Err(ConvertError::Losses(report)) = run(&library, &scratch.join("copy"), Target::Official) else { panic!("the copy was made") };
     let found: BTreeMap<&str, u64> = report.losses.iter().map(|l| (l.id.as_str(), l.records)).collect();
     assert_eq!(
         found,
-        BTreeMap::from([("input:photo.left_in_file", 1), ("input:photo.truncated", 1), ("input:catalog.albums.*.smart.keywords", 1)]),
+        BTreeMap::from([
+            ("input:photo.hologram", 1),
+            ("input:catalog.albums.*.smart.palette", 1),
+            ("photo.left_in_file", 1),
+            ("photo.truncated", 1),
+            ("album.rules.keywords", 1),
+        ]),
         "{report}"
     );
     assert!(!scratch.join("copy").exists());
     assert_eq!(tree(&library), before);
+    // build 7248 has the fields this build knows: only what this build's reader could not see is lost
+    let Err(ConvertError::Losses(report)) = run(&library, &scratch.join("old"), Target::Build7248) else { panic!("the copy was made") };
+    let found: BTreeMap<&str, u64> = report.losses.iter().map(|l| (l.id.as_str(), l.records)).collect();
+    assert_eq!(found, BTreeMap::from([("input:photo.hologram", 1), ("input:catalog.albums.*.smart.palette", 1)]), "{report}");
+    assert!(!scratch.join("old").exists());
     // with `--allow-loss` the rest is copied, and the report names what was not
     let report = run_lossy(&library, &scratch.join("copy"), Target::Official);
-    assert_eq!(report.losses.len(), 3);
+    assert_eq!(report.losses.len(), 5);
     let (copy, _) = read_lib(&scratch.join("copy"));
     assert_eq!(copy.len(), 24);
 }
@@ -1438,6 +1527,11 @@ fn every_field_is_classified() {
         "photo.embedded_lens.source",
         "photo.develop.masks[].on_photo",
         "photo.truncated",
+        "photo.left_in_file.keywords",
+        "catalog.albums.*.smart.albums[]",
+        "catalog.albums.*.smart.dates[]",
+        "catalog.albums.*.smart.libraryFolders[]",
+        "catalog.albums.*.smart.keywords[]",
         "catalog.folder_records.*.made",
     ] {
         assert!(now.contains(dropped), "{dropped}");
