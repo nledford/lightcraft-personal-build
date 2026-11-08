@@ -6,7 +6,7 @@ mod dialog;
 mod settings;
 mod view;
 
-pub use dialog::{Dialog, NameEdit, SyncCounts, default_preset_groups};
+pub use dialog::{Dialog, NameEdit, SyncCounts, SyncFolder, default_preset_groups};
 pub use settings::{
     AppSettings, AppearanceMode, DarkTheme, EditFile, EditFormat, EditSpace, GridBadges, HOT_PIXEL_LIMIT_DEFAULT, HOT_PIXEL_LIMITS, KeywordChips,
     LOUPE_EDGE_CEILING, LOUPE_EDGE_STEP, LaunchLibrary, LightTheme, LightroomImport, MIN_TEXTURE_SIDE, PHOTOCRAFT, PREVIEW_LIMITS, RECENT_LIBRARIES,
@@ -41,9 +41,6 @@ pub struct UiState {
     /// when it reads a file with the flag on.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub follow_system_language: bool,
-    /// The Build Previews run last announced (its identity, finished?).
-    #[serde(skip)]
-    pub preview_build_seen: Option<(usize, bool)>,
     /// The library backup whose end was announced (see `backup_status`): an address, only good
     /// for this run.
     #[serde(skip)]
@@ -159,6 +156,12 @@ pub struct UiState {
     /// so they stay folded ([`UiState::sanitized`] moves them over), never written.
     #[serde(skip_serializing)]
     pub collapsed_sidebar: Vec<String>,
+    /// The order generation `sidebar` was saved in ([`crate::sidebar::ORDER_VERSION`]). Settings
+    /// without it hold generation 0; [`UiState::sanitized`] moves Folders above Local once in a
+    /// layout still in generation 0's usual order, then records the current one, so a person who
+    /// later drags Folders back keeps that order.
+    #[serde(default, deserialize_with = "lenient_generation")]
+    pub sidebar_order_version: u32,
     /// A face's name being typed in the loupe.
     #[serde(skip)]
     pub name_edit: Option<NameEdit>,
@@ -266,6 +269,13 @@ pub struct UiState {
     /// An album or folder row being dragged in the sidebar (dropped on a folder to move it there).
     #[serde(skip)]
     pub dragging_album: Option<u64>,
+    /// A Folders row being dragged in the sidebar (its path; dropped on another row to move the
+    /// folder there on disk).
+    #[serde(skip)]
+    pub dragging_folder: Option<String>,
+    /// The library `dragging_folder` was picked up in (`Session::library_generation`).
+    #[serde(skip)]
+    pub dragging_folder_library: u64,
     /// A sidebar section being dragged by its header (dropped between sections to move it there).
     #[serde(skip)]
     pub dragging_section: Option<crate::sidebar::SidebarSection>,
@@ -355,6 +365,10 @@ pub struct UiState {
     /// A keyword being dragged in the Keyword List (onto another to nest it).
     #[serde(skip)]
     pub dragging_keyword: Option<String>,
+    /// Choosing several rows of a sidebar list: the rows drawn and the anchor of each list, and
+    /// the other keywords picked in the Keyword List.
+    #[serde(skip)]
+    pub side: crate::panels::side_select::SideState,
     /// A running slideshow (full screen; see [`crate::panels::slideshow`]).
     #[serde(skip)]
     pub slideshow: Option<Box<crate::panels::slideshow::Run>>,
@@ -381,6 +395,11 @@ pub struct UiState {
     /// The HUD toast on screen (shown only through [`UiState::show_toast`]; the painter then extends `until` while hovered and clears it).
     #[serde(skip)]
     pub toast: Option<crate::toast::Toast>,
+    /// The toast that offers Undo: its text, how many undo steps the session had committed, and how many the undo
+    /// stack held, when the action it tells of finished. The toast shows the button only while its text is still on
+    /// screen and the stacks are as that action left them, so Undo can only reach that action ([`crate::LightcraftApp::toast_undoable`]).
+    #[serde(skip)]
+    pub toast_undo: Option<(String, u64, usize)>,
     /// The result of the last Find Missing Photos (it searches in the background).
     #[serde(skip)]
     pub last_find_missing: Option<serde_json::Value>,
@@ -429,7 +448,6 @@ impl Default for UiState {
             docking_version: crate::docking::DOCKING_VERSION,
             language: crate::i18n::default_language(),
             follow_system_language: true,
-            preview_build_seen: None,
             backup_seen: None,
             restore_seen: None,
             unsaved_seen: false,
@@ -482,6 +500,7 @@ impl Default for UiState {
             sidebar_keys_grace: 0,
             sidebar_cursor_moved: false,
             collapsed_sidebar: Vec::new(),
+            sidebar_order_version: crate::sidebar::ORDER_VERSION,
             name_edit: None,
             person_page: None,
             person_from: None,
@@ -516,6 +535,8 @@ impl Default for UiState {
             reveal_keyword: None,
             reveal_folder: None,
             dragging_album: None,
+            dragging_folder: None,
+            dragging_folder_library: 0,
             dragging_section: None,
             curve_channel: "parametric".into(),
             mixer_mode: "hue".into(),
@@ -553,6 +574,7 @@ impl Default for UiState {
             sidebar_trees: Default::default(),
             keyword_list_selected: None,
             dragging_keyword: None,
+            side: Default::default(),
             info_overlay: InfoOverlay::Off,
             brief_info: BriefInfo::default(),
             layout_image: LayoutImage::default(),
@@ -565,6 +587,7 @@ impl Default for UiState {
             compare: None,
             reference: None,
             toast: None,
+            toast_undo: None,
             last_find_missing: None,
             last_find_missing_result: None,
             #[cfg(test)]
@@ -591,6 +614,8 @@ impl UiState {
     /// way a toast gets on screen. The same text shown again while still visible extends it and
     /// keeps its `shown_at`, so it does not fade in again; a different text replaces it.
     pub fn show_toast(&mut self, now: f64, text: String, floor: f64, label: Option<lightcraft_catalog::ColorLabel>) {
+        // a toast offers Undo only when `LightcraftApp::toast_undoable` says so, after this
+        self.toast_undo = None;
         let until = now + crate::toast::Toast::duration(&text, floor);
         match &mut self.toast {
             Some(t) if t.text == text && (now <= t.until || t.hovered) => {
@@ -695,6 +720,8 @@ impl UiState {
         self.brush_size = self.brush_size.clamp(0.002, 0.5);
         self.sidebar.adopt_collapsed(&std::mem::take(&mut self.collapsed_sidebar));
         self.normalize_folder_parents();
+        self.sidebar.adopt_order_version(self.sidebar_order_version);
+        self.sidebar_order_version = self.sidebar_order_version.max(crate::sidebar::ORDER_VERSION);
         self.dialog = None;
         self.fullscreen = false;
         if !crate::state::PREVIEW_LIMITS.contains(&self.settings.preview_limit) {
@@ -717,6 +744,13 @@ impl UiState {
     pub fn record_startup_dialog_seen(&mut self) {
         self.seen_version = Some(env!("CARGO_PKG_VERSION").to_string());
     }
+}
+
+/// A generation number read leniently: what isn't a whole number that fits reads as 0, the
+/// generation of settings from before the number was written.
+fn lenient_generation<'de, D: serde::Deserializer<'de>>(d: D) -> Result<u32, D::Error> {
+    let value = serde_json::Value::deserialize(d)?;
+    Ok(value.as_u64().and_then(|n| u32::try_from(n).ok()).unwrap_or(0))
 }
 
 /// A list of ids read leniently: what isn't a list is none, and what isn't text in it is left out.

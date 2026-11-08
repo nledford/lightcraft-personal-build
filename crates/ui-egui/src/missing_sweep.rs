@@ -97,21 +97,28 @@ pub fn ask(app: &mut LightcraftApp, reply: Sender<Value>) -> Outcome {
         })
     };
     let done = move |app: &mut LightcraftApp, _ctx: &egui::Context, checked: Result<Option<Vec<(PhotoId, String)>>, String>| {
-        let (answer, complete) = match checked {
+        use lightcraft_engine::activity::{Ending, Outcome as Row};
+        let (answer, complete, row) = match checked {
+            // ✕ pressed before another library was opened still counts: the row says stopped
+            Ok(None) => (control::failure("Missing Photos: the check was stopped"), false, Row::ended(Ending::Stopped)),
+            // a check of the library before is no stopped task of this one: only the row's ✕ makes it one
             _ if app.session.library_generation() != library => {
-                (control::failure("Missing Photos: another library was opened before the check ended"), false)
+                let why = "Missing Photos: another library was opened before the check ended";
+                (control::failure(why), false, Row::default())
             }
-            Err(e) => (control::failure(e), false),
-            Ok(None) => (control::failure("Missing Photos: the check was stopped"), false),
-            Ok(Some(gone)) if missing::fingerprint(&app.session.catalog) == snapshot => (control::success(missing::missing_json(gone)), true),
+            Err(e) => (control::failure(e.clone()), false, Row::failed(e)),
+            Ok(Some(gone)) if missing::fingerprint(&app.session.catalog) == snapshot => {
+                (control::success(missing::missing_json(gone)), true, Row::default())
+            }
             // (photos changed while the files were checked, as an import does: the answer is what of the
             // check still holds, and is not kept, for the next request must see the photos as they are then)
-            Ok(Some(gone)) => (control::success(missing::missing_json(missing::still_missing(&app.session.catalog, gone))), false),
+            Ok(Some(gone)) => (control::success(missing::missing_json(missing::still_missing(&app.session.catalog, gone))), false, Row::default()),
         };
         let received = app.missing.answer(library, &answer);
         if complete && !received {
             app.missing.kept = Some(Kept { library, snapshot, at: Instant::now(), answer });
         }
+        row
     };
     if let Err(e) = crate::tasks::spawn_tracked(app, LABEL, KIND, cancel, work, done) {
         app.missing.fail(library, &e);

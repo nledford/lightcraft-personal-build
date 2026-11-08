@@ -6,10 +6,21 @@ pub fn default_preset_groups() -> Vec<String> {
     lightcraft_develop::SettingsGroup::default_copy().iter().filter_map(|g| serde_json::to_value(g).ok()?.as_str().map(str::to_string)).collect()
 }
 
+/// A number no other smart album dialog has had in this run ([`Dialog::SmartRules`]'s `instance`).
+fn new_smart_rules_instance() -> u64 {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+}
+
 impl Dialog {
     /// A fresh Create Preset dialog.
     pub fn create_preset() -> Dialog {
         Dialog::CreatePreset { name: String::new(), group: "User Presets".into(), groups: default_preset_groups() }
+    }
+
+    /// A new smart album rules dialog: a fresh one, whatever rules it holds.
+    pub fn smart_rules(id: Option<u64>, name: String, rules: lightcraft_catalog::RuleSet, parent: Option<u64>) -> Dialog {
+        Dialog::SmartRules { id, name, rules, parent, instance: new_smart_rules_instance() }
     }
 }
 
@@ -142,6 +153,13 @@ pub enum Dialog {
         keyword: String,
         parent: Option<String>,
     },
+    /// Delete or remove several sidebar rows at once (albums, keywords, folders), after asking.
+    Several {
+        rows: crate::panels::side_select::Several,
+        /// The library the question was asked in (`Session::library_generation`): album ids are numbered per library, and a keyword
+        /// of that name or a folder of that path can be another one in a library that opened since, so OK changes nothing there.
+        library: u64,
+    },
     /// Delete a keyword from every photo and the keyword list, after asking.
     DeleteKeyword {
         keyword: String,
@@ -216,6 +234,11 @@ pub enum Dialog {
         /// The folder a new smart album is created in (ignored when editing).
         #[serde(default)]
         parent: Option<u64>,
+        /// Which dialog this is: two dialogs holding the same rules can't be told apart by them, and a drag
+        /// in the editor belongs to the dialog it began in. Made with the dialog ([`Dialog::smart_rules`]),
+        /// never saved.
+        #[serde(skip, default = "new_smart_rules_instance")]
+        instance: u64,
     },
     /// `groups`: the settings groups the preset includes (`SettingsGroup` ids).
     CreatePreset {
@@ -335,6 +358,20 @@ pub enum Dialog {
         /// numbered per library, so in another one they name other photos.
         library: u64,
     },
+    /// Confirm moving a Folders row dropped on another row: the folder `path` goes into `into` on
+    /// disk (`folder.move`). `name` and `into_name` are as the question says them; `count` is
+    /// the library photos in the folder and the folders inside it.
+    MoveFolder {
+        path: String,
+        into: String,
+        name: String,
+        into_name: String,
+        count: usize,
+        dont_ask: bool,
+        /// The library the row was dragged in (`Session::library_generation`): the question's
+        /// folder and photo count belong to it.
+        library: u64,
+    },
     /// Confirm taking a folder's photos out of the library (`library.removeFolder`).
     RemoveFolder {
         path: String,
@@ -368,6 +405,21 @@ pub enum Dialog {
         /// opens as it was last used, see `ImportDefaults::read_in`).
         #[serde(default)]
         read: lightcraft_engine::import::ReadFromPhotos,
+    },
+    /// Synchronize N Folders: the folders chosen in the sidebar, scanned one after another, then synchronized with one
+    /// set of choices, one after another in the library lane (the scans run in [`crate::sync`]).
+    SynchronizeFolders {
+        /// In the sidebar's order; a folder inside another chosen one is left out (the other covers it).
+        folders: Vec<SyncFolder>,
+        import_new: bool,
+        #[serde(default = "yes")]
+        relink_moved: bool,
+        remove_missing: bool,
+        read_metadata: bool,
+        /// The library the folders were scanned in (`Session::library_generation`): photo ids are numbered per
+        /// library, so in another one they name other photos.
+        #[serde(default)]
+        library: u64,
     },
     About,
     Shortcuts,
@@ -416,5 +468,34 @@ impl SyncCounts {
     pub fn nothing_to_do(&self, import_new: bool, import_duplicates: bool) -> bool {
         let has_incoming = import_new && (self.new != 0 || (import_duplicates && self.copies != 0));
         !self.offline && !has_incoming && self.moved == 0 && self.missing == 0 && self.metadata == 0
+    }
+}
+
+/// One folder of the Synchronize N Folders dialog.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncFolder {
+    pub path: String,
+    /// What the dialog calls it (a folder's last two names).
+    pub name: String,
+    /// What its scan found (`None` until it was scanned).
+    pub counts: Option<SyncCounts>,
+    /// Why it is left out (a whole disk, a folder that can't be scanned); it isn't scanned then.
+    #[serde(default)]
+    pub skipped: Option<String>,
+    /// The missing and moved photos its scan found: the only ones its synchronize may remove or relink.
+    #[serde(default)]
+    pub missing: Vec<u64>,
+    #[serde(default)]
+    pub moved: Vec<u64>,
+    /// The photos whose sidecar changed: the only ones its synchronize may read.
+    #[serde(default)]
+    pub metadata: Vec<u64>,
+}
+
+impl SyncFolder {
+    /// Whether it was scanned, or left out.
+    pub fn settled(&self) -> bool {
+        self.counts.is_some() || self.skipped.is_some()
     }
 }

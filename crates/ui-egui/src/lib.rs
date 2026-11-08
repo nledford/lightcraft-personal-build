@@ -30,6 +30,7 @@ mod frame_rate;
 pub mod headless;
 pub mod i18n;
 pub mod icons;
+mod import_queue;
 pub mod lens_db;
 pub mod library_work;
 pub mod lightroom_import;
@@ -38,6 +39,7 @@ pub mod loupe_timing;
 pub mod menus;
 mod missing_sweep;
 pub mod motion;
+pub mod multi_select;
 pub mod panels;
 pub mod pick;
 pub mod recheck;
@@ -196,6 +198,8 @@ impl From<lightcraft_engine::EngineError> for Refusal {
     }
 }
 
+/// How long a toast that offers Undo stays: time to read it and reach the button.
+const UNDO_TOAST_SECONDS: f64 = 6.0;
 /// The `path` of a display profile read from the screen rather than chosen as a file.
 pub const SCREEN_PROFILE: &str = "screen";
 
@@ -258,6 +262,19 @@ impl QuitPrompt {
     }
 }
 
+/// A library switch that stopped to ask first, because tasks wait in line that the other library would drop
+/// (`panels::notices`). `create`: the folder is made when it is confirmed (a New Library).
+#[derive(Clone, Debug, PartialEq)]
+pub struct SwitchPrompt {
+    pub path: String,
+    pub create: bool,
+    pub text: String,
+    /// The library that was open when it was asked (`Session::library_generation`).
+    pub generation: u64,
+    /// The tasks that were waiting when it was asked: the question names these, and only these are agreed to be dropped.
+    pub waiting: Vec<u64>,
+}
+
 pub struct LightcraftApp {
     /// Per-catalog-revision caches of library-wide results the panels show every frame
     /// (expensive on big libraries).
@@ -296,6 +313,8 @@ pub struct LightcraftApp {
     pub quit_prompt: Option<QuitPrompt>,
     /// Keyboard/focus/input state for the prompt above, including its one-frame creation barrier.
     pub(crate) notice_input: panels::notices::PromptInput,
+    /// Switching libraries was stopped to ask first: tasks waiting in line would not run in the other one.
+    pub switch_prompt: Option<SwitchPrompt>,
     /// Quit Anyway was chosen: the window may close with unsaved changes.
     pub quit_confirmed: bool,
     /// How far the backup the library has when LightCraft quits has got in this quit (see
@@ -464,6 +483,10 @@ pub struct LightcraftApp {
     pub waiting_import: panels::library_problem::WaitingImport,
     /// The folders the scan of the review on screen listed, for the import that review starts (and no other).
     pub review_listed: Option<lightcraft_engine::import::ListedFolders>,
+    /// How the last confirmed import review brought its files in (this run only): what "Queue without review" asks.
+    pub(crate) last_import: Option<import_queue::Remembered>,
+    /// The imports waiting in line that were queued without a review, by their task id.
+    pub(crate) unreviewed: Vec<import::Unreviewed>,
     /// A Synchronize Folder scan in progress (feeds its dialog).
     pub sync: Option<sync::SyncTask>,
     /// `session.folder_changes` came from the Synchronize Folder dialog (and goes with it).
@@ -474,6 +497,10 @@ pub struct LightcraftApp {
     pub sync_ready: Option<sync::SyncReady>,
     /// A Synchronize Folder at work in the background.
     pub sync_run: Option<sync::SyncRun>,
+    /// A Synchronize Folder that waited in line, scanning its folder again before it runs.
+    pub sync_queued: Option<sync::SyncRescan>,
+    /// The scans of the Synchronize N Folders dialog, one folder after another.
+    pub sync_scans: Option<sync::ManyScan>,
     /// A Lightroom catalog inspect/import in progress.
     pub lightroom: Option<lightroom_import::LightroomTask>,
     /// Last terminal Lightroom result, exposed by the command's status/wait response.
@@ -542,6 +569,8 @@ pub struct LightcraftApp {
     pub activity_open: bool,
     /// `view.tasks` asked for the list to be opened or closed; the top bar does it on its next frame.
     pub(crate) activity_set: Option<bool>,
+    /// The finished task whose failed files the list shows ("Show failed" was clicked).
+    pub(crate) activity_failures: Option<u64>,
 }
 
 /// How long a screenshot waits for in-flight renders before it is captured anyway (and the

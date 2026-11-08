@@ -1,6 +1,6 @@
 use super::albums::top_level_drop_target;
 use super::local::folder_label;
-use super::rows::{MAX_ELIDE_CHARS, ROW_HEIGHT, current_mark, elide_end, note_width};
+use super::rows::{MAX_ELIDE_CHARS, ROW_HEIGHT, Row, current_mark, elide_end, note_width};
 use super::{Align2, Icon, LibrarySource, LightcraftApp, Rect, Sense, SidebarSection, Tokens, icon_button, json, paint, pos2, register, vec2};
 use crate::menu_item::MenuItem;
 
@@ -45,7 +45,7 @@ pub(super) fn section(
         let rows_from = ui.cursor().top();
         body(app, ui);
         if ui.cursor().top() <= rows_from {
-            empty_hint(ui, section);
+            empty_hint(app, ui, section);
         }
     }
     PlacedSection { section, top: header.top(), bottom: ui.cursor().top(), open, rows }
@@ -85,8 +85,9 @@ pub(super) fn pinned_header(app: &mut LightcraftApp, ui: &mut egui::Ui, placed: 
 }
 
 /// What an open section with nothing to list says in place of its rows (widget
-/// `sidebarEmpty:<id>`), so the section stays where it is instead of disappearing.
-fn empty_hint(ui: &mut egui::Ui, section: SidebarSection) {
+/// `sidebarEmpty:<id>`), so the section stays where it is instead of disappearing. An empty
+/// Folders also offers the ways to fill it ([`IMPORT_WAYS`]), as rows.
+fn empty_hint(app: &mut LightcraftApp, ui: &mut egui::Ui, section: SidebarSection) {
     let t = Tokens::get(ui.ctx());
     let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_HEIGHT), Sense::hover());
     register(ui, format!("sidebarEmpty:{}", section.id()), r);
@@ -94,6 +95,9 @@ fn empty_hint(ui: &mut egui::Ui, section: SidebarSection) {
     let galley = ui.painter().layout_no_wrap(text.to_string(), t.label(), t.text_dim);
     note_width(ui, 42.0 + galley.size().x + 18.0);
     ui.painter().galley(pos2(r.left() + 42.0, r.center().y - galley.size().y / 2.0), galley, t.text_dim);
+    if section == SidebarSection::Folders {
+        folders_import_rows(app, ui);
+    }
 }
 
 /// Where a section was laid out this frame (screen y): from its header's top to the end of its rows.
@@ -197,12 +201,24 @@ pub(crate) fn shown_in(app: &LightcraftApp, section: SidebarSection) -> Option<S
             let browsed = s.browse.as_ref().filter(|_| s.source == LibrarySource::Folder);
             browsed.map(|b| folder_label(&b.path))
         }
-        SidebarSection::Folders if s.source == LibrarySource::LibraryFolder => s.library_folder.as_deref().map(folder_label),
-        SidebarSection::Folders => None,
+        // several folders chosen at once: counted as the grid's title counts them; one by its own name, as its row
+        SidebarSection::Folders if s.source == LibrarySource::LibraryFolder && s.library_folder.is_some() && !s.also_library_folders.is_empty() => {
+            Some(crate::i18n::source_title(s))
+        }
+        SidebarSection::Folders => s.library_folder.as_deref().filter(|_| s.source == LibrarySource::LibraryFolder).map(folder_label),
         // the date in its dated form ("September 2026", as the Date chip and the grid header say it), not `2026-09`:
-        // the year and month rows that give a short label its context are folded away; a keyword by its own name, not its path
-        SidebarSection::ByDate => s.filter().date.as_deref().map(|d| crate::i18n::date_group_label(d, false)),
-        SidebarSection::Keywords => s.filter().keyword.as_deref().map(|k| k.rsplit('|').next().unwrap_or(k).to_string()),
+        // the year and month rows that give a short label its context are folded away; several are counted
+        SidebarSection::ByDate => match s.filter().dates_wanted().as_slice() {
+            [] => None,
+            [one] => Some(crate::i18n::date_group_label(one, false)),
+            many => Some(crate::i18n::tr_format!("{n} dates", n = many.len())),
+        },
+        // a keyword by its own name, not its path; several are counted
+        SidebarSection::Keywords => match s.filter().keywords_wanted().as_slice() {
+            [] => None,
+            [one] => Some(one.rsplit('|').next().unwrap_or(one).to_string()),
+            many => Some(crate::i18n::tr_format!("{n} keywords", n = many.len())),
+        },
     })
 }
 
@@ -217,6 +233,11 @@ fn section_header(app: &mut LightcraftApp, ui: &mut egui::Ui, section: SidebarSe
     let title = crate::i18n::tr(section.title());
     let (interact, widget) = if pinned { ("sidebar-section-pinned", "sidebarSectionPinned") } else { ("sidebar-section", "sidebarSection") };
     let resp = ui.interact(r, ui.scope_id().with((interact, id)), Sense::click_and_drag());
+    // (what the name leaves open, as Local's is the disk and not the library)
+    let resp = match section.header_hint() {
+        Some(hint) => resp.on_hover_text(crate::i18n::tr(hint)),
+        None => resp,
+    };
     register(ui, format!("{widget}:{id}"), r);
     // (the pinned copy is the same header: the keys know the one in the list)
     let keys = if pinned {
@@ -231,7 +252,8 @@ fn section_header(app: &mut LightcraftApp, ui: &mut egui::Ui, section: SidebarSe
     }
     // dragged by its header, a section moves among the others (see `section_drag`); a press on
     // the header's button is the button's, also when it turns into a drag
-    let on_button = header_button(section).is_some() && ui.input(|i| i.pointer.press_origin()).is_some_and(|p| header_button_rect(ui, r).contains(p));
+    let on_button =
+        header_button(app, section).is_some() && ui.input(|i| i.pointer.press_origin()).is_some_and(|p| header_button_rect(ui, r).contains(p));
     if resp.drag_started_by(egui::PointerButton::Primary) && !on_button {
         // picked up by the pinned header, the drag starts inside the top edge (see `drag_auto_scroll`)
         ui.data_mut(|d| d.insert_temp(egui::Id::unique("left-section-drag-from-pinned"), pinned));
@@ -261,7 +283,7 @@ fn section_header(app: &mut LightcraftApp, ui: &mut egui::Ui, section: SidebarSe
     let col = if hovered { t.text } else { t.text_dim };
     paint(ui.painter(), Rect::from_center_size(c, vec2(16.0, 16.0)), if open { Icon::ChevronDown } else { Icon::ChevronRight }, col);
     let title_rect = ui.painter().text(pos2(r.left() + 18.0, r.center().y), Align2::LEFT_CENTER, title, t.title_strong(), t.text_label);
-    let button = header_button(section);
+    let button = header_button(app, section);
     // (an album being dragged puts "Top Level" in the Albums header)
     let room = !(section == SidebarSection::Albums && app.ui.dragging_album.is_some());
     // where the title's side of the header ends: at the count, the button or the edge
@@ -327,7 +349,7 @@ enum HeaderAction {
 /// The button a section has at the end of its header, if it has one. This is the one place that
 /// says so: the header (its own and the pinned copy) draws the button at the visible edge, keeps
 /// its clicks from folding the section and leaves it room beside a folded section's count.
-fn header_button(section: SidebarSection) -> Option<HeaderButton> {
+fn header_button(app: &LightcraftApp, section: SidebarSection) -> Option<HeaderButton> {
     match section {
         SidebarSection::Albums => {
             Some(HeaderButton { id: "albumNew", icon: Icon::Plus, tooltip: "Create Album", action: HeaderAction::Menu(new_album_menu) })
@@ -335,7 +357,14 @@ fn header_button(section: SidebarSection) -> Option<HeaderButton> {
         SidebarSection::Keywords => {
             Some(HeaderButton { id: "keywordNew", icon: Icon::Plus, tooltip: "Create Keyword Tag", action: HeaderAction::Run(new_keyword) })
         }
-        SidebarSection::Local | SidebarSection::ByDate | SidebarSection::Folders => None,
+        // (a host with no dialog to pick with can't import from here: no + either)
+        SidebarSection::Folders => (import_ways(app).next().is_some()).then_some(HeaderButton {
+            id: "foldersImport",
+            icon: Icon::Plus,
+            tooltip: "Import",
+            action: HeaderAction::Menu(import_menu),
+        }),
+        SidebarSection::Local | SidebarSection::ByDate => None,
     }
 }
 
@@ -417,12 +446,12 @@ fn new_album_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         app.ui.dialog = Some(crate::state::Dialog::NewAlbum { name: String::new(), folder: false, parent: None, include_selected: true });
     }
     if MenuItem::new(crate::i18n::tr("Create Smart Album…")).show(ui).clicked() {
-        app.ui.dialog = Some(crate::state::Dialog::SmartRules {
-            id: None,
-            name: String::new(),
-            rules: lightcraft_catalog::RuleSet { rules: vec![crate::panels::rules_editor::new_rule()], ..Default::default() },
-            parent: None,
-        });
+        app.ui.dialog = Some(crate::state::Dialog::smart_rules(
+            None,
+            String::new(),
+            lightcraft_catalog::RuleSet { rules: vec![crate::panels::rules_editor::new_rule()], ..Default::default() },
+            None,
+        ));
     }
     // (a view that can't be saved as rules greys this out, and says why)
     let why_not = app.session.view_save_refusal();
@@ -437,11 +466,67 @@ fn new_album_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     if MenuItem::new(crate::i18n::tr("Create Folder…")).show(ui).clicked() {
         app.ui.dialog = Some(crate::state::Dialog::NewAlbum { name: String::new(), folder: true, parent: None, include_selected: false });
     }
+    // albums taken with Cut or Copy go to the top level from here
+    crate::panels::side_select::album_paste_item(app, ui, None);
     // only once the albums were put in an order by hand
     if app.session.catalog.album_children_are_ordered(None) {
         ui.separator();
         if MenuItem::new(crate::i18n::tr("Sort Albums A–Z")).show(ui).on_hover_text(crate::i18n::tr("Go back to listing them by name")).clicked() {
             app.act("album.sort", json!({}));
+        }
+    }
+}
+
+/// One way into the library from the Folders section: a command File ▸ Import offers, as a row of
+/// the empty section and as an item of the header's + menu.
+struct ImportWay {
+    command: &'static str,
+    /// In English (translated where it is shown).
+    label: &'static str,
+    /// The empty section's row: widget `source:<row>`.
+    row: &'static str,
+    /// The + menu's item: its widget.
+    item: &'static str,
+}
+
+/// Import Photos…, and where the host has a folder picker (not the web build) Import from Folder….
+const IMPORT_WAYS: [ImportWay; 2] = [
+    ImportWay { command: "file.addPhotos", label: "Import Photos…", row: "folders:import", item: "button:foldersImportPhotos" },
+    ImportWay { command: "file.addFolder", label: "Import from Folder…", row: "folders:importFolder", item: "button:foldersImportFolder" },
+];
+
+/// The ways in this build offers right now: a command that can't run is not offered. That is the menu's
+/// own rule, and for Import Photos… (which the menu always enables, and which does nothing on a host with
+/// no dialog to pick files with) a file picker of either kind. Decided up front, so the caller is free to
+/// use `app` as it draws them.
+fn import_ways(app: &LightcraftApp) -> impl Iterator<Item = &'static ImportWay> + use<> {
+    let can_pick_files = app.services.pick_files.is_some() || app.services.picker.is_some();
+    let offered = IMPORT_WAYS.each_ref().map(|w| crate::menus::ui_enabled(app, w.command) && (w.command != "file.addPhotos" || can_pick_files));
+    IMPORT_WAYS.iter().zip(offered).filter_map(|(way, offered)| offered.then_some(way))
+}
+
+/// Run one of [`IMPORT_WAYS`] as its menu item does (it asks for the photos or the folder); a refusal is a toast.
+fn run_import(app: &mut LightcraftApp, ctx: &egui::Context, way: &ImportWay) {
+    if let Err(e) = app.run(way.command, json!({})) {
+        app.toast_error(ctx, e);
+    }
+}
+
+/// What an empty Folders offers below its "No imported folders yet": a row for each of [`IMPORT_WAYS`].
+fn folders_import_rows(app: &mut LightcraftApp, ui: &mut egui::Ui) {
+    for way in import_ways(app) {
+        if Row::new(way.row, Icon::Plus, crate::i18n::tr(way.label)).show(app, ui).clicked() {
+            run_import(app, ui.ctx(), way);
+        }
+    }
+}
+
+/// The menu of Folders' +: Import Photos…, Import from Folder….
+fn import_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
+    for way in import_ways(app) {
+        let item = MenuItem::new(crate::i18n::tr(way.label)).widget(way.item).show(ui);
+        if item.clicked() {
+            run_import(app, ui.ctx(), way);
         }
     }
 }

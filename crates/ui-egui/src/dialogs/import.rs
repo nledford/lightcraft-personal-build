@@ -11,6 +11,7 @@
 //! a row and ✕ in the activity stack (issue #345); the whole import is one undo step.
 
 use egui::{Color32, Rect, Sense, Stroke, StrokeKind, Vec2, pos2, vec2};
+use lightcraft_engine::activity::{Lane, Request};
 use lightcraft_engine::import::{
     ImportCandidate, ImportUprightMode, ImportWarning, ImportWarningCode, ScanInput, ScanOutput, ScanProgress, scan_with,
 };
@@ -19,6 +20,7 @@ use serde_json::{Value, json};
 use std::sync::atomic::Ordering;
 
 use crate::LightcraftApp;
+use crate::import_queue::{self, Remembered, Transfer};
 use crate::render::Slot;
 use crate::theme::Tokens;
 use crate::widgets::register;
@@ -41,13 +43,18 @@ pub(crate) use body::{DIALOG_SIZE, READ_HINT, THUMB_SIZE_DEFAULT, note_dialog_bo
 #[cfg(test)]
 use body::{RECIPE_CONTROLS, note_recipe_value};
 pub(crate) use scan::StoppingScans;
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) use scan::cards_seen;
 #[cfg(test)]
-pub(crate) use scan::{HELD_RESOLVES, ScanEnd, scan_by_hand, stall_scan, stall_scan_of};
-pub use scan::{ScanTask, add_folder_picker_pending, browse, can_open, open, poll_scan, running};
+pub(crate) use scan::{HELD_RESOLVES, ScanEnd, scan_by_hand, stall_scan, stall_scan_in, stall_scan_of};
+pub use scan::{
+    IMPORT_REQUEST, ScanTask, Unreviewed, add_folder_picker_pending, browse, can_open, drop_refusal, open, poll_scan, prune_unreviewed, queue_scan,
+    queueable_scan, review_queued, running,
+};
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use scan::{auto_import_listed, cards_seen};
+pub(crate) use scan::{lane_ahead_text, library_busy};
 pub(crate) use tags::{tag_field_width, tag_help, tag_toggle, unknown_tags_warning};
-pub use task::{ImportTask, start, start_paths, tick};
+pub use task::{ImportTask, start, start_paths, start_request, tick};
+pub(crate) use task::{failure_name, not_readable_text};
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]

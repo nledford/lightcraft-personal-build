@@ -158,11 +158,11 @@ pub fn inspect(app: &LightcraftApp, ctx: &egui::Context) -> Value {
         "export": {"running": app.export.as_ref().map(crate::export_task::ExportTask::status), "last": app.last_export_result},
         "import": app.import.as_ref().map(crate::import::ImportTask::status),
         "tasks": app.tasks.labels(),
-        // every long-running task in flight, as the activity stack shows them (`activity.list`)
+        // every long-running task in flight and every task waiting in line (`activity.list`); the list under the bell draws them all, the waiting ones under "Waiting"
         "activity": app.session.activity.list(),
         // the list of them under the top bar's bell is open (`view.tasks`)
         "activityOpen": app.activity_open,
-        // the tasks that ended and left a row (`activity.finished`)
+        // the tasks that ended and left a row there (`activity.finished`)
         "activityFinished": app.session.activity.finished(),
         // commands waiting on a native file dialog shown off the UI thread (`pick`)
         "fileDialogs": app.pending_picks.iter().map(|p| p.command.clone()).collect::<Vec<_>>(),
@@ -336,6 +336,22 @@ pub(crate) fn widget_target_visible(ctx: &egui::Context, hit: Option<crate::widg
     top_modal == at_layer && !above_modal
 }
 
+/// [`LightcraftApp::run`], except that `albums.list` answers from the counts the sidebar keeps
+/// ([`crate::Caches::album_counts_for_list`]: counted on a worker thread, followed through small edits) instead of
+/// counting every smart album's photos here, on the UI thread, for as long as the library takes. Counts not ready
+/// are listed as pending (`countPending`).
+fn run_command(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+    if id != "albums.list" {
+        return app.run(id, params);
+    }
+    let now = (app.session.clock)();
+    let (counts, age) = app.caches.album_counts_for_list(&app.session.catalog, app.session.library_generation(), &now, ctx);
+    app.session.offer_album_counts(counts, age);
+    let r = app.run(id, params);
+    app.session.withdraw_album_counts();
+    r
+}
+
 /// Dispatch one control request: run engine commands, list menus/widgets, inspect state, queue
 /// file drops and synthetic input, capture screenshots, or return an error for an unknown or
 /// invalid request. Requests that need fresh widget geometry are queued as `Outcome` values.
@@ -359,7 +375,7 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
                 ctx.request_repaint();
                 return started;
             }
-            let r = app.run(id, params);
+            let r = run_command(app, ctx, id, params);
             ctx.request_repaint();
             wrap(r)
         }
@@ -473,7 +489,7 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
                     (Ok(made), crate::state::Dialog::TextPrompt { .. }) => crate::dialogs::toast_created_folder(app, ctx, &d, made),
                     _ => {}
                 }
-                // the import review, the rule editor and the one-line prompts stay open on an error, as with their buttons
+                // the import review, the rule editor, the one-line prompts and the folders' Synchronize stay open on an error, as with their buttons
                 if (r.is_err()
                     && matches!(
                         d,
@@ -485,6 +501,7 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
                             | crate::state::Dialog::LensDatabase { .. }
                             | crate::state::Dialog::TextPrompt { .. }
                             | crate::state::Dialog::RestoreBackup { .. }
+                            | crate::state::Dialog::SynchronizeFolders { .. }
                     ))
                     || (r.is_ok() && crate::panels::dialogs::keeps_open(app, &d))
                     || (r.is_err() && crate::lightroom_destination::keeps_open_on_error(app, &d))

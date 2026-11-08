@@ -106,12 +106,27 @@ pub fn disk_space_notice(alert: &lightcraft_engine::disk_space::LowDiskAlert) ->
     )
 }
 
-/// The quit prompt's text while `count` cancellable tasks run (`names` lists them).
-fn tasks_message(count: usize, names: &str) -> String {
-    if count == 1 {
-        crate::i18n::tr_format!("1 task is still running: {names}. Quitting stops it.", names = names)
+/// The quit prompt's text while `count` cancellable tasks run (`names` lists them) and `waiting` tasks wait in line.
+fn tasks_message(count: usize, names: &str, waiting: usize) -> String {
+    let text = match count {
+        0 => String::new(),
+        1 => crate::i18n::tr_format!("1 task is still running: {names}. Quitting stops it.", names = names),
+        n => crate::i18n::tr_format!("{n} tasks are still running: {names}. Quitting stops them.", n = n, names = names),
+    };
+    if waiting == 0 {
+        return text;
+    }
+    // (nothing waits across a quit: the files may change before the next launch)
+    let line = if waiting == 1 {
+        crate::i18n::tr("1 task waiting in line won't run.").to_string()
     } else {
-        crate::i18n::tr_format!("{n} tasks are still running: {names}. Quitting stops them.", n = count, names = names)
+        crate::i18n::tr_format!("{n} tasks waiting in line won't run.", n = waiting)
+    };
+    // (sentences that end in a full-width stop are not followed by a space)
+    match text.chars().last() {
+        None => line,
+        Some('。') => format!("{text}{line}"),
+        Some(_) => format!("{text} {line}"),
     }
 }
 
@@ -123,9 +138,9 @@ fn unsaved_message(n: usize, e: &str) -> String {
 }
 
 /// The window may close now (`true`), or the quit prompt is shown (`false`). Running tasks that
-/// can be cancelled (an import, an export…) are asked about first; then the library is backed
-/// up where that was chosen for quitting; then changes that couldn't be written are retried —
-/// the log, then a snapshot of everything in memory.
+/// can be cancelled (an import, an export…) and tasks waiting in line (they would not run) are
+/// asked about first; then the library is backed up where that was chosen for quitting; then
+/// changes that couldn't be written are retried — the log, then a snapshot of everything in memory.
 pub fn may_close(app: &mut LightcraftApp) -> bool {
     if app.quit_confirmed {
         return true;
@@ -139,8 +154,9 @@ pub fn may_close(app: &mut LightcraftApp) -> bool {
     if unlisted && !running.iter().any(|t| t.kind == "import") {
         names.push(crate::i18n::tr("Importing"));
     }
-    if !names.is_empty() {
-        app.quit_prompt = Some(QuitPrompt::Tasks(tasks_message(names.len(), &names.join(", "))));
+    let waiting = app.session.activity.waiting().len();
+    if !names.is_empty() || waiting > 0 {
+        app.quit_prompt = Some(QuitPrompt::Tasks(tasks_message(names.len(), &names.join(", "), waiting)));
         return false;
     }
     if !backed_up_for_quitting(app) {
@@ -303,14 +319,15 @@ enum Choice {
 /// the main view or a `Middle` dialog. The control channel and raw keyboard/event handlers do not
 /// go through that hit test, however: they must consult this explicit barrier as well.
 pub(crate) fn prompt_layer(app: &LightcraftApp) -> Option<egui::LayerId> {
-    let id = match (&app.quit_prompt, app.notices.is_empty()) {
-        (Some(QuitPrompt::Tasks(_)), _) => "quit-tasks",
-        (Some(QuitPrompt::Unsaved(_)), _) => "quit-unsaved",
-        (Some(QuitPrompt::BackUp(_)), _) => "quit-backup",
-        (Some(QuitPrompt::BackingUp(_)), _) => "quit-backing-up",
-        (Some(QuitPrompt::BackupFailed(_)), _) => "quit-backup-failed",
-        (None, false) => "settings-notice",
-        (None, true) => return None,
+    let id = match (&app.switch_prompt, &app.quit_prompt, app.notices.is_empty()) {
+        (Some(_), _, _) => "switch-tasks",
+        (None, Some(QuitPrompt::Tasks(_)), _) => "quit-tasks",
+        (None, Some(QuitPrompt::Unsaved(_)), _) => "quit-unsaved",
+        (None, Some(QuitPrompt::BackUp(_)), _) => "quit-backup",
+        (None, Some(QuitPrompt::BackingUp(_)), _) => "quit-backing-up",
+        (None, Some(QuitPrompt::BackupFailed(_)), _) => "quit-backup-failed",
+        (None, None, false) => "settings-notice",
+        (None, None, true) => return None,
     };
     Some(egui::LayerId::new(egui::Order::Foreground, egui::Id::unique(id)))
 }
@@ -342,10 +359,11 @@ struct PromptKey {
 /// Identity of the prompt currently owning input: its layer, text and, for the settings-notice
 /// queue, the number of notices remaining, including the one shown. `None` when no prompt is up.
 fn prompt_key(app: &LightcraftApp) -> Option<PromptKey> {
-    let (layer, text, queue_len) = match (&app.quit_prompt, app.notices.first()) {
-        (Some(prompt), _) => (prompt_layer(app)?, prompt.text().to_string(), 0),
-        (None, Some(text)) => (prompt_layer(app)?, text.clone(), app.notices.len()),
-        (None, None) => return None,
+    let (layer, text, queue_len) = match (&app.switch_prompt, &app.quit_prompt, app.notices.first()) {
+        (Some(prompt), _, _) => (prompt_layer(app)?, prompt.text.clone(), 0),
+        (None, Some(prompt), _) => (prompt_layer(app)?, prompt.text().to_string(), 0),
+        (None, None, Some(text)) => (prompt_layer(app)?, text.clone(), app.notices.len()),
+        (None, None, None) => return None,
     };
     Some(PromptKey { layer, text, queue_len })
 }
@@ -742,6 +760,34 @@ fn quit_without_the_backup(app: &mut LightcraftApp) {
 /// and re-checks for unsaved changes; quit-with-unsaved retries, quits or cancels; a settings
 /// notice is removed when acknowledged. Returns without drawing when no prompt is up.
 pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
+    // The question is about the library that was open when it was asked: once another one is open (a control call
+    // switched), answering would drop that library's waiting tasks without asking.
+    if app.switch_prompt.as_ref().is_some_and(|p| p.generation != app.session.library_generation()) {
+        app.switch_prompt = None;
+    }
+    if let Some(prompt) = app.switch_prompt.clone() {
+        let buttons = [("switchAnyway", "Switch Library", Choice::QuitAnyway), ("switchCancel", "Cancel", Choice::Cancel)];
+        let Some(i) = window(ctx, "switch-tasks", "Switch library while tasks are waiting?", &prompt.text, &buttons, &mut app.notice_input) else {
+            return;
+        };
+        app.switch_prompt = None;
+        let confirmed = matches!(buttons[i].2, Choice::QuitAnyway).then(|| crate::dialogs::settings::confirm_switch(app, &prompt));
+        if confirmed.as_ref().is_some_and(Result::is_ok) && app.switch_prompt.is_some() {
+            // asked again (a task was put in line meanwhile): the same words would otherwise look like the same prompt,
+            // with the old focus on Switch Library (as a retry that fails again does, below)
+            app.notice_input.reset_to(None);
+            clear_prompt_focus(ctx);
+        }
+        if let Some(Err(e)) = confirmed {
+            // from the library chooser: the error goes where it goes for a failed open there, and the chooser stays
+            if app.library_problem.as_ref().is_some_and(|p| p.chooser.is_some() && !p.dismissed) {
+                super::library_problem::failed(app, Some(prompt.path.clone()), e);
+            } else {
+                app.toast_error(ctx, e);
+            }
+        }
+        return;
+    }
     if let Some(QuitPrompt::BackUp(text)) = app.quit_prompt.clone() {
         let buttons = [("quitBackUp", "Back Up", Choice::BackUp), ("quitSkipBackup", "Skip", Choice::Skip), ("quitCancel", "Cancel", Choice::Cancel)];
         let Some(i) = window(ctx, "quit-backup", "Back up before quitting?", &text, &buttons, &mut app.notice_input) else { return };
@@ -790,6 +836,11 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
             // (not the backup this quit waits for: see `tasks_quitting_would_stop`)
             for task in tasks_quitting_would_stop(app) {
                 // (one that ended meanwhile has nothing left to stop)
+                let _ = app.session.activity.cancel(task.id);
+            }
+            // tasks waiting in line would not run once the window closes (the question said so), and `may_close` would
+            // ask about them again; the backup this quit waits for is not in the line
+            for task in app.session.activity.waiting() {
                 let _ = app.session.activity.cancel(task.id);
             }
             // files waiting for an import, and one handed its files but not started, are given up

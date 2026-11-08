@@ -163,6 +163,10 @@ fn stopping_leaves_the_view_alone_and_the_next_search_reads_only_the_rest() {
     assert_eq!(h.app.ui.view, ViewMode::Detail);
     assert!(h.app.ui.toast.is_none(), "{:?}", h.app.ui.toast);
     assert_eq!(drive.reads.load(Ordering::SeqCst), 1);
+    // ✕ is the person's stop: the row stays, saying so
+    let ended = h.app.session.activity.finished();
+    assert_eq!(ended.len(), 1, "{ended:?}");
+    assert_eq!((ended[0].kind, ended[0].ending), ("similar", lightcraft_engine::activity::Ending::Stopped), "{ended:?}");
 
     let r = h.app.run("library.findSimilar", json!({"id": 1})).unwrap();
     assert_eq!(r["count"], PHOTOS - 1, "what was read isn't read again");
@@ -304,4 +308,7 @@ fn another_library_stops_the_search_and_gets_nothing_from_it() {
     assert!(h.app.session.signatures.is_empty());
     assert_eq!(*h.app.session.filter(), Default::default());
     let _ = std::fs::remove_dir_all(dir);
+    // a search of the library before is not a stopped task of this one: nothing stays in the list for it
+    assert!(h.step_until(T, |h| h.app.tasks.is_empty()));
+    assert!(h.app.session.activity.finished().is_empty(), "{:?}", h.app.session.activity.finished());
 }

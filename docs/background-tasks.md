@@ -11,7 +11,17 @@ the list (Window ▸ Tasks, `view.tasks`): each task has a row with its name, a 
 working on, and ✕ if it can stop, the task started last at the top. "No tasks are running" when none is. Esc, a click
 elsewhere or a dialog closes it. Nothing floats over the panels but the notice of a finished Synchronize Folder scan
 (no task, so not in the list): the list covers them only while it is open.
-Quitting asks first while a task that can stop is running. Agents see the same list through `activity.list` /
+A task that says how it ended stays in the list after it: what it did ("Exported 4,963 of 5,000 photos"), what else
+needs reading and how long it took, "Show failed (37)" for the files it could not do, each with its reason (the
+first five in the row, all that were kept through Copy all, with a line saying how many more there were), and "Show
+in Finder" (Explorer, File Manager) for one of the files it made. It stays until its ✕ or "Clear all" lets go of it,
+for this session. The toast that says how a job went still shows, as before: the row is what stays after it. A clean
+end leaves a row only when the task ran 10 s or more (a shorter one was watched to its end); one that did not go
+well always does: done with problems, failed, stopped, or stopped unexpectedly (its worker died). Those come first
+in the list, under "Needs attention", and put a mark on the bell until they are dismissed. With nothing running, a
+task that just ended is named beside the bell for a few seconds. Which jobs report this way is listed under "Say
+how it ended" below.
+Quitting asks first while a task that can stop is running, or one waits in line. Agents see the same list through `activity.list` /
 `activity.cancel`, and `ui.inspect` reports it as `activity` (and whether the list is open as `activityOpen`); the tasks that ended and left a row are
 `activity.finished` / `activity.dismiss` and `activityFinished`.
 
@@ -58,12 +68,11 @@ guard.detail(&file_name);
 - **Quiet periodic work** shows no row: the auto-import folder listing runs every few seconds through
   `tasks::spawn(.., None, ..)`.
 - **Say how it ended:** `guard.finish(Outcome { ending, summary, detail, failures, failed, path })` in place of
-  letting the guard drop. These jobs do: exports (contact sheet and Print to PDF from the app included), imports and
-  their folder scans, Build / Smart Previews, model and place-name downloads, Fill Location from GPS and moving
-  photos. The others do not yet and leave a row only when a panic drops them: Synchronize Folder, Photo Merge,
-  Lightroom catalogs, Find Missing Photos and Reload from Disk (the app's jobs that run through `tasks::spawn`, or
-  their own thread), slideshow export, the engine's `print.exportPdf`, reading focus points, thumbnail-cache tidying,
-  the face GPU check, Apple Photos imports, and the face scan and AI Denoise (queues whose row goes when they empty). `ending` is `Done`, `Problems` (not for every file),
+  letting the guard drop. These jobs do: exports (contact sheet and Print to PDF from the app included), imports,
+  folder scans, Synchronize Folder, Build / Smart Previews, Photo Merge, Lightroom catalog inspect / import, model and
+  place-name downloads, Fill Location from GPS, moving photos, Find Missing Photos and Reload from Disk. These do not
+  yet: slideshow export, the engine's `print.exportPdf`, reading focus points, thumbnail-cache tidying, the face GPU
+  check, Apple Photos imports, and the face scan and AI Denoise (queues whose row goes when they empty). `ending` is `Done`, `Problems` (not for every file),
   `Failed`, `Stopped`, or `Died` when the job finds its worker gone; `summary` is the sentence the row shows (UI code
   passes it translated); `failures` are the files with their reasons (`failed` when the job only counts them); `path`
   is one of the files it made, or the folder they are in or were to go to. `Outcome::ended(ending)` and `Outcome::failed(why)` cover the plain cases. The row
@@ -72,6 +81,61 @@ guard.detail(&file_name);
   toast that says how it went: the row is the record, not the announcement. A guard that is only dropped leaves
   nothing, as before, unless a panic dropped it: then the row says the task stopped unexpectedly. A scan or Local folder read
   that another replaced leaves nothing either: only the row's ✕ makes it a stopped task.
+
+## Waiting in line
+
+Jobs that must not run side by side share a lane (`activity::Lane`). There are two so far:
+
+- **The preview lane:** Build Previews and the background Build / Discard Smart Previews, one preview build at a time.
+- **The library lane:** imports (the import review's Import, files dropped on the window) and Synchronize Folder.
+  Each plans its work against the library as it is when it starts, so two side by side could add the same file. An
+  import asked for while the lane is taken is not refused any more: it waits and checks for duplicates against the
+  library as it is when its turn comes. A Synchronize Folder that waits scans its folder again at its turn, then
+  removes, relinks or reads the sidecars of only the photos its dialog showed: one that went missing, moved or got a
+  sidecar update while it waited was never shown, so it is left alone and the end says so ("Left alone: 1
+  (synchronize again to review them)"). If another library is opened while it scans, its folder is gone, or a photo of the
+  folder is changed in the library (a rating, an edit) while it scans, it stops without doing anything and a toast says
+  so (at once for a new library, even if the old folder's scan is still going). The focus points and face regions the
+  background searches add don't count as changes.
+  A toast says it was queued when it was put in line. A queued task names its folder (`Request::subject`, shown as
+  the row's `detail`, and kept when it starts) and a waiting import says what else is known of it (`Request::facts`,
+  shown as `facts`: how many photos the review counted and how they come in). While the lane is busy the import
+  review and the Synchronize dialog offer "Queue …" and say what they start after. The dialog's own scan ("Looking for changes", kind `scan`) only
+  reads and holds up nothing. These requests are the app's (`app:import`, `app:synchronize`): the app starts them
+  (`LightcraftApp::start_waiting`, every frame), and the engine leaves them alone (`Activity::take_ready_if`). Auto
+  Import lists its folder only when nothing runs, rescans or waits in this lane; files it finds after something
+  started meanwhile wait in line, quietly. A drop while a scan runs or an import's review waits behind a dialog is
+  still refused, and says which of the three it is. Synchronize N Folders (several Folders rows) scans its folders
+  one after another under one "Looking for changes" row, then puts one Synchronize per folder with something to do in this
+  line, in the sidebar's order, each removing, relinking or reading sidecars of only the photos its scan found; a waiting
+  row names its folder (`Request::subject`, the row's detail).
+  While this lane is busy, the stack's row of the review's folder scan (kind `scan`, "Scanning folder") has Queue
+  without review: the scan is let go and the folder waits as an import asked as the last confirmed review brought its
+  files in (`import_queue::plan`: add in place, or copy with its destination, folders, names and DNG conversion, never Move; with none,
+  add in place, or copy for a card). Its waiting row says so ("Without review: add in place", "…copy to <folder>") and
+  has Review…, which takes it out of the line and scans it for the usual review, or is refused with a toast while
+  another folder is being scanned or a finished scan's review waits for a dialog to close. The notes of the last review and of the queued rows are kept in memory only.
+
+A call that sets `queue: true` while its lane is busy does not fail, as long as the waiting line has room (a full line is refused, as described below):
+`Activity::enqueue` keeps what it was asked (`Request`: the command and its parameters, with the photos written out)
+and `Session::start_waiting` runs it, under the id it had in line, once the lane is free. The engine calls it after
+every command and the app every frame. `activity.list` shows a waiting task after the running ones (`waiting`,
+`place`, `lane`); the list under the bell shows them under "Waiting", below the running tasks (its folder, what is known of it, and when each starts; ✕ to
+take it out of the line) and the line beside the bell counts them ("Building previews · 40 % · 2 waiting"). `activity.cancel` takes a waiting task out
+of the line, `activity.cancel {all: true}` empties it, and opening another library drops it: the photos it names
+belong to the old one, and so does a quit (the files may change before the next launch; the quit question says how
+many would not run). An Auto Import's request (`app:import` with `auto: true`) that leaves the line this way, or whose start is refused (its album was deleted while it waited, say),
+gives its files back (`Activity::take_untried`, applied by `Session::untry_auto_imports`): `library.autoImportScan` had noted them
+as tried, so without it nothing would import them. Opening another library while tasks wait asks first in the app (an agent says `dropWaiting: true` to agree; without it
+`app.openLibrary` and `app.newLibrary` return `asked: true` and the question is up), and the switch says how many it
+dropped. While the question is up nothing leaves the line (the app holds it: a task that started then would refuse the
+switch (an import) or escape the drop the person is agreeing to (a build)), and a switch that fails opens the old library again with its line intact. At most `MAX_WAITING` (100) tasks wait, in all lanes together; a `queue: true` call that would wait while the line already holds that many is refused, not queued. The app's own refusals of a full line say so in the window's language,
+the engine's (`Activity::line_full_error`) stays English. Without `queue` a call is refused while its lane is
+busy, as before. A waiting task whose start fails (there is no smart previews folder any more, say) is logged and leaves a failed row saying why (the app's own, an import or a Synchronize Folder, also says why in a toast), and the next in line goes on.
+
+A job that kept what it was asked (`guard.set_request`, only the preview builds so far) and did not end well has Retry in its
+row (`activity.retry`, `retryable` in `activity.finished`): the row goes and the same request waits at the end of its
+lane, for the same photos. Opening another library makes old rows unretryable.
 
 ## Examples in the code
 
@@ -96,6 +160,8 @@ job, and that the row is gone once the job ends. `crates/ui-egui/src/tests/activ
 job-specific tests show the pattern (`tests_sync.rs`, `export_task.rs`, `tests_denoise.rs`…). The bell shows a
 task once it is 0.5 s old (`activity:ring`; `activity:readout` is the line beside it, `activity:count` the count on
 the bell), and its row is on screen only while the list is open: tests that click a row's ✕ open the list first
-(`view.tasks` with `{"show": true}`, or a click on `icon:bell`) and wait for `activity:cancel:<id>`. For a job
-that reports how it ended, assert `session.activity.finished()` (ending, summary, failures);
+(`view.tasks` with `{"show": true}`, or a click on `icon:bell`) and wait for `activity:cancel:<id>`.
+For a job that reports how it ended, assert `session.activity.finished()` (ending, summary, failures);
 `session.activity.keep_after(0)` keeps a clean end's row however short the test's job.
+Ended rows are `activity:done:<id>` with `activity:dismiss:<id>`, `activity:failures:<id>`, `activity:copy:<id>` and
+`activity:reveal:<id>`; `activity:clear` is Clear all and `activity:attention` the mark on the bell.

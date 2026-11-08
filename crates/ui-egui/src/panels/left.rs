@@ -31,10 +31,18 @@ pub(crate) use folders::folder_export_blocker;
 pub(crate) use folders::follow_shown;
 #[cfg(test)]
 pub(crate) use folders::native_path;
-pub(crate) use folders::{FolderPlace, created_text, folder_place, folder_row_of, move_photos, moved_text};
+pub use folders::folder_drag_feedback;
+#[cfg(test)]
+pub(crate) use folders::folder_drop_refusal;
+pub(crate) use folders::folder_moved_message;
+#[cfg(test)]
+pub(crate) use folders::move_folder_to;
+pub(crate) use folders::{FolderPlace, created_text, folder_place, folder_row_of, move_photos, moved_text, run_folder_move, toast_folder_moved};
 use folders::{folder_rows, reveal_chosen};
 use keywords::keyword_rows;
-pub(crate) use local::{fs_cached, fs_cached_running, is_builtin_place, same_folder};
+#[cfg(test)]
+pub(crate) use local::CHECKED_ON;
+pub(crate) use local::{fs_cached, fs_cached_running, is_builtin_place, keep_local_root, local_root_path, same_folder};
 use local::{local_now, local_rows};
 pub(crate) use rows::disclosure_name;
 #[cfg(test)]
@@ -54,6 +62,7 @@ use sections::{SECTION_GAP, missing_count, pinned_header, section, section_drag,
 pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let frame = egui::Frame::NONE.fill(t.chrome).stroke(egui::Stroke::new(1.0, t.divider));
+    super::side_select::begin_left(app);
     // (a library opened since the frame began is known before its rows are shown)
     follow_shown(app, ui.ctx());
     frame.show(ui, |ui| {

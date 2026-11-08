@@ -141,6 +141,10 @@ fn stopping_the_check_answers_the_request_with_an_error() {
     assert!(reply["error"].as_str().is_some_and(|e| e.contains("stopped")), "{reply}");
     assert!(h.step_until(T, |h| h.app.tasks.is_empty()));
     assert!(missing_rows(&h).is_empty());
+    // the person's ✕ leaves its row, saying stopped
+    let ended = h.app.session.activity.finished();
+    assert_eq!(ended.len(), 1, "{ended:?}");
+    assert_eq!((ended[0].kind, ended[0].ending), ("missing", lightcraft_engine::activity::Ending::Stopped), "{ended:?}");
 }
 
 /// The control server gives a request 60 s, a check on a big share takes longer: the caller asks
@@ -294,4 +298,47 @@ fn a_kept_answer_is_not_given_after_the_photos_changed() {
     let reply = answer(&mut h, &again);
     assert_eq!(reply["result"].as_array().map(Vec::len), Some(11), "{reply}");
     assert!(share.calls.load(Ordering::SeqCst) > calls);
+}
+
+/// Another library was opened while the check ran: the check of the library before is not a stopped task of
+/// this one, so nothing stays in the list for it.
+#[test]
+fn another_library_leaves_no_row_of_the_check() {
+    let (mut h, share) = app_on_a_slow_share(Duration::from_secs(3));
+    let rx = ask(&mut h);
+    for _ in 0..3 {
+        h.step();
+    }
+    let dir = std::env::temp_dir().join(format!("lc-ui-missing-other-{}", std::process::id()));
+    h.app.session.open_library(&dir, false).unwrap();
+    h.step();
+    share.open.store(true, Ordering::SeqCst);
+    let reply = answer(&mut h, &rx);
+    assert_eq!(reply["ok"], false, "{reply}");
+    assert!(h.step_until(T, |h| h.app.tasks.is_empty()));
+    assert!(h.app.session.activity.finished().is_empty(), "{:?}", h.app.session.activity.finished());
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+/// ✕ pressed before another library was opened still counts: the row stays, saying stopped.
+#[test]
+fn a_stop_before_another_library_opened_still_leaves_a_stopped_row() {
+    let (mut h, share) = app_on_a_slow_share(Duration::from_secs(3));
+    let rx = ask(&mut h);
+    for _ in 0..3 {
+        h.step();
+    }
+    let id = missing_rows(&h)[0].id;
+    let r = h.request("engine.execute", json!({"command": "activity.cancel", "params": {"id": id}}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    let dir = std::env::temp_dir().join(format!("lc-ui-missing-stopped-{}", std::process::id()));
+    h.app.session.open_library(&dir, false).unwrap();
+    h.step();
+    share.open.store(true, Ordering::SeqCst);
+    let _ = answer(&mut h, &rx);
+    assert!(h.step_until(T, |h| h.app.tasks.is_empty()));
+    let ended = h.app.session.activity.finished();
+    assert_eq!(ended.len(), 1, "{ended:?}");
+    assert_eq!((ended[0].kind, ended[0].ending), ("missing", lightcraft_engine::activity::Ending::Stopped), "{ended:?}");
+    let _ = std::fs::remove_dir_all(dir);
 }

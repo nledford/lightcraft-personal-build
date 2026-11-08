@@ -16,6 +16,7 @@
 extern crate lightcraft_denoise_core as lightcraft_denoise;
 
 pub mod activity;
+mod album_counts;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod apple_photos;
 pub mod availability;
@@ -95,6 +96,7 @@ pub mod walk;
 
 use std::sync::Arc;
 
+pub use album_counts::CountsAge;
 pub use cmd::{CommandInfo, CommandSpec, command_specs, find_command};
 pub use errors::{AiModel, ErrorKind};
 pub use fonts::{CRAFT_FONTS, CraftFont};
@@ -210,6 +212,15 @@ pub struct Interaction {
     pub crop_edited: bool,
 }
 
+/// The photos of the current source, counted ([`Session::source_total`]).
+struct SourceTotal {
+    /// Which source ([`Session::total_key`]).
+    key: String,
+    tally: lightcraft_catalog::tally::FilterTally,
+    /// The clock's minute the count is of, for a source whose rules read the clock.
+    minute: Option<String>,
+}
+
 /// The most photos an edit may touch for the view to follow it photo by photo; a larger edit is worked out whole.
 const MAX_FOLLOWED: usize = 256;
 
@@ -250,6 +261,8 @@ static LIBRARY_GEN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64:
 
 pub struct Session {
     library_generation: u64,
+    /// The counts `albums.list` answers with.
+    album_counts: album_counts::AlbumCounts,
     /// Auto Sync: edits to the active photo also change the other selected photos (the settings
     /// that changed, nothing else).
     pub auto_sync: bool,
@@ -289,8 +302,13 @@ pub struct Session {
     /// Identifies the current `visible` list: a new value (unique in the process) every time it
     /// is recomputed, so frontends can key their per-view caches on it instead of hashing the ids.
     visible_gen: u64,
-    /// Photos in the current source with no filter on (cached like `visible`).
-    total: Option<((u64, String), usize, Option<String>)>,
+    /// Photos in the current source with no filter on: kept up to date from what each edit touched, like the view.
+    total: Option<SourceTotal>,
+    /// How many times [`Session::source_total`] followed an edit photo by photo, took the count from the pass that
+    /// built the view, and counted every photo (`ui.inspect` → `perf`, tests).
+    pub total_followed: u64,
+    pub total_from_view: u64,
+    pub total_counted: u64,
     pub undo: Vec<UndoEntry>,
     /// Undo steps committed in this session, ever (the history drops its oldest past 1000, so
     /// its length can't tell how many steps a command just made; see [`Session::commits`]).
@@ -364,6 +382,8 @@ pub struct Session {
     /// Current time provider (ISO 8601); injectable for tests and wasm.
     pub clock: Box<dyn Fn() -> String + Send>,
     depth: u32,
+    /// [`Session::start_waiting`] is starting tasks (the commands it runs don't start more themselves).
+    starting_waiting: bool,
     /// Selected mask (Masking panel), by mask id.
     pub active_mask: Option<u32>,
     /// AI masks (SAM 3): the model and the last photo prepared for it.
@@ -466,6 +486,9 @@ pub struct Session {
     /// Holds a restore before it starts (tests look at its row meanwhile).
     #[cfg(test)]
     pub(crate) restore_hold: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    /// Builds that ended and were replaced by the next one before a frontend announced them
+    /// ([`Session::take_unreported_builds`]).
+    unreported_builds: Vec<std::sync::Arc<cmd::previews::PreviewBuild>>,
     /// Develop defaults applied on import (persisted in prefs.json).
     pub import_defaults: import::ImportDefaults,
     /// Disk budget of the library's thumbnail cache in MB (0 = default; persisted in prefs.json).
@@ -523,9 +546,23 @@ impl Session {
         self.library_generation
     }
 
+    /// The next `albums.list` answers with `counts` and counts nothing itself: a window that keeps the albums' counts
+    /// (counted off its UI thread) offers them with how far they are from the catalog and the clock as they are now,
+    /// and `albums.list` marks the smart albums whose count is behind as pending.
+    /// [`Session::withdraw_album_counts`] takes the offer back once the command has run.
+    pub fn offer_album_counts(&mut self, counts: Arc<std::collections::HashMap<lightcraft_catalog::AlbumId, usize>>, age: CountsAge) {
+        self.album_counts.offer(counts, age);
+    }
+
+    /// Take back what [`Session::offer_album_counts`] offered, if `albums.list` didn't use it.
+    pub fn withdraw_album_counts(&mut self) {
+        self.album_counts.withdraw();
+    }
+
     pub fn new() -> Session {
         Session {
             library_generation: LIBRARY_GEN.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+            album_counts: album_counts::AlbumCounts::default(),
             auto_sync: false,
             catalog: Catalog::new(),
             source: LibrarySource::All,
@@ -543,6 +580,9 @@ impl Session {
             #[cfg(test)]
             never_follow: false,
             visible_gen: 0,
+            total_followed: 0,
+            total_from_view: 0,
+            total_counted: 0,
             total: None,
             undo: Vec::new(),
             commits: 0,
@@ -580,6 +620,7 @@ impl Session {
             media: media::MediaCache::default(),
             clock: Box::new(|| "2026-09-30T12:00:00".to_string()),
             depth: 0,
+            starting_waiting: false,
             active_mask: None,
             segmenter: segment::Segmenter::default(),
             active_spot: None,
@@ -612,6 +653,7 @@ impl Session {
             preview_build: None,
             prep: Default::default(),
             loupe_edge: 0,
+            unreported_builds: Vec::new(),
             slideshow_export: None,
             backup: None,
             backup_dir: None,
@@ -655,6 +697,15 @@ impl Session {
 
     /// Run a command by id. THE entry point for every frontend.
     pub fn execute(&mut self, id: &str, params: &Value) -> Result<Value> {
+        let r = self.dispatch(id, params, true);
+        // a task this command freed the lane of starts now, not at the next frame
+        self.start_waiting();
+        r
+    }
+
+    /// [`Session::execute`] without starting waiting tasks; `journal`: record the call when the command is journaled
+    /// (not for a task that waited: the call that asked for it is recorded already).
+    fn dispatch(&mut self, id: &str, params: &Value, journal: bool) -> Result<Value> {
         self.begin_frame();
         let spec = find_command(id).ok_or_else(|| EngineError::UnknownCommand(id.to_string()))?;
         // a command that validates the photos a call names isn't held back by the selection
@@ -666,11 +717,69 @@ impl Session {
         if spec.journal {
             self.not_stuck()?;
         }
-        self.run_command(id, spec.journal.then_some(params), |s| (spec.run)(s, params)).map_err(|e| match e {
+        self.run_command(id, (journal && spec.journal).then_some(params), |s| (spec.run)(s, params)).map_err(|e| match e {
             // a shared parameter check ([`Session::targets`]) names the command it ran for
             EngineError::BadParams { cmd, msg } if cmd.is_empty() => EngineError::BadParams { cmd: id.to_string(), msg },
             e => e,
         })
+    }
+
+    /// A build that ended is replaced by the next one before a frontend announced it: keep it (at most 16; the oldest
+    /// goes first) for [`Session::take_unreported_builds`].
+    pub(crate) fn keep_unreported_build(&mut self, build: std::sync::Arc<cmd::previews::PreviewBuild>) {
+        const KEEP: usize = 16;
+        if self.unreported_builds.len() >= KEEP {
+            self.unreported_builds.remove(0);
+        }
+        self.unreported_builds.push(build);
+    }
+
+    /// The builds that ended and were replaced before a frontend announced them, oldest first, once. The frontend
+    /// announces each (and sets its `reported`) like the current build's end.
+    pub fn take_unreported_builds(&mut self) -> Vec<std::sync::Arc<cmd::previews::PreviewBuild>> {
+        std::mem::take(&mut self.unreported_builds)
+    }
+
+    /// Make the files of the Auto Imports that left the line without running eligible for Auto Import again (the
+    /// scan noted them as tried when it handed them over, so nothing would import them otherwise): they go through
+    /// the size check once more, like a file seen for the first time. Run before each scan and by [`Session::start_waiting`].
+    pub fn untry_auto_imports(&mut self) {
+        for path in self.activity.take_untried() {
+            self.auto_import_seen.remove(&path);
+        }
+    }
+
+    /// Start the tasks waiting in line whose lane is free ([`crate::activity`]), each by running the command it was
+    /// asked with. One that can't start is logged and the next in line goes on. Every frontend gets this after each
+    /// command; the app also calls it every frame, for a lane that frees while nothing is asked.
+    /// Requests that aren't engine commands (the app's own, `app:…`: an import, a Synchronize Folder) are left to the
+    /// app, which starts them the same way.
+    pub fn start_waiting(&mut self) {
+        self.untry_auto_imports();
+        if self.depth > 0 || self.starting_waiting {
+            return;
+        }
+        self.starting_waiting = true;
+        // the background preparation yields only inside its own work, so a build waiting behind its row would wait for
+        // every photo it has left: it is told to stop, as it is for a build asked for now (not while a question about the
+        // line is open: nothing leaves the line then, so stopping the build would only lose its work)
+        if !self.activity.line_is_held()
+            && self.activity.lane_waiting(activity::Lane::Previews)
+            && let Some(b) = self.preview_build.as_ref().filter(|b| b.background && b.running())
+        {
+            b.cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+        // (bounded: each turn takes one task out of a line that is at most this long)
+        for _ in 0..activity::MAX_WAITING {
+            let Some(w) = self.activity.take_ready_if(|r| find_command(&r.command).is_some()) else { break };
+            let r = self.dispatch(&w.request.command, &w.request.params, false);
+            self.activity.started();
+            if let Err(e) = r {
+                log::warn!("{}: a task that waited could not start: {e}", w.request.command);
+                self.activity.could_not_start(w, &e.to_string());
+            }
+        }
+        self.starting_waiting = false;
     }
 
     /// Run `f` as command `id` with what [`Session::execute`] does around every command: the
@@ -1436,8 +1545,7 @@ impl Session {
         // What a held view is told apart by: what is shown and how, and for a smart album its rules (rules that were
         // changed ask something else). Not the checks of Missing Photos below: they fill the view in, they are
         // no other view.
-        let asks = matches!(self.source, LibrarySource::Picks)
-            || matches!(self.source, LibrarySource::Album(a) if self.catalog.album(a).is_some_and(|al| al.is_smart()));
+        let asks = self.view_asks();
         let rules = match self.source {
             LibrarySource::Album(a) if asks => self.catalog.album(a).map(|al| format!("{:?}", al.smart)).unwrap_or_default(),
             _ => String::new(),
@@ -1503,9 +1611,20 @@ impl Session {
                 Some(_) => self.view_followed += 1,
                 None => self.view_worked_out += 1,
             }
+            // (a view worked out from every photo, asked only the source's own question, lists exactly the photos of
+            // the source: that is the source's total, with no second pass over the library)
+            let mut exact = *self.filter() == Filter::default() && self.source != LibrarySource::Missing;
+            #[cfg(test)]
+            {
+                exact &= !self.never_follow;
+            }
             let mut visible = match (followed, &base, &within) {
-                (Some(ids), _, _) => ids,
+                (Some(ids), _, _) => {
+                    exact = false;
+                    ids
+                }
                 (None, Some((_, _, held)), Some(within)) => {
+                    exact = false;
                     let keep: std::collections::HashSet<PhotoId> = held.iter().copied().collect();
                     self.catalog.query_keeping(&f, &self.sort, &keep, within)
                 }
@@ -1514,6 +1633,11 @@ impl Session {
             // after the query: a big view has just made the order it needed itself (and this does nothing); a small one
             // has not, and the first big view in this sort later is then not sorted in a frame the user waits for
             self.catalog.prebuild_order_holding(&self.sort, || self.activity.start("sort", "Sorting the library", activity::Cancel::No));
+            if exact {
+                let tally = lightcraft_catalog::tally::FilterTally::from_matching(self.catalog.revision, &visible);
+                self.total = Some(SourceTotal { key: self.total_key(), tally, minute: clocked.then(|| clock_minute(&now).to_owned()) });
+                self.total_from_view += 1;
+            }
             // what the view shows now is what the next edit is followed from, and what it holds until it is
             // refreshed (taken before stacks are arranged, so a photo folded into a stack is held with it)
             self.base = (!whole || holds).then(|| (view, self.catalog.revision, visible.clone()));
@@ -1711,14 +1835,30 @@ impl Session {
         true
     }
 
+    /// Whether the view asks something of the photos it lists (Picks, a smart album's rules), so that a held view may
+    /// show photos that stopped matching.
+    fn view_asks(&self) -> bool {
+        matches!(self.source, LibrarySource::Picks)
+            || matches!(self.source, LibrarySource::Album(a) if self.catalog.album(a).is_some_and(|al| al.is_smart()))
+    }
+
+    /// What tells one source's total from another's (the catalog's revision and the source's rules aside).
+    fn total_key(&self) -> String {
+        format!("{:?}|{:?}|{:?}|{:?}|{:?}", self.source, self.browse, self.library_folder, self.also_albums, self.also_library_folders)
+    }
+
     /// Photos in the current source (folder, album, …) before the filter bar and search narrow
     /// them; `None` where that is not a separate number (Missing Photos).
+    ///
+    /// Kept from one edit to the next: a small edit asks only the photos it touched, and a view just built for the
+    /// source with nothing narrowing it gives its own pass as the answer. Every photo is counted when an edit is
+    /// larger or more than photos, the clock moved under rules that read it, or the source changed.
     pub fn source_total(&mut self) -> Option<usize> {
         self.reconcile_view();
         if self.source == LibrarySource::Missing {
             return None;
         }
-        if *self.filters.current() == Filter::default() && !self.hold_view {
+        if *self.filters.current() == Filter::default() && !(self.hold_view && self.view_asks()) {
             // nothing narrows the source: what the view lists is all of it, and is counted already (not a view
             // that holds photos that stopped matching: those are not of the source any more)
             let _ = self.visible();
@@ -1728,26 +1868,35 @@ impl Session {
                 return Some(ids.len());
             }
         }
-        let key = (
-            self.catalog.revision,
-            format!("{:?}|{:?}|{:?}|{:?}|{:?}", self.source, self.browse, self.library_folder, self.also_albums, self.also_library_folders),
-        );
-        let key_changed = self.total.as_ref().map(|total| &total.0) != Some(&key);
-        let cached_minute = self.total.as_ref().and_then(|total| total.2.as_deref());
+        let key = self.total_key();
+        let cached_minute = self.total.as_ref().filter(|total| total.key == key).and_then(|total| total.minute.as_deref());
         let current_now = cached_minute.map(|_| (self.clock)());
-        let current_minute = current_now.as_deref().map(clock_minute);
-        let clock_changed = cached_minute.is_some_and(|cached| current_minute != Some(cached));
-        if key_changed || clock_changed {
-            // The source count can be requested before `visible`; bind it to the session's clock itself.
-            let now = current_now.unwrap_or_else(|| (self.clock)());
-            lightcraft_catalog::rules::set_now(Some(now.clone()));
-            let f = self.view_filter(self.source, &Filter::default());
-            // (how many, not which: nothing to put in order)
-            let n = self.catalog.count(&f);
-            let clocked = filter_depends_on_clock(&f, &self.catalog);
-            self.total = Some((key, n, clocked.then(|| clock_minute(&now).to_owned())));
+        let clock_changed = cached_minute.is_some_and(|cached| current_now.as_deref().map(clock_minute) != Some(cached));
+        if !clock_changed && let Some(total) = self.total.as_ref().filter(|total| total.key == key) {
+            if total.tally.revision() == self.catalog.revision {
+                return Some(total.tally.len());
+            }
+            // (a rule that reads the clock, or Recently Added's reach, can change what a photo nobody touched matches)
+            if total.minute.is_none() && self.source != LibrarySource::RecentlyAdded {
+                let f = self.view_filter(self.source, &Filter::default());
+                if let Some(total) = self.total.as_mut()
+                    && total.tally.update(&self.catalog, &f)
+                {
+                    self.total_followed += 1;
+                    return Some(total.tally.len());
+                }
+            }
         }
-        self.total.as_ref().map(|t| t.1)
+        // The source count can be requested before `visible`; bind it to the session's clock itself.
+        let now = current_now.unwrap_or_else(|| (self.clock)());
+        lightcraft_catalog::rules::set_now(Some(now.clone()));
+        let f = self.view_filter(self.source, &Filter::default());
+        let tally = lightcraft_catalog::tally::FilterTally::of(&self.catalog, &f);
+        let minute = filter_depends_on_clock(&f, &self.catalog).then(|| clock_minute(&now).to_owned());
+        self.total_counted += 1;
+        let n = tally.len();
+        self.total = Some(SourceTotal { key, tally, minute });
+        Some(n)
     }
 
     pub fn visible_cloned(&mut self) -> Vec<PhotoId> {

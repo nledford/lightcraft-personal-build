@@ -1,19 +1,20 @@
 use super::albums::refuse_photos;
-use super::dates::browse_all_photos;
 use super::rows::{INDENT_STEP, Inside, Row, out_of_sight, tree_toggle};
 use super::{Branch, Icon, KeywordNode, LightcraftApp, Said, json};
 use crate::menu_item::MenuItem;
 
-/// "Keywords": the library's keyword tree with photo counts (`a|b|c` keywords nest). A click
-/// filters the grid by the keyword (children included), the triangle opens a level, and the
-/// context menu renames, merges or deletes the keyword across the library.
+/// "By Keyword": the library's keyword tree with photo counts (`a|b|c` keywords nest). A click
+/// shows the photos with the keyword (children included), the triangle opens a level, and the
+/// context menu renames, merges or deletes the keyword across the library. The right panel's
+/// Keyword List is the other list: its tick boxes give keywords to the selected photos.
 pub(super) fn keyword_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[KeywordNode], indent: f32, above: Option<Said>) {
     for n in nodes {
         // leaves (most keywords) have no open state to look up
         let branch = (!n.children.is_empty()).then(|| Branch::keyword(&n.path));
         let mut open = branch.as_ref().is_some_and(|b| app.ui.sidebar_trees.is_open_under(b, above));
         let id = format!("keyword:{}", n.path);
-        let sel_of = |app: &LightcraftApp| app.session.filter().keyword.as_deref().is_some_and(|k| k.eq_ignore_ascii_case(&n.path));
+        let sel_of = |app: &LightcraftApp| crate::panels::side_select::keyword_shown(app, &n.path);
+        app.ui.side.keywords.saw(n.path.clone());
         if !out_of_sight(app, ui, &id, &n.name, Some(n.count), indent, false, || sel_of(app)) {
             let sel = sel_of(app);
             keyword_row(app, ui, n, &id, indent, branch.as_ref(), &mut open, sel);
@@ -45,17 +46,29 @@ fn keyword_row(
         crate::i18n::tr("Add keywords in the Keyword List"),
         crate::i18n::tr("Give photos a keyword in the Keyword List (Window → Keywords, K): drop them on it there"),
     );
+    crate::panels::side_select::outline(app, ui, crate::panels::side_select::SideList::Keywords, sel, resp.rect, 8.0);
     if let Some(branch) = branch {
         let inside = if n.children.iter().any(|c| !c.children.is_empty()) { Inside::OpensAndFolds } else { Inside::Alone };
         tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, branch, open, format!("keywordToggle:{}", n.path), &n.name, inside);
     }
-    let resp = resp.on_hover_text(if n.children.is_empty() { n.path.clone() } else { format!("{} (includes the keywords below it)", n.path) });
+    let shown = n.path.replace('|', " › ");
+    let resp = resp.on_hover_text(if sel {
+        // the row is the filter now and a click clears it (below)
+        crate::i18n::tr_format!("Stop showing only photos with {path}", path = shown)
+    } else if n.children.is_empty() {
+        crate::i18n::tr_format!("Show photos with {path}", path = shown)
+    } else {
+        crate::i18n::tr_format!("Show photos with {path} (includes the keywords below it)", path = shown)
+    });
     if super::side_keys::chosen(ui, &resp) {
-        let v = if sel { serde_json::Value::Null } else { json!(n.path) };
-        browse_all_photos(app, !sel);
-        app.act("library.filter", json!({"keyword": v}));
+        crate::panels::side_select::keyword_clicked(app, ui, &n.path);
     }
     crate::widgets::context_menu(&resp, |ui| {
+        // one of several keywords chosen: what can be done to them all
+        let several = crate::panels::side_select::keyword_targets(app, &n.path);
+        if several.len() > 1 {
+            return crate::panels::side_select::keywords_menu(app, ui, &several, false);
+        }
         let has_sel = app.session.active().is_some();
         if MenuItem::new(crate::i18n::tr("Add to Selected Photos")).enabled(has_sel).show(ui).clicked() {
             app.act("photo.setMeta", json!({"addKeywords": [n.path]}));
@@ -64,6 +77,8 @@ fn keyword_row(
             app.act("photo.setMeta", json!({"removeKeywords": [n.path]}));
         }
         ui.separator();
+        crate::panels::side_select::keyword_clip_items(app, ui, std::slice::from_ref(&n.path));
+        crate::panels::side_select::keyword_paste_item(app, ui, &n.path);
         if MenuItem::new(crate::i18n::tr("Rename Keyword…")).show(ui).clicked() {
             app.ui.dialog = Some(crate::state::Dialog::RenameKeyword { from: n.path.clone(), to: n.path.clone() });
         }

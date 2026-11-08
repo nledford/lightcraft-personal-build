@@ -147,14 +147,18 @@ fn refresh(app: &mut LightcraftApp) {
         // next frame looks them up again with the database in use now (asked for here: an idle window draws none)
         if lookup_key(app) != key {
             ctx.request_repaint();
-            return;
+            return lightcraft_engine::activity::Outcome::default();
         }
         match lens_refresh::apply(&mut app.session, results) {
             Ok(found) if found.len() == 1 => app.toast(ctx, crate::i18n::tr("1 photo got its lens profile")),
             Ok(found) if found.len() > 1 => app.toast(ctx, crate::i18n::tr_format!("{n} photos got their lens profile", n = found.len())),
             Ok(_) => {}
-            Err(e) => log::warn!("lens profile lookup: {e}"),
+            Err(e) => {
+                log::warn!("lens profile lookup: {e}");
+                return lightcraft_engine::activity::Outcome::failed(e.to_string());
+            }
         }
+        lightcraft_engine::activity::Outcome::default()
     };
     if let Err(e) = crate::tasks::spawn(app, LABEL, Some("lensLookup"), work, done) {
         log::warn!("{e}");

@@ -382,10 +382,13 @@ pub(crate) fn host_supports(app: &LightcraftApp, id: &str) -> bool {
     }
 }
 
-/// The library shows an album that holds its photos (not a smart album, not a folder of albums).
+/// The library shows one album that holds its photos (not a smart album, not a folder of albums,
+/// not several albums at once: Remove from Album would take the photos out of the one chosen last).
 pub(crate) fn in_normal_album(app: &LightcraftApp) -> bool {
     match app.session.source {
-        lightcraft_engine::LibrarySource::Album(a) => app.session.catalog.album(a).is_some_and(|a| !a.folder && !a.is_smart()),
+        lightcraft_engine::LibrarySource::Album(a) => {
+            app.session.also_albums.is_empty() && app.session.catalog.album(a).is_some_and(|a| !a.folder && !a.is_smart())
+        }
         _ => false,
     }
 }
@@ -492,26 +495,28 @@ pub(crate) fn expanded(app: &LightcraftApp, name: &str) -> Option<Vec<MenuNode>>
     let has = active.is_some();
     Some(match name {
         "Previews" => {
-            // (the background preparation's build gives way to one asked for here)
-            let running = app.session.preview_build.as_ref().is_some_and(|b| b.running() && !b.background);
+            // (the background preparation's build gives way to one asked for here; a build that was asked for makes the
+            // next wait in line for it: `queue`)
             let stoppable = app.session.preview_build.as_ref().is_some_and(|b| b.running());
-            let standard = standard_build_params(&app.ui.settings, app.session.loupe_edge);
+            let mut standard = standard_build_params(&app.ui.settings, app.session.loupe_edge);
+            standard["queue"] = json!(true);
             let scope = if app.session.selection.ids.len() > 1 { "Selected" } else { "Visible" };
+            // (while a build runs, the next one waits in line for it: `queue`)
             vec![
                 item(
                     "library.buildPreviews",
                     standard,
                     crate::i18n::tr_format!("Build Standard-Sized Previews ({scope})", scope = crate::i18n::tr(scope)),
                     None,
-                    !running,
+                    true,
                     None,
                 ),
                 item(
                     "library.buildPreviews",
-                    json!({"size": "full"}),
+                    json!({"size": "full", "queue": true}),
                     crate::i18n::tr_format!("Build 1:1 Previews ({scope})", scope = crate::i18n::tr(scope)),
                     None,
-                    !running,
+                    true,
                     None,
                 ),
                 item("library.cancelPreviews", Value::Null, "Stop Building Previews", None, stoppable, None),
@@ -519,18 +524,18 @@ pub(crate) fn expanded(app: &LightcraftApp, name: &str) -> Option<Vec<MenuNode>>
                 // (read and written on a worker thread: the originals may be on a slow drive)
                 item(
                     "library.smartPreviews",
-                    json!({"background": true}),
+                    json!({"background": true, "queue": true}),
                     crate::i18n::tr_format!("Build Smart Previews ({scope})", scope = crate::i18n::tr(scope)),
                     None,
-                    app.session.media.smart_dir.is_some() && !running,
+                    app.session.media.smart_dir.is_some(),
                     None,
                 ),
                 item(
                     "library.smartPreviews",
-                    json!({"discard": true, "background": true}),
+                    json!({"discard": true, "background": true, "queue": true}),
                     crate::i18n::tr_format!("Discard Smart Previews ({scope})", scope = crate::i18n::tr(scope)),
                     None,
-                    app.session.media.smart_dir.is_some() && !running,
+                    app.session.media.smart_dir.is_some(),
                     None,
                 ),
                 MenuNode::Separator,
@@ -846,7 +851,7 @@ fn node(app: &LightcraftApp, e: &MenuEntry) -> MenuNode {
     let shortcut = match e.id.as_str() {
         "view.photoGrid" | "view.squareGrid" => shortcut.or_else(|| crate::shortcuts::shortcut_of(&app.ui.settings.keymap, "view.gridToggle")),
         "album.removePhotos" => delete_key,
-        "photo.delete" if matches!(app.session.source, lightcraft_engine::LibrarySource::Album(_)) => None,
+        "photo.delete" if matches!(app.session.source, lightcraft_engine::LibrarySource::Album(_)) && app.session.also_albums.is_empty() => None,
         _ => shortcut,
     };
     item(&e.id, Value::Null, live_label(app, &e.id, &e.label), shortcut, e.enabled, checked(app, &e.id))
