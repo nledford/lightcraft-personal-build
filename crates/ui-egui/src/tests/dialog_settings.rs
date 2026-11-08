@@ -440,8 +440,9 @@ fn each_language_choice_in_general_switches_the_interface() {
     let mut h = demo([1600.0, 1000.0]);
     show(&mut h, "general");
     let picker = crate::i18n::Locale::for_picker();
+    // (the first choice is Sync with System, so the languages follow it)
     for (i, language) in picker.iter().enumerate() {
-        let r = h.request("ui.clickWidget", json!({"id": format!("button:settingsLanguage-{i}")}), T);
+        let r = h.request("ui.clickWidget", json!({"id": format!("button:settingsLanguage-{}", i + 1)}), T);
         assert_eq!(r["ok"], true, "{language:?}: {r}");
         h.step();
         h.step();

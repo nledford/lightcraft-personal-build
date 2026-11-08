@@ -868,6 +868,8 @@ fn a_question_about_several_folders_is_refused_once_another_library_opened() {
         let p = Photo::new(id, Source::File { path: path.into() }, "x.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00");
         h.app.session.catalog.apply(Op::AddPhoto { photo: Box::new(p) }).unwrap();
     }
+    // (the welcome leaves with the photos and gives the Tools panel back: a frame for that before the click)
+    h.settle(SETTLE);
     click(&mut h, "button:dialogOk");
     assert_eq!(h.app.session.catalog.photos().filter(|p| p.in_library()).count(), 2, "the photos of the library that opened stay in it");
     assert!(!several_dialog(&h), "{:?}", h.app.ui.dialog);

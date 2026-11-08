@@ -40,7 +40,8 @@ fn a_rated_photo_with_a_keyword(dir: &Path, name: &str, seed: u8) {
 fn app() -> Headless {
     let session = lightcraft_engine::Session::new().with_fs();
     let mut h = Headless::new(LightcraftApp::new(session, Services::default()), [1400.0, 1000.0], 1.0);
-    h.step();
+    // (the welcome of an empty library puts the Tools panel aside on its first frames: let them pass)
+    h.settle(T);
     h
 }
 

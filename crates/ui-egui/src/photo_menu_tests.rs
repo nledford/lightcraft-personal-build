@@ -133,9 +133,10 @@ fn actions_are_grouped_with_the_long_tails_in_submenus() {
             assert!(group <= 6, "a group of more than 6 rows: {n:?}");
         }
     }
-    // Delete stands alone at the end
-    assert!(matches!(n.last(), Some(MenuNode::Item { id, .. }) if id == "photo.delete"), "{:?}", n.last());
-    assert_eq!(n.get(n.len().saturating_sub(2)), Some(&MenuNode::Separator));
+    // Delete stands alone at the end, with Move Files to Trash… (the files too, #2822) beside it
+    assert!(matches!(n.last(), Some(MenuNode::Item { id, .. }) if id == "dialog.trashFiles"), "{:?}", n.last());
+    assert!(matches!(n.get(n.len().saturating_sub(2)), Some(MenuNode::Item { id, .. }) if id == "photo.delete"), "{:?}", n.get(n.len().saturating_sub(2)));
+    assert_eq!(n.get(n.len().saturating_sub(3)), Some(&MenuNode::Separator));
 }
 
 /// The labels, shortcuts and enabled state are the menu bar's (one model): "Delete 3 Photos".

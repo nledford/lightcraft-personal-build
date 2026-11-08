@@ -740,7 +740,8 @@ pub fn apply_kind(ctx: &egui::Context, kind: ThemeKind) {
     v.window_stroke = Stroke::new(line, t.button_border);
     v.window_corner_radius = CornerRadius::same(6);
     v.menu_corner_radius = CornerRadius::same(6);
-    v.selection.bg_fill = t.selection_fill();
+    // (the fill is the only sign a row is selected: increased contrast leaves it as it was, and the lighter text is the more legible on it)
+    v.selection.bg_fill = Tokens::for_kind(kind).selection_fill();
     v.selection.stroke = Stroke::new(line, t.accent);
     v.disabled_alpha = crate::increase_contrast::disabled_alpha(increased);
     v.override_text_color = Some(t.text_label);
