@@ -137,8 +137,10 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
         let offers = undo && i == 0;
         // long messages (a save warning, the web build's notices) wrap within the canvas
         let wrap = (canvas.width() - 80.0 - if offers { button_w + TOAST_UNDO_GAP } else { 0.0 }).clamp(200.0, 720.0);
-        let (background, foreground) =
-            shown.label.map(crate::theme::label_toast_colors).unwrap_or((crate::transparency::hud(ctx, Tokens::photo_shade().a()), Tokens::on_photo()));
+        let (background, foreground) = shown
+            .label
+            .map(crate::theme::label_toast_colors)
+            .unwrap_or((crate::transparency::hud(ctx, Tokens::photo_shade().a()), Tokens::on_photo()));
         let galley = painter.layout(shown.text.clone(), t.font(14.0), foreground, wrap);
         let extra = if offers { button_w + TOAST_UNDO_GAP - 8.0 } else { 0.0 };
         let size = vec2(galley.size().x + 40.0 + extra, (galley.size().y + 22.0).max(40.0));
@@ -166,19 +168,25 @@ pub fn toast(app: &mut LightcraftApp, ctx: &egui::Context) {
         let shown_at = shown.shown_at;
         let alpha = toast_alpha(now, shown_at, shown.until);
         painter.rect_filled(r, 6.0, crate::transparency::fade(ctx, background, alpha));
-        painter.galley_with_override_text_color(pos2(r.left() + 20.0, r.center().y - galley.size().y / 2.0), galley, foreground.gamma_multiply(alpha));
+        painter.galley_with_override_text_color(
+            pos2(r.left() + 20.0, r.center().y - galley.size().y / 2.0),
+            galley,
+            foreground.gamma_multiply(alpha),
+        );
         crate::widgets::register_geometry(ctx, format!("toast:{drawn}"), r);
         drawn += 1;
-        // a screen reader reads each out when it comes, without leaving what it was reading; the area is keyed by the
-        // toast itself (when it was shown and what it says), not by its place in the stack, so a toast that moves
-        // down when a newer one arrives is not read again
+        // a screen reader reads each out when it comes, without leaving what it was reading; the area is one for all the
+        // toasts (an area's state is never pruned, so one per toast would pile up over a culling session) and each
+        // toast's node is keyed by the toast itself (when it was shown, what it says and its label), not by its place in
+        // the stack, so a toast that moves down when a newer one arrives is not read again
         let words = &shown.text;
-        egui::Area::new(egui::Id::unique(("toast-words", shown_at.to_bits(), words.as_str())))
+        let key = (shown_at.to_bits(), words.as_str(), shown.label);
+        egui::Area::new(egui::Id::unique("toast-words"))
             .order(egui::Order::Foreground)
             .fixed_pos(r.min)
             .interactable(false)
             .show(ctx, |ui| {
-                let resp = ui.interact(r, ui.scope_id().with("toast"), egui::Sense::hover());
+                let resp = ui.interact(r, ui.scope_id().with(key), egui::Sense::hover());
                 resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, words));
                 ctx.accesskit_node_builder(resp.id, |node| node.set_live(egui::accesskit::Live::Polite));
             });

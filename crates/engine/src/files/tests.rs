@@ -1643,9 +1643,10 @@ fn import_review_and_report_name_the_jpegs_cut_short() {
     let r = s.execute("library.import", &json!({"paths": paths})).unwrap();
     assert_eq!(r["imported"].as_array().map(Vec::len), Some(2), "{r}");
     assert_eq!(r["truncated"], json!([cut_path.to_string_lossy()]), "{r}");
-    // a cut file first browsed in Local and then imported for real is reported too
+    // a cut file first browsed in Local and then imported for real is reported too (cut elsewhere than `cut.jpg`: a browsed
+    // copy of the library's own content is its duplicate, not a photo to promote)
     let browsed = files.join("browsed.jpg");
-    std::fs::write(&browsed, &whole[..whole.len() / 2]).unwrap();
+    std::fs::write(&browsed, &whole[..whole.len() * 2 / 3]).unwrap();
     s.execute("library.import", &json!({"paths": [browsed.to_string_lossy()], "local": true})).unwrap();
     let r = s.execute("library.import", &json!({"paths": [browsed.to_string_lossy()]})).unwrap();
     assert_eq!(r["imported"].as_array().map(Vec::len), Some(1), "{r}");
