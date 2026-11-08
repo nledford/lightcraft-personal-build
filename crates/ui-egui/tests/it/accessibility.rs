@@ -54,6 +54,10 @@ fn hide_the_computers_places(app: &mut LightcraftApp) {
     }
 }
 
+/// Render workers of each harness: the library's tests use two (`TEST_WORKERS`, #3067); with the machine's pool every
+/// harness of the audits' many would start up to six, and the audits starve the other tests' renders on a small runner.
+const RENDER_WORKERS: usize = 2;
+
 /// Run frames until the renders the screen asked for have come back (a photo the view shows is a
 /// control only once its picture is there), so what the audit counts does not depend on how fast
 /// the workers were.
@@ -74,6 +78,7 @@ fn settle_renders(h: &mut App) {
 
 fn harness_with(setup: impl FnOnce(&mut LightcraftApp)) -> App {
     let mut app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services { png: None, ..Default::default() });
+    app.renderer = lightcraft_ui_egui::render::Renderer::with_worker_threads(RENDER_WORKERS);
     // a headless host never gains the first-run tour: its modal would take the Tab focus under test
     app.headless_host = true;
     app.ui.left_panel = true;
@@ -118,6 +123,7 @@ fn people_harness(what: People) -> App {
     use lightcraft_catalog::Op;
     use lightcraft_meta::{Region, RegionKind};
     let mut app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services { png: None, ..Default::default() });
+    app.renderer = lightcraft_ui_egui::render::Renderer::with_worker_threads(RENDER_WORKERS);
     // a headless host never gains the first-run tour: its modal would take the Tab focus under test
     app.headless_host = true;
     let ids: Vec<_> = app.session.catalog.photos().map(|p| p.id).take(3).collect();
