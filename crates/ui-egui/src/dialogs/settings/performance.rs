@@ -407,7 +407,6 @@ fn smart_folder_rows(ui: &mut egui::Ui, t: &Tokens, loc: &Value) {
             ),
         );
     }
-
 }
 
 /// Says what a folder change did: how many previews were moved or deleted, and how many failed.
