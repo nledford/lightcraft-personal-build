@@ -114,6 +114,7 @@ mod switch_library;
 mod sync;
 mod tallies;
 mod temp_slider;
+mod text_field_saves;
 mod text_prompt;
 mod thumb;
 mod titlebar;

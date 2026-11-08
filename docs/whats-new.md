@@ -286,6 +286,18 @@
 
 ## 2026-10-27
 
+### Text typed in a box is kept however you leave it
+- Text typed in a box that saves when you finish (the Info panel's fields, Copyright and Creator in Settings, the Auto
+  Import album, the slideshow's title, overlay and template-name boxes, and Manage Effect Presets' rename) is now saved
+  however you leave the box, except with Esc, which still gives it up. Before, it was kept only while the box was still
+  on screen when you left it: a click on another Settings tab, a menu item or command that opened another tab or dialog,
+  hiding the Info panel, opening another library, and closing the window or quitting could drop what you had typed.
+- If the text can't be saved (a place that isn't coordinates, say), the window, Quit or the other library stays where it
+  was, the box keeps the text and the error is shown. Closing, quitting or switching again, with that text still in the
+  box, gives it up.
+- Copyright, Creator and the Auto Import album in Settings now have the same right-click Cut, Copy, Paste and Select
+  All menu as the other text boxes, and Esc in them gives the text back.
+
 ### A folder made with New Folder on Disk… appears in Folders at once
 - Right-click a folder, choose New Folder on Disk…, name it and Create: the new folder now has its own row in Folders
   straight away, with 0 photos, and the sidebar scrolls to it (it is not chosen, so the photos you selected to move
