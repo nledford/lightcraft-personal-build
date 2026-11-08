@@ -193,6 +193,51 @@ fn a_folder_move_refused_for_its_destination_does_not_finish_pending_repairs() {
     assert_eq!(std::fs::read(root.join("Archive/Trip").join(sidecar.file_name().unwrap())).unwrap(), b"Retained edits");
 }
 
+/// A move of several folders is refused while photos are being moved in the background, before it finishes the
+/// sidecar repairs that wait (as a folder move does first) or takes the redo history: nothing moved, the repair
+/// is still waiting and the redo history is as it was.
+#[test]
+fn a_batch_folder_move_refused_during_a_background_move_leaves_the_sidecars_alone() {
+    let root = crate::tests_xmp::temp_dir("batch-folder-move-busy");
+    let (trip, other, archive) = (root.join("Trip"), root.join("Other"), root.join("Archive"));
+    for dir in [&trip, &other, &archive, &root.join("local"), &root.join("share")] {
+        std::fs::create_dir_all(dir).unwrap();
+    }
+    let photo = trip.join("b.jpg");
+    std::fs::write(&photo, b"Photo bytes").unwrap();
+    let afloat = root.join("local").join("c.jpg");
+    std::fs::write(&afloat, b"Photo bytes of the one moving").unwrap();
+    let old_sidecar = crate::sidecar::sidecar_path(&trip.join("a.jpg").to_string_lossy(), SidecarNaming::Stem);
+    let sidecar = crate::sidecar::sidecar_path(&photo.to_string_lossy(), SidecarNaming::Stem);
+    std::fs::write(&old_sidecar, b"Retained edits").unwrap();
+    let mut s = Session::new();
+    s.catalog.apply(Op::AddPhoto { photo: Box::new(file_photo(1, &photo.to_string_lossy())) }).unwrap();
+    s.catalog.apply(Op::AddPhoto { photo: Box::new(file_photo(2, &afloat.to_string_lossy())) }).unwrap();
+    // a step to undo, so there is a redo history to keep
+    s.commit("Rating", Op::SetRating { id: PhotoId(1), rating: 3 }).unwrap();
+    s.undo_step().unwrap();
+    // the move starts (it repairs what is waiting then), and only after it a repair is left waiting
+    let moving = crate::move_job::start(&mut s, &serde_json::json!({"ids": [2], "folder": root.join("share")}), true).unwrap();
+    assert!(moving.is_some() && s.move_running());
+    s.pending_sidecar_repairs.push(SidecarMove {
+        from: old_sidecar.clone(),
+        to: sidecar.clone(),
+        copied: false,
+        companions: vec![RetainedPacket { path: old_sidecar.clone(), version: Some(RealFs.packet_version(&old_sidecar).unwrap()) }],
+    });
+    let before = s.catalog.to_snapshot();
+    let history = (s.undo.len(), s.redo.len());
+    let e = s.execute("folder.move", &serde_json::json!({"paths": [trip, other], "into": archive})).unwrap_err();
+    assert!(e.to_string().contains("being moved"), "{e}");
+    assert_eq!(s.pending_sidecar_repairs.len(), 1, "the repair is still waiting");
+    assert!(old_sidecar.is_file() && !sidecar.exists(), "no repair was carried out");
+    assert!(trip.is_dir() && other.is_dir() && !archive.join("Trip").exists() && !archive.join("Other").exists(), "nothing moved");
+    assert_eq!(s.catalog.to_snapshot(), before);
+    assert_eq!((s.undo.len(), s.redo.len()), history, "the redo history is kept");
+    assert_eq!(e.kind(), crate::ErrorKind::MoveInProgress, "{e}");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 #[cfg(unix)]
 #[test]
 fn a_folder_moved_into_itself_through_a_link_is_refused_before_pending_repairs() {
