@@ -979,6 +979,17 @@
   import adds some, others are removed, moved to Recently Deleted or relinked), the answer leaves out the photos that
   no longer apply, a photo added meanwhile is not part of that check, and the answer is not kept for a later request.
 
+### A refused move to another folder says what is wrong
+- When photos can't be moved into another folder, the message now names the photos and what to do (rename them,
+  reconnect the disk, or leave them out of the move), in plain words, instead of an "invalid parameters" error that
+  named an internal command. Moving the photos you chose still stops as a whole when one of them can't go, and then
+  nothing is moved.
+- Agents get the same details: `photo.checkMove` lists, without moving anything, the photos that can go, the ones
+  already in the folder, and those that can't go: a name taken there, a file that is missing or offline, or a photo
+  that can't move as it is (a Local photo, until it is added to the library, or one with no file).
+  `photo.moveToFolder` takes `skip`, the ids of photos to leave where they are while the rest move (a Local photo
+  can be skipped too), and reports each skipped photo with the reason.
+
 ### Choose where a Lightroom catalog goes
 - File ▸ Import Lightroom Catalog… now asks first: merge the catalog's photos, collections and edits into the
   library open now, or create a new library for them, named after the catalog and placed next to the open library
