@@ -2002,7 +2002,7 @@ impl Session {
     fn folder_is_listed(&self) -> bool {
         let Some(folder) = self.library_folder.as_deref() else { return false };
         let f = Filter { library_folder: Some(folder.to_string()), library_folders: self.also_library_folders.clone(), ..Default::default() };
-        self.catalog.holds_made_folder(folder) || !self.catalog.query(&f, &Sort::default()).is_empty()
+        self.catalog.holds_made_folder(folder) || self.catalog.any(&f)
     }
 
     /// `source` as a filter over `base` (the filter bar's, or none): what [`LibrarySource::to_filter`] gives,

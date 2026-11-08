@@ -653,7 +653,9 @@ pub fn cmp_name(a: &str, b: &str) -> std::cmp::Ordering {
 }
 
 impl Catalog {
-    /// Photos matching `filter`, in `sort` order (ties broken by file name, then id).
+    /// Photos matching `filter`, in `sort` order (ties broken by file name, then id). A filter for a library folder
+    /// looks at the photos filed at or below it (see [`crate::index`]), not at every photo; only a folder holding
+    /// more than half of the library is walked with it.
     pub fn query(&self, filter: &Filter, sort: &Sort) -> Vec<PhotoId> {
         self.query_keeping(filter, sort, &std::collections::HashSet::new(), filter)
     }
@@ -669,6 +671,19 @@ impl Catalog {
         let wanted = |p: &Photo| filter.matches_in(p, self, &prepared) || (keep.contains(&p.id) && within.matches_in(p, self, &within_prepared));
         // one pass: a folder of albums it asks about is gathered once
         crate::gathering(|| {
+            // library folders that hold under half of the library: the photos filed at or below them and the
+            // held ones (which may lie elsewhere, where `within` still looks), put in order: not every photo of the library
+            if !prepared.roots.is_empty() && !self.folder_holds_most(&prepared.roots) {
+                let mut ids: Vec<PhotoId> = self.folders_under(&prepared.roots).flatten().copied().collect();
+                // (in id order, each once, as `sorted_among` takes them: the folders' sets come in no order)
+                ids.extend(keep.iter().copied());
+                ids.sort_unstable();
+                ids.dedup();
+                self.looked_at(ids.len());
+                let v: Vec<&Photo> = ids.iter().filter_map(|id| self.photo(*id)).map(|p| p.as_ref()).filter(|p| wanted(p)).collect();
+                return self.sorted_among(sort, v);
+            }
+            self.looked_at(self.photos.len());
             // the whole library is kept in order ([`crate::order`]): what matches is picked out of it, not sorted
             if let Some(ids) = self.pick_in_order(sort, wanted) {
                 return ids;
@@ -735,10 +750,73 @@ impl Catalog {
 
     /// How many photos match `filter`: [`Catalog::query`]'s length without its sorting.
     pub fn count(&self, filter: &Filter) -> usize {
-        self.note_scan();
         let prepared = filter.prepare(self);
         // one pass: a folder of albums it asks about is gathered once
-        crate::gathering(|| self.photos().filter(|p| filter.matches_in(p, self, &prepared)).count())
+        crate::gathering(|| {
+            let mut seen = 0;
+            let n = if !prepared.roots.is_empty() && !self.folder_holds_most(&prepared.roots) {
+                let photos = self.folders_under(&prepared.roots).flatten().filter_map(|id| self.photo(*id));
+                photos.inspect(|_| seen += 1).filter(|p| filter.matches_in(p, self, &prepared)).count()
+            } else {
+                self.note_scan();
+                self.photos().inspect(|_| seen += 1).filter(|p| filter.matches_in(p, self, &prepared)).count()
+            };
+            self.looked_at(seen);
+            n
+        })
+    }
+
+    /// Whether any photo matches `filter`: [`Catalog::count`] above 0, without going on past the first.
+    pub fn any(&self, filter: &Filter) -> bool {
+        let prepared = filter.prepare(self);
+        // one pass: a folder of albums it asks about is gathered once
+        crate::gathering(|| {
+            let mut seen = 0;
+            let mut test = |p: &Photo| {
+                seen += 1;
+                filter.matches_in(p, self, &prepared)
+            };
+            let found = if prepared.roots.is_empty() {
+                self.photos().any(|p| test(p))
+            } else {
+                self.folders_under(&prepared.roots).flatten().filter_map(|id| self.photo(*id)).any(|p| test(p))
+            };
+            self.looked_at(seen);
+            found
+        })
+    }
+
+    /// The lowest-numbered photo matching `filter` from each folder that has any, in id order: what a question that
+    /// depends only on the folder a photo is in (which disk it is on) asks instead of every photo that matches. A
+    /// photo with no file is in no folder and has no say. Folders that differ only in letter case count as one (the
+    /// index files by lower-cased folder).
+    pub fn folder_samples(&self, filter: &Filter) -> Vec<PhotoId> {
+        let prepared = filter.prepare(self);
+        // one pass: a folder of albums it asks about is gathered once
+        crate::gathering(|| {
+            let mut seen = 0;
+            let mut samples: Vec<PhotoId> = self
+                .folders_under(&prepared.roots)
+                .filter_map(|ids| {
+                    // the lowest, not the first a set gives: the same photo whatever order the set is read in
+                    let mut lowest: Option<PhotoId> = None;
+                    for id in ids {
+                        if lowest.is_none_or(|l| *id < l)
+                            && self.photo(*id).is_some_and(|p| {
+                                seen += 1;
+                                filter.matches_in(p, self, &prepared)
+                            })
+                        {
+                            lowest = Some(*id);
+                        }
+                    }
+                    lowest
+                })
+                .collect();
+            self.looked_at(seen);
+            samples.sort_unstable();
+            samples
+        })
     }
 
     /// Year → month → day counts for the "By Date" section (newest first).
@@ -944,46 +1022,31 @@ pub fn folder_rest(path: &str, root: &str) -> Option<Vec<String>> {
 
 impl Catalog {
     /// For each of `folders`, whether the library holds a photo imported from it or from a folder
-    /// inside it (one pass over the library, however many folders).
+    /// inside it (each looked up in the folder index, which stops at the first photo: no pass over the library).
     pub fn folders_holding(&self, folders: &[String]) -> Vec<bool> {
-        let roots: Vec<String> = folders.iter().map(|d| folder_key(d)).collect();
-        let mut holds = vec![false; roots.len()];
-        let mut left = roots.len();
-        for p in self.photos().filter(|p| !p.deleted) {
-            for (h, root) in holds.iter_mut().zip(&roots) {
-                if !*h && photo_in_root(p, root) {
-                    *h = true;
-                    left -= 1;
-                }
-            }
-            if left == 0 {
-                break;
-            }
-        }
-        holds
+        // (a blank folder is nowhere: a filter would read it as no choice of folder, so everywhere)
+        folders.iter().map(|d| !d.trim().is_empty() && self.any(&Filter { library_folder: Some(d.clone()), ..Default::default() })).collect()
     }
 
     /// For each of `folders`: whether the library holds a photo imported from it (or from a
     /// folder inside it), and whether some of those photos are on a disk (not the startup disk)
     /// the folder does not lie in, which makes it a way to several disks (`/Volumes`, `/mnt`…)
-    /// and not a folder of one. One pass over the library, however many folders.
+    /// and not a folder of one. Which disk a photo is on depends on the folder it is in, so one
+    /// photo of each folder ([`Catalog::folder_samples`]) says, not every photo.
     pub fn folders_scan(&self, folders: &[String]) -> Vec<FolderScan> {
-        let roots: Vec<String> = folders.iter().map(|d| folder_key(d)).collect();
-        let mut out = vec![FolderScan::default(); roots.len()];
-        for p in self.photos().filter(|p| !p.deleted) {
-            let mut volume: Option<Option<String>> = None;
-            for (scan, root) in out.iter_mut().zip(&roots) {
-                if (scan.holds && scan.other_disks) || !photo_in_root(p, root) {
-                    continue;
-                }
-                scan.holds = true;
-                let v = volume.get_or_insert_with(|| crate::folders::volume_of(p));
-                if v.as_deref().is_some_and(|v| v != "/" && !key_within(root, v)) {
-                    scan.other_disks = true;
-                }
-            }
-        }
-        out
+        folders
+            .iter()
+            .map(|d| {
+                let samples = if d.trim().is_empty() {
+                    Vec::new()
+                } else {
+                    self.folder_samples(&Filter { library_folder: Some(d.clone()), ..Default::default() })
+                };
+                let root = folder_key(d);
+                let volumes = samples.iter().filter_map(|id| self.photo(*id)).filter_map(|p| crate::folders::volume_of(p));
+                FolderScan { holds: !samples.is_empty(), other_disks: volumes.into_iter().any(|v| v != "/" && !key_within(&root, &v)) }
+            })
+            .collect()
     }
 }
 

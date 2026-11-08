@@ -2121,7 +2121,11 @@ mod tests_census;
 #[cfg(test)]
 mod tests_convert;
 #[cfg(test)]
+mod tests_folder_filing;
+#[cfg(test)]
 mod tests_folder_index;
+#[cfg(test)]
+mod tests_folder_order;
 #[cfg(test)]
 mod tests_folder_patch;
 #[cfg(test)]
