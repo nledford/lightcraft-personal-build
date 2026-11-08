@@ -109,28 +109,33 @@ pub(crate) fn command(app: &mut LightcraftApp, params: &Value) -> Result<Value, 
     let prepared = prepare(app, params)?;
     let count = prepared.inputs.len();
     let cancel = Arc::new(AtomicBool::new(false));
+    let stopped = cancel.clone();
     crate::tasks::spawn_tracked(
         app,
         LABEL,
         "auto",
         cancel,
         move |progress| prepared.run(Some(&progress)),
-        |app, ctx, result| match result.and_then(|done| apply(app, done)) {
-            Ok(0) => {
-                app.toast(ctx, crate::i18n::tr("Auto Settings").to_owned());
-                lightcraft_engine::activity::Outcome::default()
+        move |app, ctx, result| {
+            use lightcraft_engine::activity::{Ending, Outcome};
+            // ✕ made `run` answer `Err("… cancelled")`: that is a stop, said by the row alone (the person pressed
+            // it, so no toast), not a failure
+            if result.is_err() && stopped.load(std::sync::atomic::Ordering::Relaxed) {
+                return Outcome::ended(Ending::Stopped);
             }
-            Ok(skipped) => {
-                app.toast(ctx, format!("{}: {skipped} photo(s) could not be read", crate::i18n::tr("Auto Settings")));
-                lightcraft_engine::activity::Outcome {
-                    ending: lightcraft_engine::activity::Ending::Problems,
-                    failed: skipped,
-                    ..Default::default()
+            match result.and_then(|done| apply(app, done)) {
+                Ok(0) => {
+                    app.toast(ctx, crate::i18n::tr("Auto Settings").to_owned());
+                    Outcome::default()
                 }
-            }
-            Err(error) => {
-                app.toast(ctx, error.clone());
-                lightcraft_engine::activity::Outcome::failed(error)
+                Ok(skipped) => {
+                    app.toast(ctx, format!("{}: {skipped} photo(s) could not be read", crate::i18n::tr("Auto Settings")));
+                    Outcome { ending: Ending::Problems, failed: skipped, ..Default::default() }
+                }
+                Err(error) => {
+                    app.toast(ctx, error.clone());
+                    Outcome::failed(error)
+                }
             }
         },
     )?;
@@ -160,6 +165,21 @@ mod tests {
         for id in ids {
             assert_eq!(app.session.develop_of(id).unwrap().color.vibrance, 30.0);
         }
+    }
+    /// ✕ on the row stops the task: the row says stopped (not failed) and no toast speaks over the person's own click.
+    #[test]
+    fn stopping_it_from_the_row_leaves_a_stopped_row_and_no_toast() {
+        let mut app = app();
+        let before = app.session.commits();
+        app.run("develop.auto", json!({})).unwrap();
+        let id = app.session.activity.list().into_iter().find(|r| r.kind == "auto").expect("the task has a row").id;
+        app.session.activity.cancel(id).unwrap();
+        assert!(crate::tasks::wait_for(&mut app, &egui::Context::default(), LABEL, std::time::Duration::from_secs(60)));
+        let rows = app.session.activity.finished();
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!((rows[0].kind, rows[0].ending), ("auto", lightcraft_engine::activity::Ending::Stopped), "{rows:?}");
+        assert!(app.ui.toast.is_none(), "{:?}", app.ui.toast);
+        assert_eq!(app.session.commits(), before, "nothing was applied");
     }
     #[test]
     fn selection_auto_does_not_overwrite_newer_edits_or_another_library() {

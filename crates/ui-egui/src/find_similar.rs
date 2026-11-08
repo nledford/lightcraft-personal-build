@@ -45,6 +45,7 @@ fn start(app: &mut LightcraftApp, p: &Value, end: impl FnOnce(&mut LightcraftApp
         lightcraft_engine::guard::catch(LABEL, || similar::measure(reads, &flag, &|done| task.progress(done as u64, total)))
     };
     let done = move |app: &mut LightcraftApp, ctx: &egui::Context, found: Result<Vec<similar::Signature>, String>| {
+        let other_library = app.session.library_generation() != library;
         let ended = match found {
             _ if app.session.library_generation() != library => End::Dropped("another library was opened before the search ended"),
             Err(e) => End::Failed(e),
@@ -62,6 +63,9 @@ fn start(app: &mut LightcraftApp, p: &Value, end: impl FnOnce(&mut LightcraftApp
         };
         let outcome = match &ended {
             End::Found(_) => lightcraft_engine::activity::Outcome::default(),
+            // a search of the library before is no stopped task of this one: only the row's ✕ (or `activity.cancel`,
+            // or quitting) makes it a stopped task, and the new library's person did none of those
+            End::Dropped(_) if other_library => lightcraft_engine::activity::Outcome::default(),
             End::Dropped(_) => lightcraft_engine::activity::Outcome::ended(lightcraft_engine::activity::Ending::Stopped),
             End::Failed(e) => lightcraft_engine::activity::Outcome::failed(e.clone()),
         };

@@ -99,12 +99,14 @@ pub fn ask(app: &mut LightcraftApp, reply: Sender<Value>) -> Outcome {
     let done = move |app: &mut LightcraftApp, _ctx: &egui::Context, checked: Result<Option<Vec<(PhotoId, String)>>, String>| {
         use lightcraft_engine::activity::{Ending, Outcome as Row};
         let (answer, complete, row) = match checked {
+            // ✕ pressed before another library was opened still counts: the row says stopped
+            Ok(None) => (control::failure("Missing Photos: the check was stopped"), false, Row::ended(Ending::Stopped)),
+            // a check of the library before is no stopped task of this one: only the row's ✕ makes it one
             _ if app.session.library_generation() != library => {
                 let why = "Missing Photos: another library was opened before the check ended";
-                (control::failure(why), false, Row::ended(Ending::Stopped))
+                (control::failure(why), false, Row::default())
             }
             Err(e) => (control::failure(e.clone()), false, Row::failed(e)),
-            Ok(None) => (control::failure("Missing Photos: the check was stopped"), false, Row::ended(Ending::Stopped)),
             Ok(Some(gone)) if missing::fingerprint(&app.session.catalog) == snapshot => {
                 (control::success(missing::missing_json(gone)), true, Row::default())
             }
