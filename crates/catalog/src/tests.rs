@@ -1202,3 +1202,23 @@ fn boxed_embedded_lens_serializes_like_the_bare_lens() {
     p.embedded_lens = None;
     assert!(serde_json::to_value(&p).unwrap().get("embedded_lens").is_none(), "no lens, no field");
 }
+
+#[test]
+fn photos_after_walks_the_library_in_id_order_from_where_it_stopped() {
+    let mut c = Catalog::default();
+    let ids: Vec<PhotoId> = (0..5)
+        .map(|i| {
+            let id = c.alloc_photo_id();
+            c.apply(Op::AddPhoto {
+                photo: Box::new(Photo::new(id, Source::File { path: format!("/p/{i}.jpg") }, "n.jpg", "JPEG", 60, 40, "2026-01-01T10:00:00")),
+            })
+            .unwrap();
+            id
+        })
+        .collect();
+    let of = |after: Option<PhotoId>| c.photos_after(after).map(|p| p.id).collect::<Vec<_>>();
+    assert_eq!(of(None), ids);
+    assert_eq!(of(Some(ids[1])), ids[2..].to_vec(), "after the photo, not from it");
+    assert_eq!(of(Some(ids[4])), vec![]);
+    assert_eq!(of(Some(PhotoId(99))), vec![]);
+}
