@@ -344,7 +344,7 @@ pub struct TaskInfo {
     pub id: u64,
     /// A stable id: `import`, `export`, `scan`, `sync`, `move`, `previews`, `smartPreviews`, `backup`, `lightroom`,
     /// `merge`, `download`, `faces`, `facesGpu`, `denoise`, `findMissing`, `applePhotos`, `cache`, `focus`, `geocode`,
-    /// `recheck`, `reload`, `trash`, `saveMetadata`, `readMetadata`, `scheduledBackup` (a backup the schedule started by itself).
+    /// `recheck`, `reload`, `relocate`, `restore`, `trash`, `saveMetadata`, `readMetadata`, `scheduledBackup` (a backup the schedule started by itself).
     pub kind: &'static str,
     /// English; the frontend translates it.
     pub label: String,
