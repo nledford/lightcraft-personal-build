@@ -627,7 +627,8 @@ fn scan_by_hand_in(app: &mut LightcraftApp, sources: Vec<String>, browse: bool) 
     let progress = std::sync::Arc::new(ScanProgress::default());
     let (tx, rx) = std::sync::mpsc::channel::<ScanEnd>();
     let guard = scan_guard(app, &progress, false);
-    app.scan = Some(ScanTask { progress, rx, copy: false, album: None, browse, sources, library: app.session.library_generation(), guard, resolved: None });
+    app.scan =
+        Some(ScanTask { progress, rx, copy: false, album: None, browse, sources, library: app.session.library_generation(), guard, resolved: None });
     tx
 }
 

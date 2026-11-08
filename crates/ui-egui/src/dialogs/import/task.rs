@@ -1,8 +1,7 @@
 use super::scan::{drop_refusal, import_request, subject_of, wait_in_line};
 use super::{
-    ImportDialog, ImportUprightMode, ImportWarning, ImportWarningCode, LightcraftApp, Ordering, Remembered, Request, Value, json,
-    library_busy, recipe_items,
-    remember_read,
+    ImportDialog, ImportUprightMode, ImportWarning, ImportWarningCode, LightcraftApp, Ordering, Remembered, Request, Value, json, library_busy,
+    recipe_items, remember_read,
 };
 
 /// Files per batch in the browser build (each batch joins the catalog as it is ready, so the

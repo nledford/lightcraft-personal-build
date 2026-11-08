@@ -827,37 +827,37 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
         return;
     }
     if let Some(QuitPrompt::Tasks(text)) = app.quit_prompt.clone() {
-    let buttons = [("quitAnyway", "Quit Anyway", Choice::QuitAnyway), ("quitCancel", "Cancel", Choice::Cancel)];
-    let Some(i) = window(ctx, "quit-tasks", "Quit while tasks are running?", &text, &buttons, &mut app.notice_input) else {
+        let buttons = [("quitAnyway", "Quit Anyway", Choice::QuitAnyway), ("quitCancel", "Cancel", Choice::Cancel)];
+        let Some(i) = window(ctx, "quit-tasks", "Quit while tasks are running?", &text, &buttons, &mut app.notice_input) else {
+            return;
+        };
+        app.quit_prompt = None;
+        if buttons.get(i).is_some_and(|(_, _, choice)| *choice == Choice::QuitAnyway) {
+            // (not the backup this quit waits for: see `tasks_quitting_would_stop`)
+            for task in tasks_quitting_would_stop(app) {
+                // (one that ended meanwhile has nothing left to stop)
+                let _ = app.session.activity.cancel(task.id);
+            }
+            // tasks waiting in line would not run once the window closes (the question said so), and `may_close` would
+            // ask about them again; the backup this quit waits for is not in the line
+            for task in app.session.activity.waiting() {
+                let _ = app.session.activity.cancel(task.id);
+            }
+            // files waiting for an import, and one handed its files but not started, are given up
+            // too, or `may_close` would ask about them again
+            app.waiting_import = Default::default();
+            if app.import.as_ref().is_some_and(|t| !t.listed()) {
+                app.import = None;
+            }
+            // the backup and unsaved changes still get their own questions
+            if may_close(app) {
+                app.ui.quit = true;
+            }
+        } else {
+            quit_called_off(app);
+        }
         return;
-    };
-    app.quit_prompt = None;
-    if buttons.get(i).is_some_and(|(_, _, choice)| *choice == Choice::QuitAnyway) {
-        // (not the backup this quit waits for: see `tasks_quitting_would_stop`)
-        for task in tasks_quitting_would_stop(app) {
-            // (one that ended meanwhile has nothing left to stop)
-            let _ = app.session.activity.cancel(task.id);
-        }
-        // tasks waiting in line would not run once the window closes (the question said so), and `may_close` would
-        // ask about them again; the backup this quit waits for is not in the line
-        for task in app.session.activity.waiting() {
-            let _ = app.session.activity.cancel(task.id);
-        }
-        // files waiting for an import, and one handed its files but not started, are given up
-        // too, or `may_close` would ask about them again
-        app.waiting_import = Default::default();
-        if app.import.as_ref().is_some_and(|t| !t.listed()) {
-            app.import = None;
-        }
-        // the backup and unsaved changes still get their own questions
-        if may_close(app) {
-            app.ui.quit = true;
-        }
-    } else {
-        quit_called_off(app);
     }
-    return;
-}
     if let Some(QuitPrompt::Unsaved(text)) = app.quit_prompt.clone() {
         let buttons = [
             ("quitRetry", "Try Saving Again", Choice::Retry),

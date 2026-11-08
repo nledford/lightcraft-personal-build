@@ -43,14 +43,14 @@ pub(crate) use body::{DIALOG_SIZE, READ_HINT, THUMB_SIZE_DEFAULT, note_dialog_bo
 #[cfg(test)]
 use body::{RECIPE_CONTROLS, note_recipe_value};
 pub(crate) use scan::StoppingScans;
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) use scan::{auto_import_listed, cards_seen};
-pub(crate) use scan::{lane_ahead_text, library_busy};
 #[cfg(test)]
 pub(crate) use scan::{HELD_RESOLVES, ScanEnd, scan_by_hand, stall_scan, stall_scan_in, stall_scan_of};
 pub use scan::{
     IMPORT_REQUEST, ScanTask, Unreviewed, browse, drop_refusal, open, poll_scan, prune_unreviewed, queue_scan, queueable_scan, review_queued, running,
 };
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use scan::{auto_import_listed, cards_seen};
+pub(crate) use scan::{lane_ahead_text, library_busy};
 pub(crate) use tags::{tag_field_width, tag_help, tag_toggle, unknown_tags_warning};
 pub use task::{ImportTask, start, start_paths, start_request, tick};
 pub(crate) use task::{failure_name, not_readable_text};

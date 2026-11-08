@@ -911,7 +911,13 @@ pub fn confirm_many(app: &mut LightcraftApp, dlg: &Dialog) -> Result<Value, Stri
         return Err("the folders are still being scanned".into());
     }
     // (the folders' dialog has no "Don't import files already in the library" box nor a Read row: duplicates stay out and the Read row is as the library has it)
-    let choice = SyncChoice { import_new: *import_new, relink_moved: *relink_moved, remove_missing: *remove_missing, read_metadata: *read_metadata, ..SyncChoice::default() };
+    let choice = SyncChoice {
+        import_new: *import_new,
+        relink_moved: *relink_moved,
+        remove_missing: *remove_missing,
+        read_metadata: *read_metadata,
+        ..SyncChoice::default()
+    };
     let to_do: Vec<&SyncFolder> = folders.iter().filter(|f| f.skipped.is_none() && f.counts.as_ref().is_some_and(|c| has_work(c, &choice))).collect();
     // all or none: a line too full for them all takes none of them (the dialog stays, nothing half done)
     let room = lightcraft_engine::activity::MAX_WAITING.saturating_sub(app.session.activity.waiting().len());
@@ -1251,14 +1257,8 @@ pub fn poll_run(app: &mut LightcraftApp, ctx: &egui::Context) {
         run.commit = Some(commit);
         return;
     }
-    let (name, stopped, crashed, mut not_saved, guard, left_alone) = (
-        run.name.clone(),
-        run.stopping,
-        run.crashed.load(Ordering::Relaxed),
-        std::mem::take(&mut run.not_saved),
-        run.guard.take(),
-        run.left_alone,
-    );
+    let (name, stopped, crashed, mut not_saved, guard, left_alone) =
+        (run.name.clone(), run.stopping, run.crashed.load(Ordering::Relaxed), std::mem::take(&mut run.not_saved), run.guard.take(), run.left_alone);
     app.sync_run = None;
     let mut report = None;
     if let Err(e) = app.session.execute_fn("folder.synchronize", |s| {

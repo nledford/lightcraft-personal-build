@@ -1215,7 +1215,11 @@ mod tests {
         let s = Session::with_demo();
         let state = Arc::new(super::PreviewBuild::default());
         let run = super::Running {
-            task: Some(super::task_for(&s, &state, crate::activity::Request { command: String::new(), params: serde_json::Value::Null, ..Default::default() })),
+            task: Some(super::task_for(
+                &s,
+                &state,
+                crate::activity::Request { command: String::new(), params: serde_json::Value::Null, ..Default::default() },
+            )),
             state: state.clone(),
         };
         assert!(s.activity.lane_busy(crate::activity::Lane::Previews));
@@ -1238,7 +1242,11 @@ mod tests {
         let s = Session::with_demo();
         let state = Arc::new(super::PreviewBuild::default());
         let run = super::Running {
-            task: Some(super::task_for(&s, &state, crate::activity::Request { command: String::new(), params: serde_json::Value::Null, ..Default::default() })),
+            task: Some(super::task_for(
+                &s,
+                &state,
+                crate::activity::Request { command: String::new(), params: serde_json::Value::Null, ..Default::default() },
+            )),
             state: state.clone(),
         };
         state.finished.store(true, Ordering::Relaxed);

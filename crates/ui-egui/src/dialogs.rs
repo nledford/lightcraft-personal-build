@@ -738,7 +738,7 @@ fn button_row(app: &LightcraftApp, ui: &mut egui::Ui, dlg: &Dialog, close: &mut 
         let line = crate::i18n::tr_format!("Starts after: {what}", what = what);
         ui.allocate_ui_with_layout(egui::vec2(room, row_h), egui::Layout::left_to_right(egui::Align::Center), |ui| {
             ui.set_width(room);
-            let r = ui.add(egui::Label::new(egui::RichText::new(line).size(11.0).color(t.text_dim)).truncate());
+            let r = ui.add(egui::Label::new(egui::RichText::new(line).font(t.caption()).color(t.text_dim)).truncate());
             crate::widgets::register(ui, "dialog:startsAfter", r.rect);
         });
     } else {
@@ -765,6 +765,19 @@ pub(crate) fn toast_created_folder(app: &mut LightcraftApp, ctx: &egui::Context,
     {
         let (path, parent) = (made["path"].as_str().unwrap_or_default(), params["parent"].as_str().unwrap_or_default());
         app.toast(ctx, crate::panels::left::created_text(path, parent));
+    }
+}
+
+/// A move of photos says how it went, or why nothing moved.
+fn toast_photos_moved(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &Dialog, made: &serde_json::Value) {
+    if let Dialog::MovePhotos { name, .. } = dlg {
+        let moved = made["moved"].as_u64().unwrap_or(0);
+        let text = crate::panels::left::moved_text(moved, name);
+        if moved > 0 {
+            app.toast_undoable(ctx, text);
+        } else {
+            app.toast(ctx, text);
+        }
     }
 }
 
@@ -826,15 +839,7 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
         }
         // a move says how it went, or why nothing moved
         Ok(r) if matches!(dlg, Dialog::MovePhotos { .. }) => {
-            if let Dialog::MovePhotos { name, .. } = dlg {
-                let moved = r["moved"].as_u64().unwrap_or(0);
-                let text = crate::panels::left::moved_text(moved, name);
-                if moved > 0 {
-                    app.toast_undoable(ctx, text);
-                } else {
-                    app.toast(ctx, text);
-                }
-            }
+            toast_photos_moved(app, ctx, dlg, &r);
             closed = true;
         }
         Err(e) if matches!(dlg, Dialog::MovePhotos { .. } | Dialog::MoveFolder { .. }) => {
