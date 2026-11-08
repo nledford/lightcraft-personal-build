@@ -366,5 +366,10 @@
   "Photos that could not be moved stay in the library ({n}): {why}": "Ei voitu siirtää, jäävät kirjastoon ({n}): {why}",
   "Photos whose file was already gone: {n}": "Kuvat, joiden tiedosto oli jo poissa: {n}",
   "Sidecars left in place: {n}": "Paikoilleen jätetyt sivutiedostot: {n}",
-  "Files other photos still use, kept: {n}": "Säilytetyt tiedostot, joita muut kuvat vielä käyttävät: {n}"
+  "Files other photos still use, kept: {n}": "Säilytetyt tiedostot, joita muut kuvat vielä käyttävät: {n}",
+  "None of this folder's photos are in “{name}”: choose the folder it is now": "Mikään tämän kansion kuvista ei ole kansiossa ”{name}”: valitse kansio, jossa se nyt on",
+  "Only {found} of this folder's {total} photos are in:": "Vain {found} tämän kansion {total} kuvasta on kansiossa:",
+  "Only {found} of this folder's {total} photos are in “{name}”: the folder was not located": "Vain {found} tämän kansion {total} kuvasta on kansiossa ”{name}”: kansiota ei paikannettu",
+  "Files there that are not the size the library recorded: {n}": "Siellä olevat tiedostot, joiden koko ei vastaa kirjaston tallentamaa: {n}",
+  "Folder located. Photos relinked: {n}": "Kansio paikannettu. Uudelleen yhdistettyjä kuvia: {n}"
 }

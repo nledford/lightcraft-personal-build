@@ -238,6 +238,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     ("file.backupLibrary", "Back Up Library…", None, "File"),
     ("file.restoreLibrary", "Restore Library from Backup…", None, "File"),
     ("photo.locate", "Locate Missing File…", None, ""),
+    ("folder.locate", "Locate Missing Folder…", None, ""),
     ("dialog.saveMetadataPreset", "Save Metadata Preset…", None, ""),
     // the keywords ⇧K adds or removes, typed with commas between them
     ("dialog.keywordShortcut", "Set Keyword Shortcut…", Some("Cmd+Alt+Shift+K"), ""),
