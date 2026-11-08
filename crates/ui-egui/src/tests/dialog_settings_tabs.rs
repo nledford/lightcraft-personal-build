@@ -129,8 +129,9 @@ fn tabs_are_not_drawn_as_the_choices_under_them_are() {
     let border: usize = edges(choice, 1.0).iter().map(|e| count(&image, *e, drawn)).sum();
     assert!(border as f32 > choice.width(), "a choice has a border ({border} px)");
     // And a tab that is not open is its name alone on the window: no border, no fill of its own
+    // (a border as Settings draws it, so that this is not vacuous: a choice's border is `drawn` too)
     let import = tab(&h, "import");
-    let border: usize = edges(import, 1.0).iter().map(|e| count(&image, *e, t.button_border)).sum();
+    let border: usize = edges(import, 1.0).iter().map(|e| count(&image, *e, drawn)).sum();
     assert_eq!(border, 0, "a tab has no border");
     assert_eq!(count(&image, import, t.button), 0, "a tab has no button fill");
     assert!(count(&image, import, t.chrome) as f32 > 0.6 * import.area(), "a tab is drawn on the window itself");

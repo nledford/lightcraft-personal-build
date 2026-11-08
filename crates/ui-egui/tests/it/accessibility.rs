@@ -711,9 +711,88 @@ fn painted_near<S>(h: &Harness<'_, S>, rect: egui::Rect) -> Vec<egui::Shape> {
         .collect()
 }
 
+/// Whether the frame looks different with the focus on `focus` (the control at `rect`), or `None` where
+/// the answer is not the focus alone. Leaves the focus on the control.
+fn focus_shows<S>(h: &mut Harness<'_, S>, focus: egui::Id, rect: egui::Rect) -> Option<bool> {
+    // a widget that drew itself before the focus reached it paints the focus a frame later
+    h.run_steps(1);
+    let focused = painted_near(h, rect);
+    h.run_steps(1);
+    let focused_again = painted_near(h, rect);
+    h.ctx.memory_mut(|m| m.surrender_focus(focus));
+    h.run_steps(1);
+    let plain = painted_near(h, rect);
+    h.run_steps(1);
+    let plain_again = painted_near(h, rect);
+    // No verdict where the answer is not the focus alone: a field that takes the focus back
+    // at once cannot be shown without it, and something that moves on its own (a fade, a
+    // thumbnail arriving) would make the same control pass on one run and fail on the next.
+    let held_back = h.ctx.memory(|m| m.focused()) == Some(focus);
+    h.ctx.memory_mut(|m| m.request_focus(focus));
+    h.run_steps(2);
+    // the focused frame again, after the plain ones: what changed between the two (a picture that
+    // came back, a row that moved) is not the focus
+    let focused_last = painted_near(h, rect);
+    (!held_back && focused == focused_again && plain == plain_again && focused == focused_last).then_some(focused != plain)
+}
+
+/// The role and place of the control with the egui id `id` in the last frame.
+fn find_control<S>(h: &Harness<'_, S>, id: u64) -> Option<(Role, egui::Rect)> {
+    let node = h.root().children_recursive().map(|n| n.accesskit_node()).find(|n| n.locate().0.0 == id)?;
+    let b = node.bounding_box()?;
+    let rect = egui::Rect::from_min_max(egui::pos2(b.x0 as f32, b.y0 as f32), egui::pos2(b.x1 as f32, b.y1 as f32));
+    Some((node.role(), rect))
+}
+
+/// More members than any tab bar or group of radio buttons has: a row whose arrow keys never stop
+/// at an end is given up on.
+const MAX_ROW: usize = 100;
+
+/// Checks the focused control `focus` for a visible focus, and notes it as reached.
+fn visit<S>(h: &mut Harness<'_, S>, focus: egui::Id, order: &mut Vec<u64>, shows: &mut BTreeMap<u64, bool>) -> Option<Role> {
+    let id = focus.value();
+    let found = find_control(h, id);
+    if let Some((_, rect)) = found.filter(|(_, r)| r.width() > 0.0 && r.height() > 0.0) {
+        if let Some(shown) = focus_shows(h, focus, rect) {
+            shows.insert(id, shown);
+        }
+    }
+    order.push(id);
+    found.map(|(role, _)| role)
+}
+
+/// The focus is on `entry`, a tab or a radio button. Where it is a member of a tab bar or a group of
+/// radio buttons that is one Tab stop, the arrow keys visit the others (from the first to the last:
+/// Home, then →), and each is checked as a control Tab reached is. The focus ends on the last
+/// member, where Tab leaves the row from.
+///
+/// Where the arrow goes to anything but another control of the entry's role (a tab that is a stop of
+/// its own, a radio button of another kind: egui moves the focus to the nearest control there),
+/// there is no row to follow: the focus goes back to the last member and Tab goes on from there.
+fn visit_row<S>(h: &mut Harness<'_, S>, entry: Role, order: &mut Vec<u64>, shows: &mut BTreeMap<u64, bool>) {
+    h.key_press(egui::Key::Home);
+    h.run_steps(2);
+    for _ in 0..MAX_ROW {
+        let Some(focus) = h.ctx.memory(|m| m.focused()) else { return };
+        if !order.contains(&focus.value()) {
+            visit(h, focus, order, shows);
+        }
+        h.key_press(egui::Key::ArrowRight);
+        h.run_steps(2);
+        // the end of the row: → goes nowhere
+        let Some(next) = h.ctx.memory(|m| m.focused()).filter(|next| *next != focus) else { return };
+        if find_control(h, next.value()).is_none_or(|(role, _)| role != entry) {
+            h.ctx.memory_mut(|m| m.request_focus(focus));
+            h.run_steps(2);
+            return;
+        }
+    }
+}
+
 /// Presses Tab until the focus comes back to a control it already visited (a round, or a control
 /// that holds the focus and lets Tab go nowhere). Returns the focus order (egui's widget ids), and
-/// for each control focused whether the frame looked different with the focus.
+/// for each control focused whether the frame looked different with the focus. A tab bar or a group
+/// of radio buttons is one Tab stop: the arrow keys visit the rest of it ([`visit_row`]).
 fn tab_round<S>(h: &mut Harness<'_, S>) -> Result<(Vec<u64>, BTreeMap<u64, bool>), String> {
     let mut order: Vec<u64> = Vec::new();
     let mut shows: BTreeMap<u64, bool> = BTreeMap::new();
@@ -729,43 +808,13 @@ fn tab_round<S>(h: &mut Harness<'_, S>) -> Result<(Vec<u64>, BTreeMap<u64, bool>
             continue;
         };
         lost = 0;
-        let id = focus.value();
         // back at a control already visited: the round is over, or the focus is held on one control
-        if order.contains(&id) {
+        if order.contains(&focus.value()) {
             return Ok((order, shows));
         }
-        let rect = h
-            .root()
-            .children_recursive()
-            .map(|n| n.accesskit_node())
-            .find(|n| n.locate().0.0 == id)
-            .and_then(|n| n.bounding_box())
-            .map(|b| egui::Rect::from_min_max(egui::pos2(b.x0 as f32, b.y0 as f32), egui::pos2(b.x1 as f32, b.y1 as f32)));
-        if let Some(rect) = rect.filter(|r| r.width() > 0.0 && r.height() > 0.0) {
-            // a widget that drew itself before the focus reached it paints the focus a frame later
-            h.run_steps(1);
-            let focused = painted_near(h, rect);
-            h.run_steps(1);
-            let focused_again = painted_near(h, rect);
-            h.ctx.memory_mut(|m| m.surrender_focus(focus));
-            h.run_steps(1);
-            let plain = painted_near(h, rect);
-            h.run_steps(1);
-            let plain_again = painted_near(h, rect);
-            // No verdict where the answer is not the focus alone: a field that takes the focus back
-            // at once cannot be shown without it, and something that moves on its own (a fade, a
-            // thumbnail arriving) would make the same control pass on one run and fail on the next.
-            let held_back = h.ctx.memory(|m| m.focused()) == Some(focus);
-            h.ctx.memory_mut(|m| m.request_focus(focus));
-            h.run_steps(2);
-            // the focused frame again, after the plain ones: what changed between the two (a picture that
-            // came back, a row that moved) is not the focus
-            let focused_last = painted_near(h, rect);
-            if !held_back && focused == focused_again && plain == plain_again && focused == focused_last {
-                shows.insert(id, focused != plain);
-            }
+        if let Some(role) = visit(h, focus, &mut order, &mut shows).filter(|role| matches!(role, Role::Tab | Role::RadioButton)) {
+            visit_row(h, role, &mut order, &mut shows);
         }
-        order.push(id);
     }
     Err(format!("Tab reached a new control on each of {MAX_TABS} presses: the order never comes round"))
 }
