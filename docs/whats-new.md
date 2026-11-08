@@ -908,6 +908,10 @@
   underneath it.
 - A toast fades in over a fraction of a second, as it already faded out.
 
+### Dragged photos step back in the grid
+- While you drag photos from the grid, their thumbnails are dimmed (as dark as a rejected photo's), so the label at
+  the pointer and the row it is over are what stands out. They return to normal when you let go of them.
+
 ## 2026-10-22
 
 ### Exports don't create a photo's sidecar
