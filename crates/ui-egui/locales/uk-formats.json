@@ -398,5 +398,12 @@
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "Завдання чекають у черзі ({n}): {names}. Зміна бібліотеки скасує їх.",
   "Waiting tasks dropped: {n}": "Скасовано завдань із черги: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "У черзі забагато завдань: {n}. Зачекайте, поки частина завершиться",
-  "Without review: copy to {destination}": "Без перевірки: копіювати до {destination}"
+  "Without review: copy to {destination}": "Без перевірки: копіювати до {destination}",
+  "Synchronizing {n} folders one after another: see them under the bell": "Теки ({n}) синхронізуються по черзі: дивіться під дзвоником",
+  "Too many tasks are waiting: only {n} more can wait in line": "Забагато завдань у черзі: поміститься ще лише {n}",
+  "Synchronize {n} Folders…": "Синхронізувати теки ({n})…",
+  "{n} new": "нових: {n}",
+  "{n} moved": "переміщених: {n}",
+  "{n} missing": "відсутніх: {n}",
+  "{n} with changed sidecars": "зі зміненим файлом XMP: {n}"
 }

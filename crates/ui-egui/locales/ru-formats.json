@@ -398,5 +398,12 @@
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "В очереди ждёт задач: {n} — {names}. При смене библиотеки они будут отброшены.",
   "Waiting tasks dropped: {n}": "Отброшено задач из очереди: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "В очереди слишком много задач: {n}. Подождите, пока часть завершится",
-  "Without review: copy to {destination}": "Без проверки: копировать в {destination}"
+  "Without review: copy to {destination}": "Без проверки: копировать в {destination}",
+  "Synchronizing {n} folders one after another: see them under the bell": "Папки ({n}) синхронизируются по очереди: смотрите под колокольчиком",
+  "Too many tasks are waiting: only {n} more can wait in line": "Слишком много задач в очереди: поместится ещё только {n}",
+  "Synchronize {n} Folders…": "Синхронизировать папки ({n})…",
+  "{n} new": "новых: {n}",
+  "{n} moved": "перемещённых: {n}",
+  "{n} missing": "отсутствующих: {n}",
+  "{n} with changed sidecars": "с изменённым XMP-файлом: {n}"
 }

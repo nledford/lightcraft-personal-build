@@ -105,7 +105,10 @@ Jobs that must not run side by side share a lane (`activity::Lane`). There are t
   (`LightcraftApp::start_waiting`, every frame), and the engine leaves them alone (`Activity::take_ready_if`). Auto
   Import lists its folder only when nothing runs, rescans or waits in this lane; files it finds after something
   started meanwhile wait in line, quietly. A drop while a scan runs or an import's review waits behind a dialog is
-  still refused, and says which of the three it is.
+  still refused, and says which of the three it is. Synchronize N Folders (several Folders rows) scans its folders
+  one after another under one "Looking for changes" row, then puts one Synchronize per folder with something to do in this
+  line, in the sidebar's order, each removing, relinking or reading sidecars of only the photos its scan found; a waiting
+  row names its folder (`Request::subject`, the row's detail).
   While this lane is busy, the stack's row of the review's folder scan (kind `scan`, "Scanning folder") has Queue
   without review: the scan is let go and the folder waits as an import asked as the last confirmed review brought its
   files in (`import_queue::plan`: add in place, or copy with its destination, folders, names and DNG conversion, never Move; with none,

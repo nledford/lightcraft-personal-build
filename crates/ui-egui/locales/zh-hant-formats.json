@@ -398,5 +398,12 @@
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "有 {n} 個工作在排隊等待：{names}。切換照片庫將捨棄它們。",
   "Waiting tasks dropped: {n}": "已捨棄排隊等待的工作：{n} 個",
   "Too many tasks are waiting ({n}): wait for some to finish": "等待中的工作過多（{n} 個）：請等待部分工作完成",
-  "Without review: copy to {destination}": "不經檢視：複製至 {destination}"
+  "Without review: copy to {destination}": "不經檢視：複製至 {destination}",
+  "Synchronizing {n} folders one after another: see them under the bell": "正在依序同步 {n} 個資料夾：可在鈴鐺下查看",
+  "Too many tasks are waiting: only {n} more can wait in line": "等待中的工作過多：佇列中只能再加入 {n} 個",
+  "Synchronize {n} Folders…": "同步 {n} 個資料夾…",
+  "{n} new": "新增 {n}",
+  "{n} moved": "已移動 {n}",
+  "{n} missing": "遺失 {n}",
+  "{n} with changed sidecars": "附屬檔案已變更 {n}"
 }

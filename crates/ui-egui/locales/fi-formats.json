@@ -394,5 +394,12 @@
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "Jonossa odottavia tehtäviä: {n}: {names}. Kirjaston vaihtaminen hylkää ne.",
   "Waiting tasks dropped: {n}": "Hylättyjä odottavia tehtäviä: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Liian monta tehtävää odottaa: {n}. Odota, että osa valmistuu",
-  "Without review: copy to {destination}": "Ilman tarkistusta: kopioi kohteeseen {destination}"
+  "Without review: copy to {destination}": "Ilman tarkistusta: kopioi kohteeseen {destination}",
+  "Synchronizing {n} folders one after another: see them under the bell": "Synkronoidaan {n} kansiota yksi kerrallaan: katso ne kellon alta",
+  "Too many tasks are waiting: only {n} more can wait in line": "Liian monta tehtävää odottaa: jonoon mahtuu vielä vain {n}",
+  "Synchronize {n} Folders…": "Synkronoi {n} kansiota…",
+  "{n} new": "uusia: {n}",
+  "{n} moved": "siirretty: {n}",
+  "{n} missing": "puuttuu: {n}",
+  "{n} with changed sidecars": "muuttuneita sivutiedostoja: {n}"
 }

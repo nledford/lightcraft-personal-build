@@ -3617,7 +3617,6 @@
   "Another library was opened since the folder was dropped: nothing was moved": "Seit dem Ablegen des Ordners wurde eine andere Bibliothek geöffnet: Es wurde nichts verschoben",
   "Choose one album to rename it": "Wähle ein einzelnes Album, um es umzubenennen",
   "Choose one folder to rename it": "Wähle einen einzelnen Ordner, um ihn umzubenennen",
-  "Choose one folder to synchronize it": "Wähle einen einzelnen Ordner, um ihn zu synchronisieren",
   "Choose one keyword to create a keyword inside it": "Wähle ein einzelnes Stichwort, um darin ein Stichwort zu erstellen",
   "Choose one keyword to edit it": "Wähle ein einzelnes Stichwort, um es zu bearbeiten",
   "Choose one keyword to rename it": "Wähle ein einzelnes Stichwort, um es umzubenennen",
@@ -3667,5 +3666,16 @@
   "A folder is already being scanned": "Ein Ordner wird bereits durchsucht",
   "Without review: add in place": "Ohne Prüfung: am Speicherort hinzufügen",
   "Without review: copy into the library": "Ohne Prüfung: in die Bibliothek kopieren",
-  "Close the open dialog, then choose Review… again": "Schließe den geöffneten Dialog und wähle dann erneut Prüfen…"
+  "Close the open dialog, then choose Review… again": "Schließe den geöffneten Dialog und wähle dann erneut Prüfen…",
+  "A whole disk: synchronize it by itself": "Eine ganze Festplatte: einzeln synchronisieren",
+  "Bring the library up to date with these folders and the folders inside them, one after another:": "Die Bibliothek nacheinander mit diesen Ordnern und den Ordnern darin abgleichen:",
+  "Waiting to be scanned": "Wartet auf die Suche",
+  "Up to date": "Aktuell",
+  "Nothing to do: the library is up to date with these folders": "Nichts zu tun: Die Bibliothek ist mit diesen Ordnern auf dem neuesten Stand",
+  "Synchronizing the folder: see it under the bell": "Ordner wird synchronisiert: siehe unter der Glocke",
+  "Find what changed in each of these folders on disk, then bring the library up to date with them one after another": "Findet, was sich in jedem dieser Ordner auf der Festplatte geändert hat, und gleicht die Bibliothek nacheinander mit ihnen ab",
+  "Synchronize Folders": "Ordner synchronisieren",
+  "Can't be synchronized with the others: synchronize it by itself": "Nicht zusammen mit den anderen synchronisierbar: einzeln synchronisieren",
+  "Nothing to do with the choices ticked": "Mit den gewählten Optionen ist nichts zu tun",
+  "Nothing was synchronized": "Nichts wurde synchronisiert"
 }

@@ -506,6 +506,7 @@ fn dialog_title(app: &LightcraftApp, dlg: &Dialog) -> String {
         Dialog::RemoveFolder { disk: true, .. } => "Remove Disk from Library",
         Dialog::RemoveFolder { .. } => "Remove Folder from Library",
         Dialog::SynchronizeFolder { .. } => "Synchronize Folder",
+        Dialog::SynchronizeFolders { .. } => "Synchronize Folders",
         // (nothing to download from in this build: the dialog explains the manual install)
         Dialog::SamModel { .. } if sam_by_hand(&app.session.segmenter) => "Install the SAM 3 Model",
         Dialog::SamModel { .. } => "Download the SAM 3 Model?",
@@ -542,6 +543,12 @@ impl SamState {
             by_hand: sam_by_hand(sam),
         }
     }
+}
+
+/// The label the dialog's confirm button has now, for tests.
+#[cfg(test)]
+pub(crate) fn confirm_label(app: &LightcraftApp, dlg: &Dialog) -> String {
+    ok_label(app, dlg, is_informational(dlg), &SamState::of(app), false)
 }
 
 /// The label of a dialog's cancel button.
@@ -637,11 +644,11 @@ fn fixed_ok_label(app: &LightcraftApp, dlg: &Dialog, informational: bool, queues
         d @ Dialog::LightroomDestination { .. } => crate::lightroom_destination::ok_label(d),
         Dialog::Welcome { .. } => "",
         Dialog::LensDatabase { .. } => "Download",
-        Dialog::SynchronizeFolder { .. } if informational => "Close",
+        Dialog::SynchronizeFolder { .. } | Dialog::SynchronizeFolders { .. } if informational => "Close",
         // the scan need not be waited for
         Dialog::SynchronizeFolder { counts: None, .. } => "Continue in Background",
         Dialog::SynchronizeFolder { .. } if queues => "Queue Synchronize",
-        Dialog::SynchronizeFolder { .. } => "Synchronize",
+        Dialog::SynchronizeFolder { .. } | Dialog::SynchronizeFolders { .. } => "Synchronize",
         Dialog::RenamePerson { from, to, .. } if person_rename_plan(&app.session.catalog, from, to).needs_merge => "Merge",
         Dialog::RenamePerson { .. } => "Rename",
         // the dialogs that only show something, or a model file that can't be used
@@ -687,7 +694,8 @@ fn can_confirm(app: &LightcraftApp, ctx: &egui::Context, dlg: &Dialog, informati
             | Dialog::RestoreBackup { selected: None, .. }
     )
         // (Synchronize, just after its button stopped being Continue in Background)
-        || (matches!(dlg, Dialog::SynchronizeFolder { counts: Some(_), .. }) && !crate::sync::settled(app, ctx));
+        || (matches!(dlg, Dialog::SynchronizeFolder { counts: Some(_), .. }) && !crate::sync::settled(app, ctx))
+        || (matches!(dlg, Dialog::SynchronizeFolders { .. }) && !crate::sync::many_scanned(dlg));
     let bad_rules =
         matches!(dlg, Dialog::SmartRules { id, rules, .. } if !rules.check_for(&app.session.catalog, id.map(lightcraft_catalog::AlbumId)).is_empty());
     !rename_blocked && (informational || (!waiting && !bad_rules))
@@ -782,6 +790,7 @@ fn confirmed(app: &mut LightcraftApp, ctx: &egui::Context, dlg: &mut Dialog) -> 
                     | Dialog::KeywordTag { .. }
                     | Dialog::KeywordSet { .. }
                     | Dialog::SynchronizeFolder { .. }
+                    | Dialog::SynchronizeFolders { .. }
                     | Dialog::SaveEffect { .. }
                     | Dialog::CaptureTime { .. }
                     | Dialog::LensDatabase { .. }
@@ -2255,6 +2264,7 @@ fn dialog_content(
         Dialog::MovePhotos { .. } => move_photos_body(ui, t, dlg),
         Dialog::MoveFolder { .. } => move_folder_body(ui, t, dlg),
         d @ Dialog::SynchronizeFolder { .. } => crate::sync::body(app, ui, d),
+        d @ Dialog::SynchronizeFolders { .. } => crate::sync::many_body(app, ui, d),
         Dialog::LightroomCatalog { .. } => lightroom_catalog_body(app, ui, t, dlg),
         d @ Dialog::LightroomDestination { .. } => crate::lightroom_destination::body(app, ui, d),
         Dialog::LensDatabase { .. } => crate::lens_db::offer(ui),

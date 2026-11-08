@@ -397,5 +397,12 @@
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} uppgifter väntar i kön: {names}. Om du byter bibliotek tas de bort.",
   "Waiting tasks dropped: {n}": "Väntande uppgifter som togs bort: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "För många uppgifter väntar ({n}): vänta tills några är klara",
-  "Without review: copy to {destination}": "Utan granskning: kopiera till {destination}"
+  "Without review: copy to {destination}": "Utan granskning: kopiera till {destination}",
+  "Synchronizing {n} folders one after another: see them under the bell": "Synkroniserar {n} mappar en i taget: se dem under klockan",
+  "Too many tasks are waiting: only {n} more can wait in line": "För många uppgifter väntar: bara {n} till får plats i kön",
+  "Synchronize {n} Folders…": "Synkronisera {n} mappar…",
+  "{n} new": "nya: {n}",
+  "{n} moved": "flyttade: {n}",
+  "{n} missing": "{n} saknas",
+  "{n} with changed sidecars": "med ändrade sidofiler: {n}"
 }

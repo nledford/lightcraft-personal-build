@@ -461,24 +461,25 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
                     (Ok(made), crate::state::Dialog::TextPrompt { .. }) => crate::dialogs::toast_created_folder(app, ctx, &d, made),
                     _ => {}
                 }
-                // the import review, the rule editor and the one-line prompts stay open on an error, as with their buttons
+                // the import review, the rule editor, the one-line prompts and the folders' Synchronize stay open on an error, as with their buttons
                 if (r.is_err()
-                    && matches!(
-                        d,
-                        crate::state::Dialog::Import { .. }
-                            | crate::state::Dialog::SamModel { .. }
-                            | crate::state::Dialog::SmartRules { .. }
-                            | crate::state::Dialog::SaveEffect { .. }
-                            | crate::state::Dialog::CaptureTime { .. }
-                            | crate::state::Dialog::LensDatabase { .. }
+                && matches!(
+                    d,
+                    crate::state::Dialog::Import { .. }
+                        | crate::state::Dialog::SamModel { .. }
+                        | crate::state::Dialog::SmartRules { .. }
+                        | crate::state::Dialog::SaveEffect { .. }
+                        | crate::state::Dialog::CaptureTime { .. }
+                        | crate::state::Dialog::LensDatabase { .. }
                             | crate::state::Dialog::TextPrompt { .. }
                             | crate::state::Dialog::RestoreBackup { .. }
+                            | crate::state::Dialog::SynchronizeFolders { .. }
                     ))
-                    || (r.is_ok() && crate::panels::dialogs::keeps_open(app, &d))
-                    || (r.is_err() && crate::lightroom_destination::keeps_open_on_error(app, &d))
-                {
-                    app.ui.dialog = Some(d);
-                }
+                || (r.is_ok() && crate::panels::dialogs::keeps_open(app, &d))
+                || (r.is_err() && crate::lightroom_destination::keeps_open_on_error(app, &d))
+            {
+                app.ui.dialog = Some(d);
+            }
                 wrap(r)
             }
             None => err("no dialog open"),

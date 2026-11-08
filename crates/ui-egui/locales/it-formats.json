@@ -397,5 +397,12 @@
   "{n} tasks are waiting in line: {names}. Switching libraries drops them.": "{n} attività sono in coda: {names}. Cambiando libreria vengono scartate.",
   "Waiting tasks dropped: {n}": "Attività in coda scartate: {n}",
   "Too many tasks are waiting ({n}): wait for some to finish": "Troppe attività in coda ({n}): attendi che alcune finiscano",
-  "Without review: copy to {destination}": "Senza revisione: copia in {destination}"
+  "Without review: copy to {destination}": "Senza revisione: copia in {destination}",
+  "Synchronizing {n} folders one after another: see them under the bell": "Sincronizzazione di {n} cartelle una dopo l'altra: vedi sotto la campanella",
+  "Too many tasks are waiting: only {n} more can wait in line": "Troppe attività in attesa: posti rimasti in coda: {n}",
+  "Synchronize {n} Folders…": "Sincronizza {n} cartelle…",
+  "{n} new": "nuove: {n}",
+  "{n} moved": "spostate: {n}",
+  "{n} missing": "mancanti: {n}",
+  "{n} with changed sidecars": "con file collaterale cambiato: {n}"
 }
