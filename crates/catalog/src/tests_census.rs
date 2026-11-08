@@ -196,10 +196,11 @@ fn a_changed_label_and_changed_keywords_on_photos_and_a_changed_folder_label_are
             ("photo.label", eight.as_str(), "red -> yellow"),
             ("photo.keywords", sixteen.as_str(), "+late|keyword"),
             ("folder.label", "/pictures/2019/trip", "green -> purple"),
+            ("label_names.changed", "blue", "none -> Later"),
         ])
     );
     // (the other fields: counted, not listed)
-    assert_eq!(d.other.iter().map(|(k, n)| (*k, *n)).collect::<Vec<_>>(), [("catalog.label_names", 1), ("photo.rating", 1)]);
+    assert_eq!(d.other.iter().map(|(k, n)| (*k, *n)).collect::<Vec<_>>(), [("photo.rating", 1)]);
 
     // (and the other way round)
     let back = census::diff(&b, &a);
@@ -296,8 +297,8 @@ fn counts_only_names_no_photo_folder_label_or_keyword() {
     assert!(full.starts_with("MUST KEEP"), "the must-keep section comes first:\n{full}");
     let counts = d.report(true);
     assert!(counts.contains("photo.label: 1") && counts.contains("photo.keywords: 1") && counts.contains("folder.label: 1"), "{counts}");
-    assert!(counts.contains("photo.rating: 1") && counts.contains("result: DIFFERENT"), "{counts}");
-    for secret in ["IMG_", "pictures", "yellow", "green", "purple", "late|", "Lisbon", "boats"] {
+    assert!(counts.contains("photo.rating: 1") && counts.contains("label_names.changed: 1") && counts.contains("result: DIFFERENT"), "{counts}");
+    for secret in ["IMG_", "pictures", "yellow", "green", "purple", "late|", "Lisbon", "boats", "Later", "Approved"] {
         assert!(!counts.contains(secret), "`{secret}` in the counts-only report:\n{counts}");
     }
 }
@@ -437,9 +438,96 @@ fn two_census_files_are_compared_by_what_they_hold() {
     census::write(&after, &b).unwrap();
     let d = census::diff_files(&a, &b).unwrap();
     assert_eq!(d, census::diff(&read(&before), &read(&after)));
-    assert_eq!(d.must_keep.len(), 3);
+    assert_eq!(d.must_keep.len(), 4);
     // (the same library twice: the same)
     let again = scratch.join("again.json");
     census::write(&before, &again).unwrap();
     assert!(!census::diff_files(&a, &again).unwrap().differs());
+}
+
+/// An entry of the other library's folder that would be named like one of this library's own must not hide it: neither
+/// is left out of the comparison.
+#[test]
+fn entries_that_would_share_a_name_when_rebased_are_all_compared() {
+    let scratch = Scratch::new("rebase");
+    let library = scratch.join("library");
+    personal_library(&library, false, 4, false);
+    let mut a = read(&library);
+    let entry = a.photos[&key(8)].clone();
+    a.photos.insert("x.jpg".into(), entry.clone());
+    a.photos.insert("/L2/x.jpg".into(), entry);
+    a.roots = vec!["/L2".into()];
+    let mut b = a.clone();
+    b.photos.get_mut("/L2/x.jpg").unwrap().label = Some("green".into());
+    let d = census::diff(&a, &b);
+    assert_eq!(kinds(&d), ["photo.label"], "{}", d.report(false));
+    assert_eq!(d.must_keep[0].subject, "/L2/x.jpg");
+    // (the same for folders)
+    let mut a = read(&library);
+    a.folders.insert("trip".into(), census::FolderEntry { label: "red".into() });
+    a.folders.insert("/L2/trip".into(), census::FolderEntry { label: "red".into() });
+    a.roots = vec!["/L2".into()];
+    let mut b = a.clone();
+    b.folders.get_mut("/L2/trip").unwrap().label = "blue".into();
+    let d = census::diff(&a, &b);
+    assert_eq!(kinds(&d), ["folder.label"], "{}", d.report(false));
+    assert_eq!(d.must_keep[0].subject, "/L2/trip");
+}
+
+/// A folder given as a relative path is no prefix to strip from keys: only an absolute one is.
+#[test]
+fn a_relative_root_is_no_prefix_to_strip() {
+    let scratch = Scratch::new("relroot");
+    let library = scratch.join("library");
+    personal_library(&library, false, 4, false);
+    let mut a = read(&library);
+    let entry = a.photos[&key(8)].clone();
+    a.photos.insert("lib/y.jpg".into(), entry.clone());
+    let mut b = a.clone();
+    b.photos.remove("lib/y.jpg");
+    b.photos.insert("y.jpg".into(), entry);
+    b.roots = vec!["lib".into()];
+    let d = census::diff(&a, &b);
+    let mut seen = kinds(&d);
+    seen.sort_unstable();
+    assert_eq!(seen, ["photo.appeared", "photo.disappeared"], "{}", d.report(false));
+}
+
+/// The user's own words for the color labels, and the keyword list (listed keywords no photo has too), are kept data.
+#[test]
+fn the_label_names_and_the_keyword_list_are_kept_too() {
+    let scratch = Scratch::new("catalog");
+    let library = scratch.join("library");
+    personal_library(&library, false, 4, false);
+    let a = read(&library);
+    assert!(a.label_names.contains_key("red") && a.keyword_list.contains_key("Places|Lisbon"));
+    let mut b = a.clone();
+    b.label_names.remove("red");
+    b.label_names.insert("blue".into(), "Later".into());
+    b.keyword_list.remove("Places|Lisbon");
+    b.keyword_list.insert("Added".into(), serde_json::json!({}));
+    let d = census::diff(&a, &b);
+    assert!(d.differs());
+    let mut seen = kinds(&d);
+    seen.sort_unstable();
+    assert_eq!(seen, ["keyword_list.appeared", "keyword_list.disappeared", "label_names.changed", "label_names.changed"]);
+    assert!(d.must_keep.iter().any(|c| c.kind == "label_names.changed" && c.subject == "red" && c.detail == "Approved -> none"));
+    let mut c = a.clone();
+    c.keyword_list.insert("Places|Lisbon".into(), serde_json::json!({"changed": true}));
+    assert_eq!(kinds(&census::diff(&a, &c)), ["keyword_list.changed"]);
+}
+
+/// A census file that is damaged or edited by hand is refused with where, never what: its text could quote a name, and
+/// `census-diff --counts-only` prints none.
+#[test]
+fn a_damaged_census_file_is_refused_without_quoting_it() {
+    let scratch = Scratch::new("quote");
+    let path = scratch.join("census.json");
+    fs::write(&path, "{\"census\": 1, \"roots\": \"IMG_SECRET\", \"library\": {}}").unwrap();
+    let why = match census::load(&path) {
+        Err(ConvertError::Unreadable(why)) => why,
+        other => panic!("expected an unreadable census, got {other:?}"),
+    };
+    assert!(why.contains("not a census") && why.contains("line 1, column"), "{why}");
+    assert!(!why.contains("IMG_SECRET"), "{why}");
 }

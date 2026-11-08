@@ -25,7 +25,8 @@
 //!
 //! Exit status: 0 done; 2 the copy would lose data and `--allow-loss` was not given (nothing was written); 1 anything
 //! else went wrong (nothing was written). `census-diff`: 0 no difference in the labels and keywords of photos and folders
-//! (or in which photos and folders there are), 1 there is one, 2 a census could not be read.
+//! (or in which photos and folders there are, or in the label names and the keyword list), 1 there is one, 2 a census could
+//! not be read or the command was wrong.
 
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
@@ -104,7 +105,8 @@ fn main() -> ExitCode {
         Ok(task) => task,
         Err(e) => {
             let _ = writeln!(std::io::stderr(), "{e}\n{USAGE}");
-            return ExitCode::from(1);
+            // (`census-diff` exits 1 for a difference: a mistake in how it was called is not one)
+            return ExitCode::from(if args.first().is_some_and(|command| command == "census-diff") { 2 } else { 1 });
         }
     };
     let done = match task {

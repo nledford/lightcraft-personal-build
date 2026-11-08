@@ -6,10 +6,10 @@
 //! label, the label; the albums with their smart rules, the custom label names, the keyword list and the totals; and the
 //! format stamp and layout the library had. Keys are sorted, so two manifests of the same data are the same bytes.
 //!
-//! The data a user must keep above all is the color labels and keywords of photos and folders ([`Diff::must_keep`]).
-//! [`diff`] lists every photo and folder whose label or keywords changed, appeared or disappeared first, then counts the
-//! changes of every other field. Folders have no keywords in this build's catalog (a folder record holds a label and when
-//! the folder was made), so a folder's census holds its label only.
+//! The data a user must keep above all is the color labels and keywords of photos and folders ([`Diff::must_keep`]), and with
+//! them the custom label names and the keyword list. [`diff`] lists every photo and folder whose label or keywords changed,
+//! appeared or disappeared first, then counts the changes of every other field. Folders have no keywords in this build's
+//! catalog (a folder record holds a label and when the folder was made), so a folder's census holds its label only.
 //!
 //! Read only: the census opens nothing for writing in the library and takes no lock on it (a library is read the way
 //! [`super::dump`] reads it, in memory; one a program has open is read as the files stand, and may be refused by the open's
@@ -185,13 +185,13 @@ pub fn write(library: &Path, out: &Path) -> Result<Summary, ConvertError> {
 struct Root(Vec<PathBuf>);
 
 impl Root {
+    /// The library's folder as the file system spells it and as it is given (made absolute), without a spelling twice.
     fn of(library: &Path) -> Root {
-        let mut roots = Vec::new();
-        if let Ok(canonical) = fs::canonicalize(library) {
-            roots.push(canonical);
-        }
-        if !roots.iter().any(|r| r == library) {
-            roots.push(library.to_path_buf());
+        let mut roots: Vec<PathBuf> = Vec::new();
+        for root in [fs::canonicalize(library).ok(), std::path::absolute(library).ok()].into_iter().flatten() {
+            if !roots.contains(&root) {
+                roots.push(root);
+            }
         }
         Root(roots)
     }
@@ -202,8 +202,12 @@ impl Root {
     }
 }
 
-/// `path` below `root` as names joined by `/`; `None` when it is not below it (or is it).
+/// `path` below `root` as names joined by `/`; `None` when it is not below it (or is it), or when `root` is not an absolute
+/// path (a relative one would match any key that starts with its names).
 fn relative_to(root: &Path, path: &str) -> Option<String> {
+    if !root.is_absolute() {
+        return None;
+    }
     let rest = Path::new(path).strip_prefix(root).ok()?;
     let names: Vec<String> = rest.components().map(|c| c.as_os_str().to_string_lossy().into_owned()).collect();
     (!names.is_empty()).then(|| names.join("/"))
@@ -347,7 +351,8 @@ fn manifest(source: &read::Source, root: &Root) -> Manifest {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Change {
     /// `photo.label`, `photo.keywords`, `photo.appeared`, `photo.disappeared`, `folder.label`, `folder.appeared`,
-    /// `folder.disappeared`.
+    /// `folder.disappeared`, `label_names.changed`, `keyword_list.appeared`, `keyword_list.disappeared`,
+    /// `keyword_list.changed`.
     pub kind: &'static str,
     /// The photo's or folder's key.
     pub subject: String,
@@ -358,7 +363,8 @@ pub struct Change {
 /// What two censuses differ in.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Diff {
-    /// The labels and keywords of photos and folders, and photos and folders that appeared or disappeared.
+    /// The labels and keywords of photos and folders, photos and folders that appeared or disappeared, and the custom label
+    /// names and the keyword list.
     pub must_keep: Vec<Change>,
     /// Every other changed field: its kind and how many records changed.
     pub other: BTreeMap<&'static str, u64>,
@@ -516,10 +522,42 @@ fn totals_context(a: &Totals, b: &Totals) -> Vec<String> {
     rows.into_iter().filter(|(_, x, y)| x != y).map(|(name, x, y)| format!("totals.{name} {x} -> {y}")).collect()
 }
 
+/// The custom names of the color labels and the keyword list: the user's own words for the labels and keywords, kept
+/// whether or not a photo has them.
+fn catalog_changes(a: &Manifest, b: &Manifest, d: &mut Diff) {
+    let labels: BTreeSet<&String> = a.label_names.keys().chain(b.label_names.keys()).collect();
+    for label in labels {
+        let (x, y) = (a.label_names.get(label).map(String::as_str), b.label_names.get(label).map(String::as_str));
+        if x != y {
+            d.must("label_names.changed", label, format!("{} -> {}", shown(x), shown(y)));
+        }
+    }
+    let listed = delta(&a.keyword_list, &b.keyword_list);
+    for key in listed.only_a {
+        d.must("keyword_list.disappeared", key, "in the first census only".to_string());
+    }
+    for key in listed.only_b {
+        d.must("keyword_list.appeared", key, "in the second census only".to_string());
+    }
+    for (key, _, _) in listed.both.into_iter().filter(|(_, x, y)| x != y) {
+        d.must("keyword_list.changed", key, "its attributes differ".to_string());
+    }
+}
+
 /// The entries of a census by key, a key that is a path inside the other library's folder (`other_roots`) made relative to it:
-/// a copy of a library keeps pointing at the originals the library held, which the library names relative to itself.
+/// a copy of a library keeps pointing at the originals the library held, which the library names relative to itself. Entries
+/// that would end up under one name keep their own: none is left out of the comparison.
 fn rebased<'a, V>(map: &'a BTreeMap<String, V>, other_roots: &[String]) -> BTreeMap<String, &'a V> {
-    map.iter().map(|(key, v)| (other_roots.iter().find_map(|root| relative_to(Path::new(root), key)).unwrap_or_else(|| key.clone()), v)).collect()
+    let moved: Vec<(String, &String, &V)> = map
+        .iter()
+        .map(|(key, v)| (other_roots.iter().find_map(|root| relative_to(Path::new(root), key)).unwrap_or_else(|| key.clone()), key, v))
+        .collect();
+    let mut uses: BTreeMap<&str, usize> = BTreeMap::new();
+    for (new, ..) in &moved {
+        *uses.entry(new.as_str()).or_default() += 1;
+    }
+    let shared: BTreeSet<String> = uses.into_iter().filter(|(_, n)| *n > 1).map(|(name, _)| name.to_string()).collect();
+    moved.into_iter().map(|(new, key, v)| (if shared.contains(&new) { key.clone() } else { new }, v)).collect()
 }
 
 /// What `b` differs from `a` in.
@@ -556,9 +594,7 @@ pub fn diff(a: &Manifest, b: &Manifest) -> Diff {
     for (_, x, y) in albums.both {
         album_changes(x, y, &mut d);
     }
-    d.also("catalog.label_names", usize::from(a.label_names != b.label_names));
-    let listed = delta(&a.keyword_list, &b.keyword_list);
-    d.also("catalog.keyword_list", listed.only_a.len() + listed.only_b.len() + listed.both.iter().filter(|(_, x, y)| x != y).count());
+    catalog_changes(a, b, &mut d);
 
     if a.library.stamp != b.library.stamp {
         d.context.push(format!("format {} -> {}", a.library.stamp, b.library.stamp));
@@ -575,15 +611,24 @@ pub fn diff(a: &Manifest, b: &Manifest) -> Diff {
 
 /// A census file, as [`write`] made it.
 pub fn load(path: &Path) -> Result<Manifest, ConvertError> {
+    /// What a census says first: its format number.
+    #[derive(Deserialize)]
+    struct Head {
+        #[serde(default)]
+        census: Option<u64>,
+    }
     let bytes = fs::read(path).map_err(|e| ConvertError::Io(format!("can't read {}: {e}", path.display())))?;
     let bad = |why: String| ConvertError::Unreadable(format!("{} is not a census this build reads: {why}", path.display()));
-    let value: Value = serde_json::from_slice(&bytes).map_err(|e| bad(e.to_string()))?;
-    match value.get("census").and_then(Value::as_u64) {
+    // (a parse error says what kind and where, never what: its own text can quote a value of the file, and `census-diff
+    // --counts-only` prints no name)
+    let wrong = |e: &serde_json::Error| bad(format!("{:?} error at line {}, column {}", e.classify(), e.line(), e.column()));
+    let head: Head = serde_json::from_slice(&bytes).map_err(|e| wrong(&e))?;
+    match head.census {
         Some(n) if n == u64::from(CENSUS_FORMAT) => {}
         Some(n) => return Err(bad(format!("it is census format {n}, this build reads {CENSUS_FORMAT}"))),
         None => return Err(bad("it has no `census` format number".to_string())),
     }
-    serde_json::from_value(value).map_err(|e| bad(e.to_string()))
+    serde_json::from_slice(&bytes).map_err(|e| wrong(&e))
 }
 
 /// Compare two census files.
