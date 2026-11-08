@@ -89,6 +89,7 @@ pub mod sync;
 mod sync_same;
 pub mod text;
 pub mod trash;
+mod undo_filters;
 mod view;
 pub mod walk;
 
@@ -150,6 +151,9 @@ pub struct UndoEntry {
     /// done). Never overwrites; refused when `to` exists. An empty `to` removes the (empty)
     /// folder `from`, an empty `from` creates `to` (Create Folder).
     pub folders: Vec<FolderMove>,
+    /// What the step did to the person's filter (a keyword deleted or renamed, a folder removed…): undo carries it
+    /// back and redo forward (see [`undo_filters`]).
+    pub(crate) filters: Option<undo_filters::FilterChange>,
     /// Inverses of logged path corrections from a partially failed history step.
     pub(crate) retry_inverse: Vec<Op>,
     /// Sidecars still separated from their photo after a failed move or rollback.
@@ -680,6 +684,11 @@ impl Session {
     fn run_command(&mut self, id: &str, journal: Option<&Value>, f: impl FnOnce(&mut Session) -> Result<Value>) -> Result<Value> {
         let log_start = self.pending_log.len();
         let was_active = self.active();
+        // what the step does to the person's filter is kept with it for undo (see `undo_filters`)
+        let commits = self.commits;
+        if self.depth == 0 {
+            self.filters.begin_recording();
+        }
         self.depth += 1;
         // last-resort guard: a panic in a command is that command's error, not a crash
         let r = guard::catch(&format!("`{id}`"), || f(self)).unwrap_or_else(|e| Err(EngineError::Other(e)));
@@ -687,12 +696,17 @@ impl Session {
         // the command may have read the selection's index and then changed its ids to others of the same
         // length and ends: the caller must not be answered from what was cached before
         self.begin_frame();
-        if self.depth == 0 && was_active.is_some() && self.active() != was_active {
-            self.previous_active = was_active;
-            if let Some(left) = was_active {
-                self.auto_version(left);
-            }
+        if self.depth == 0
+            && let Some(before) = self.filters.end_recording()
+        {
+            self.note_filter_change(before, commits);
         }
+        if self.depth == 0 && was_active.is_some() && self.active() != was_active {
+        self.previous_active = was_active;
+        if let Some(left) = was_active {
+            self.auto_version(left);
+        }
+    }
         if r.is_ok()
             && let Some(params) = journal
             && self.depth == 0
@@ -748,6 +762,7 @@ impl Session {
             label: label.to_string(),
             op: inv,
             folders: Vec::new(),
+            filters: None,
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
             folders_done: Vec::new(),
@@ -817,7 +832,10 @@ impl Session {
     /// they are (returns false).
     pub(crate) fn merge_folder_moves(&mut self, n: usize, label: &str) -> bool {
         let Some(from) = self.undo.len().checked_sub(n).filter(|_| n > 0) else { return false };
-        if self.undo.get(from..).is_none_or(|t| t.iter().any(|e| e.folders.len() != 1 || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty()))
+        if self
+            .undo
+            .get(from..)
+            .is_none_or(|t| t.iter().any(|e| e.folders.len() != 1 || e.filters.is_some() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty()))
         {
             return false;
         }
@@ -828,6 +846,7 @@ impl Session {
             label: label.to_string(),
             op: Op::Batch { ops },
             folders,
+            filters: None,
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
             folders_done: Vec::new(),
@@ -894,8 +913,8 @@ impl Session {
             return;
         }
         let Some(entries) = self.undo.get(self.undo.len() - n..) else { return };
-        // Folder moves and partially applied file steps stay on their own.
-        if entries.iter().any(|e| !e.folders.is_empty() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty()) {
+        // Folder moves, steps that carry a filter change and partially applied file steps stay on their own.
+        if entries.iter().any(|e| !e.folders.is_empty() || e.filters.is_some() || !e.retry_inverse.is_empty() || !e.retry_sidecars.is_empty()) {
             return;
         }
         let tail = self.undo.split_off(self.undo.len() - n);
@@ -904,6 +923,7 @@ impl Session {
             label: label.to_string(),
             op: Op::Batch { ops },
             folders: Vec::new(),
+            filters: None,
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
             folders_done: Vec::new(),
@@ -930,6 +950,8 @@ impl Session {
                 return Err(err);
             }
         };
+        // (the filter first: the photo is shown if it is in view under the filter the step's undo leaves)
+        let carried = self.carry_filters(e.filters.as_ref());
         self.show_undone(&e.op);
         self.reconcile_view();
         self.pending_log.push(e.op);
@@ -937,6 +959,7 @@ impl Session {
             label: e.label.clone(),
             op: redo,
             folders: e.folders.iter().map(FolderMove::reversed).collect(),
+            filters: carried,
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
             folders_done: Vec::new(),
@@ -958,6 +981,8 @@ impl Session {
                 return Err(err);
             }
         };
+        // (the filter first: the photo is shown if it is in view under the filter the step leaves)
+        let carried = self.carry_filters(e.filters.as_ref());
         self.show_undone(&e.op);
         self.reconcile_view();
         self.pending_log.push(e.op);
@@ -965,6 +990,7 @@ impl Session {
             label: e.label.clone(),
             op: undo,
             folders: e.folders.iter().map(FolderMove::reversed).collect(),
+            filters: carried,
             retry_inverse: Vec::new(),
             retry_sidecars: Vec::new(),
             folders_done: Vec::new(),
@@ -1366,7 +1392,7 @@ impl Session {
     /// Show `f` as the filter bar's filter, over the source shown: what that source owns is left out
     /// ([`LibrarySource::reconcile`]) and returned. Setting a filter forgets the one Enable Filters put aside.
     pub fn set_filter(&mut self, f: Filter) -> Vec<filter_state::SourceOwned> {
-        self.filters.set(self.source, f)
+        self.filters.replace(self.source, f)
     }
 
     /// Library > Enable Filters is off: a filter is put aside (`library.toggleFilters`).
