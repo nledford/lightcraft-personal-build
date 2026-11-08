@@ -283,12 +283,15 @@ fn a_slider_value_field_is_named_value_and_describes_how_to_use_it() {
 }
 
 /// Whether a button named `name` has `help` as its accessible description (the menu bar has an
-/// "Edit" menu too, so the name alone doesn't pick the tool-strip button).
+/// "Edit" menu too, so the name alone doesn't pick the tool-strip button). The bottom bar's view
+/// buttons are radio buttons (#3259: one of several choices), the rest plain buttons.
 fn button_described(h: &Harness<'_, LightcraftApp>, name: &str, help: &str) -> bool {
     h.root()
         .children_recursive()
         .map(|n| n.accesskit_node())
-        .any(|n| n.role() == Role::Button && n.label().as_deref() == Some(name) && n.description().as_deref() == Some(help))
+        .any(|n| {
+            matches!(n.role(), Role::Button | Role::RadioButton) && n.label().as_deref() == Some(name) && n.description().as_deref() == Some(help)
+        })
 }
 
 /// A screen reader reads a control's name every time it lands on it: the shortcut belongs in the
@@ -328,7 +331,7 @@ fn tool_strip_and_toolbar_buttons_are_named_by_label_with_the_shortcut_as_descri
         .root()
         .children_recursive()
         .map(|n| n.accesskit_node())
-        .filter(|n| n.role() == Role::Button)
+        .filter(|n| matches!(n.role(), Role::Button | Role::RadioButton))
         .filter_map(|n| n.label())
         .filter(|l| ["Edit (E)", "Presets (Shift+P)", "Photo Grid (G)", "Filmstrip (/)"].contains(&l.as_str()))
         .collect();
