@@ -127,6 +127,7 @@ pub(crate) fn look_ahead(app: &mut LightcraftApp, id: PhotoId, edge: usize, crop
         }
         app.look_ahead.last = Some(id);
     }
+
     // before the early return below: the limit moves with the memory budget, and thumbnails arrive
     // while the loupe rests on a photo, so being over it is not a matter of a step
     trim_thumbs(app, &ids, id);
