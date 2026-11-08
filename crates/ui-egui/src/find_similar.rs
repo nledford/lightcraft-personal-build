@@ -60,7 +60,13 @@ fn start(app: &mut LightcraftApp, p: &Value, end: impl FnOnce(&mut LightcraftApp
                 }
             }
         };
+        let outcome = match &ended {
+            End::Found(_) => lightcraft_engine::activity::Outcome::default(),
+            End::Dropped(_) => lightcraft_engine::activity::Outcome::ended(lightcraft_engine::activity::Ending::Stopped),
+            End::Failed(e) => lightcraft_engine::activity::Outcome::failed(e.clone()),
+        };
         end(app, ctx, ended);
+        outcome
     };
     crate::tasks::spawn_tracked(app, LABEL, similar::KIND, cancel, work, done)?;
     Ok(count)

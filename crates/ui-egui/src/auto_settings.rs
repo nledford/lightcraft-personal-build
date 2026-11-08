@@ -116,9 +116,22 @@ pub(crate) fn command(app: &mut LightcraftApp, params: &Value) -> Result<Value, 
         cancel,
         move |progress| prepared.run(Some(&progress)),
         |app, ctx, result| match result.and_then(|done| apply(app, done)) {
-            Ok(0) => app.toast(ctx, crate::i18n::tr("Auto Settings").to_owned()),
-            Ok(skipped) => app.toast(ctx, format!("{}: {skipped} photo(s) could not be read", crate::i18n::tr("Auto Settings"))),
-            Err(error) => app.toast(ctx, error),
+            Ok(0) => {
+                app.toast(ctx, crate::i18n::tr("Auto Settings").to_owned());
+                lightcraft_engine::activity::Outcome::default()
+            }
+            Ok(skipped) => {
+                app.toast(ctx, format!("{}: {skipped} photo(s) could not be read", crate::i18n::tr("Auto Settings")));
+                lightcraft_engine::activity::Outcome {
+                    ending: lightcraft_engine::activity::Ending::Problems,
+                    failed: skipped,
+                    ..Default::default()
+                }
+            }
+            Err(error) => {
+                app.toast(ctx, error.clone());
+                lightcraft_engine::activity::Outcome::failed(error)
+            }
         },
     )?;
     Ok(json!({"pending": true, "photos": count}))

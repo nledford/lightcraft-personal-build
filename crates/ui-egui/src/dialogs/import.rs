@@ -48,6 +48,7 @@ pub(crate) use scan::{HELD_RESOLVES, ScanEnd, scan_by_hand, stall_scan, stall_sc
 pub use scan::{ScanTask, browse, open, poll_scan, running};
 pub(crate) use tags::{tag_field_width, tag_help, tag_toggle, unknown_tags_warning};
 pub use task::{ImportTask, start, start_paths, tick};
+pub(crate) use task::{failure_name, not_readable_text};
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
