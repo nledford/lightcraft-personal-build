@@ -1,6 +1,6 @@
 use super::albums::{MARK_W, pinned_rect};
 use super::sections::visible_right;
-use super::{Align2, Icon, LightcraftApp, Rect, Sense, Tokens, paint, pos2, register, vec2};
+use super::{Align2, Branch, Icon, LightcraftApp, Rect, Sense, Tokens, TreeState, paint, pos2, register, vec2};
 
 /// How wide the sidebar's content needs to be, from the widest row of the last frame: rows are
 /// drawn at this width (or the panel's, if wider), and the sidebar scrolls sideways when it
@@ -372,33 +372,26 @@ pub(crate) fn disclosure_name(open: bool, name: &str) -> String {
     if open { crate::i18n::tr_format!("Collapse {name}", name = name) } else { crate::i18n::tr_format!("Expand {name}", name = name) }
 }
 
-/// Whether the tree row `key` is open: what the user last chose this session, else `default`.
-pub(super) fn tree_open(ui: &egui::Ui, key: egui::Id, default: bool) -> bool {
-    ui.data(|d| d.get_temp(key)).unwrap_or(default)
-}
-
-/// Open or close the tree row `key` from now on.
-pub(super) fn set_tree_open(ui: &egui::Ui, key: egui::Id, open: bool) {
-    ui.data_mut(|d| d.insert_temp(key, open));
-}
-
-/// The chevron of a tree row that has rows inside it (Albums' folders, Local, By Date, Folders,
-/// Keywords): a click flips `open` and remembers it under `key`. Returns the chevron's response
-/// (it sits on the row and takes its clicks, so a row's context menu is attached to it too).
+/// The triangle of a tree row that has rows inside it (Albums' folders, Local, By Date, Folders,
+/// Keywords): a click flips `open` and keeps it for `row` in `trees`, which is kept with the
+/// settings ([`TreeState`]): the tree opens as it was left. Returns the triangle's response (it
+/// sits on the row and takes its clicks, so a row's context menu is attached to it too).
+#[allow(clippy::too_many_arguments)]
 pub(super) fn tree_toggle(
     ui: &mut egui::Ui,
-    row: &egui::Response,
+    trees: &mut TreeState,
+    on: &egui::Response,
     indent: f32,
-    key: egui::Id,
+    row: &Branch,
     open: &mut bool,
     widget: String,
     name: &str,
 ) -> egui::Response {
-    let tri = disclosure_chevron(ui, row, indent, *open, key.with("triangle"), widget);
+    let tri = disclosure_chevron(ui, on, indent, *open, row.id().with("triangle"), widget);
     // Left / Right on the row, with the keys in the sidebar, is a click on its chevron
     if tri.clicked() != super::side_keys::note_open(ui, *open) {
         *open = !*open;
-        set_tree_open(ui, key, *open);
+        trees.set(row, *open);
     }
     // (the name of the row it opens: a screen reader lists the triangles one after another)
     let label = disclosure_name(*open, name);
