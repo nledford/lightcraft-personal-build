@@ -1,4 +1,4 @@
-use super::{Button, LightcraftApp, PhotoId, Tokens, choice_button, command_button, divider, header, json, padded, register, slider, text_button};
+use super::{Button, LightcraftApp, PhotoId, Tokens, choice_button, divider, header, json, padded, register, slider, text_button};
 use crate::check::check;
 use crate::menu_item::MenuItem;
 

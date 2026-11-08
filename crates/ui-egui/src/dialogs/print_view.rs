@@ -18,7 +18,7 @@ use crate::LightcraftApp;
 use crate::button::Button;
 use crate::menu_item::MenuItem;
 use crate::theme::Tokens;
-use crate::widgets::{choice_button, command_button, register};
+use crate::widgets::{choice_button, register};
 
 /// Width of the settings column.
 const SETTINGS_W: f32 = 290.0;

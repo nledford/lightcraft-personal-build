@@ -13,7 +13,7 @@ use crate::button::Button;
 use crate::icons::{Icon, paint};
 use crate::menu_item::MenuItem;
 use crate::theme::{TextSize, Tokens};
-use crate::widgets::{choice_button, command_button, divider, icon_button, icon_command, one_line, register, slider, text_button};
+use crate::widgets::{choice_button, divider, icon_button, icon_command, one_line, register, slider, text_button};
 
 const fn spec(id: &'static str, label: &'static str, min: f64, max: f64, step: f64, decimals: u8, track: Track) -> ControlSpec {
     ControlSpec { id, label, section: Section::Light, min, max, default: 0.0, step, decimals, track }

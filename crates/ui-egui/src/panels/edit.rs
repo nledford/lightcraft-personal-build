@@ -18,7 +18,7 @@ use crate::menu_item::MenuItem;
 use crate::render::Slot;
 use crate::state::RightPanel;
 use crate::theme::Tokens;
-use crate::widgets::{BAND_COLORS, SliderOut, command_button, divider, flyout_row, hex, register, section_header, slider, text_button};
+use crate::widgets::{BAND_COLORS, SliderOut, divider, flyout_row, hex, register, section_header, slider, text_button};
 
 mod curve;
 mod grading;

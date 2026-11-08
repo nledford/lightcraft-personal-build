@@ -2,7 +2,7 @@ use super::histogram::preview_histogram;
 use super::sliders::control;
 use super::{
     Align2, Button, Color32, DevelopSettings, Icon, LightcraftApp, Mesh, PARAM_AMOUNTS, ParametricCurve, PhotoId, Point, Pos2, Rect, RichText, Sense,
-    Stroke, Tokens, Vertex, command_button, controls, hex, json, paint, pos2, register, vec2,
+    Stroke, Tokens, Vertex, controls, hex, json, paint, pos2, register, vec2,
 };
 use crate::menu_item::MenuItem;
 

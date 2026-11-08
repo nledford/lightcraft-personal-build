@@ -1,8 +1,7 @@
 use super::curve::set_tat;
 use super::sliders::{control, sub_title};
 use super::{
-    BAND_COLORS, Button, Color32, DevelopSettings, Icon, LightcraftApp, Sense, Stroke, Tokens, command_button, hex, json, paint, register,
-    text_button, vec2,
+    BAND_COLORS, Button, Color32, DevelopSettings, Icon, LightcraftApp, Sense, Stroke, Tokens, hex, json, paint, register, text_button, vec2,
 };
 use crate::check::check;
 

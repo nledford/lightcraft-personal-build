@@ -1,4 +1,4 @@
-use super::{Button, Icon, LightcraftApp, PhotoId, Sense, Tokens, choice_button, command_button, divider, header, json, padded, register, vec2};
+use super::{Button, Icon, LightcraftApp, PhotoId, Sense, Tokens, choice_button, divider, header, json, padded, register, vec2};
 use crate::menu_item::MenuItem;
 
 pub(super) fn info(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
