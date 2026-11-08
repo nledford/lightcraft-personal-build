@@ -375,9 +375,7 @@ fn drop_photos_on_keyword(app: &mut LightcraftApp, ui: &mut egui::Ui, ids: &[u64
     if n == 0 {
         super::grid::drag_hint(ui.ctx(), crate::i18n::tr("Already on these photos").to_string());
         if released {
-
             app.ui.dragging_photos = None;
-
         }
         return;
     }
@@ -399,11 +397,7 @@ fn give_keyword(app: &mut LightcraftApp, ctx: &egui::Context, ids: &[u64], path:
     match app.run("photo.setMeta", json!({"ids": ids, "addKeywords": [path]})) {
         Ok(_) => {
             let text = crate::i18n::tr_format!("Added “{keyword}” to {n} photo{}", if n == 1 { "" } else { "s" }, keyword = keyword, n = n);
-            if n > 0 {
-                app.toast_undoable(ctx, text);
-            } else {
-                app.toast(ctx, text);
-            }
+            app.toast_undoable(ctx, text);
         }
         Err(e) => app.toast_error(ctx, e),
     }

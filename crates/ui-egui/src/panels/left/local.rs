@@ -192,13 +192,13 @@ pub(super) fn add_local_root_checked(
             keep_local_root(app, &abs);
             then(app, ctx);
         } else {
-            app.toast(ctx, format!("{shown}: not a folder"));
+            app.toast_error(ctx, format!("{shown}: not a folder"));
         }
         // a quiet task: no row in the activity stack, so nothing to say of how it ended
         lightcraft_engine::activity::Outcome::default()
     };
     if let Err(e) = crate::tasks::spawn(app, &label, None, move || is_folder(&checked), done) {
-        app.toast(ctx, e);
+        app.toast_error(ctx, e);
     }
 }
 
@@ -468,7 +468,18 @@ mod tests {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     for index in 0..500 {
                         let path = format!("/lightcraft-test/folder-{index:04}");
-                        super::folder_tree(&mut app, ui, &path, &format!("Folder {index}"), &path, 0.0, &super::LocalView::default(), false, false, None);
+                        super::folder_tree(
+                            &mut app,
+                            ui,
+                            &path,
+                            &format!("Folder {index}"),
+                            &path,
+                            0.0,
+                            &super::LocalView::default(),
+                            false,
+                            false,
+                            None,
+                        );
                     }
                 });
             });
