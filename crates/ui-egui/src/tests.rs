@@ -54,6 +54,7 @@ mod import_read;
 mod import_recipe;
 mod import_scan_note;
 mod import_thumbnails;
+mod increase_contrast;
 mod info_dialogs;
 mod keymap;
 mod keyword_files;
