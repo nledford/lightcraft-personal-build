@@ -108,7 +108,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
                     egui::RichText::new(crate::i18n::tr_format!("Auto Sync: edits apply to {n} photos", n = n)).color(t.text_link()).font(t.label()),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if  Button::new("Turn Off").small().widget("button:autoSyncOff").show(ui).clicked() {
+                    if Button::new("Turn Off").small().widget("button:autoSyncOff").show(ui).clicked() {
                         app.act("develop.autoSync", json!({"on": false}));
                     }
                 });

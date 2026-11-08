@@ -319,7 +319,7 @@ pub(super) fn header_buttons(ui: &mut egui::Ui, bw: bool, hdr: bool, reset_tip: 
     let reset_on_last = used + GAP + crate::widgets::text_button_size(ui, "Reset") <= avail;
     let reset = |ui: &mut egui::Ui, clicks: &mut HeaderClicks| {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            clicks.reset = crate::widgets::text_button(ui, "reset", crate::i18n::tr("Reset"), false).on_hover_text(reset_tip).clicked();
+            clicks.reset = crate::widgets::command_button(ui, "reset", crate::i18n::tr("Reset")).on_hover_text(reset_tip).clicked();
         });
     };
     let last = rows.len() - 1;
@@ -328,7 +328,11 @@ pub(super) fn header_buttons(ui: &mut egui::Ui, bw: bool, hdr: bool, reset_tip: 
             ui.spacing_mut().item_spacing.x = GAP;
             for &i in row {
                 let (id, label, active) = left[i];
-                let mut resp = crate::widgets::text_button(ui, id, crate::i18n::tr(label), active);
+                let mut resp = if id == "auto" {
+                    crate::widgets::command_button(ui, id, crate::i18n::tr(label))
+                } else {
+                    crate::widgets::text_button(ui, id, crate::i18n::tr(label), active)
+                };
                 if id == "hdr" {
                     // HDR editing, next to B&W as Lightroom has it
                     resp = resp.on_hover_text(crate::i18n::tr("Edit in HDR: highlights above SDR white, for HDR exports and displays"));
