@@ -207,7 +207,8 @@ fn sef_file(image: &[u8], back: u32, magic: &[u8; 4], kind: u16, data: &[u8], le
 
 /// Issue #3350: a Samsung panorama has no EOI; its scan data runs into the SEF trailer. It reads
 /// and decodes (both decoders: zune-jpeg in full, jpeg-decoder DCT-scaled) as the image before the
-/// trailer, and a file cut short with no trailer, or with a broken one, is still truncated.
+/// trailer, and a file cut short with no trailer, or with a broken one, is no such image: it is
+/// read as a JPEG cut short (`truncated`), or refused when the cut leaves no picture data.
 #[test]
 fn samsung_sef_trailer_without_eoi() {
     let jpeg = fixtures(160, 96).into_iter().find(|x| x.0 == "jpeg 420 o6").map(|x| x.1).unwrap();
@@ -231,14 +232,21 @@ fn samsung_sef_trailer_without_eoi() {
     assert_eq!(read_header(&eoi_in_data).unwrap().width, 160);
     let small = decode(&eoi_in_data, DecodeOptions::fit(32, 32)).unwrap();
     assert_eq!((small.source_width, small.source_height), (160, 96));
-    // still truncated: no trailer, offsets outside the file or past `SEFH`, no `SEFH`, an empty
-    // entry, an entry whose type isn't its block's, a cut before the first scan
-    assert!(read_header(scan).is_err());
-    assert!(read_header(&with_sef_trailer(scan, u32::MAX, b"SEFH")).is_err());
-    assert!(read_header(&with_sef_trailer(scan, block - 1, b"SEFH")).is_err());
-    assert!(read_header(&with_sef_trailer(scan, block, b"SEFX")).is_err());
-    assert!(read_header(&sef_file(scan, 0, b"SEFH", 0x08E0, &[], Some(0))).is_err());
-    assert!(read_header(&sef_file(scan, block, b"SEFH", 0x0A01, &[0; 18], None)).is_err());
+    // no SEF image: no trailer, offsets outside the file or past `SEFH`, no `SEFH`, an empty
+    // entry, an entry whose type isn't its block's: never read as a whole file, but as a JPEG cut
+    // short (marked so), or refused (a trailer that makes a damaged segment length)
+    assert!(!read_header(&pano).unwrap().truncated, "the SEF image is whole");
+    for cut in [
+        scan.to_vec(),
+        with_sef_trailer(scan, u32::MAX, b"SEFH"),
+        with_sef_trailer(scan, block - 1, b"SEFH"),
+        with_sef_trailer(scan, block, b"SEFX"),
+        sef_file(scan, 0, b"SEFH", 0x08E0, &[], Some(0)),
+        sef_file(scan, block, b"SEFH", 0x0A01, &[0; 18], None),
+    ] {
+        assert!(!read_header(&cut).is_ok_and(|h| !h.truncated));
+    }
+    // a cut before the first scan has nothing to show
     let cut_in_headers = with_sef_trailer(&jpeg[..40], block, b"SEFH");
     assert!(read_header(&cut_in_headers).is_err());
     assert!(decode(&cut_in_headers, DecodeOptions::fit(32, 32)).is_err());
