@@ -1671,6 +1671,7 @@ impl Catalog {
             self.index = index::Indexes::default();
             // (and what was worked out from the albums, the guard of [`Self::keeps_written_order`] too)
             self.plans = PlansMemo::default();
+            self.loops = LoopsMemo::default();
         }
         changed
     }
