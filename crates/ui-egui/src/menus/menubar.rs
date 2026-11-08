@@ -47,6 +47,7 @@ impl MenuNode {
 pub fn display_item_label<'a>(id: &str, params: &Value, label: &'a str) -> &'a str {
     if matches!(id, "metadata.applyPreset" | "album.addPhotos" | "label.applySet" | "preset.apply")
         || (id == "app.export" && params.get("preset").is_some())
+        || (id == "photo.setMeta" && params.get("addKeywords").is_some())
         || (id == "app.openLibrary" && params.get("path").is_some())
         || (id == "app.recentLibraries" && params.get("remove").is_some())
     {
@@ -1085,7 +1086,8 @@ pub(crate) fn menu_defaults(id: &str, params: &mut Value) {
 }
 
 /// Run a menu item. Rating, flag and label items behave like their keys (the active photo only in
-/// Compare/Survey; Auto Advance moves on).
+/// Compare/Survey; Auto Advance moves on), except that one aimed by `ids` at a single photo other
+/// than the active one leaves the active photo where it is.
 pub fn run_item(app: &mut LightcraftApp, id: &str, params: Value) -> Result<Value, String> {
     clicked_item(app, id, params, LightcraftApp::run, Result::is_ok).unwrap_or(Ok(Value::Null))
 }
@@ -1127,8 +1129,12 @@ fn clicked_item<R>(
         return None;
     }
     let was = app.session.active();
+    // a row aimed at one other photo (a script's `ids`, or the photo menu's in Compare or Survey
+    // for a filmstrip photo the panes or tiles don't show) leaves the active one
+    let elsewhere =
+        params.get("ids").and_then(Value::as_array).is_some_and(|ids| ids.len() == 1 && ids.first().and_then(Value::as_u64) != was.map(|p| p.0));
     let r = run(app, id, params);
-    if culling_cmd && went(&r) && app.ui.auto_advance {
+    if  culling_cmd && went(&r) && app.ui.auto_advance && !elsewhere {
         crate::panels::compare::advance(app, was);
     }
     Some(r)
@@ -1264,7 +1270,7 @@ pub fn show_in_window(app: &mut LightcraftApp, ui: &mut egui::Ui, max_width: f32
             egui::Popup::menu(r)
                 .close_behavior(close)
                 .open_memory(None)
-                .show(|ui| crate::menu_level::level(ui, 1, bar_bottom, |ui| nodes_ui(ui, items, &mut clicked, 1, bar_bottom)));
+                .show(|ui| crate::menu_level::level(ui, 1, bar_bottom, |ui| nodes_ui(ui, items, &mut clicked, 1, bar_bottom, &BAR_ROWS)));
         }
         ui.spacing_mut().item_spacing.x = saved;
     } else {
@@ -1273,7 +1279,9 @@ pub fn show_in_window(app: &mut LightcraftApp, ui: &mut egui::Ui, max_width: f32
         egui::Popup::menu(&r).show(|ui| {
             crate::menu_level::level(ui, 1, bar_bottom, |ui| {
                 for (title, items) in &bar {
-                    submenu(ui, title, false, 1, bar_bottom, |ui| nodes_ui(ui, items, &mut clicked, 2, bar_bottom));
+                    submenu(ui, title, crate::i18n::tr(title), false, 1, bar_bottom, &BAR_ROWS, None, |ui| {
+                        nodes_ui(ui, items, &mut clicked, 2, bar_bottom, &BAR_ROWS)
+                    });
                 }
             });
         });
@@ -1326,35 +1334,142 @@ fn switch_open_title(ctx: &egui::Context, titles: &[egui::Response]) -> Option<e
     confirmed
 }
 
+/// How a menu's rows are named for the control channel and tests, and what more a row says.
+pub(crate) struct Rows<'a> {
+    /// Item rows are registered as `<item>:<command id>` (`<item>:<id|params>` when `keyed`) …
+    pub item: &'static str,
+    /// … and submenu rows as `<sub>:<untranslated label>` (a preset group's: as shown, since its
+    /// name is the user's or already in the UI language).
+    pub sub: &'static str,
+    pub keyed: bool,
+    /// A row's second id (older names kept for scripts), and what it says on hover: why it is off when it is, else a note.
+    pub extra: Option<&'a dyn Fn(&MenuNode) -> (Option<String>, Option<String>)>,
+    /// The rows of a submenu kept elsewhere (borrowed, not copied every frame), asked with the
+    /// submenu: the photo menu's Apply Preset, which can hold 10 000+ presets.
+    pub children: Option<&'a dyn Fn(&MenuNode) -> Option<&'a [MenuNode]>>,
+    /// Which build of the borrowed rows this is (the photo menu's preset cache numbers each
+    /// one): what is measured from a long list is kept per build.
+    pub epoch: u64,
+}
+
+/// The menu bar's rows: `menuitem:<id>` and `menusub:<label>`.
+const BAR_ROWS: Rows<'static> = Rows { item: "menuitem", sub: "menusub", keyed: false, extra: None, children: None, epoch: 0 };
+
 /// A submenu row showing `text` at `depth`, whose rows `children` draws one level deeper,
-/// bounded like every level. The row is registered as `menusub:<label>` (the untranslated
-/// label), and while its submenu is open it is the anchor the next frame's room is measured from.
-fn submenu(ui: &mut egui::Ui, label: &str, gutter: bool, depth: usize, bar_bottom: Option<f32>, children: impl FnOnce(&mut egui::Ui)) {
-    let text = crate::i18n::tr(label);
+/// bounded like every level. The row is registered as `<rows.sub>:<label>` (the untranslated
+/// label) and as `alias`, and while its submenu is open it is the anchor the next frame's room
+/// is measured from.
+#[allow(clippy::too_many_arguments)]
+fn submenu(
+    ui: &mut egui::Ui,
+    label: &str,
+    text: &str,
+    gutter: bool,
+    depth: usize,
+    bar_bottom: Option<f32>,
+    rows: &Rows,
+    alias: Option<String>,
+    children: impl FnOnce(&mut egui::Ui),
+) {
     let r = crate::menu_item::MenuItem::new(text).check_slot(gutter).submenu(ui, |ui| crate::menu_level::level(ui, depth + 1, bar_bottom, children));
-    crate::widgets::register(ui, format!("menusub:{label}"), r.response.rect);
+    crate::widgets::register(ui, format!("{}:{label}", rows.sub), r.response.rect);
+    if let Some(alias) = alias {
+        crate::widgets::register(ui, alias, r.response.rect);
+    }
     if r.inner.is_some() {
         crate::menu_level::set_anchor(ui.ctx(), depth + 1, r.response.rect);
     }
 }
 
+/// The rows of a menu opened elsewhere (a context menu), drawn like the menu bar's: a bounded
+/// level that scrolls when it doesn't fit, submenus, check marks and shortcuts. Returns the item
+/// clicked.
+pub(crate) fn show_rows(ui: &mut egui::Ui, nodes: &[MenuNode], rows: &Rows) -> Option<(String, Value)> {
+    let mut clicked = None;
+    crate::menu_level::level(ui, 1, None, |ui| nodes_ui(ui, nodes, &mut clicked, 1, None, rows));
+    clicked
+}
+
 /// `depth` is 1 for a top-level menu's rows; `bar_bottom` is where the menu bar ends.
-fn nodes_ui(ui: &mut egui::Ui, nodes: &[MenuNode], clicked: &mut Option<(String, Value)>, depth: usize, bar_bottom: Option<f32>) {
+fn nodes_ui(
+    ui: &mut egui::Ui,
+    nodes: &[MenuNode],
+    clicked: &mut Option<(String, Value)>,
+    depth: usize,
+    bar_bottom: Option<f32>,
+    rows: &Rows,
+) {
     ui.set_min_width(220.0);
+    // A long list of rows (a preset group can hold thousands) draws only the rows in view; the
+    // rest only take their place, measured from the first row. Its rows stay on one line, so
+    // every row has that height, and the menu is as wide as its widest row from the start. That
+    // width is measured once per list: a long list is borrowed from storage that stays put
+    // (`rows.children`), and its rows have no shortcut or color swatch (the width leaves them
+    // out); a list built anew each frame would be measured each frame.
+    let long = nodes.len() > 100 && nodes.iter().all(|n| matches!(n, MenuNode::Item { .. }));
+    if long {
+        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+        // (keyed by the build of the rows and the list within it, not by the menu it opens in:
+        // the same group opened from another photo's menu keeps its width)
+        let key = egui::Id::unique(("menu-long-rows", rows.epoch, nodes.as_ptr() as usize, nodes.len()));
+        let widest = ui.data(|d| d.get_temp::<f32>(key)).unwrap_or_else(|| {
+            let font = crate::theme::Tokens::get(ui.ctx()).font(13.0);
+            let w = nodes
+                .iter()
+                .filter_map(|n| match n {
+                    MenuNode::Item { id, params, label, .. } => Some(display_item_label(id, params, label)),
+                    _ => None,
+                })
+                .map(|t| ui.painter().layout_no_wrap(t.to_string(), font.clone(), egui::Color32::WHITE).size().x)
+                .fold(0.0_f32, f32::max);
+            // (the width of a `MenuItem` row: padding both sides and the check slot)
+            let w = w + 2.0 * crate::menu_item::PAD + crate::menu_item::SLOT + crate::menu_item::GAP;
+            ui.data_mut(|d| d.insert_temp(key, w));
+            w
+        });
+        ui.set_min_width(widest);
+    }
+    let mut row_h: Option<f32> = None;
     for n in nodes {
+        let top = ui.cursor().top();
+        if long && let Some(h) = row_h {
+            let clip = ui.clip_rect();
+            if top + h < clip.top() || top > clip.bottom() {
+                // the row's place, and its one auto id, so the rows after it keep theirs
+                ui.add_space(h);
+                ui.skip_ahead_auto_ids(1);
+                continue;
+            }
+        }
+        let (alias, reason) = rows.extra.map(|f| f(n)).unwrap_or_default();
         match n {
             MenuNode::Separator => {
                 ui.separator();
             }
             MenuNode::Submenu { label, children } => {
-                submenu(ui, label, true, depth, bar_bottom, |ui| nodes_ui(ui, children, clicked, depth + 1, bar_bottom));
+                let children: &[MenuNode] = rows.children.and_then(|f| f(n)).unwrap_or(children);
+                // a preset group's name is already in the UI language, or the user's own
+                let text = if matches!(children.first(), Some(MenuNode::Item { id, .. }) if id == "preset.apply") {
+                    label.as_str()
+                } else {
+                    crate::i18n::tr(label)
+                };
+                submenu(ui, label, text, true, depth, bar_bottom, rows, alias, |ui| nodes_ui(ui, children, clicked, depth + 1, bar_bottom, rows));
             }
             MenuNode::Item { id, params, label, shortcut, enabled, checked } => {
-                // the check slot is reserved on every row, like native menus
+                // the check slot is reserved on every row, like native menus; a colour label's row also shows its colour
+                let swatch = if id == "photo.label" { params["label"].as_str().and_then(lightcraft_catalog::ColorLabel::parse) } else { None };
+                let key = if rows.keyed { MenuNode::key(id, params) } else { id.clone() };
                 let mut item = crate::menu_item::MenuItem::new(display_item_label(id, params, label))
                     .check_slot(true)
                     .enabled(*enabled)
-                    .widget(format!("menuitem:{id}"));
+                    .widget(format!("{}:{key}", rows.item));
+                if let Some(l) = swatch {
+                    item = item.swatch(crate::theme::label_color(l));
+                }
+                if let Some(text) = reason.as_deref().filter(|_| !*enabled) {
+                    item = item.disabled_reason(text);
+                }
                 if let Some(on) = checked {
                     item = item.checked(*on);
                 }
@@ -1362,9 +1477,20 @@ fn nodes_ui(ui: &mut egui::Ui, nodes: &[MenuNode], clicked: &mut Option<(String,
                     item = item.shortcut(sc);
                 }
                 let r = item.show(ui);
+                if let Some(alias) = alias {
+                    crate::widgets::register(ui, alias, r.rect);
+                }
+                // (a note on an enabled row; the reason a disabled one is off is on the row itself)
+                let r = match reason {
+                    Some(text) if *enabled => r.on_hover_text(text),
+                    _ => r,
+                };
                 if r.clicked() {
                     *clicked = Some((id.clone(), params.clone()));
                     ui.close();
+                }
+                if long && row_h.is_none() {
+                    row_h = Some(ui.cursor().top() - top);
                 }
             }
         }
