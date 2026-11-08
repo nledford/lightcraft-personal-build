@@ -390,5 +390,7 @@
   "{n} waiting": "Ожидают: {n}",
   "Starts after {n} more": "Начнётся после ещё {n}",
   "Queued: it starts after {n} more": "В очереди: начнётся после ещё {n}",
-  "{n} tasks waiting in line won't run.": "Задачи в очереди ({n}) не будут запущены."
+  "{n} tasks waiting in line won't run.": "Задачи в очереди ({n}) не будут запущены.",
+  "Left alone: {n} (synchronize again to review them)": "Оставлено без изменений: {n} (синхронизируйте снова, чтобы проверить)",
+  "Remove from Queue: {label}": "Убрать из очереди: {label}"
 }

@@ -392,5 +392,7 @@
   "{n} waiting": "{n} ელოდება",
   "Starts after {n} more": "დაიწყება კიდევ {n}-ის შემდეგ",
   "Queued: it starts after {n} more": "რიგშია: დაიწყება კიდევ {n}-ის შემდეგ",
-  "{n} tasks waiting in line won't run.": "რიგში მყოფი {n} ამოცანა არ გაეშვება."
+  "{n} tasks waiting in line won't run.": "რიგში მყოფი {n} ამოცანა არ გაეშვება.",
+  "Left alone: {n} (synchronize again to review them)": "უცვლელი დარჩა: {n} (გადასახედად თავიდან დაასინქრონეთ)",
+  "Remove from Queue: {label}": "რიგიდან ამოღება: {label}"
 }

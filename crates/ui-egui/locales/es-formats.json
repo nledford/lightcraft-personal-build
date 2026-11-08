@@ -390,5 +390,7 @@
   "{n} waiting": "{n} en espera",
   "Starts after {n} more": "Empieza tras {n} más",
   "Queued: it starts after {n} more": "En cola: empieza tras {n} más",
-  "{n} tasks waiting in line won't run.": "{n} tareas en cola no se ejecutarán."
+  "{n} tasks waiting in line won't run.": "{n} tareas en cola no se ejecutarán.",
+  "Left alone: {n} (synchronize again to review them)": "Sin tocar: {n} (sincroniza de nuevo para revisarlos)",
+  "Remove from Queue: {label}": "Quitar de la cola: {label}"
 }

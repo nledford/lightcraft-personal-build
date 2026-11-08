@@ -1921,7 +1921,6 @@
   "Skipped: files that can't be read": "Ignorés : fichiers illisibles",
   "This folder isn't there: it was moved or renamed, or its disk isn't connected.": "Ce dossier est introuvable : il a été déplacé ou renommé, ou son disque n'est pas connecté.",
   "Relink photos whose file was renamed or moved": "Relier les photos dont le fichier a été renommé ou déplacé",
-  "A folder is already being synchronized": "Un dossier est déjà en cours de synchronisation",
   "Synchronizing…": "Synchronisation…",
   "Relinked": "Reliées",
   "Removed": "Retirées",
@@ -1931,8 +1930,6 @@
   "Stopped at the scan limit: there may be more photos": "Arrêt à la limite d'analyse : il peut y avoir d'autres photos",
   "Stopped by an error (see the log)": "Arrêté par une erreur (voir le journal)",
   "Not saved": "Non enregistré",
-  "A folder is being synchronized": "Un dossier est en cours de synchronisation",
-  "Wait for the import to finish": "Attendez la fin de l'importation",
   "Quit while tasks are running?": "Quitter pendant que des tâches sont en cours ?",
   "Exporting contact sheet": "Exportation de la planche-contact",
   "Reading folder": "Lecture du dossier",
@@ -3759,5 +3756,7 @@
   "Remove from Queue": "Retirer de la file",
   "Retry": "Réessayer",
   "Queued: it starts when the task ahead of it ends": "En file : démarre à la fin de la tâche précédente",
-  "1 task waiting in line won't run.": "1 tâche en file d’attente ne sera pas lancée."
+  "1 task waiting in line won't run.": "1 tâche en file d’attente ne sera pas lancée.",
+  "Another library was opened: nothing was done": "Une autre bibliothèque a été ouverte : rien n’a été fait",
+  "Photos of the folder changed while it was read: nothing was done": "Les photos du dossier ont changé pendant la lecture : rien n’a été fait"
 }

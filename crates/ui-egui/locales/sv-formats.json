@@ -389,5 +389,7 @@
   "{n} waiting": "{n} väntar",
   "Starts after {n} more": "Startar efter {n} till",
   "Queued: it starts after {n} more": "I kö: startar efter {n} till",
-  "{n} tasks waiting in line won't run.": "{n} uppgifter som väntar i kön kommer inte att köras."
+  "{n} tasks waiting in line won't run.": "{n} uppgifter som väntar i kön kommer inte att köras.",
+  "Left alone: {n} (synchronize again to review them)": "Lämnade orörda: {n} (synkronisera igen för att granska dem)",
+  "Remove from Queue: {label}": "Ta bort från kön: {label}"
 }

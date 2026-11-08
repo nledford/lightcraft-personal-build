@@ -83,6 +83,7 @@ impl LightcraftApp {
         merge::poll(self, ctx);
         import::poll_scan(self, ctx);
         sync::poll(self, ctx);
+        sync::poll_rescan(self, ctx);
         sync::poll_run(self, ctx);
         // Import commits batches and must not run twice in one host frame. The first layout pass
         // and a hidden logic tick both report pass index 0; a second pass reports 1. A wall-clock
@@ -117,13 +118,12 @@ impl LightcraftApp {
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(folder) = self.session.import_defaults.auto_folder.clone() {
             const LABEL: &str = "Auto Import";
+            // (it waits for the whole library lane: what runs, rescans or waits there goes first)
             if now - self.ui.auto_import_at >= 3.0
+                && !import::library_busy(self)
                 && !import::running(self)
                 && self.sync.is_none()
-                && self.sync_run.is_none()
-                && self.lightroom.is_none()
-                && !self.tasks.is_running(LABEL)
-            {
+                && self.lightroom.is_none() && !self.tasks.is_running(LABEL) {
                 self.ui.auto_import_at = now;
                 let listed = folder.clone();
                 let watched = folder.clone();
@@ -153,22 +153,14 @@ impl LightcraftApp {
                             return;
                         }
                     };
-                    // an import, a scan (a finished Local browse replaces `app.import`), a Synchronize Folder (its scan
-                    // or its run) or a Lightroom migration that started while the folder was listed: scanning now would
-                    // mark the new files as tried without importing them; the next listing picks them up
-                    if import::running(app) || app.sync.is_some() || app.sync_run.is_some() || app.lightroom.is_some() {
+                    // a scan (a finished Local browse replaces `app.import`), a Synchronize Folder's scan or a Lightroom
+                    // migration that started while the folder was listed: scanning now would mark the new files as tried
+                    // without importing them; the next listing picks them up. (An import or a synchronize that runs or
+                    // waits in the library lane is no reason: the files wait in line behind it.)
+                    if import::drop_blocked(app) || app.sync.is_some() || app.lightroom.is_some() {
                         return;
                     }
-                    let p = serde_json::json!({"listing": listing, "start": false});
-                    let Ok(r) = app.session.execute("library.autoImportScan", &p) else { return };
-                    let Some(mut params) = r.get("import").cloned().filter(|_| app.import.is_none()) else { return };
-                    let paths: Vec<String> =
-                        params["paths"].as_array().into_iter().flatten().filter_map(|v| v.as_str().map(str::to_string)).collect();
-                    if let Some(o) = params.as_object_mut() {
-                        o.remove("paths");
-                    }
-                    let undo0 = app.session.undo.len();
-                    app.import = Some(import::ImportTask::new(paths, params, undo0, false).named_below(vec![watched]).auto());
+                    import::auto_import_listed(app, listing, &watched);
                 };
                 // listed every few seconds: quiet, no row in the activity stack (so nothing to say of how it ended)
                 let done = move |app: &mut LightcraftApp, ctx: &egui::Context, listing| {
