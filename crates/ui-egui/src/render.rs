@@ -1222,8 +1222,7 @@ impl Renderer {
         if let Some(touched) = catalog.touched_since(self.catalog_rev) {
             // (is_gone, not is_offline: what the checks already know, asking nothing — an edit
             // that moves no file asks about no file, and the sweep refreshes what is known)
-            let missing =
-                |id| matches!(catalog.photo(id).map(|p| &p.source), Some(lightcraft_catalog::Source::File { path }) if files.is_gone(path));
+            let missing = |id| matches!(catalog.photo(id).map(|p| &p.source), Some(lightcraft_catalog::Source::File { path }) if files.is_gone(path));
             for f in self.failed.values_mut() {
                 if f.2 == self.catalog_rev && touched.binary_search(&f.3).is_err() && !missing(f.3) {
                     f.2 = rev;
