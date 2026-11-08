@@ -280,7 +280,7 @@ pub fn specs() -> Vec<CommandSpec> {
             always,
             |s, p| {
                 if p.get("paths").is_some() {
-                    return move_folders(s, p);
+                    return move_folders(s, p, crate::library::home_folder().as_deref());
                 }
                 let from =
                     lexical_path(str_param(p, "path").ok_or_else(|| bad("folder.move", "missing path"))?.trim_end_matches(std::path::is_separator));
@@ -553,8 +553,9 @@ const MOST_FOLDERS_AT_ONCE: usize = 200;
 
 /// `folder.move {paths, into}`: several folders into one, as one undo step. Refused as a whole
 /// ([`batch_refusal`]); a folder that still fails when its turn comes (the library's own, a
-/// disk error) puts the ones already moved back and nothing is left half done.
-fn move_folders(s: &mut Session, p: &Value) -> Result<Value> {
+/// disk error) puts the ones already moved back and nothing is left half done. `home` is the
+/// home folder whose places stay put (passed in so a test can name one).
+fn move_folders(s: &mut Session, p: &Value, home: Option<&Path>) -> Result<Value> {
     let into = str_param(p, "into").filter(|i| !i.is_empty()).ok_or_else(|| bad("folder.move", "missing into"))?;
     // (without trailing separators, but a root stays one: `/` and `C:\\` are folders, `` and `C:` are not)
     let trimmed = into.trim_end_matches(std::path::is_separator);
@@ -582,7 +583,7 @@ fn move_folders(s: &mut Session, p: &Value) -> Result<Value> {
         return Err(bad("folder.move", "give at least one folder in `paths`"));
     }
     for folder in &folders {
-        refuse_protected_place("folder.move", folder)?;
+        refuse_protected_place_in("folder.move", folder, home)?;
     }
     if let Some(why) = batch_refusal(&folders, into) {
         return Err(crate::EngineError::Other(why));
@@ -803,7 +804,7 @@ fn refuse_protected_place_in(command: &str, from: &str, home: Option<&Path>) -> 
 
 #[cfg(test)]
 mod tests {
-    use super::{is_protected_place, refuse_protected_place_in};
+    use super::{is_protected_place, move_folders, refuse_protected_place_in};
     use std::path::Path;
 
     #[test]
@@ -915,6 +916,28 @@ mod tests {
         let shortcut = dir.join("shortcut");
         std::os::unix::fs::symlink(home.join("Pictures"), &shortcut).expect("link");
         assert!(refuse_protected_place_in("folder.rename", &shortcut.to_string_lossy(), Some(&home)).is_ok());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_batch_move_refuses_the_homes_places_and_moves_nothing() {
+        let dir = scratch("batch");
+        let home = dir.join("home");
+        let (other, archive) = (dir.join("other"), dir.join("archive"));
+        std::fs::create_dir_all(&other).expect("other");
+        std::fs::create_dir_all(&archive).expect("archive");
+        let mut s = crate::Session::new();
+        let pictures = home.join("Pictures");
+        // the folder that may move comes first: it is not moved either
+        let p = serde_json::json!({"paths": [other.to_string_lossy(), pictures.to_string_lossy()], "into": archive.to_string_lossy()});
+        let e = move_folders(&mut s, &p, Some(&home)).expect_err("refused").to_string();
+        assert!(e.contains("home folder"), "{e}");
+        assert!(other.is_dir() && pictures.is_dir(), "both are where they were");
+        assert!(!archive.join("other").exists() && !archive.join("Pictures").exists(), "nothing moved");
+        assert!(s.undo.is_empty(), "no undo step was left");
+        // with no home known, the same batch moves
+        move_folders(&mut s, &p, None).expect("moves");
+        assert!(archive.join("other").is_dir() && archive.join("Pictures").is_dir());
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

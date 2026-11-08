@@ -414,7 +414,11 @@ fn menu(title: &'static str) -> Screen {
     screen(format!("Menu {title}"), move || {
         let mut h = harness(ViewMode::PhotoGrid, RightPanel::None);
         let before = audit(&h).0;
-        h.get_by_label(title).click();
+        // (the tool strip's Edit button has the same name: a menu's title is the one that is no toggle)
+        h.query_all_by_label(title)
+            .find(|n| n.accesskit_node().toggled().is_none())
+            .unwrap_or_else(|| panic!("no menu titled {title:?}"))
+            .click();
         h.run_steps(8);
         assert!(audit(&h).0 > before, "the {title} menu did not open");
         h
@@ -1246,7 +1250,8 @@ fn the_settings_tab_strip_is_a_tab_list_of_tabs_that_control_their_page() {
         .map(|(n, _)| n)
         .collect();
     let names: Vec<String> = found.iter().map(|n| n.label().unwrap_or_default()).collect();
-    let want: Vec<String> = tabs.iter().map(|(_, l)| lightcraft_ui_egui::i18n::tr(l).to_string()).collect();
+    let want: Vec<String> =
+        tabs.iter().map(|(id, l)| lightcraft_ui_egui::i18n::tr(lightcraft_ui_egui::panels::settings::tab_label(id, l)).to_string()).collect();
     assert_eq!(names, want, "one tab per section");
     // the open one, and only it, is selected, and it is no toggle (a check box to VoiceOver)
     for (tab, (id, _)) in found.iter().zip(tabs) {
