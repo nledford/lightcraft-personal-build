@@ -29,6 +29,17 @@ fn find_item<'a>(nodes: &'a [MenuNode], id: &str) -> Option<&'a MenuNode> {
     })
 }
 
+/// The submenu named `label` in `nodes`: one of their own first, else one inside a submenu (the
+/// Photo menu holds Metadata Preset inside Metadata).
+fn find_submenu<'a>(nodes: &'a [MenuNode], label: &str) -> Option<&'a MenuNode> {
+    nodes.iter().find(|n| matches!(n, MenuNode::Submenu { label: l, .. } if l == label)).or_else(|| {
+        nodes.iter().find_map(|n| match n {
+            MenuNode::Submenu { children, .. } => find_submenu(children, label),
+            _ => None,
+        })
+    })
+}
+
 /// Any registered command as a row, with or without a place in the menu bar.
 fn registered(app: &LightcraftApp, infos: &[CommandInfo], id: &str) -> Option<MenuNode> {
     let keymap = &app.ui.settings.keymap;
@@ -133,7 +144,7 @@ fn nodes_with(app: &LightcraftApp, photo: PhotoId, infos: &[CommandInfo], preset
     // a hint row for Add to My Photos)
     let top = |id: &str| bar.iter().find_map(|(_, n)| n.iter().find(|x| matches!(x, MenuNode::Item { id: i, .. } if i == id))).cloned();
     let row = |id: &str| top(id).or_else(|| bar.iter().find_map(|(_, n)| find_item(n, id)).cloned()).or_else(|| registered(app, infos, id));
-    let sub = |title: &str, label: &str| menu(title).iter().find(|n| matches!(n, MenuNode::Submenu { label: l, .. } if l == label)).cloned();
+    let sub = |title: &str, label: &str| find_submenu(menu(title), label).cloned();
     let submenu =
         |label: &str, children: Vec<Option<MenuNode>>| MenuNode::Submenu { label: label.into(), children: children.into_iter().flatten().collect() };
     let selected = app.session.selected();
