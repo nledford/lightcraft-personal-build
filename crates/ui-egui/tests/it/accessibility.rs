@@ -80,11 +80,9 @@ fn harness_with(setup: impl FnOnce(&mut LightcraftApp)) -> App {
     hide_the_computers_places(&mut app);
     setup(&mut app);
     let mut builder = Harness::builder().with_size(vec2(1500.0, 950.0)).with_accessibility_check(false);
-    // text such as "▸" in the Reference view's hint has its glyph only in the craft-fonts faces (releases
-    // always have them): without them it is drawn as a box, which this audit of names doesn't need
-    if lightcraft_engine::CRAFT_FONTS.is_empty() {
-        builder = builder.allow_missing_glyphs();
-    }
+    // text such as "▸" in the Reference view's hint has its glyph in no face of the test fonts, craft-fonts or not (the
+    // Linux run lists them and has none): it is drawn as a box, which this audit of names doesn't need
+    builder = builder.allow_missing_glyphs();
     let mut h = builder.build_ui_state(
         |ui, app: &mut LightcraftApp| {
             app.logic(&ui.ctx().clone());
@@ -149,11 +147,9 @@ fn people_harness(what: People) -> App {
         People::Page => app.ui.person_page = Some("Jane Doe".to_string()),
     }
     let mut builder = Harness::builder().with_size(vec2(1500.0, 950.0)).with_accessibility_check(false);
-    // text such as "▸" has its glyph only in the craft-fonts faces (releases always have them): without them it is
-    // drawn as a box, which this audit of names doesn't need
-    if lightcraft_engine::CRAFT_FONTS.is_empty() {
-        builder = builder.allow_missing_glyphs();
-    }
+    // text such as "▸" in the Reference view's hint has its glyph in no face of the test fonts, craft-fonts or not (the
+    // Linux run lists them and has none): it is drawn as a box, which this audit of names doesn't need
+    builder = builder.allow_missing_glyphs();
     let mut h = builder.build_ui_state(
         |ui, app: &mut LightcraftApp| {
             app.logic(&ui.ctx().clone());
