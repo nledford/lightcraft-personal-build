@@ -693,10 +693,12 @@ mod tests {
         h.app.run("file.addPhotos", json!({})).unwrap();
         h.app.session.open_library(&library, true).unwrap();
         asked.lock().unwrap()[0].1.send(vec![photo]).unwrap();
+        // the toast is read at the first frame that has it: it lasts 6 s of wall clock, and the settle below can outlast
+        // that on a slow runner
+        let toast = |h: &Headless| h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+        assert!(h.step_until(SETTLE, |h| toast(h).contains("library changed")), "the person is told why nothing happened: {}", toast(&h));
         assert!(import_sources(&mut h).is_none(), "nothing is imported into the library that was opened meanwhile");
         assert!(h.app.pending_picks.is_empty());
-        let said = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
-        assert!(said.contains("library changed"), "the person is told why nothing happened: {said}");
         let _ = std::fs::remove_dir_all(&dir);
         let _ = std::fs::remove_dir_all(&library);
     }
