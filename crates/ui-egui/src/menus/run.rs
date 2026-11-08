@@ -312,7 +312,7 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
     let ctx = app.tasks.repaint.clone().unwrap_or_default();
     if id == "photo.moveToFolder" && p.get("background").and_then(Value::as_bool) == Some(true) {
         // the files move on a worker thread; `ui.inspect` → `move` says how it ended
-        return Some(crate::move_task::start(app, &ctx, p));
+        return Some(crate::move_task::start(app, &ctx, p, false));
     }
     const PARTS: [fn(&mut LightcraftApp, &egui::Context, &str, &Value) -> Option<Result<Value, String>>; 12] = [
         ui_commands_1,

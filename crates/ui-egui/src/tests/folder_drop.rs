@@ -466,8 +466,29 @@ fn dont_ask_again_moves_the_next_drop_at_once() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
+/// A file of that name is in the folder already (not in the library): the worker refuses the whole move, so Don't ask
+/// again, ticked in the question, stays unused.
 #[test]
 fn dont_ask_again_is_kept_only_when_the_move_began() {
+    let (root, trip, home) = folders("dont-ask-clash");
+    let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
+    click(&mut h, &format!("libraryFolderToggle:{}", folder_key(&root)));
+    let target = folder_row(&h, &home).unwrap();
+    let beach = id_of(&h, "beach.png");
+    std::fs::copy(trip.join("beach.png"), home.join("beach.png")).unwrap();
+    drop_beach(&mut h, beach, target);
+    click(&mut h, "check:moveDontAsk");
+    assert!(matches!(h.app.ui.dialog, Some(crate::state::Dialog::MovePhotos { dont_ask: true, .. })), "ticked");
+    click(&mut h, "button:dialogOk");
+    assert!(h.app.ui.dialog.is_none(), "the question closes");
+    settle(&mut h);
+    assert!(trip.join("beach.png").is_file(), "nothing moved: the worker refused the name");
+    assert!(h.app.ui.settings.ask_before_move, "a move the worker refused leaves the question on");
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn dont_ask_again_is_kept_when_another_library_opens_before_the_answer() {
     let (root, trip, home) = folders("dont-ask-refused");
     let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
     click(&mut h, &format!("libraryFolderToggle:{}", folder_key(&root)));
@@ -719,7 +740,7 @@ fn a_move_started_from_the_grid_or_a_folder_row_that_is_refused_says_so_for_as_l
     h.app.run("photo.moveToFolder", json!({"ids": [beach], "folder": home.to_string_lossy(), "background": true})).unwrap();
     h.app.ui.toast = None;
     let ctx = h.view.ctx.clone();
-    let e = crate::move_task::start(&mut h.app, &ctx, &json!({"ids": [garden], "folder": trip.to_string_lossy()})).unwrap_err();
+    let e = crate::move_task::start(&mut h.app, &ctx, &json!({"ids": [garden], "folder": trip.to_string_lossy()}), false).unwrap_err();
     assert!(e.contains("being moved"), "{e}");
     let (text, until) = h.app.ui.toast.clone().map(|t| (t.text, t.until)).expect("the refusal is told");
     assert_eq!(text, e);

@@ -157,7 +157,7 @@ impl LightcraftApp {
                     // an import, a scan (a finished Local browse replaces `app.import`), a Synchronize Folder (its scan
                     // or its run) or a Lightroom migration that started while the folder was listed: scanning now would
                     // mark the new files as tried without importing them; the next listing picks them up
-                    if import::running(app) || app.sync.is_some() || app.sync_run.is_some() || app.lightroom.is_some() {
+                    if import::running(app) || app.sync.is_some() || app.sync_run.is_some() || app.lightroom.is_some() || app.move_run.is_some() {
                         return;
                     }
                     let p = serde_json::json!({"listing": listing, "start": false});

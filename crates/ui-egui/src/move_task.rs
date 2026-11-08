@@ -18,6 +18,8 @@ pub struct MoveRun {
     folder: String,
     /// The folder's name, as the toast says it.
     name: String,
+    /// Don't ask again was ticked in the question that began this move.
+    stop_asking: bool,
     /// The worker, so a test can wait until it has sent its result.
     #[cfg(all(test, not(target_arch = "wasm32")))]
     pub(crate) worker: Option<std::thread::JoinHandle<()>>,
@@ -41,6 +43,7 @@ pub(crate) fn stalled(app: &mut LightcraftApp) -> (std::sync::mpsc::Sender<MoveO
         finish: None,
         folder: String::new(),
         name: String::new(),
+        stop_asking: false,
         #[cfg(all(test, not(target_arch = "wasm32")))]
         worker: None,
     });
@@ -53,20 +56,21 @@ fn name_of(app: &mut LightcraftApp, path: &str) -> String {
 }
 
 /// Start moving photos into a folder on disk: `params` as `photo.moveToFolder` takes them
-/// (`{folder, ids?}`; the selection by default). Returns at once: `{background: true, files}`
+/// (`{folder, ids?}`; the selection by default). `stop_asking`: the question's Don't ask again was ticked; the
+/// question is turned off when the move ends with a file moved ([`poll`]), not before. Returns at once: `{background: true, files}`
 /// while it runs, or `{moved: 0, of: 0, folder, stopped: false}` when every photo is there
 /// already (said in a toast). An error when the move can't begin (Local photos, another move
 /// running…), also logged, shown in the status line as `LightcraftApp::run` does, and told in an error toast
 /// (a menu, key or button caller drops the returned error, so the toast is what tells the person why nothing moved).
-pub fn start(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value) -> Result<Value, String> {
-    start_inner(app, ctx, params).inspect_err(|e| {
+pub fn start(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value, stop_asking: bool) -> Result<Value, String> {
+    start_inner(app, ctx, params, stop_asking).inspect_err(|e| {
         log::warn!("photo.moveToFolder: {e}");
         app.ui.status = e.clone();
         app.toast_error(ctx, e.clone());
     })
 }
 
-fn start_inner(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value) -> Result<Value, String> {
+fn start_inner(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value, stop_asking: bool) -> Result<Value, String> {
     let raw = params.get("folder").and_then(Value::as_str).unwrap_or_default();
     let path = raw.trim_end_matches(['/', '\\']).to_string();
     let name = name_of(app, &path);
@@ -96,6 +100,7 @@ fn start_inner(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value) -> 
         finish: Some(finish),
         folder: path,
         name,
+        stop_asking,
         #[cfg(all(test, not(target_arch = "wasm32")))]
         worker: Some(worker),
     });
@@ -141,6 +146,11 @@ pub fn poll(app: &mut LightcraftApp, ctx: &egui::Context) {
         Ok(r) => {
             let moved = r["moved"].as_u64().unwrap_or(0);
             let of = r["of"].as_u64().unwrap_or(moved);
+            // Don't ask again takes effect once a file has moved: a move the worker refuses (a name taken in the
+            // folder) or that was stopped before the first file leaves the question on
+            if run.stop_asking && moved > 0 {
+                app.ui.settings.ask_before_move = false;
+            }
             let text = if r["stopped"].as_bool() == Some(true) {
                 stopped_text(moved, of, &run.name)
             } else {

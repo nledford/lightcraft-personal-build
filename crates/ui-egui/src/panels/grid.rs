@@ -1356,7 +1356,7 @@ fn context_menu_file_actions(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             && let Some(into) = v.into_iter().next()
         {
             // (a refusal is told in a toast by `start`)
-            let _ = crate::move_task::start(app, ui.ctx(), &json!({"folder": into}));
+            let _ = crate::move_task::start(app, ui.ctx(), &json!({"folder": into}), false);
         }
     }
     if MenuItem::new(crate::i18n::tr("Reload from Disk")).show(ui).clicked() {

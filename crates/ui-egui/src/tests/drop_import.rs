@@ -1211,6 +1211,25 @@ fn auto_import_waits_for_an_import_that_starts_during_its_listing() {
     h.app.session.import_defaults.auto_folder = None;
 }
 
+/// A move to another folder in the background (its files arrive in the watched folder before the library knows
+/// them): Auto Import looks at nothing meanwhile, and a file that was added to the folder is imported after the move.
+#[test]
+fn auto_import_waits_for_a_move_and_then_imports_the_new_file() {
+    let dir = Scratch::new("auto-move");
+    let mut h = app(&dir);
+    second_auto_import_listing(&mut h, &dir);
+    let (tx, guard) = crate::move_task::stalled(&mut h.app);
+    apply_auto_import_listing(&mut h);
+    assert!(h.app.import.is_none(), "no import starts while a move runs");
+    assert_eq!(photos(&h), 0);
+    // the move ends (nothing to follow: the worker's channel closes), and the next listings import the file
+    drop(guard);
+    drop(tx);
+    assert!(h.step_until(T, |h| h.app.move_run.is_none()), "the move is followed");
+    assert!(h.step_until(T, |h| photos(h) == 1), "the watched folder's file arrives after the move: {}", photos(&h));
+    h.app.session.import_defaults.auto_folder = None;
+}
+
 /// The same with a Local folder browse: a browse that finishes replaces `app.import` with its own, so
 /// Auto Import doesn't start one beside it.
 #[test]
