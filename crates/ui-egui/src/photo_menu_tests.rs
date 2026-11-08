@@ -135,7 +135,11 @@ fn actions_are_grouped_with_the_long_tails_in_submenus() {
     }
     // Delete stands alone at the end, with Move Files to Trash… (the files too, #2822) beside it
     assert!(matches!(n.last(), Some(MenuNode::Item { id, .. }) if id == "dialog.trashFiles"), "{:?}", n.last());
-    assert!(matches!(n.get(n.len().saturating_sub(2)), Some(MenuNode::Item { id, .. }) if id == "photo.delete"), "{:?}", n.get(n.len().saturating_sub(2)));
+    assert!(
+        matches!(n.get(n.len().saturating_sub(2)), Some(MenuNode::Item { id, .. }) if id == "photo.delete"),
+        "{:?}",
+        n.get(n.len().saturating_sub(2))
+    );
     assert_eq!(n.get(n.len().saturating_sub(3)), Some(&MenuNode::Separator));
 }
 
