@@ -226,7 +226,10 @@ fn a_refused_key_keeps_its_reason_and_claims_no_success() {
     ] {
         empty.ui.status.clear();
         press(&mut empty, &ctx, key, modifiers);
-        assert!(toast(&mut empty).is_none(), "{key:?} {modifiers:?} claimed success on an empty library");
+        // (a key is a click by another name: `act` shows the reason it refused with in a toast; no success is claimed)
+        let shown = toast(&mut empty);
+        let success = |t: &str| ["Rated", "Rating cleared", "Flagged", "Unflagged", "Flag changed", "Color label cleared"].iter().any(|s| t.starts_with(s)) || t.ends_with(" Label");
+        assert!(!shown.as_deref().is_some_and(success), "{key:?} {modifiers:?} claimed success on an empty library: {shown:?}");
         assert!(!empty.ui.status.is_empty(), "{key:?} {modifiers:?} lost the reason it was refused");
     }
 }
