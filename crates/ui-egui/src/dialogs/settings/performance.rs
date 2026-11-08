@@ -271,7 +271,8 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     let mut ask = kept.filter(|k| pass.saturating_sub(k.pass) <= 1 && k.library == library && k.folder == path).unwrap_or_default();
     // a folder chosen in a dialog that ran off the UI thread, kept until this section is drawn
     // (of this library: a folder chosen for another one, opened while the dialog was up, is not taken up for this)
-    let picked = ui.data_mut(|d| d.remove_temp::<(String, String, u8)>(smart_picked_id())).filter(|(lib, _, _)| *lib == library).map(|(_, dir, m)| (dir, m));
+    let picked =
+        ui.data_mut(|d| d.remove_temp::<(String, String, u8)>(smart_picked_id())).filter(|(lib, _, _)| *lib == library).map(|(_, dir, m)| (dir, m));
     let mut mode = picked.as_ref().map_or(ask.mode, |(_, m)| *m);
     if count > 0 {
         row(ui, t, crate::i18n::tr("Existing previews"), |ui| {
