@@ -1,5 +1,5 @@
 use super::commit::{How, Plan, Slot, Transfer, commit_prepared, discard, name_family, run_transfers, system_clock};
-use super::files::{KnownContent, Read, ReadJob, SidecarSource, expand_knowing, read_files};
+use super::files::{KnownContent, Read, ReadJob, SidecarSource, SidecarText, expand_knowing, read_files};
 use super::scan::{cache_holds_for_import, note_content};
 use super::types::{FileFacts, ImportCandidate, ImportMode, ImportOptions, ImportReport, Kept, OnDeleted};
 use super::{HashMap, ListedFolders, MediaKind, Path, PathBuf, Photo, PhotoId, ProbeInfo, ReadChoice, ReadFromPhotos, ReadWatch, Session, Source};
@@ -100,6 +100,8 @@ pub(super) struct ReadyFile {
     pub(super) stored: String,
     pub(super) info: ProbeInfo,
     pub(super) sidecar: Option<crate::sidecar::SidecarData>,
+    /// Its sidecar was over [`crate::sync::MAX_SIDECAR_BYTES`] and was left unread: the report says so.
+    pub(super) sidecar_too_large: bool,
     pub(super) placed: Option<crate::import_move::Placed>,
 }
 
@@ -156,7 +158,7 @@ impl Prepared {
                 items.push(item);
                 continue;
             };
-            let ReadyFile { path, stored, info, sidecar, placed } = *ready;
+            let ReadyFile { path, stored, info, sidecar, sidecar_too_large, placed } = *ready;
             let existing_path = paths.get(&normalize_import_path(&stored)).copied().or_else(|| paths.get(&normalize_import_path(&path)).copied());
             let existing_hash = info.content_hash.as_ref().and_then(|hash| hashes.get(crate::sync::base_hash(hash)).map(|(_, id)| *id));
             if let Some(existing) = existing_path.or(existing_hash) {
@@ -171,7 +173,7 @@ impl Prepared {
                     file: Some(Box::new(FileFacts { meta: info.meta, captured: info.captured })),
                 });
             } else {
-                items.push(PreparedItem::Ready(Box::new(ReadyFile { path, stored, info, sidecar, placed })));
+                items.push(PreparedItem::Ready(Box::new(ReadyFile { path, stored, info, sidecar, sidecar_too_large, placed })));
             }
         }
         self.items = items;
@@ -409,7 +411,12 @@ impl ImportJob {
             let sidecar_file = found.as_ref().map(|f| f.path.clone());
             // (a duplicate whose capture time is known needs no sidecar: its packet is not used)
             let skip_packet = duplicate_of.is_some() && info.captured.is_some();
-            let file_packet = found.and_then(|f| f.text).filter(|_| !skip_packet);
+            let (file_packet, sidecar_too_large) = match found.map(|f| f.text) {
+                Some(SidecarText::Text(text)) if !skip_packet => (Some(text), false),
+                // (a photo that is not imported, as a duplicate, loses nothing to it)
+                Some(SidecarText::TooLarge) => (None, duplicate_of.is_none()),
+                _ => (None, false),
+            };
             let from_file = file_packet.is_some();
             let packet = if skip_packet { None } else { file_packet.or_else(|| info.xmp.clone().filter(|_| raw)) };
             let target = crate::crs::Target::for_file(info.kind, &info.format, info.preview_only.is_some(), &info.meta.camera);
@@ -505,7 +512,7 @@ impl ImportJob {
                     // (transfers of one folder and name family can take each other's names, so they never run together)
                     plan.pending_families.insert(family);
                     plan.pending_hashes.extend(info.content_hash.clone());
-                    plan.transfers.push(Transfer { path, info, sidecar, dir, how, dng, bring_sidecar });
+                    plan.transfers.push(Transfer { path, info, sidecar, sidecar_too_large, dir, how, dng, bring_sidecar });
                     continue;
                 }
                 (ImportMode::Move, _) => {
@@ -521,7 +528,7 @@ impl ImportJob {
                 self.by_hash.insert(h.clone(), None);
             }
             self.done.fetch_add(1, Relaxed);
-            plan.slots.push(Slot::Item(PreparedItem::Ready(Box::new(ReadyFile { path, stored, info, sidecar, placed: None }))));
+            plan.slots.push(Slot::Item(PreparedItem::Ready(Box::new(ReadyFile { path, stored, info, sidecar, sidecar_too_large, placed: None }))));
         }
         self.run_plan(&mut plan, &mut out, cancel);
         out.stopped = self.reads.ended();

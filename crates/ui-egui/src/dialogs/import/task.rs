@@ -528,6 +528,12 @@ fn xmp_warning_text(warning: &ImportWarning) -> String {
         ImportWarningCode::UnmappedXmp => {
             crate::i18n::tr_format!("XMP adjustments were not imported for {path}: {fields}.", path = path, fields = warning.fields.join(", "),)
         }
+        ImportWarningCode::SidecarTooLarge => {
+            crate::i18n::tr_format!(
+                "The XMP sidecar of {path} is too large to read; its keywords, ratings and settings were not imported.",
+                path = path,
+            )
+        }
     }
 }
 

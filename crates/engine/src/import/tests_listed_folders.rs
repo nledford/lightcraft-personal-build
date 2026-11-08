@@ -516,11 +516,11 @@ fn the_readers_are_not_held_to_the_cores() {
 }
 
 /// A sidecar over the cap ([`crate::sync::MAX_SIDECAR_BYTES`]) is skipped, not read whole into memory; one at the cap is
-/// read, and the import goes on without it.
+/// read, and the import goes on without it, saying so in its report.
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn an_oversized_sidecar_is_skipped() {
-    use super::files::read_text;
+    use super::files::{SidecarText, read_text};
     let root = scratch("oversized");
     let cap = crate::sync::MAX_SIDECAR_BYTES;
     let sparse = |name: &str, len: u64| {
@@ -528,17 +528,70 @@ fn an_oversized_sidecar_is_skipped() {
         std::fs::File::create(&f).unwrap().set_len(len).unwrap();
         f
     };
-    assert!(read_text(&sparse("at.xmp", cap)).is_some(), "a sidecar at the cap is read");
-    assert!(read_text(&sparse("over.xmp", cap + 1)).is_none(), "a sidecar over the cap is skipped");
-    assert!(read_text(&root.join("none.xmp")).is_none());
+    assert!(matches!(read_text(&sparse("at.xmp", cap)), SidecarText::Text(_)), "a sidecar at the cap is read");
+    assert_eq!(read_text(&sparse("over.xmp", cap + 1)), SidecarText::TooLarge, "a sidecar over the cap is skipped");
+    // (cut in the middle of a character: still too large, not merely unreadable)
+    let cut = root.join("cut.xmp");
+    let mut bytes = vec![b'a'; usize::try_from(cap).unwrap() - 1];
+    bytes.extend("é".as_bytes());
+    std::fs::write(&cut, &bytes).unwrap();
+    assert_eq!(read_text(&cut), SidecarText::TooLarge, "a sidecar over the cap whose cap falls inside a character");
+    assert_eq!(read_text(&root.join("none.xmp")), SidecarText::Unreadable);
 
-    // in an import: the photo comes in, without what the oversized sidecar would have said
+    // in an import: the photo comes in, without what the oversized sidecar would have said, and the report says so
     let photo = root.join("IMG_0001.jpg");
     std::fs::write(&photo, b"x").unwrap();
     sparse("IMG_0001.xmp", cap + 1);
-    let mut job = job(SidecarNaming::Stem);
+    let mut s = Session::new();
+    let mut job = ImportJob::new(&mut s, ImportOptions { mode: ImportMode::Add, ..ImportOptions::default() }).unwrap();
+    job.probe = Some(std::sync::Arc::new(|_: &str| Ok(ProbeInfo { format: "JPEG".into(), ..ProbeInfo::default() })));
     let prepared = job.prepare_files(vec![photo.to_string_lossy().to_string()], &AtomicBool::new(false));
-    assert_eq!(ratings(prepared), [("IMG_0001.jpg".to_string(), None)]);
+    let report = super::commit::commit_prepared(&mut s, &job.opts, job.now(), prepared).unwrap();
+    assert_eq!(report.imported.len(), 1, "the photo comes in");
+    assert_eq!(report.sidecars, 0);
+    let warnings: Vec<_> = report.warnings.iter().map(|w| (w.path.as_str(), &w.code)).collect();
+    assert_eq!(warnings, [(photo.to_str().unwrap(), &super::ImportWarningCode::SidecarTooLarge)]);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+/// Given a file's sidecars read by the readers, when the planning thread picks one with `choose`, then it asks the disk
+/// for nothing: the files are gone by then, and the lookup counters and the threads that looked do not change.
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn choosing_a_sidecar_needs_no_disk() {
+    use super::files::{SidecarText, Sidecars};
+    let root = scratch("choose");
+    let raw = root.join("IMG_0001.NEF");
+    let jpg = root.join("IMG_0001.JPG");
+    for f in [&raw, &jpg] {
+        std::fs::write(f, b"x").unwrap();
+    }
+    let (shared, own) = (root.join("IMG_0001.xmp"), root.join("IMG_0001.JPG.xmp"));
+    std::fs::write(&shared, xmp(5)).unwrap();
+    std::fs::write(&own, xmp(2)).unwrap();
+    let job = job(SidecarNaming::Stem);
+    let (listed, path) = (job.listed.clone(), jpg.to_string_lossy().to_string());
+    let read = std::thread::spawn(move || Sidecars::read(&path, SidecarNaming::Stem, &listed)).join().unwrap();
+    let own_read = std::thread::spawn({
+        let (listed, path) = (job.listed.clone(), jpg.to_string_lossy().to_string());
+        move || Sidecars::read(&path, SidecarNaming::Stem, &listed)
+    })
+    .join()
+    .unwrap();
+    std::fs::remove_file(&shared).unwrap();
+    std::fs::remove_file(&own).unwrap();
+    let (asked, asked_own, lookers) = (job.listed.asked.load(Relaxed), job.listed.asked_own.load(Relaxed), job.listed.lookers.lock().unwrap().len());
+    let owner = read.choose(true).expect("the owner's sidecar");
+    assert_eq!(owner.path, shared);
+    assert!(matches!(owner.text, SidecarText::Text(_)), "its text was read before");
+    let theirs = own_read.choose(false).expect("the file's own sidecar");
+    assert_eq!(theirs.path, own);
+    assert!(matches!(theirs.text, SidecarText::Text(_)), "its text was read before");
+    assert_eq!(
+        (job.listed.asked.load(Relaxed), job.listed.asked_own.load(Relaxed), job.listed.lookers.lock().unwrap().len()),
+        (asked, asked_own, lookers),
+        "choosing looked at the disk"
+    );
     let _ = std::fs::remove_dir_all(&root);
 }
 

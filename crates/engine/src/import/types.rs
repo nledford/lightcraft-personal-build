@@ -397,6 +397,9 @@ pub enum ImportWarningCode {
     UprightGeometry,
     /// One or more other XMP develop fields have no LightCraft mapping.
     UnmappedXmp,
+    /// The photo's XMP sidecar is over [`crate::sync::MAX_SIDECAR_BYTES`] and was not read: what it holds (keywords,
+    /// ratings, develop settings) is not on the photo.
+    SidecarTooLarge,
 }
 
 /// The saved Lightroom Upright mode associated with a foreign geometry transform.

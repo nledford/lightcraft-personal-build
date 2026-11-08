@@ -396,10 +396,10 @@ pub(super) struct Read {
     pub(super) reused: bool,
 }
 
-/// A sidecar a file of an import may read: where it was found, and its text (`None`: it could not be read).
+/// A sidecar a file of an import may read: where it was found, and its text.
 pub(super) struct Found {
     pub(super) path: PathBuf,
-    pub(super) text: Option<String>,
+    pub(super) text: SidecarText,
 }
 
 /// The sidecars the readers found for a file of an import: what the library's naming finds
@@ -418,7 +418,7 @@ pub(super) struct Sidecars {
 }
 
 impl Sidecars {
-    fn read(path: &str, naming: crate::sidecar::SidecarNaming, listed: &super::ListedFolders) -> Sidecars {
+    pub(super) fn read(path: &str, naming: crate::sidecar::SidecarNaming, listed: &super::ListedFolders) -> Sidecars {
         let Some(owner) = listed.find_for_import(path, naming) else { return Sidecars::default() };
         // (a sidecar that is not under the shared name is the file's own already: nothing more to look up)
         let shared = crate::sidecar::is_shared_stem_sidecar(path, &owner);
@@ -435,22 +435,32 @@ impl Sidecars {
     }
 }
 
-/// The text of the sidecar at `path` (`None`: it could not be read, or is over [`crate::sync::MAX_SIDECAR_BYTES`], which
-/// is skipped and logged): never more than that is read.
-pub(super) fn read_text(path: &Path) -> Option<String> {
+/// What reading a sidecar's file gave.
+#[derive(Debug, PartialEq, Eq)]
+pub(super) enum SidecarText {
+    Text(String),
+    /// The file is over [`crate::sync::MAX_SIDECAR_BYTES`]: not read whole into memory, and the import says it was left
+    /// out (`ImportWarningCode::SidecarTooLarge`).
+    TooLarge,
+    /// It could not be read (or is not text).
+    Unreadable,
+}
+
+/// The text of the sidecar at `path`: never more than [`crate::sync::MAX_SIDECAR_BYTES`] (and one byte) is read.
+pub(super) fn read_text(path: &Path) -> SidecarText {
     use std::io::Read as _;
     let cap = crate::sync::MAX_SIDECAR_BYTES;
-    let mut text = String::new();
+    let mut bytes = Vec::new();
     // (one byte past the cap tells a file that is over it from one that is just at it)
-    let read = std::fs::File::open(path).and_then(|f| f.take(cap.saturating_add(1)).read_to_string(&mut text));
-    match read {
-        Ok(n) if u64::try_from(n).map_or(true, |n| n > cap) => {
-            log::warn!("import {}: too large for an XMP sidecar (over {cap} bytes): skipped", path.display());
-            None
-        }
-        Ok(_) => Some(text),
-        Err(_) => None,
+    let Ok(_) = std::fs::File::open(path).and_then(|f| f.take(cap.saturating_add(1)).read_to_end(&mut bytes)) else {
+        return SidecarText::Unreadable;
+    };
+    // (the length first: a file cut short in the middle of a character is still too large)
+    if u64::try_from(bytes.len()).map_or(true, |n| n > cap) {
+        log::warn!("import {}: too large for an XMP sidecar (over {cap} bytes): skipped", path.display());
+        return SidecarText::TooLarge;
     }
+    String::from_utf8(bytes).map_or(SidecarText::Unreadable, SidecarText::Text)
 }
 
 /// What the readers of a batch look a file's sidecar up with.
@@ -725,6 +735,7 @@ mod prepared_tests {
             stored: path.to_string_lossy().into(),
             info: ProbeInfo { format: "JPG".into(), ..ProbeInfo::default() },
             sidecar: None,
+            sidecar_too_large: false,
             placed: None,
         };
         let mut prepared = Prepared {
@@ -747,7 +758,14 @@ mod prepared_tests {
         twin.content_hash = Some("abc123:dup5".into());
         s.commit("twin", Op::AddPhoto { photo: Box::new(twin) }).unwrap();
         let info = ProbeInfo { format: "JPG".into(), content_hash: Some("abc123".into()), ..ProbeInfo::default() };
-        let ready = ReadyFile { path: path.to_string_lossy().into(), stored: path.to_string_lossy().into(), info, sidecar: None, placed: None };
+        let ready = ReadyFile {
+            path: path.to_string_lossy().into(),
+            stored: path.to_string_lossy().into(),
+            info,
+            sidecar: None,
+            sidecar_too_large: false,
+            placed: None,
+        };
         let mut prepared = Prepared { scanned: 1, items: vec![PreparedItem::Ready(Box::new(ready))], stopped: None };
         prepared.revalidate_add(&s);
         assert!(matches!(prepared.items.first(), Some(PreparedItem::Duplicate { reason: "content", existing: Some(PhotoId(7)), .. })));

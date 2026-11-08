@@ -31,6 +31,8 @@ pub(super) struct Transfer {
     pub(super) path: String,
     pub(super) info: ProbeInfo,
     pub(super) sidecar: Option<crate::sidecar::SidecarData>,
+    /// Its sidecar was over [`crate::sync::MAX_SIDECAR_BYTES`] and was left unread ([`ReadyFile::sidecar_too_large`]).
+    pub(super) sidecar_too_large: bool,
     pub(super) dir: PathBuf,
     pub(super) how: How,
     /// Copy as DNG.
@@ -180,7 +182,7 @@ pub(super) fn discard(item: PreparedItem) {
 
 /// Copy or move one planned file (and Copy as DNG); its item.
 fn run_transfer(t: Transfer, file_bytes: Option<&crate::merge::ByteReader>) -> PreparedItem {
-    let Transfer { path, mut info, sidecar, dir, how, dng, bring_sidecar, .. } = t;
+    let Transfer { path, mut info, sidecar, sidecar_too_large, dir, how, dng, bring_sidecar, .. } = t;
     let mut placed = None;
     let mut stored = match how {
         How::Place { name } => match crate::import_move::place(Path::new(&path), &dir, &name) {
@@ -219,7 +221,7 @@ fn run_transfer(t: Transfer, file_bytes: Option<&crate::merge::ByteReader>) -> P
         let _ = std::fs::remove_file(&stored);
         return PreparedItem::Failed(path, e);
     }
-    PreparedItem::Ready(Box::new(ReadyFile { path, stored, info, sidecar, placed }))
+    PreparedItem::Ready(Box::new(ReadyFile { path, stored, info, sidecar, sidecar_too_large, placed }))
 }
 
 /// A trashed photo's file is not where the library had it (never on the web, where paths are
@@ -338,7 +340,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
             PreparedItem::Failed(path, e) => report.failed.push((path, e)),
             PreparedItem::Kept(k) => report.kept.push(k),
             PreparedItem::Ready(r) => {
-                let ReadyFile { path, stored, info, sidecar, placed: pl } = *r;
+                let ReadyFile { path, stored, info, sidecar, sidecar_too_large, placed: pl } = *r;
                 placed.extend(pl);
                 let id = s.catalog.alloc_photo_id();
                 if let Some(h) = &info.content_hash {
@@ -393,6 +395,15 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                         warning.path = path.clone();
                         warning
                     }));
+                }
+                if sidecar_too_large {
+                    report.warnings.push(crate::import::ImportWarning {
+                        path: path.clone(),
+                        code: crate::import::ImportWarningCode::SidecarTooLarge,
+                        profile: None,
+                        mode: None,
+                        fields: Vec::new(),
+                    });
                 }
                 if let Some(mp) = opts.metadata_preset.as_ref().and_then(|n| s.metadata_presets.iter().find(|m| m.name.eq_ignore_ascii_case(n))) {
                     crate::cmd::metadata::apply_to(&mut p.meta, &mp.fields);
