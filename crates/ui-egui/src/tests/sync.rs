@@ -1595,7 +1595,7 @@ fn skip_on_the_folders_scan_row_lists_the_file_as_unreadable() {
     crate::sync::open(&mut h.app, &dir.path("trip"), "trip", false).unwrap();
     assert!(h.step_until(T, |h| h.app.session.activity.list().first().is_some_and(|t| t.stalled.is_some())), "no stall");
     let row = h.app.session.activity.list().remove(0);
-    assert_eq!((row.kind, row.stalled.as_ref().map(|s| s.what.as_str())), ("sync", Some("hang.png")));
+    assert_eq!((row.kind, row.stalled.as_ref().map(|s| s.what.as_str())), ("scan", Some("hang.png")));
     let r = h.request("engine.execute", json!({"command": "activity.skip", "params": {"id": row.id}}), T);
     assert_eq!(r["ok"], true, "{r}");
     assert!(h.step_until(T, |h| matches!(&h.app.ui.dialog, Some(Dialog::SynchronizeFolder { counts: Some(_), .. }))), "the scan went on");
