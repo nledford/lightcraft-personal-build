@@ -360,5 +360,6 @@
   "{title}, showing {what}": "{title}, wyświetlane: {what}",
   " · {} damaged": " · uszkodzone: {}",
   "Copied {n} file paths": "Skopiowane ścieżki plików: {n}",
-  "Photos waiting: {n}": "Oczekujące zdjęcia: {n}"
+  "Photos waiting: {n}": "Oczekujące zdjęcia: {n}",
+  "{toast} · {n} photos": "{toast} · zdjęcia: {n}"
 }

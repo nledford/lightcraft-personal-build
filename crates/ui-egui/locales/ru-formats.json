@@ -361,5 +361,6 @@
   "+{n} more": "ещё {n}",
   " · {} damaged": " · повреждено: {}",
   "Copied {n} file paths": "Скопировано путей к файлам: {n}",
-  "Photos waiting: {n}": "Фото в очереди: {n}"
+  "Photos waiting: {n}": "Фото в очереди: {n}",
+  "{toast} · {n} photos": "{toast} · фото: {n}"
 }

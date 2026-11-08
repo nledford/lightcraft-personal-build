@@ -361,5 +361,6 @@
   "+{n} more": "還有 {n} 項",
   " · {} damaged": " · {} 個已損毀",
   "Copied {n} file paths": "已複製 {n} 個檔案路徑",
-  "Photos waiting: {n}": "{n} 張照片等待中"
+  "Photos waiting: {n}": "{n} 張照片等待中",
+  "{toast} · {n} photos": "{toast} · {n} 張照片"
 }

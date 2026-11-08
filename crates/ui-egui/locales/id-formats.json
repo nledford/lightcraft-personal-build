@@ -360,5 +360,6 @@
   "Press {key} to see it beside the original.": "Tekan {key} untuk melihatnya berdampingan dengan aslinya.",
   " · {} damaged": " · {} rusak",
   "Copied {n} file paths": "{n} jalur file disalin",
-  "Photos waiting: {n}": "Foto dalam antrean: {n}"
+  "Photos waiting: {n}": "Foto dalam antrean: {n}",
+  "{toast} · {n} photos": "{toast} · {n} foto"
 }

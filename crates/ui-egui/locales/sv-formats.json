@@ -360,5 +360,6 @@
   "Press {key} to see it beside the original.": "Tryck på {key} för att se den bredvid originalet.",
   " · {} damaged": " · skadade: {}",
   "Copied {n} file paths": "Kopierade filsökvägar: {n}",
-  "Photos waiting: {n}": "Väntande foton: {n}"
+  "Photos waiting: {n}": "Väntande foton: {n}",
+  "{toast} · {n} photos": "{toast} · {n} foton"
 }

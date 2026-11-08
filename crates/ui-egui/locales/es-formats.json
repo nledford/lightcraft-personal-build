@@ -361,5 +361,6 @@
   "+{n} more": "+{n} más",
   " · {} damaged": " · dañadas: {}",
   "Copied {n} file paths": "{n} rutas de archivo copiadas",
-  "Photos waiting: {n}": "Fotos en espera: {n}"
+  "Photos waiting: {n}": "Fotos en espera: {n}",
+  "{toast} · {n} photos": "{toast} · {n} fotos"
 }
