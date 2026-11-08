@@ -386,5 +386,9 @@
   "{n} keywords": "{n} 个关键字",
   "Rule {n} of {m}: {what}. Move with the arrow keys": "规则 {n}/{m}：{what}。用方向键移动",
   "Group {n} of {m}: match {mode}, {count} inside. Move with the arrow keys": "组 {n}/{m}：匹配{mode}，内含 {count} 项。用方向键移动",
-  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "它通过相册“{0}”回到自身：请更改循环中某个相册的规则（编辑智能相册…）"
+  "It leads back to itself through “{}”: change the rules of one album on the loop (Edit Smart Album…)": "它通过相册“{0}”回到自身：请更改循环中某个相册的规则（编辑智能相册…）",
+  "{n} waiting": "{n} 个等待中",
+  "Starts after {n} more": "再过 {n} 个后开始",
+  "Queued: it starts after {n} more": "已加入队列：再过 {n} 个后开始",
+  "{n} tasks waiting in line won't run.": "队列中等待的 {n} 个任务不会运行。"
 }

@@ -243,10 +243,12 @@ fn row_of(what: &str, background: bool) -> (&'static str, &'static str) {
 }
 
 /// The build's row in the activity stack.
-fn task_for(s: &Session, state: &PreviewBuild) -> TaskGuard {
+fn task_for(s: &Session, state: &PreviewBuild, request: Request) -> TaskGuard {
     let (kind, label) = row_of(state.what, state.background);
     let task = s.activity.start(kind, label, Cancel::Flag(state.cancel.clone()));
     task.progress(0, state.total as u64);
+    // (a build that did not go well can be asked for again: Retry)
+    task.set_request(request);
     task
 }
 
@@ -666,7 +668,7 @@ fn build(s: &mut Session, p: &Value) -> Result<Value> {
         state.focus_on(lightcraft_catalog::PhotoId(at), p.get("backward").and_then(Value::as_bool).unwrap_or(false));
     }
     set_current(s, state.clone());
-    let run = Running { task: row.then(|| task_for(s, &state)), state: state.clone() };
+    let run = Running { task: row.then(|| task_for(s, &state, request_for(C, p, &ids))), state: state.clone() };
     // the background preparation leaves most of the machine to the photo on screen and the user
     let lanes = if background { crate::prep::background_lanes() } else { lanes(jobs.len(), edge.is_none()) };
     let wait = p.get("wait").and_then(Value::as_bool).unwrap_or(false) || cfg!(target_arch = "wasm32");
@@ -892,7 +894,7 @@ fn smart(s: &mut Session, p: &Value) -> Result<Value> {
         return queued;
     }
     let mut jobs: Vec<SmartJob> = Vec::new();
-    for id in ids {
+    for &id in &ids {
         let Some(ph) = s.catalog.photo(id).cloned() else { continue };
         if !matches!(ph.source, lightcraft_catalog::Source::File { .. }) {
             continue;
@@ -909,7 +911,7 @@ fn smart(s: &mut Session, p: &Value) -> Result<Value> {
         let previous = s.preview_build.clone();
         set_current(s, state.clone());
         // (this build always has its row)
-        let run = Running { task: Some(task_for(s, &state)), state: state.clone() };
+        let run = Running { task: Some(task_for(s, &state, request_for(C, p, &ids))), state: state.clone() };
         let work = move || {
             if let Err(e) = smart_run(&dir, custom, discard, jobs, run.task.as_ref().map(|task| (&*run.state, task))) {
                 log::warn!("{C}: {e}");
@@ -1213,7 +1215,10 @@ mod tests {
 
         let s = Session::with_demo();
         let state = Arc::new(super::PreviewBuild::default());
-        let run = super::Running { task: Some(super::task_for(&s, &state)), state: state.clone() };
+        let run = super::Running {
+            task: Some(super::task_for(&s, &state, crate::activity::Request { command: String::new(), params: serde_json::Value::Null })),
+            state: state.clone(),
+        };
         assert!(s.activity.lane_busy(crate::activity::Lane::Previews));
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
             let _run = run;
@@ -1233,7 +1238,10 @@ mod tests {
 
         let s = Session::with_demo();
         let state = Arc::new(super::PreviewBuild::default());
-        let run = super::Running { task: Some(super::task_for(&s, &state)), state: state.clone() };
+        let run = super::Running {
+            task: Some(super::task_for(&s, &state, crate::activity::Request { command: String::new(), params: serde_json::Value::Null })),
+            state: state.clone(),
+        };
         state.finished.store(true, Ordering::Relaxed);
         drop(run);
         assert!(state.error().is_none());

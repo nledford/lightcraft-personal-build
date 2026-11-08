@@ -106,12 +106,27 @@ pub fn disk_space_notice(alert: &lightcraft_engine::disk_space::LowDiskAlert) ->
     )
 }
 
-/// The quit prompt's text while `count` cancellable tasks run (`names` lists them).
-fn tasks_message(count: usize, names: &str) -> String {
-    if count == 1 {
-        crate::i18n::tr_format!("1 task is still running: {names}. Quitting stops it.", names = names)
+/// The quit prompt's text while `count` cancellable tasks run (`names` lists them) and `waiting` tasks wait in line.
+fn tasks_message(count: usize, names: &str, waiting: usize) -> String {
+    let text = match count {
+        0 => String::new(),
+        1 => crate::i18n::tr_format!("1 task is still running: {names}. Quitting stops it.", names = names),
+        n => crate::i18n::tr_format!("{n} tasks are still running: {names}. Quitting stops them.", n = n, names = names),
+    };
+    if waiting == 0 {
+        return text;
+    }
+    // (nothing waits across a quit: the files may change before the next launch)
+    let line = if waiting == 1 {
+        crate::i18n::tr("1 task waiting in line won't run.").to_string()
     } else {
-        crate::i18n::tr_format!("{n} tasks are still running: {names}. Quitting stops them.", n = count, names = names)
+        crate::i18n::tr_format!("{n} tasks waiting in line won't run.", n = waiting)
+    };
+    // (sentences that end in a full-width stop are not followed by a space)
+    match text.chars().last() {
+        None => line,
+        Some('。') => format!("{text}{line}"),
+        Some(_) => format!("{text} {line}"),
     }
 }
 
@@ -123,9 +138,9 @@ fn unsaved_message(n: usize, e: &str) -> String {
 }
 
 /// The window may close now (`true`), or the quit prompt is shown (`false`). Running tasks that
-/// can be cancelled (an import, an export…) are asked about first; then the library is backed
-/// up where that was chosen for quitting; then changes that couldn't be written are retried —
-/// the log, then a snapshot of everything in memory.
+/// can be cancelled (an import, an export…) and tasks waiting in line (they would not run) are
+/// asked about first; then the library is backed up where that was chosen for quitting; then
+/// changes that couldn't be written are retried — the log, then a snapshot of everything in memory.
 pub fn may_close(app: &mut LightcraftApp) -> bool {
     if app.quit_confirmed {
         return true;
@@ -139,8 +154,9 @@ pub fn may_close(app: &mut LightcraftApp) -> bool {
     if unlisted && !running.iter().any(|t| t.kind == "import") {
         names.push(crate::i18n::tr("Importing"));
     }
-    if !names.is_empty() {
-        app.quit_prompt = Some(QuitPrompt::Tasks(tasks_message(names.len(), &names.join(", "))));
+    let waiting = app.session.activity.waiting().len();
+    if !names.is_empty() || waiting > 0 {
+        app.quit_prompt = Some(QuitPrompt::Tasks(tasks_message(names.len(), &names.join(", "), waiting)));
         return false;
     }
     if !backed_up_for_quitting(app) {
