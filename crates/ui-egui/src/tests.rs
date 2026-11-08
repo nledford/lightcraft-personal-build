@@ -99,6 +99,7 @@ mod restore_list;
 mod rules_editor;
 mod sam_setup;
 mod samples;
+mod samples_banner;
 mod scan_probes;
 mod scroll;
 mod side_keys;

@@ -536,6 +536,10 @@ pub struct LightcraftApp {
     pub activity_open: bool,
     /// `view.tasks` asked for the list to be opened or closed; the top bar does it on its next frame.
     pub(crate) activity_set: Option<bool>,
+    /// Whether the library held sample photos last frame (`None` before the first): samples that
+    /// newly appear, however they came (the welcome, Help ▸ Add Sample Photos, an agent), bring
+    /// back a samples banner closed over earlier ones.
+    pub samples_present: Option<bool>,
 }
 
 /// How long a screenshot waits for in-flight renders before it is captured anyway (and the
