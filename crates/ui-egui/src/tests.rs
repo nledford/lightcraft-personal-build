@@ -119,6 +119,7 @@ mod titlebar;
 mod toast_timing;
 mod toasts;
 mod tool_overlay;
+mod trash_files;
 mod tree_branch;
 mod tree_state;
 mod type_contrast;

@@ -246,6 +246,7 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
             // refused (the `?` above, or by the worker: a name taken), or that found the photos there already, leaves it on
             crate::move_task::start(app, &ctx, &json!({"ids": ids, "folder": folder}), *dont_ask)
         }
+        Dialog::TrashFiles(ask) => crate::panels::trash_files::run(app, ask),
         // the catalog found: no file dialog; none: File ▸ Import Lightroom Catalog… asks for it
         Dialog::LightroomCatalog { catalog, .. } => {
             app.run("file.importLightroom", catalog.as_ref().map_or_else(|| json!({}), |c| json!({"path": c})))

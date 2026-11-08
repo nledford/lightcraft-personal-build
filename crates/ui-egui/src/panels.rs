@@ -30,6 +30,7 @@ pub(crate) mod side_keys;
 pub mod slideshow;
 pub mod strip;
 pub mod topbar;
+pub mod trash_files;
 pub mod unnamed;
 
 use egui::{Rect, pos2, vec2};

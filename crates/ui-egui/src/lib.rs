@@ -57,6 +57,7 @@ pub mod tasks;
 pub mod theme;
 mod thumb;
 pub mod toast;
+pub mod trash_run;
 pub mod tree_state;
 pub mod widgets;
 pub mod window_place;
@@ -473,6 +474,11 @@ pub struct LightcraftApp {
     pub move_run: Option<move_task::MoveRun>,
     /// How the last background move ended (`ui.inspect` → `move.last`).
     pub last_move: Option<Value>,
+    /// Move Files to Trash at work in the background.
+    pub trash_run: Option<trash_run::TrashRun>,
+    /// An Erase question a finished Move Files to Trash has to ask (photo ids, library generation),
+    /// waiting for the dialog slot to be free.
+    pub trash_erase_later: Option<(Vec<u64>, u64)>,
     /// A Lightroom catalog inspect/import in progress.
     pub lightroom: Option<lightroom_import::LightroomTask>,
     /// Last terminal Lightroom result, exposed by the command's status/wait response.
