@@ -2576,5 +2576,7 @@
   "This photo has no file on disk": "这张照片在磁盘上没有文件",
   "This photo is not in a folder of the library": "这张照片不在图库的文件夹中",
   "Opening other programs needs the desktop app": "打开其他程序需要桌面版",
-  "Only a photo file LightCraft reads can be opened this way": "只有 LightCraft 能读取的照片文件才能这样打开"
+  "Only a photo file LightCraft reads can be opened this way": "只有 LightCraft 能读取的照片文件才能这样打开",
+  "Recently Added always shows the newest imports first.": "“最近添加”始终先显示最新导入的照片。",
+  "Recently Deleted shows no date groups.": "“最近删除”不显示日期分组。"
 }
