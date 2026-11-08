@@ -35,6 +35,59 @@ fn select_only_active_chord(h: &mut crate::headless::Headless) {
     assert_eq!(r["ok"], true, "{r}");
 }
 
+/// On macOS ⌃⌘F (window full screen) is not ⌘F (Find) with Control held, and a bare ⌃F is not
+/// window full screen: Control counts as Command only where Ctrl *is* Command (Windows, Linux).
+/// The menu bar takes both keys itself; this is what the handler does when it gets them (no native
+/// menu, `LIGHTCRAFT_NO_NATIVE_MENU`).
+#[cfg(target_os = "macos")]
+#[test]
+fn control_command_f_is_window_full_screen_and_not_find_and_control_f_is_nothing() {
+    let mut h = library();
+    let t = std::time::Duration::from_secs(20);
+    h.request("ui.key", json!({"key": "f", "ctrl": true}), t);
+    h.step();
+    assert!(!h.app.window_is_fullscreen, "⌃F alone is not window full screen");
+    h.request("ui.key", json!({"key": "f", "cmd": true, "ctrl": true}), t);
+    h.step();
+    assert!(h.app.window_is_fullscreen, "⌃⌘F is");
+    assert!(!h.app.ui.focus_search && !h.app.text_focus, "and it doesn't also run Find (⌘F)");
+}
+
+/// On macOS a Control binding (⌃H, HDR…) is Control alone: ⌃⌘H, which is Command's, doesn't run it.
+#[cfg(target_os = "macos")]
+#[test]
+fn a_control_binding_does_not_match_with_command_held_on_macos() {
+    let mut h = library();
+    let t = std::time::Duration::from_secs(20);
+    h.app.session.execute("library.select", &json!({"ids": [1, 2, 3]})).unwrap();
+    h.request("ui.key", json!({"key": "h", "cmd": true, "ctrl": true}), t);
+    h.step();
+    assert!(h.app.ui.dialog.is_none(), "⌃⌘H is not ⌃H");
+    h.request("ui.key", json!({"key": "h", "ctrl": true}), t);
+    h.step();
+    assert!(h.app.ui.dialog.is_some(), "⌃H opens HDR…");
+}
+
+/// ⌃⌘F, the macOS default of window full screen, survives Restore and recording: Control is never
+/// Command there, so the saved text keeps both, and Find (⌘F) keeps its own key.
+#[cfg(target_os = "macos")]
+#[test]
+fn control_command_f_survives_restore_and_recording_without_taking_finds_key() {
+    let mut keymap = crate::shortcuts::Keymap::new();
+    crate::shortcuts::assign(&mut keymap, "view.enterFullScreen", None).unwrap();
+    assert_eq!(crate::shortcuts::shortcut_of(&keymap, "view.enterFullScreen"), None, "cleared");
+    let lost = crate::shortcuts::reset(&mut keymap, "view.enterFullScreen").unwrap();
+    assert!(lost.is_empty(), "Restore takes no other command's key: {lost:?}");
+    assert_eq!(crate::shortcuts::shortcut_of(&keymap, "view.enterFullScreen"), Some("Ctrl+Cmd+F"));
+    assert_eq!(crate::shortcuts::shortcut_of(&keymap, "view.focusSearch"), Some("Cmd+F"));
+    // recording the chord: the dialog hands over what `format` writes for the key press
+    let recorded = crate::shortcuts::format(egui::Modifiers { ctrl: true, mac_cmd: true, command: true, ..Default::default() }, egui::Key::F);
+    assert_eq!(recorded.as_deref().and_then(crate::shortcuts::parse), crate::shortcuts::parse("Ctrl+Cmd+F"));
+    let lost = crate::shortcuts::assign(&mut keymap, "view.enterFullScreen", recorded.as_deref()).unwrap();
+    assert!(lost.is_empty(), "recording ⌃⌘F takes no other command's key: {lost:?}");
+    assert_eq!(crate::shortcuts::shortcut_of(&keymap, "view.focusSearch"), Some("Cmd+F"));
+}
+
 #[test]
 fn select_only_active_keeps_the_active_photo_and_the_edit_undo_step() {
     use crate::state::ViewMode;
@@ -728,5 +781,73 @@ mod issue1771 {
         h.step();
         assert_eq!(h.app.ui.view, ViewMode::Detail);
         assert_eq!(h.app.session.selection.ids.len(), 3);
+    }
+}
+
+/// Press P or U with the Crop panel open and Auto Advance on, in the grid or in Compare, on photos 1 and 2 selected.
+/// Gives the app and the flag the photos had before (P: none, U: pick) and the one the key sets.
+fn crop_open_flag_key(compare: bool, k: &str) -> (crate::headless::Headless, lightcraft_catalog::Flag, lightcraft_catalog::Flag) {
+    use crate::state::RightPanel;
+    use lightcraft_catalog::Flag;
+    let (start, end) = if k == "P" { (Flag::None, Flag::Pick) } else { (Flag::Pick, Flag::None) };
+    let mut h = library();
+    h.app.ui.right = RightPanel::Crop;
+    h.app.ui.auto_advance = true;
+    h.app.session.execute("library.select", &json!({"ids": [1, 2], "active": 1})).unwrap();
+    h.app.session.execute("photo.flag", &json!({"flag": if start == Flag::Pick { "pick" } else { "none" }})).unwrap();
+    if compare {
+        crate::panels::compare::enter_compare(&mut h.app).unwrap();
+    }
+    key(&mut h, k, false);
+    (h, start, end)
+}
+
+/// With the Crop panel open P and U are still the culling keys: Auto Advance moves on once. (They skipped `cull`,
+/// so the plain command ran and the photo stayed.)
+#[test]
+fn pick_and_unflag_with_crop_open_auto_advance_once_in_the_grid() {
+    use lightcraft_catalog::PhotoId;
+    for k in ["P", "U"] {
+        let (h, _, end) = crop_open_flag_key(false, k);
+        let flag = |id: u64| h.app.session.catalog.photo(PhotoId(id)).unwrap().flag;
+        assert_eq!((flag(1), flag(2)), (end, end), "{k}: the whole selection in the grid");
+        assert_eq!(h.app.session.active(), Some(PhotoId(2)), "{k}: Auto Advance moves on once");
+    }
+}
+
+/// In Compare, with the Crop panel open, P and U flag the active photo only (the candidate) and Auto Advance goes to
+/// the next candidate.
+#[test]
+fn pick_and_unflag_with_crop_open_target_the_active_photo_in_compare() {
+    use lightcraft_catalog::PhotoId;
+    for k in ["P", "U"] {
+        let (h, start, end) = crop_open_flag_key(true, k);
+        let flag = |id: u64| h.app.session.catalog.photo(PhotoId(id)).unwrap().flag;
+        assert_eq!((flag(1), flag(2)), (start, end), "{k}: only the active photo in Compare");
+        assert_eq!(h.app.session.active(), Some(PhotoId(3)), "{k}: the next candidate");
+        assert_eq!(h.app.ui.view, crate::state::ViewMode::Compare);
+    }
+}
+
+/// X with the Crop panel open stays Swap Crop Aspect (#1866): it never rejects, and being no culling key it never
+/// advances either, in the grid or in Compare.
+#[test]
+fn reject_key_with_crop_open_is_not_a_culling_key() {
+    use crate::state::RightPanel;
+    use lightcraft_catalog::{Flag, PhotoId};
+    for compare in [false, true] {
+        let mut h = library();
+        h.app.ui.right = RightPanel::Crop;
+        h.app.ui.auto_advance = true;
+        h.app.session.execute("library.select", &json!({"ids": [1, 2], "active": 1})).unwrap();
+        if compare {
+            crate::panels::compare::enter_compare(&mut h.app).unwrap();
+        }
+        let active = h.app.session.active();
+        key(&mut h, "X", false);
+        for id in [1, 2] {
+            assert_eq!(h.app.session.catalog.photo(PhotoId(id)).unwrap().flag, Flag::None, "photo {id} stays unflagged (compare: {compare})");
+        }
+        assert_eq!(h.app.session.active(), active, "no Auto Advance (compare: {compare})");
     }
 }

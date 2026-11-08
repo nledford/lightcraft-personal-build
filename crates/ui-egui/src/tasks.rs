@@ -45,7 +45,8 @@ impl Tasks {
 
 /// Run `work` on a worker thread, then `done(app, ctx, result)` on the UI thread (in the browser
 /// build, which has no threads, `work` runs at once and `done` on the next frame). With `kind`, the
-/// activity stack shows `label` meanwhile, without a count and without ✕ (the work can't be stopped);
+/// activity stack shows `label` meanwhile, without a count and without ✕ (a short read-only check
+/// that can't be stopped; quitting doesn't ask about it);
 /// what `done` returns is how its row says the task ended.
 pub fn spawn<T: Send + 'static>(
     app: &mut LightcraftApp,
@@ -54,7 +55,7 @@ pub fn spawn<T: Send + 'static>(
     work: impl FnOnce() -> T + Send + 'static,
     done: impl FnOnce(&mut LightcraftApp, &egui::Context, T) -> Outcome + Send + 'static,
 ) -> Result<(), String> {
-    let guard = kind.map(|k| app.session.activity.start(k, label, lightcraft_engine::activity::Cancel::No));
+    let guard = kind.map(|k| app.session.activity.start(k, label, lightcraft_engine::activity::Cancel::Quick));
     start(app, label, guard, work, done)
 }
 

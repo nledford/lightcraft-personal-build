@@ -132,6 +132,8 @@
   "Named ({named_n})": "Namngivna ({named_n})",
   "New Folder in “{name}”": "Ny mapp i ”{name}”",
   "Created folder “{name}” in “{parent}”": "Mappen ”{name}” skapad i ”{parent}”",
+  "Sort: {key}": "Sortering: {key}",
+  "Sort: {key}, {direction}": "Sortering: {key}, {direction}",
   "new, inside {parent}": "ny, inuti {parent}",
   "none (CPU rendering): {why}": "ingen (CPU-rendering): {why}",
   "not added to Apple Photos: {e}": "inte tillagt i Apple Photos: {e}",
@@ -249,6 +251,7 @@
   "{n} raws can now be developed from their raw data": "{n} raw-filer kan nu framkallas från sina rådata",
   "{n} similar photo{} · View ▸ Clear Filters to see all": "{n} likartade foto{} · Visa → Rensa filter för att se alla",
   "{n} tasks are still running: {names}. Quitting stops them.": "{n} uppgifter körs fortfarande: {names}. Om du avslutar stoppas de.",
+  "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.": "Körs fortfarande och kan inte stoppas: {names}. Om du avslutar nu väntar appen inte på dem.",
   "{n} {noun}": "{n} {noun}",
   "{pct} %": "{pct} %",
   "{photos} catalog records processed; {collections} collections.": "{photos} katalogposter bearbetade; {collections} samlingar.",
@@ -409,5 +412,15 @@
   "Show photos with {path} (includes the keywords below it)": "Visa foton med {path} (inklusive nyckelorden under)",
   "Add {path} to the selected photos ({n})": "Lägg till {path} i de markerade fotona ({n})",
   "Take {path} off the selected photos ({n})": "Ta bort {path} från de markerade fotona ({n})",
-  "Stop showing only photos with {path}": "Sluta visa bara foton med {path}"
+  "Stop showing only photos with {path}": "Sluta visa bara foton med {path}",
+  "Added {n} sample photos, with albums under “{folder}” and keywords to try": "Lade till {n} exempelfoton, med album under ”{folder}” och nyckelord att prova",
+  "Removed {n} sample photos. Edit → Undo brings them back.": "Borttagna exempelfoton: {n}. Redigera → Ångra tar tillbaka dem.",
+  "Open the sample photo “{title}”": "Öppna exempelfotot ”{title}”",
+  "Or explore LightCraft with {n} sample photos": "Eller utforska LightCraft med {n} exempelfoton",
+  "Press {key} to compare before and after.": "Tryck på {key} för att jämföra före och efter.",
+  "Press {key} to see it beside the original.": "Tryck på {key} för att se den bredvid originalet.",
+  " · {} damaged": " · skadade: {}",
+  "Copied {n} file paths": "Kopierade filsökvägar: {n}",
+  "Photos waiting: {n}": "Väntande foton: {n}",
+  "{toast} · {n} photos": "{toast} · {n} foton"
 }

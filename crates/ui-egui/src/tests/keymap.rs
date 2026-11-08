@@ -332,6 +332,42 @@ fn opening_numeric_release_keeps_keys_in_the_editor() {
     }
 }
 
+/// ⌘⌥⇧R / ⌘⌥⇧P reshuffle and go back, but only where the Sort menus offer those rows: a key press goes straight to the
+/// command on Windows and Linux, so it follows the same rule (not under a date sort, not in Recently Added).
+#[test]
+fn the_shuffle_keys_follow_the_sort_menus_rules() {
+    let mut h = demo();
+    let seed = |h: &Headless| h.app.session.sort.seed;
+    let chord = |h: &mut Headless, key: &str| press(h, key, &["cmd", "alt", "shift"]);
+    chord(&mut h, "R");
+    assert_ne!(h.app.session.sort.key, lightcraft_catalog::SortKey::Random, "Reshuffle is off under a date sort");
+    h.app.run("library.sort", json!({"key": "random", "seed": 9})).unwrap();
+    chord(&mut h, "R");
+    assert_ne!(seed(&h), 9, "Reshuffle works under Random");
+    chord(&mut h, "P");
+    assert_eq!(seed(&h), 9, "Previous Shuffle goes back");
+    h.app.run("library.shuffle", json!({})).unwrap();
+    let now = seed(&h);
+    h.app.run("library.source", json!({"kind": "recentlyAdded"})).unwrap();
+    chord(&mut h, "P");
+    chord(&mut h, "R");
+    assert_eq!(seed(&h), now, "both are off in Recently Added, where the sort is not used");
+}
+
+/// A shuffle key that its Sort-menu row turns off says why, as a refused command does, instead of doing nothing.
+#[test]
+fn a_shuffle_key_its_menu_row_turns_off_says_why() {
+    let mut h = demo();
+    let chord = |h: &mut Headless, key: &str| press(h, key, &["cmd", "alt", "shift"]);
+    let said = |h: &Headless| h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
+    chord(&mut h, "R");
+    assert_eq!(said(&h), "The view is not sorted at random", "Reshuffle under a date sort");
+    h.app.ui.toast = None;
+    h.app.run("library.sort", json!({"key": "random", "seed": 9})).unwrap();
+    chord(&mut h, "P");
+    assert_eq!(said(&h), "No earlier shuffle", "Previous Shuffle before any reshuffle");
+}
+
 /// Press `key` with the named modifiers held (`cmd`, `shift`, `alt`, `ctrl`).
 fn press(h: &mut Headless, key: &str, mods: &[&str]) {
     let mut p = json!({ "key": key });
@@ -718,4 +754,54 @@ fn h_keeps_its_binding_when_the_masking_panel_is_not_exposed() {
     assert_eq!(h.app.ui.right, RightPanel::Remove, "H opens Remove while the panel is hidden");
     assert_eq!(h.app.ui.tool, "remove");
     assert!(h.app.ui.mask_pins, "the pins are untouched");
+}
+
+/// The rating keys (0–5) are rows of the editor like any other command: a key recorded for one rates with it
+/// and the digit it had stops, and Reset All gives the digit back.
+#[test]
+fn a_rating_row_records_a_key_that_rates_and_the_digit_stops() {
+    use crate::shortcuts::shortcut_of;
+    let mut h = demo();
+    let id = h.app.session.active().expect("the demo has an active photo");
+    let rating = |h: &Headless| h.app.session.catalog.photo(id).unwrap().rating;
+    record(&mut h, "photo.rate3", "photo.rate3");
+    key(&mut h, "F3", false);
+    assert_eq!(shortcut_of(&h.app.ui.settings.keymap, "photo.rate3"), Some("F3"));
+    key(&mut h, "Escape", false);
+    assert!(h.app.ui.dialog.is_none());
+    // F3 rates; the 3 is free
+    h.app.run("photo.rate", json!({"rating": 1})).unwrap();
+    key(&mut h, "3", false);
+    assert_eq!(rating(&h), 1);
+    key(&mut h, "F3", false);
+    assert_eq!(rating(&h), 3);
+    // Reset All gives the 3 back and takes F3 away
+    h.app.run("app.resetShortcuts", json!({})).unwrap();
+    h.app.run("photo.rate", json!({"rating": 1})).unwrap();
+    key(&mut h, "F3", false);
+    assert_eq!(rating(&h), 1);
+    key(&mut h, "3", false);
+    assert_eq!(rating(&h), 3);
+}
+
+/// The color-label keys (6–9) are rows of the editor too.
+#[test]
+fn a_label_row_records_a_key_that_labels_and_the_digit_stops() {
+    use crate::shortcuts::shortcut_of;
+    use lightcraft_catalog::ColorLabel;
+    let mut h = demo();
+    let id = h.app.session.active().expect("the demo has an active photo");
+    let label = |h: &Headless| h.app.session.catalog.photo(id).unwrap().label;
+    record(&mut h, "photo.labelRed", "photo.labelRed");
+    press(&mut h, "6", &["alt"]);
+    h.step();
+    assert_eq!(shortcut_of(&h.app.ui.settings.keymap, "photo.labelRed"), Some("Alt+6"));
+    key(&mut h, "Escape", false);
+    assert!(h.app.ui.dialog.is_none());
+    // Alt+6 labels (and takes the key from the sixth keyword); the 6 is free
+    h.app.run("photo.label", json!({"label": "blue"})).unwrap();
+    key(&mut h, "6", false);
+    assert_eq!(label(&h), Some(ColorLabel::Blue));
+    press(&mut h, "6", &["alt"]);
+    assert_eq!(label(&h), Some(ColorLabel::Red));
 }

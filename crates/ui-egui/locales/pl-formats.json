@@ -409,5 +409,18 @@
   "Show photos with {path} (includes the keywords below it)": "Pokaż zdjęcia ze słowem kluczowym {path} (łącznie ze słowami kluczowymi poniżej)",
   "Add {path} to the selected photos ({n})": "Dodaj {path} do zaznaczonych zdjęć ({n})",
   "Take {path} off the selected photos ({n})": "Usuń {path} z zaznaczonych zdjęć ({n})",
-  "Stop showing only photos with {path}": "Przestań pokazywać tylko zdjęcia z {path}"
+  "Stop showing only photos with {path}": "Przestań pokazywać tylko zdjęcia z {path}",
+  "Added {n} sample photos, with albums under “{folder}” and keywords to try": "Dodano przykładowe zdjęcia ({n}) z albumami w „{folder}” i słowami kluczowymi do wypróbowania",
+  "Sort: {key}": "Sortowanie: {key}",
+  "Sort: {key}, {direction}": "Sortowanie: {key}, {direction}",
+  "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.": "Wciąż trwają i nie da się ich zatrzymać: {names}. Zamknięcie programu nie poczeka na nie.",
+  "Open the sample photo “{title}”": "Otwórz przykładowe zdjęcie „{title}”",
+  "Or explore LightCraft with {n} sample photos": "Albo poznaj LightCraft na przykładowych zdjęciach ({n})",
+  "Press {key} to compare before and after.": "Naciśnij {key}, aby porównać przed i po.",
+  "Press {key} to see it beside the original.": "Naciśnij {key}, aby zobaczyć ją obok oryginału.",
+  "Removed {n} sample photos. Edit → Undo brings them back.": "Usunięto przykładowe zdjęcia ({n}). Edytuj → Cofnij je przywróci.",
+  " · {} damaged": " · uszkodzone: {}",
+  "Copied {n} file paths": "Skopiowane ścieżki plików: {n}",
+  "Photos waiting: {n}": "Oczekujące zdjęcia: {n}",
+  "{toast} · {n} photos": "{toast} · zdjęcia: {n}"
 }

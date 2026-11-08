@@ -25,6 +25,8 @@ Select photos in Photo Grid or Square Grid, then use:
 | ⌘⌥K / Ctrl+Alt+K | Enable Painting: paint the painter box's keyword, or stop painting |
 | ⌘⌥⇧C / Ctrl+Alt+Shift+C | Copy Metadata: copy the active photo's metadata |
 | ⌘⌥⇧V / Ctrl+Alt+Shift+V | Paste Metadata: paste the copied metadata on the selected photos |
+| ⌘⌥⇧R / Ctrl+Alt+Shift+R | Reshuffle: a new random order (View ▸ Sort ▸ Reshuffle; does nothing unless the menu row is on: only while sorting at random, not in Recently Added) |
+| ⌘⌥⇧P / Ctrl+Alt+Shift+P | Previous Shuffle: go back to the random order the last Reshuffle replaced (up to 32 steps back, this session only; on only where the menu row is on) |
 
 Enter opens the active photo without changing the selection. Text fields, dialogs and open popups keep the key; a custom Enter binding takes precedence. Enter has no additional action in Detail.
 
@@ -32,13 +34,33 @@ Select Only Active Photo (Edit menu) narrows the selection to the active photo. 
 the photo, its edits or the last edit Undo step, and it works in any view that has an active photo.
 It can be reassigned or disabled in Help → Keyboard Shortcuts; text fields and dialogs keep the key.
 
+The rating keys `0`–`5` and the colour-label keys `6`–`9` are the default keys of commands of their own
+(Clear rating, Rate ★ to Rate ★★★★★, and the Red, Yellow, Green and Blue labels). Help → Keyboard Shortcuts
+lists each as a row, so any of them can have another key, and Photo → Set Rating and Set Color Label show
+the key each row has. A moved rating or label answers to its new key alone and its digit stops; a digit
+given to another command is taken from its rating or label, and ↺ gives it back (taking it from that
+command). The key does what the digit did: it acts on all selected photos in the grids and on the active
+photo in Compare and Survey, and Auto Advance follows. `Shift` with a digit is not a row: `Shift+0`–`Shift+5`
+and `Shift+6`–`Shift+9` stay fixed keys that apply the action and select the next photo, whatever key the
+plain action has (Help → Keyboard Shortcuts lists them under Fixed keys, as "Rate ★★ and advance" or "Red
+label and advance"), and like every fixed key they give way to a key you gave to a command. Keymaps saved
+before these rows existed keep working unchanged.
+
 Purple and clearing a colour label are available in Photo → Set Color Label and the photo context
 menu. Purple has no default number key, matching Lightroom Classic. Clear Color Label has none either,
 but it is a command of its own: give it a key in Help → Keyboard Shortcuts and the key clears the label of
 the selected photos, as the Photo → Set Color Label → None row does (which then shows the key). Rejection marks a photo for
 culling; it does not delete the original or remove it from the library.
-Setting a colour label shows the same brief bottom toast as a rating, using the colour or your
-custom label name. Clearing it shows a confirmation too, whether applied by a key, menu or swatch.
+Every rating, flag and colour-label change confirms itself with one brief bottom toast, whichever key, menu
+row or button made it: the Shift variants (`Shift+X`, `Shift+Z`, `Shift+U`, `Shift+P`, `Shift+0`–`9`), `[` / `]`,
+the backtick and `Cmd`/`Ctrl` + `↑` / `↓` say the same as the plain keys ("Rated ★★★", "Rating cleared",
+"Flagged as Pick", "Flagged as Reject", "Unflagged", or the colour or your custom label name, and "Color label
+cleared"). The toast names the photo that changed, not the one Shift or Auto Advance moves on to, and in Compare and
+Survey (which act on the active photo only) it names that one. When the change reaches several photos it adds how
+many: "Rated ★★★ · 12 photos". The count is the photos the key acted on, including any that already had the value.
+A `[` / `]` or backtick step on a mixed selection that leaves the photos different says "Rating changed · 12 photos"
+or "Flag changed · 12 photos". A key that is refused (no photo to act on) shows no toast, only the reason in the
+status line.
 Labelled thumbnails have a translucent matching colour on the square-grid surround, photo-grid
 footer (translucent, over the bottom of the photo) and Detail filmstrip surround. The white active-photo outline remains clear.
 The label confirmation uses a pale matching background with dark text; ratings and errors retain
@@ -66,17 +88,32 @@ when you gave the same key to a command in Help → Keyboard Shortcuts, where th
 Fixed keys.
 
 Grid actions apply to all selected photos and support Undo / Redo. In Compare and Survey, culling
-actions apply to the active photo. Auto Advance moves forward after an action; holding Shift with
+actions apply to the active photo; a right-click on a selected photo there (or on its filmstrip
+thumbnail, except a photo Compare doesn't show) makes it the active one, so the rating, flag and
+colour label rows of its menu act on that photo alone. Auto Advance moves forward
+after an action, from the keys and from those menu rows alike; holding Shift with
 Auto Advance on still advances only once. The last photo stays selected. Text fields keep their
-keyboard input, and `X` in the Crop panel swaps the crop aspect.
+keyboard input. With the Crop panel open `P` and `U` still pick and unflag (Auto Advance and the
+Compare / Survey rule apply), and `X` swaps the crop aspect instead of rejecting.
 Shifted number keys also use the physical number key when the keyboard reports punctuation
 (for example, `Shift+1` as `!`). Letter shortcuts continue to follow the keyboard layout.
+
+The plain digit keys follow the physical key too on layouts that type punctuation on the digit row (French
+AZERTY types `&é"'(-è_çà`), within limits: a key counts as its digit when egui names the typed character as
+punctuation, no ⌘, ⌥ or ⌃ is held, the rating or label is still on its digit and no command has the typed
+key. French `'` (the 4 key) rates ★★★★, and the `!` of macOS's French layout (the 8 key) sets the green
+label, without Shift and without advancing, as the digits do on a US keyboard. `-` (the 6 key on a French PC
+keyboard) and `+` (the 1 key on Czech and Slovak keyboards) stay Decrease / Increase Grid Thumbnail Size, so
+those layouts give Red label or Rate ★ another key in Help → Keyboard Shortcuts. The keypad's arrow keys with
+Num Lock off are never digits.
 
 `Shift+P` picks and advances in the two library grids. In other views it retains LightCraft's
 Presets-panel binding. `Shift+Z` remains an alternative pick-and-advance key in all views.
 
 The macOS native menu displays plain-key bindings but leaves execution to egui; only shortcuts
-AppKit delivers to the menu (Command, Control or function keys) are skipped by egui. The native
+AppKit delivers to the menu (Command, Control or function keys) are skipped by egui; a rating or label given
+such a key runs from its Set Rating or Set Color Label menu row, which applies Auto Advance and the Compare
+rule as the digit does. The native
 menu correction is adapted from [PR #261](https://github.com/storytold/lightcraft/pull/261),
 commit `4e012a59a6d2442ba749f109ea27aadb5c0b11a5` by Gardy, and addresses the cause reported in
 [issue #283](https://github.com/storytold/lightcraft/issues/283). That PR was open when checked

@@ -125,8 +125,9 @@ fn ext_upper(name: &str) -> String {
 
 /// Probe a file's bytes: kind, dimensions (oriented), metadata. No pixel data is decompressed:
 /// raws are described from their headers ([`lightcraft_raw::probe_info`]), other images too
-/// ([`lightcraft_codecs::read_header`], which refuses truncated files but can't see damage inside
-/// compressed data that is all there: such a file imports and shows as unreadable when rendered).
+/// ([`lightcraft_codecs::read_header`], which refuses other formats' truncated files, reads a JPEG
+/// cut short that has data to show (`truncated`), and can't see damage inside compressed data
+/// that is all there: such a file imports and shows as unreadable when rendered).
 pub fn probe_bytes(name: &str, bytes: &[u8]) -> Result<ProbeInfo, String> {
     let content_hash = Some(lightcraft_preview::hash_bytes(bytes).to_string());
     let m = lightcraft_meta::extract(bytes);
@@ -185,6 +186,7 @@ pub fn probe_bytes(name: &str, bytes: &[u8]) -> Result<ProbeInfo, String> {
             xmp: lightcraft_meta::embedded(bytes).xmp,
             orientation: Some(raw.orientation),
             preview_only: None,
+            truncated: false,
         });
     }
     let fmt = lightcraft_codecs::sniff(bytes).ok_or("unrecognized file format")?;
@@ -231,6 +233,7 @@ pub fn probe_bytes(name: &str, bytes: &[u8]) -> Result<ProbeInfo, String> {
         xmp: None,
         orientation: m.orientation,
         preview_only: None,
+        truncated: header.truncated,
     })
 }
 

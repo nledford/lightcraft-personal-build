@@ -410,5 +410,18 @@
   "Show photos with {path} (includes the keywords below it)": "{path} の写真を表示（下位のキーワードを含む）",
   "Add {path} to the selected photos ({n})": "選択した写真に {path} を追加（{n}）",
   "Take {path} off the selected photos ({n})": "選択した写真から {path} を削除（{n}）",
-  "Stop showing only photos with {path}": "{path} の写真だけの表示をやめる"
+  "Stop showing only photos with {path}": "{path} の写真だけの表示をやめる",
+  "Added {n} sample photos, with albums under “{folder}” and keywords to try": "サンプル写真を {n} 枚追加しました。アルバムは「{folder}」にあり、キーワードも付いています",
+  "Open the sample photo “{title}”": "サンプル写真「{title}」を開く",
+  "Or explore LightCraft with {n} sample photos": "または、{n} 枚のサンプル写真で LightCraft を試す",
+  "Press {key} to compare before and after.": "{key} を押すと編集前と編集後を比較できます。",
+  "Press {key} to see it beside the original.": "{key} を押すと元の写真と並べて表示できます。",
+  "Removed {n} sample photos. Edit → Undo brings them back.": "サンプル写真を{n}枚削除しました。編集 → 取り消すで元に戻せます。",
+  "Sort: {key}": "並べ替え：{key}",
+  "Sort: {key}, {direction}": "並べ替え：{key}、{direction}",
+  "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.": "実行中で停止できません：{names}。今終了しても完了を待ちません。",
+  " · {} damaged": "・{}件は破損",
+  "Copied {n} file paths": "{n} 件のファイルパスをコピーしました",
+  "Photos waiting: {n}": "待機中の写真：{n}枚",
+  "{toast} · {n} photos": "{toast}・{n}枚"
 }

@@ -280,15 +280,16 @@ pub(super) fn smart_previews(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tok
     // be deleted for is known: until then the change (the command's parameters) waits here.
     // (asked for "Delete them" only: choosing otherwise withdraws the question)
     let mut waiting: Option<Value> = ask.waiting.take().filter(|_| existing == "discard");
-    let mut change = None;
+    // a folder chosen in a dialog that ran off the UI thread since the last frames
+    let picked = ui.data_mut(|d| d.remove_temp::<(u64, String)>(smart_picked_id())).filter(|(at, _)| pass.saturating_sub(*at) <= 3);
+    let mut change = picked.map(|(_, dir)| json!({"path": dir, "existing": existing}));
     ui.horizontal(|ui| {
         ui.add_space(LABEL_W);
         if app.services.pick_folder.is_some() {
             let r = Button::new("Choose Folder…").widget("button:settingsSmartChoose").show(ui);
-            if r.clicked()
-                && let Some(dir) = app.services.pick_folder.as_mut().and_then(|f| f())
-            {
-                change = Some(json!({"path": dir, "existing": existing}));
+            if r.clicked() {
+                // the dialog runs off the UI thread; the folder is taken up when it closes
+                crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::SmartPreviewsFolder);
             }
         }
         let r = Button::new("Use Library Folder").enabled(custom).widget("button:settingsSmartReset").show(ui);
@@ -402,6 +403,7 @@ fn smart_folder_rows(ui: &mut egui::Ui, t: &Tokens, loc: &Value) {
             ),
         );
     }
+
 }
 
 /// Says what a folder change did: how many previews were moved or deleted, and how many failed.
@@ -435,6 +437,23 @@ fn custom_cache_option(cur: u32) -> Option<(u32, String)> {
     }
     let label = if cur.is_multiple_of(1024) { format!("{} GB", cur / 1024) } else { format!("{cur} MB") };
     Some((cur, label))
+}
+
+/// Where a folder chosen in the file dialog waits for the smart previews section to take it up.
+#[cfg(not(target_arch = "wasm32"))]
+fn smart_picked_id() -> egui::Id {
+    egui::Id::unique("smart-picked")
+}
+
+/// A folder was chosen for the smart previews (the dialog may have run off the UI thread): the
+/// section above takes it up when it is next drawn, with the "Existing previews" choice then (and,
+/// for "Delete them", the one more question), as for a folder chosen with the synchronous service.
+/// One not taken up within a few frames (another tab was showing) is dropped.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn smart_folder_picked(ctx: &egui::Context, path: String) {
+    let pass = ctx.cumulative_frame_nr();
+    ctx.data_mut(|d| d.insert_temp(smart_picked_id(), (pass, path)));
+    ctx.request_repaint();
 }
 
 #[cfg(test)]

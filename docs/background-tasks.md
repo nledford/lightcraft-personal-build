@@ -21,7 +21,8 @@ well always does: done with problems, failed, stopped, or stopped unexpectedly (
 in the list, under "Needs attention", and put a mark on the bell until they are dismissed. With nothing running, a
 task that just ended is named beside the bell for a few seconds. Which jobs report this way is listed under "Say
 how it ended" below.
-Quitting asks first while a task that can stop is running, or one waits in line. Agents see the same list through `activity.list` /
+Quitting asks first while a task is running, or one waits in line: the prompt names every running task, saying which ones stop when the app
+quits and which can't be stopped and aren't waited for (a short read-only check isn't listed). Agents see the same list through `activity.list` /
 `activity.cancel`, and `ui.inspect` reports it as `activity` (and whether the list is open as `activityOpen`); the tasks that ended and left a row are
 `activity.finished` / `activity.dismiss` and `activityFinished`.
 
@@ -63,7 +64,8 @@ guard.detail(&file_name);
   - `Cancel::Flag(Arc<AtomicBool>)` adopts the flag the job already checks. The row's ✕, `activity.cancel` and the
     job's own Cancel then all set the same atomic.
   - `Cancel::Yes`: the job polls `guard.is_cancelled()` itself.
-  - `Cancel::No`: the job can't stop; it gets no ✕ and doesn't make Quit ask.
+  - `Cancel::No`: the job can't stop (Adding to Apple Photos: Photos can't be stopped once asked); it gets no ✕, and Quit's prompt names it as something quitting doesn't wait for (Photos may still finish the import, see [Apple Photos](apple-photos.md)). A job that runs inside one synchronous command (a move, Print to PDF) never shows in that prompt, because the window can't ask while it blocks.
+  - `Cancel::Quick`: a short read-only check (Find Missing Photos, a library check, Show in File Manager, the GPU check); no ✕, and Quit doesn't ask about it, because quitting loses nothing. `tasks::spawn` rows are all of this kind.
   - `set_cancellable(false)` for a phase that has to finish once started (a Lightroom import adding its photos).
 - **Quiet periodic work** shows no row: the auto-import folder listing runs every few seconds through
   `tasks::spawn(.., None, ..)`.
@@ -81,6 +83,12 @@ guard.detail(&file_name);
   toast that says how it went: the row is the record, not the announcement. A guard that is only dropped leaves
   nothing, as before, unless a panic dropped it: then the row says the task stopped unexpectedly. A scan or Local folder read
   that another replaced leaves nothing either: only the row's ✕ makes it a stopped task.
+- **A wait on something outside the app** (XMP writes waiting for a folder that is offline) is one row, `xmpWaiting`,
+  held for as long as the wait lasts and with `Cancel::No`. The periodic re-checks (every 10 s) neither drop nor remake
+  it, so the row never flaps. Its `total` is how many wait and `done` stays 0, so `activity.list` and `ui.inspect`
+  show 0 of N for a row that isn't stalled: the stack says "Photos waiting: N", draws no bar, and stops redrawing
+  (`panels::activity::only_waits`, also read by `needs_poll`, picks the row by its kind). A later wait row needs
+  the same treatment.
 
 ## Waiting in line
 
@@ -147,7 +155,7 @@ lane, for the same photos. Opening another library makes old rows unretryable.
 | Folder metadata save / read | `crates/engine/src/cmd/folder_metadata.rs` | a job that needs the session, so a per-frame pump (`folder.metadataPump`) does a few photos at a time and the row's flag stops it |
 | Model downloads | `crates/engine/src/face_download.rs` | report progress through a `TaskHandle` in shared state |
 | Lightroom catalog import | `crates/ui-egui/src/lightroom_import.rs` | stop being cancellable for a phase that must finish |
-| Face scan, AI Denoise | `crates/engine/src/cmd/face_recognize.rs`, `crates/engine/src/denoise.rs` | a continuous job with no ✕, kept in session state |
+| Face scan, AI Denoise | `crates/engine/src/cmd/face_recognize.rs`, `crates/engine/src/denoise/session.rs` | a continuous job, kept in session state, with a `Cancel::Yes` row its per-frame pump reads: ✕ drops what is lined up (a running denoise stops at its next tile and saves nothing; the face scan finishes the photos being embedded), and the photos are left alone until asked for |
 | Find Missing Photos | `crates/ui-egui/src/tasks.rs` | a generic background task with a row (`kind: Some(..)`) |
 | Reload from Disk | `crates/ui-egui/src/reload.rs`, `crates/engine/src/cmd/reload.rs` | a command split into plan / probe / apply so the app reads the files on a worker thread (`tasks::spawn_tracked`: progress and `Cancel::Flag`); the result is committed through `Session::execute_fn` (undo step, save, XMP auto-write), and dropped for a photo a later-started reload has already updated; `wait: true` runs it in place |
 | Find Similar Photos | `crates/ui-egui/src/find_similar.rs`, `crates/engine/src/cmd/similar.rs` | a command split into plan / measure / apply, whose reads are kept when it is stopped; a control request is answered when it ends (`Outcome::Later`) |

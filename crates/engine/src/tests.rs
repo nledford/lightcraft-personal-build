@@ -65,6 +65,7 @@ mod print;
 mod process;
 mod recheck;
 mod restore;
+mod samples;
 mod segment;
 mod selection_facts;
 mod settings_files;

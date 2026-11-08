@@ -1,4 +1,4 @@
-use super::{Button, Icon, LightcraftApp, PhotoId, Sense, Tokens, divider, header, json, padded, register, text_button, vec2};
+use super::{Button, Icon, LightcraftApp, PhotoId, Sense, Tokens, choice_button, divider, header, json, padded, register, vec2};
 use crate::menu_item::MenuItem;
 
 pub(super) fn info(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
@@ -12,6 +12,10 @@ pub(super) fn info(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
             if crate::widgets::preview_only_notice(ui, "info", why) {
                 crate::panels::edit::reload_preview_only(app, ui.ctx(), id);
             }
+            ui.add_space(6.0);
+        }
+        if p.truncated {
+            crate::widgets::truncated_notice(ui, "info");
             ui.add_space(6.0);
         }
         if let Some(name) = &p.copy_name {
@@ -89,7 +93,7 @@ pub(super) fn info(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
         let small = |ui: &mut egui::Ui, text: &str| ui.label(egui::RichText::new(crate::i18n::tr(text)).font(t.caption()).color(t.text_dim));
         small(ui, "File Name");
         ui.allocate_ui_with_layout(vec2(ui.available_width(), 22.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if crate::widgets::icon_button(ui, "infoRename", Icon::Pencil, vec2(20.0, 20.0), false, true, "Rename…").clicked() {
+            if crate::widgets::icon_command(ui, "infoRename", Icon::Pencil, vec2(20.0, 20.0), true, "Rename…").clicked() {
                 app.act("dialog.rename", json!({}));
             }
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
@@ -106,9 +110,7 @@ pub(super) fn info(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
             ui.add(egui::Label::new(egui::RichText::new(path).font(t.label()).color(t.text_label)).truncate());
             if crate::menus::ui_enabled(app, "app.showInFinder") {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if crate::widgets::icon_button(ui, "infoReveal", Icon::Folder, vec2(20.0, 20.0), false, true, crate::menus::reveal_label())
-                        .clicked()
-                    {
+                    if crate::widgets::icon_command(ui, "infoReveal", Icon::Folder, vec2(20.0, 20.0), true, crate::menus::reveal_label()).clicked() {
                         app.act("app.showInFinder", json!({}));
                     }
                 });
@@ -117,7 +119,7 @@ pub(super) fn info(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
         ui.add_space(4.0);
         small(ui, "Captured");
         ui.allocate_ui_with_layout(vec2(ui.available_width(), 22.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if crate::widgets::icon_button(ui, "editCaptureTime", Icon::Pencil, vec2(20.0, 20.0), false, true, "Edit Capture Time…").clicked() {
+            if crate::widgets::icon_command(ui, "editCaptureTime", Icon::Pencil, vec2(20.0, 20.0), true, "Edit Capture Time…").clicked() {
                 app.act("dialog.captureTime", json!({}));
             }
             let cap = p.captured.as_deref().map(crate::i18n::display_time).unwrap_or_else(|| "—".into());
@@ -267,7 +269,7 @@ fn camera_card(ui: &mut egui::Ui, p: &lightcraft_catalog::Photo) {
                 }
             });
         }
-        // where the camera focused, and how (View ▸ Focus Point draws it): only when known; the
+        // where the camera focused, and how (View ▸ Loupe Overlay ▸ Focus Point draws it): only when known; the
         // whole card's width, so "AF-C · Expanded Flexible Spot · Face tracking" fits
         if let Some(text) = focus_text(m.focus.as_ref()) {
             ui.add_space(3.0);
@@ -419,7 +421,7 @@ fn metadata_for(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     ui.horizontal_wrapped(|ui| {
         let on = app.ui.settings.info_selected_photos;
         for (id, label, selected) in [("infoFor-target", "Target Photo", false), ("infoFor-selected", "Selected Photos", true)] {
-            if text_button(ui, id, label, on == selected).clicked() && on != selected {
+            if choice_button(ui, id, label, on == selected).clicked() && on != selected {
                 app.act("view.infoSelectedPhotos", json!({"on": selected}));
             }
         }

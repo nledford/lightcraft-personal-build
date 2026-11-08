@@ -167,14 +167,14 @@ fn what_is_saved_with_a_library_in_memory_says_it_will_not_last() {
     let note = "In-memory session: the library's settings last until LightCraft quits.";
     for tab in ["library", "import", "files", "performance"] {
         show(&mut h, tab);
-        // (Import, with its read-from-photos settings, and Performance, with its preparation settings, are longer than the page: the note is at its foot)
+        // (Import, with its read-from-photos settings, and Performance, with its preparation settings, are longer than the page: the note is at their foot)
         if tab == "import" || tab == "performance" {
-            assert_eq!(h.request("ui.hoverWidget", json!({"id": "settings:pageRoom"}), T)["ok"], true);
-            h.request("ui.scroll", json!({"dy": -3000.0}), T);
-            for _ in 0..4 {
-                h.step();
-            }
+        assert_eq!(h.request("ui.hoverWidget", json!({"id": "settings:pageRoom"}), T)["ok"], true);
+        h.request("ui.scroll", json!({"dy": -3000.0}), T);
+        for _ in 0..4 {
+            h.step();
         }
+    }
         let texts = h.painted_text();
         assert!(texts.iter().any(|text| text == note), "{tab} says so");
         // (on Performance it ends the page, below the preparation settings the library keeps with it)

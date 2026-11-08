@@ -1,4 +1,4 @@
-use super::files::{edit_in, open_log_folder, open_original_in, show_in_finder, show_in_folders};
+use super::files::{copy_file_paths, edit_in, open_log_folder, open_original_in, photo_param, show_in_finder, show_in_folders};
 use super::ui_commands::{UI_COMMANDS, language_from_command};
 use super::{BeforeAfter, Dialog, LightcraftApp, PickRequest, Picked, RightPanel, Value, ViewMode, Zoom, json, thumb_size_view};
 
@@ -302,6 +302,10 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
         // the photos are read in the background (the first search reads the whole library)
         return Some(crate::find_similar::command(app, p));
     }
+    // the rating and color-label keys are commands of their own: they run what the Photo menu's rows run
+    if let Some((command, params)) = crate::shortcuts::culling_command(id) {
+        return Some(crate::menubar::run_item(app, command, params));
+    }
     if let Some(language) = language_from_command(id) {
         app.ui.language = language;
         app.ui.follow_system_language = false;
@@ -601,6 +605,32 @@ fn ui_commands_2(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, p: &Val
             }
             app.ui.settings.reduce_motion = if follow == Some(true) { None } else { Some(on.unwrap_or(!app.reduce_motion())) };
             Ok(json!({"on": app.reduce_motion(), "followsSystem": app.ui.settings.reduce_motion.is_none()}))
+        }
+        "view.increaseContrast" => {
+            // {on?} sets it; {follow: true} goes back to the system's Increase Contrast; no params
+            // toggles what is in effect. Borders, separators and text stand out more in every theme.
+            let (follow, on) = match (bool_param(id, p, "follow"), bool_param(id, p, "on")) {
+                (Ok(follow), Ok(on)) => (follow, on),
+                (Err(e), _) | (_, Err(e)) => return Some(Err(e)),
+            };
+            if follow == Some(true) && !app.system_increase_contrast_available() {
+                return Some(Err("view.increaseContrast: this system has no Increase Contrast setting to follow".into()));
+            }
+            app.ui.settings.increase_contrast = if follow == Some(true) { None } else { Some(on.unwrap_or(!app.increase_contrast())) };
+            Ok(json!({"on": app.increase_contrast(), "followsSystem": app.ui.settings.increase_contrast.is_none()}))
+        }
+        "view.reduceTransparency" => {
+            // {on?} sets it; {follow: true} goes back to the system's Reduce Transparency; no params
+            // toggles what is in effect. See-through badges, labels and backdrops are drawn solid.
+            let (follow, on) = match (bool_param(id, p, "follow"), bool_param(id, p, "on")) {
+                (Ok(follow), Ok(on)) => (follow, on),
+                (Err(e), _) | (_, Err(e)) => return Some(Err(e)),
+            };
+            if follow == Some(true) && !app.system_reduce_transparency_available() {
+                return Some(Err("view.reduceTransparency: this system has no Reduce Transparency setting to follow".into()));
+            }
+            app.ui.settings.reduce_transparency = if follow == Some(true) { None } else { Some(on.unwrap_or(!app.reduce_transparency())) };
+            Ok(json!({"on": app.reduce_transparency(), "followsSystem": app.ui.settings.reduce_transparency.is_none()}))
         }
         "view.faceBoxes" => {
             app.ui.face_boxes = p.get("show").and_then(Value::as_bool).unwrap_or(!app.ui.face_boxes);
@@ -920,7 +950,7 @@ fn ui_commands_4(app: &mut LightcraftApp, _ctx: &egui::Context, id: &str, p: &Va
         }
         "view.zoomToggle" => {
             // the same ratio a click on the photo zooms to; zooming in centres on the camera's focus
-            // point when the photo has one (View ▸ Zoom to Focus Point)
+            // point when the photo has one (View ▸ Loupe Overlay ▸ Zoom to Focus Point)
             let zoom_in = app.ui.zoom == Zoom::Fit;
             app.ui.zoom = if zoom_in { Zoom::Percent(app.ui.click_zoom as f32) } else { Zoom::Fit };
             app.ui.zoom_anim = true;
@@ -1539,13 +1569,20 @@ fn ui_commands_10(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, p: &Va
         "dialog.mergeHdr" => crate::merge::open(app, "merge.hdr"),
         "dialog.faceModel" => {
             let path = match p.get("path").and_then(Value::as_str) {
-                Some(x) => Some(x.to_string()),
-                None => app.services.pick_model_file.as_mut().and_then(|f| f().into_iter().next()),
+                Some(x) => x.to_string(),
+                None => {
+                    // the dialog runs off the UI thread; the command runs again when it closes
+                    let req = PickRequest::file(crate::i18n::tr("Add a Face Recognition Model"), crate::i18n::tr("Face models (ONNX)"), &["onnx"]);
+                    match crate::pick::ask(app, id, p, "path", req, |s| s.pick_model_file.as_mut().map(|f| f())) {
+                        Picked::Now(paths) => match paths.into_iter().next() {
+                            Some(path) => path,
+                            None => return Some(Ok(Value::Null)),
+                        },
+                        Picked::Later | Picked::Unavailable => return Some(Ok(Value::Null)),
+                    }
+                }
             };
-            match path {
-                Some(path) => crate::panels::faces::open_dialog(app, &path),
-                None => Ok(Value::Null),
-            }
+            crate::panels::faces::open_dialog(app, &path)
         }
         "dialog.mergePanorama" => crate::merge::open(app, "merge.panorama"),
         "dialog.mergeHdrPanorama" => crate::merge::open(app, "merge.hdrPanorama"),
@@ -1744,8 +1781,9 @@ fn ui_commands_12(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, p: &Va
     let r: Result<Value, String> = match id {
         "file.exportCurvePresets" => file_export_curve_presets_command(app, ctx, id, p),
         "app.export" => crate::control::export_active(app, p),
-        "app.showInFinder" => show_in_finder(app),
-        "app.showInFolders" => show_in_folders(app, p.get("id").and_then(Value::as_u64).map(lightcraft_catalog::PhotoId)),
+        "app.showInFinder" => photo_param(p, id).and_then(|photo| show_in_finder(app, photo)),
+        "app.showInFolders" => photo_param(p, id).and_then(|photo| show_in_folders(app, photo)),
+        "photo.copyPath" => copy_file_paths(app, ctx),
         "app.openLogFolder" => open_log_folder(app),
         "app.discord" | "app.website" | "app.github" | "app.artcraft" | "app.help" | "app.feedback" => {
             let url = crate::links::url_of(id).unwrap_or(crate::links::WEBSITE);
@@ -2046,7 +2084,11 @@ fn find_missing_done(
 
 /// The `photo.locate` command.
 fn photo_locate_command(app: &mut LightcraftApp, p: &Value) -> Result<Value, String> {
-    let Some(id) = app.session.active() else { return Err("no photo selected".into()) };
+    // `id`: the photo whose file is missing (a photo's menu names it), else the active one
+    let Some(id) = photo_param(p, "photo.locate")?.or(app.session.active()) else { return Err("no photo selected".into()) };
+    if app.session.catalog.photo(id).is_none() {
+        return Err(format!("photo.locate: no photo {}", id.0));
+    }
     let path = match p.get("path").and_then(Value::as_str) {
         Some(x) => Some(x.to_string()),
         None => {

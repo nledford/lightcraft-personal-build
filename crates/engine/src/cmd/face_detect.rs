@@ -138,7 +138,7 @@ pub(crate) fn offer_gpu(
         set_gpu_state(what, GpuState { why: Some("the CPU is chosen in Settings".into()), ..GpuState::default() });
         return;
     }
-    let task = s.activity.start("facesGpu", "Checking the GPU for faces", crate::activity::Cancel::No);
+    let task = s.activity.start("facesGpu", "Checking the GPU for faces", crate::activity::Cancel::Quick);
     task.detail(what);
     set_gpu_state(what, GpuState { checking: true, ..GpuState::default() });
     let spawned = std::thread::Builder::new().name(format!("faces-gpu-{what}")).spawn(move || {
@@ -302,7 +302,7 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(
             "faces.detect",
             "Detect Faces",
-            ["Photo"],
+            ["Photo", "Metadata"],
             None,
             "{ids?, apply?: bool (default true), score?: 0.6, nmsIou?: 0.3, maxFaces?} → {photos: [{id, faces: [{rect, score, landmarks}]}]}. Finds faces with the YuNet detector (download it first: `faces.models.download {id: \"yunet-2023mar\"}`) and, unless `apply` is false, adds them as unnamed face regions (one undo step), replacing earlier detections but never regions from XMP or ones you named; the sidecar is not touched",
             has_selection,

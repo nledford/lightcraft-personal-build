@@ -61,6 +61,7 @@ fn op(kind: u8, n: u64, v: u8) -> Op {
             height: 1,
             file_size: u64::from(v % 3),
             content_hash: None,
+            truncated: false,
             preview_only: None,
             preview_checked: String::new(),
         },

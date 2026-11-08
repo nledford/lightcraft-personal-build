@@ -406,5 +406,18 @@
   "Show photos with {path} (includes the keywords below it)": "Näytä kuvat, joilla on {path} (sisältää sen alla olevat avainsanat)",
   "Add {path} to the selected photos ({n})": "Lisää {path} valittuihin kuviin ({n})",
   "Take {path} off the selected photos ({n})": "Poista {path} valituista kuvista ({n})",
-  "Stop showing only photos with {path}": "Lopeta vain kuvien, joilla on {path}, näyttäminen"
+  "Stop showing only photos with {path}": "Lopeta vain kuvien, joilla on {path}, näyttäminen",
+  "Added {n} sample photos, with albums under “{folder}” and keywords to try": "Lisätty {n} esimerkkikuvaa, albumit kansiossa ”{folder}” ja avainsanat kokeiltavaksi",
+  "Sort: {key}": "Lajittelu: {key}",
+  "Sort: {key}, {direction}": "Lajittelu: {key}, {direction}",
+  "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.": "Yhä käynnissä, eikä niitä voi pysäyttää: {names}. Lopettaminen nyt ei odota niitä.",
+  "Removed {n} sample photos. Edit → Undo brings them back.": "Poistetut esimerkkikuvat: {n}. Muokkaa → Kumoa palauttaa ne.",
+  "Open the sample photo “{title}”": "Avaa esimerkkikuva ”{title}”",
+  "Or explore LightCraft with {n} sample photos": "Tai tutustu LightCraftiin {n} esimerkkikuvalla",
+  "Press {key} to compare before and after.": "Paina {key} verrataksesi ennen ja jälkeen.",
+  "Press {key} to see it beside the original.": "Paina {key} nähdäksesi sen alkuperäisen vieressä.",
+  " · {} damaged": " · vahingoittuneita: {}",
+  "Copied {n} file paths": "Kopioituja tiedostopolkuja: {n}",
+  "Photos waiting: {n}": "Odottavia kuvia: {n}",
+  "{toast} · {n} photos": "{toast} · kuvia: {n}"
 }

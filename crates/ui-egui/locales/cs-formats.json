@@ -409,5 +409,18 @@
   "Show photos with {path} (includes the keywords below it)": "Zobrazit fotografie s klíčovým slovem {path} (včetně klíčových slov pod ním)",
   "Add {path} to the selected photos ({n})": "Přidat {path} vybraným fotografiím ({n})",
   "Take {path} off the selected photos ({n})": "Odebrat {path} vybraným fotografiím ({n})",
-  "Stop showing only photos with {path}": "Přestat zobrazovat jen fotografie s klíčovým slovem {path}"
+  "Stop showing only photos with {path}": "Přestat zobrazovat jen fotografie s klíčovým slovem {path}",
+  "Added {n} sample photos, with albums under “{folder}” and keywords to try": "Přidáno ukázkových fotografií: {n}, s alby ve složce „{folder}“ a klíčovými slovy na vyzkoušení",
+  "Sort: {key}": "Řazení: {key}",
+  "Sort: {key}, {direction}": "Řazení: {key}, {direction}",
+  "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.": "Stále běží a nelze je zastavit: {names}. Ukončení aplikace na ně nepočká.",
+  "Open the sample photo “{title}”": "Otevřít ukázkovou fotografii „{title}“",
+  "Or explore LightCraft with {n} sample photos": "Nebo si LightCraft vyzkoušejte s ukázkovými fotografiemi ({n})",
+  "Press {key} to compare before and after.": "Stisknutím {key} porovnáte stav před a po.",
+  "Press {key} to see it beside the original.": "Stisknutím {key} ji uvidíte vedle originálu.",
+  "Removed {n} sample photos. Edit → Undo brings them back.": "Odebráno ukázkových fotografií: {n}. Úpravy → Zpět je vrátí.",
+  " · {} damaged": " · poškozené: {}",
+  "Copied {n} file paths": "Zkopírované cesty k souborům: {n}",
+  "Photos waiting: {n}": "Čekající fotografie: {n}",
+  "{toast} · {n} photos": "{toast} · fotografií: {n}"
 }

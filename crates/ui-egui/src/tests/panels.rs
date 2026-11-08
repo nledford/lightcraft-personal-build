@@ -378,18 +378,18 @@ fn exec(h: &mut Headless, command: &str, params: serde_json::Value) -> serde_jso
     r["result"].clone()
 }
 
-/// The View ▸ Sidebar Sections items: (section id or command, checked).
+/// The Window ▸ Sidebar Sections items: (section id or command, checked).
 fn sidebar_menu_items(h: &Headless) -> Vec<(String, Option<bool>)> {
     use crate::menubar::MenuNode;
     let bar = crate::menubar::menu_bar(&h.app);
-    let view = &bar.iter().find(|(t, _)| t == "View").expect("View menu").1;
-    let children = view
+    let window = &bar.iter().find(|(t, _)| t == "Window").expect("Window menu").1;
+    let children = window
         .iter()
         .find_map(|n| match n {
             MenuNode::Submenu { label, children } if label == "Sidebar Sections" => Some(children.clone()),
             _ => None,
         })
-        .expect("View ▸ Sidebar Sections");
+        .expect("Window ▸ Sidebar Sections");
     children
         .iter()
         .filter_map(|n| match n {
@@ -399,11 +399,11 @@ fn sidebar_menu_items(h: &Headless) -> Vec<(String, Option<bool>)> {
         .collect()
 }
 
-/// Given the sidebar, when a section is unchecked in View ▸ Sidebar Sections, then it leaves the
+/// Given the sidebar, when a section is unchecked in Window ▸ Sidebar Sections, then it leaves the
 /// sidebar (header and rows) and the menu shows it unchecked; checking it again brings it back
 /// as it was. The choice is part of the saved UI state.
 #[test]
-fn a_section_is_hidden_and_shown_from_the_view_menu() {
+fn a_section_is_hidden_and_shown_from_the_window_menu() {
     let mut h = demo([1400.0, 1400.0], json!({"view": "photoGrid", "leftPanel": true}));
     let checked = |h: &Headless, id: &str| sidebar_menu_items(h).into_iter().find(|(s, _)| s == id).unwrap_or_else(|| panic!("no {id} item")).1;
     assert_eq!(checked(&h, "byDate"), Some(true));
@@ -2361,6 +2361,13 @@ fn show_in_folders_reveals_the_photo_asked_for_and_follows_to_its_folder() {
     assert_eq!(h.app.session.library_folder.as_deref(), Some("/pics/home"));
     assert_eq!(h.app.session.active(), Some(c), "the view of that folder shows the photo asked for");
     assert!(crate::menus::show_in_folders_enabled(&h.app, Some(c)));
+    // a mistyped id is refused (read loosely, it would quietly mean the active photo and
+    // succeed); an unknown one says so
+    let e = h.app.run("app.showInFolders", json!({"id": a.0.to_string()})).unwrap_err();
+    assert!(e.contains("must be a photo id"), "{e}");
+    let e = h.app.run("app.showInFolders", json!({"id": u64::MAX})).unwrap_err();
+    assert!(e.contains("no photo"), "{e}");
+    assert_eq!(h.app.session.library_folder.as_deref(), Some("/pics/home"), "still the folder asked for");
 }
 
 /// A folder deeper than the tree goes has no row: the entry is disabled rather than failing.
@@ -3183,9 +3190,16 @@ fn the_bar_reads_the_same_when_the_rows_are_scrolled_sideways() {
     // deep enough that the levels, stepping right by no more than the narrowest step, still
     // do not fit the panel
     let deep: String = ('a'..='z').chain('a'..='l').map(|c| format!("/{c}")).collect();
-    // (tall enough for the whole chain: Recently Deleted is above it now)
-    let mut h = folders_app_sized(&[&format!("{deep}/x/1.jpg"), &format!("{deep}/y/2.jpg")], [1400.0, 1400.0]);
-    click(&mut h, "source:libfolder:/a");
+    // (tall enough for the whole chain: Recently Deleted is above it now, and every level is a row)
+    // (a photo at every level: a folder that holds none and only leads on is passed over in the tree, not a row)
+    let mut paths: Vec<String> = deep.match_indices('/').map(|(i, _)| format!("{}/0.jpg", &deep[..i + 2])).collect();
+    paths.extend([format!("{deep}/x/1.jpg"), format!("{deep}/y/2.jpg")]);
+    let paths: Vec<&str> = paths.iter().map(String::as_str).collect();
+    let mut h = folders_app_sized(&paths, [1400.0, 2400.0]);
+    // the deepest folder is shown: the rows above it open, and it is the row that scrolls the furthest
+    let shown = format!("{deep}/x");
+    exec(&mut h, "library.source", json!({"kind": "libraryFolder", "path": shown}));
+    h.settle(SETTLE);
     let panel = widget(&h, "panel:left_panel");
     assert!(crate::panels::left::content_width(&h.view.ctx) > panel.width() + 40.0, "there is somewhere to scroll to");
     let r = h.request("ui.move", json!({"x": panel.center().x, "y": panel.center().y}), T);
@@ -3196,7 +3210,7 @@ fn the_bar_reads_the_same_when_the_rows_are_scrolled_sideways() {
     let img = h.snapshot(SETTLE);
     assert!(widget(&h, "source:all").left() < panel.left() - 20.0, "the rows did scroll: {:?}", widget(&h, "source:all"));
     let t = crate::theme::Tokens::get(&h.view.ctx);
-    let mark = widget(&h, "currentMark:libfolder:/a");
+    let mark = widget(&h, &format!("currentMark:libfolder:{shown}"));
     assert!((mark.left() - panel.left()).abs() <= 1.5, "the bar stays at the panel's edge: {mark:?} / {panel:?}");
     for y in [mark.top() + 3.0, mark.center().y, mark.bottom() - 3.0] {
         for x in [mark.left() + 0.5, mark.center().x, mark.right() - 0.5] {

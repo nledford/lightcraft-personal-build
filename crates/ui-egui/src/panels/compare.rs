@@ -324,11 +324,8 @@ fn photo_tile(
         let now = ui.input(|i| i.time);
         // (the wait belongs to the photo in the pane: one moved in starts its own)
         let rendering = ui.ctx().data_mut(|d| {
-            let (photo, wait) = d.get_temp_mut_or(egui::Id::unique(("compare-rendering", i)), (id, None));
-            if *photo != id {
-                (*photo, *wait) = (id, None);
-            }
-            super::detail::rendering_overdue(wait, keys, coming, now)
+            let state = d.get_temp_mut_or(egui::Id::unique(("compare-rendering", i)), (id, None));
+            super::detail::rendering_overdue_for(state, id, keys, coming, now, super::detail::RENDERING_AFTER_SECS)
         });
         let failed = (!rendering && mine(slot).is_none() && (!r.is_pending(slot) || r.retrying(slot))).then(|| r.failure_of(slot, id)).flatten();
         let over = display.intersect(img_area);
@@ -534,15 +531,9 @@ pub fn show_compare(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         if resp.double_clicked() {
             app.ui.zoom = if app.ui.zoom == Zoom::Fit { Zoom::Percent(100.0) } else { Zoom::Fit };
         }
+        // Compare's own rows first, in the same bounded menu as the photo's
         crate::widgets::context_menu(&resp, |ui| {
-            if MenuItem::new(crate::i18n::tr("Swap")).show(ui).clicked() {
-                let _ = swap(app);
-            }
-            if MenuItem::new(crate::i18n::tr("Make Candidate the Select")).show(ui).clicked() {
-                let _ = make_select(app);
-            }
-            ui.separator();
-            super::grid::context_menu(app, ui, id);
+            crate::photo_menu::show(app, ui, id, crate::photo_menu::Lead::Rows(&["compare.swap", "compare.makeSelect"]));
         });
     }
     let mid = area.center().x;
@@ -602,13 +593,13 @@ pub fn show_survey(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             let xr = Rect::from_min_size(pos2(img.right() - 26.0, img.top() + 6.0), vec2(20.0, 20.0));
             let xresp = ui.interact(xr, egui::Id::unique(("survey-x", id.0)), Sense::click()).on_hover_text(crate::i18n::tr("Remove from survey"));
             crate::widgets::announce(&xresp, crate::i18n::tr("Remove from survey"));
-            ui.painter().circle_filled(xr.center(), 10.0, Color32::from_black_alpha(if xresp.hovered() { 230 } else { 160 }));
+            ui.painter().circle_filled(xr.center(), 10.0, crate::transparency::hud(ui.ctx(), if xresp.hovered() { 230 } else { 160 }));
             paint(ui.painter(), xr.shrink(4.0), Icon::Close, t.text);
             if xresp.clicked() {
                 app.act("library.select", json!({"ids": [id.0], "mode": "toggle"}));
             }
         }
-        crate::widgets::context_menu(&resp, |ui| super::grid::context_menu(app, ui, *id));
+        crate::widgets::context_menu(&resp, |ui| crate::photo_menu::show(app, ui, *id, crate::photo_menu::Lead::None));
     }
     let n = photos.len();
     let msg = if app.session.selection.ids.len() > SURVEY_MAX {

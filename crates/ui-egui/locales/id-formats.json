@@ -74,6 +74,8 @@
   "Show {hidden} hidden location{}": "Tampilkan {hidden} lokasi tersembunyi{:.0}",
   "Showing {n} of {}": "Menampilkan {n} dari {}",
   "Smart album: {}": "Album pintar: {}",
+  "Sort: {key}": "Urutan: {key}",
+  "Sort: {key}, {direction}": "Urutan: {key}, {direction}",
   "The XMP sidecars of {n} photos couldn't be written (is their folder offline?). LightCraft keeps trying.": "File sidecar XMP untuk {n} foto tidak dapat ditulis (apakah foldernya sedang offline?). LightCraft akan terus mencoba.",
   "Undo {}": "Urungkan {}",
   "Version {} — a clean-room, pure-Rust photo library and raw developer.": "Versi {} — pustaka foto dan pengolah raw yang dibuat secara clean-room dengan Rust murni.",
@@ -253,6 +255,7 @@
   "Removed “{name}” from {n} photos. Edit ▸ Undo puts it back.": "“{name}” dihapus dari {n} foto. Edit → Urungkan akan mengembalikannya.",
   "1 task is still running: {names}. Quitting stops it.": "1 tugas masih berjalan: {names}. Jika keluar sekarang, tugas ini akan dihentikan.",
   "{n} tasks are still running: {names}. Quitting stops them.": "{n} tugas masih berjalan: {names}. Jika keluar sekarang, semua tugas ini akan dihentikan.",
+  "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.": "Masih berjalan dan tidak dapat dihentikan: {names}. Keluar sekarang tidak menunggu semuanya selesai.",
   "{what} merge cancelled": "Penggabungan {what} dibatalkan",
   "{n} Local photo{} skipped: albums hold library photos (Add to My Photos first)": "{n} foto Lokal{:.0} dilewati: album hanya dapat berisi foto pustaka (tambahkan ke Foto saya terlebih dahulu)",
   "New Folder in “{name}”": "Folder baru di “{name}”",
@@ -409,5 +412,15 @@
   "Show photos with {path} (includes the keywords below it)": "Tampilkan foto dengan {path} (termasuk kata kunci di bawahnya)",
   "Add {path} to the selected photos ({n})": "Tambahkan {path} ke foto yang dipilih ({n})",
   "Take {path} off the selected photos ({n})": "Hapus {path} dari foto yang dipilih ({n})",
-  "Stop showing only photos with {path}": "Berhenti hanya menampilkan foto dengan {path}"
+  "Stop showing only photos with {path}": "Berhenti hanya menampilkan foto dengan {path}",
+  "Added {n} sample photos, with albums under “{folder}” and keywords to try": "{n} foto contoh ditambahkan, dengan album di bawah “{folder}” dan kata kunci untuk dicoba",
+  "Removed {n} sample photos. Edit → Undo brings them back.": "{n} foto contoh dihapus. Edit → Urungkan mengembalikannya.",
+  "Open the sample photo “{title}”": "Buka foto contoh “{title}”",
+  "Or explore LightCraft with {n} sample photos": "Atau jelajahi LightCraft dengan {n} foto contoh",
+  "Press {key} to compare before and after.": "Tekan {key} untuk membandingkan sebelum dan sesudah.",
+  "Press {key} to see it beside the original.": "Tekan {key} untuk melihatnya berdampingan dengan aslinya.",
+  " · {} damaged": " · {} rusak",
+  "Copied {n} file paths": "{n} jalur file disalin",
+  "Photos waiting: {n}": "Foto dalam antrean: {n}",
+  "{toast} · {n} photos": "{toast} · {n} foto"
 }

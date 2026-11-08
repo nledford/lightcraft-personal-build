@@ -12,10 +12,15 @@ pub(crate) fn services(cc: &eframe::CreationContext<'_>, log_file: Option<&std::
     let _ = DIALOG_PARENT.set(rfd::FileDialog::new().set_parent(cc));
     Services {
         local_places: None,
-        // Commands' file dialogs run on their own thread (#191): a dialog on the UI thread
+        // On macOS the commands' file dialogs are sheets of the window, made on this thread:
+        // rfd's dialog from another thread hangs the window on macOS 26.6 (#3735; `file_sheet`).
+        #[cfg(target_os = "macos")]
+        picker: Some(file_sheet::Sheets::new(rfd::AsyncFileDialog::new().set_parent(cc)).picker(ctx)),
+        // Elsewhere they run on their own thread (#191): a dialog on the UI thread
         // stopped the window answering the compositor, which then reported the app as hung.
+        #[cfg(not(target_os = "macos"))]
         picker: Some(Box::new(move |req: lightcraft_ui_egui::pick::PickRequest| {
-            use lightcraft_ui_egui::pick::PickKind;
+            use lightcraft_ui_egui::pick::{PickKind, PickStart};
             let (tx, rx) = std::sync::mpsc::channel();
             let repaint = ctx.clone();
             std::thread::Builder::new()
@@ -31,6 +36,11 @@ pub(crate) fn services(cc: &eframe::CreationContext<'_>, log_file: Option<&std::
                     if let Some(n) = &req.file_name {
                         d = d.set_file_name(n);
                     }
+                    if req.start == PickStart::MonitorProfiles
+                        && let Some(dir) = display_profile_dir()
+                    {
+                        d = d.set_directory(dir);
+                    }
                     let s = |p: std::path::PathBuf| p.to_string_lossy().to_string();
                     let paths: Vec<String> = match req.kind {
                         PickKind::Files => d.pick_files().unwrap_or_default().into_iter().map(s).collect(),
@@ -45,6 +55,7 @@ pub(crate) fn services(cc: &eframe::CreationContext<'_>, log_file: Option<&std::
                 .map_err(|e| format!("could not start the file dialog: {e}"))?;
             Ok(rx)
         })),
+        picker_one_at_a_time: cfg!(target_os = "macos"),
         log_file: log_file.map(|p| p.display().to_string()),
         pick_lightroom_catalog: Some(Box::new(|| {
             file_dialog()
@@ -148,6 +159,16 @@ pub(crate) fn services(cc: &eframe::CreationContext<'_>, log_file: Option<&std::
         system_reduce_motion: Some(Box::new(reduce_motion::system)),
         #[cfg(not(target_os = "macos"))]
         system_reduce_motion: None,
+        // Follow System Settings ▸ Accessibility ▸ Display ▸ Increase contrast until the user chooses
+        #[cfg(target_os = "macos")]
+        system_increase_contrast: Some(Box::new(increase_contrast::system)),
+        #[cfg(not(target_os = "macos"))]
+        system_increase_contrast: None,
+        // Follow System Settings ▸ Accessibility ▸ Display ▸ Reduce transparency until the user chooses
+        #[cfg(target_os = "macos")]
+        system_reduce_transparency: Some(Box::new(reduce_transparency::system)),
+        #[cfg(not(target_os = "macos"))]
+        system_reduce_transparency: None,
         // Linux: the profile the desktop assigns in colord, read off the UI thread
         #[cfg(target_os = "linux")]
         screen_profile: Some(colord::service()),
@@ -209,7 +230,7 @@ pub(crate) fn services(cc: &eframe::CreationContext<'_>, log_file: Option<&std::
                 .map(|p| p.to_string_lossy().to_string())
         })),
         pick_slideshow_templates: Some(Box::new(|| {
-            rfd::FileDialog::new()
+            file_dialog()
                 .set_title(lightcraft_ui_egui::i18n::tr("Import Slideshow Templates"))
                 .add_filter_nocase(lightcraft_ui_egui::i18n::tr("Slideshow Templates"), &["json"])
                 .pick_files()
@@ -219,7 +240,7 @@ pub(crate) fn services(cc: &eframe::CreationContext<'_>, log_file: Option<&std::
                 .collect()
         })),
         save_slideshow_template: Some(Box::new(|name: &str| {
-            rfd::FileDialog::new()
+            file_dialog()
                 .set_title(lightcraft_ui_egui::i18n::tr("Export Slideshow Template"))
                 .add_filter_nocase(lightcraft_ui_egui::i18n::tr("Slideshow Templates"), &["json"])
                 .set_file_name(name)
@@ -300,7 +321,8 @@ fn open_library_session(in_memory: bool, dir: Option<std::path::PathBuf>, rememb
     }
     let t0 = std::time::Instant::now();
     let mut s = Session::new().with_fs().with_default_denoise_models().with_system_clock();
-    match s.open_library(&dir, seed_demo && !remembered) {
+    // a new library starts empty: its first screen asks how to begin (sample photos are one way)
+    match s.open_library(&dir, false) {
         Ok(r) => {
             let (replayed, torn) = (r.replayed, r.torn_bytes);
             log::info!(

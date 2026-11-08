@@ -39,7 +39,7 @@ pub struct Ui {
     dl_watch: Vec<String>,
     list: Option<(u64, f64, Value)>,
     /// Why the last file picked with Install from file… was refused, shown under the button.
-    rejected: Option<String>,
+    pub(crate) rejected: Option<String>,
 }
 
 /// Called every frame: keeps the engine's denoise work going and asks for a redraw when a photo's picture appears (the
@@ -208,6 +208,19 @@ pub fn detail_status(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, am
                 });
             }
         }
+        PhotoState::Stopped => {
+            if amount > 0.0 {
+                egui::Frame::NONE.inner_margin(pad).show(ui, |ui| {
+                    note(ui, "AI Denoise was stopped for this photo.", t.text_dim);
+                    ui.add_space(2.0);
+                    let r = ui.small_button(crate::i18n::tr("Make it now"));
+                    register(ui, "denoise:make", r.rect);
+                    if r.clicked() {
+                        let _ = app.run("denoise.queue", json!({"ids": [id.0]}));
+                    }
+                });
+            }
+        }
         PhotoState::Queued { ahead } => {
             egui::Frame::NONE.inner_margin(pad).show(ui, |ui| {
                 let text = if ahead == 0 {
@@ -272,16 +285,9 @@ pub fn settings_tab(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
         .busy(installing)
         .widget("denoise:installFile")
         .show(ui);
-    if r.clicked()
-        && let Some(path) = app.services.pick_denoise_model.as_mut().and_then(|f| f().into_iter().next())
-    {
-        match app.session.execute("denoise.models.inspect", &json!({"path": path})) {
-            Ok(info) => {
-                app.caches.denoise.rejected = None;
-                app.ui.dialog = Some(crate::state::Dialog::DenoiseModel { info, accepted: false });
-            }
-            Err(e) => app.caches.denoise.rejected = Some(plain(&e)),
-        }
+    if r.clicked() {
+        // the dialog runs off the UI thread; the model is checked when it closes
+        crate::pick::choose_and_apply(app, ui.ctx(), crate::pick::Field::DenoiseModel);
     }
     if let Some(why) = &app.caches.denoise.rejected {
         hint(ui, t, why);
@@ -615,6 +621,18 @@ pub fn install(app: &mut LightcraftApp, info: &Value, accepted: bool) -> Result<
         app.ui.dialog = Some(crate::state::Dialog::Settings { tab: "denoise".into() });
     }
     r
+}
+
+/// Check the model file `path` chosen with Install from file…: the review dialog opens, or the
+/// reason it is refused is shown under the button.
+pub(crate) fn inspect_model(app: &mut LightcraftApp, path: &str) {
+    match app.session.execute("denoise.models.inspect", &json!({"path": path})) {
+        Ok(info) => {
+            app.caches.denoise.rejected = None;
+            app.ui.dialog = Some(crate::state::Dialog::DenoiseModel { info, accepted: false });
+        }
+        Err(e) => app.caches.denoise.rejected = Some(plain(&e)),
+    }
 }
 
 /// What an engine error says, without the command it came from (the install job's errors read the same way).

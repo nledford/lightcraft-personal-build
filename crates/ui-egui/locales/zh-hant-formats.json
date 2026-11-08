@@ -410,5 +410,18 @@
   "Show photos with {path} (includes the keywords below it)": "顯示含有 {path} 的照片（包含其下的關鍵字）",
   "Add {path} to the selected photos ({n})": "將 {path} 加入選取的照片（{n}）",
   "Take {path} off the selected photos ({n})": "將 {path} 從選取的照片移除（{n}）",
-  "Stop showing only photos with {path}": "不再只顯示含有 {path} 的照片"
+  "Stop showing only photos with {path}": "不再只顯示含有 {path} 的照片",
+  "Added {n} sample photos, with albums under “{folder}” and keywords to try": "已加入 {n} 張範例照片，相簿在「{folder}」下，並附有關鍵字",
+  "Open the sample photo “{title}”": "開啟範例照片「{title}」",
+  "Or explore LightCraft with {n} sample photos": "或者用 {n} 張範例照片體驗 LightCraft",
+  "Press {key} to compare before and after.": "按 {key} 比較編輯前後。",
+  "Press {key} to see it beside the original.": "按 {key} 與原始照片並排查看。",
+  "Removed {n} sample photos. Edit → Undo brings them back.": "已移除 {n} 張範例照片。編輯 → 復原可還原。",
+  "Sort: {key}": "排序：{key}",
+  "Sort: {key}, {direction}": "排序：{key}，{direction}",
+  "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.": "仍在執行且無法停止：{names}。現在結束不會等待它們。",
+  " · {} damaged": " · {} 個已損毀",
+  "Copied {n} file paths": "已複製 {n} 個檔案路徑",
+  "Photos waiting: {n}": "{n} 張照片等待中",
+  "{toast} · {n} photos": "{toast} · {n} 張照片"
 }

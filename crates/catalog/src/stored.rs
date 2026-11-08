@@ -1028,6 +1028,8 @@ impl Serialize for StoredPhoto<'_> {
             preview_only: Option<&'a str>,
             #[serde(skip_serializing_if = "str::is_empty")]
             preview_checked: &'a str,
+            #[serde(skip_serializing_if = "std::ops::Not::not")]
+            truncated: bool,
             #[serde(skip_serializing_if = "Option::is_none")]
             local_baseline: Option<u64>,
         }
@@ -1065,6 +1067,7 @@ impl Serialize for StoredPhoto<'_> {
             analysis,
             preview_only,
             preview_checked,
+            truncated,
             local_baseline,
         } = self.0;
         Fields {
@@ -1101,6 +1104,7 @@ impl Serialize for StoredPhoto<'_> {
             preview_only: preview_only.as_deref(),
             preview_checked,
             local_baseline: *local_baseline,
+            truncated: *truncated,
         }
         .serialize(s)
     }

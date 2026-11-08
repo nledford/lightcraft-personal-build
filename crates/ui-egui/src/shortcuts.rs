@@ -192,8 +192,9 @@ pub fn format(m: Modifiers, k: Key) -> Option<String> {
     if m.command || m.mac_cmd {
         s.push_str("Cmd+");
     }
-    // off macOS Ctrl *is* Cmd; on macOS it is the separate Control key
-    if m.ctrl && (m.mac_cmd || !m.command) {
+    // off macOS Ctrl *is* Cmd; on macOS it is the separate Control key (⌃⌘F is both, `parse` makes it
+    // `command` without `mac_cmd`)
+    if m.ctrl && (m.mac_cmd || !m.command || cfg!(target_os = "macos")) {
         s.push_str("Ctrl+");
     }
     if m.alt {
@@ -206,6 +207,54 @@ pub fn format(m: Modifiers, k: Key) -> Option<String> {
     let back = parse(&s)?;
     let want = if k == Key::Delete { Key::Backspace } else { k };
     (back.1 == want).then_some(s)
+}
+
+/// What a rating or color-label key sets.
+#[derive(Clone, Copy)]
+enum Cull {
+    Rating(u8),
+    Label(&'static str),
+}
+
+/// The rating keys (0–5) and the color-label keys (6–9) are commands of their own, so Help ▸ Keyboard Shortcuts can give each
+/// another key; the digits are the declared keys of these ids in `UI_COMMANDS`. The keys with Shift (rate or label and advance)
+/// stay fixed keys: [`ALIASES`] and [`fixed_photo_keys`].
+const CULLING_KEYS: [(&str, Cull); 10] = [
+    ("photo.rate0", Cull::Rating(0)),
+    ("photo.rate1", Cull::Rating(1)),
+    ("photo.rate2", Cull::Rating(2)),
+    ("photo.rate3", Cull::Rating(3)),
+    ("photo.rate4", Cull::Rating(4)),
+    ("photo.rate5", Cull::Rating(5)),
+    ("photo.labelRed", Cull::Label("red")),
+    ("photo.labelYellow", Cull::Label("yellow")),
+    ("photo.labelGreen", Cull::Label("green")),
+    ("photo.labelBlue", Cull::Label("blue")),
+];
+
+fn culling_key(id: &str) -> Option<Cull> {
+    CULLING_KEYS.iter().find(|(key, _)| *key == id).map(|(_, cull)| *cull)
+}
+
+/// The command a rating or color-label key runs, with its parameters: what the Photo menu's rows run too.
+pub(crate) fn culling_command(id: &str) -> Option<(&'static str, Value)> {
+    Some(match culling_key(id)? {
+        Cull::Rating(rating) => ("photo.rate", json!({"rating": rating})),
+        Cull::Label(label) => ("photo.label", json!({"label": label})),
+    })
+}
+
+/// Whether `id` is a rating or color-label key's command: no allocation, for the per-frame enabled check.
+pub(crate) fn is_culling_command(id: &str) -> bool {
+    culling_key(id).is_some()
+}
+
+/// What the press of a rating or color-label key fires: the ids [`fire_rating_key`] runs through the culling path.
+fn culling_fire(id: &str) -> Option<String> {
+    Some(match culling_key(id)? {
+        Cull::Rating(rating) => format!("rate:{rating}:0"),
+        Cull::Label(label) => format!("label:{label}"),
+    })
 }
 
 /// Secondary key bindings for commands that already exist: `(shortcut, command id, params JSON)`.
@@ -301,8 +350,11 @@ fn matches(i: &egui::InputState, m: Modifiers, k: Key) -> bool {
         };
         // `Ctrl` is the physical Control key (on macOS distinct from Cmd; elsewhere Cmd = Ctrl);
         // "Delete" (⌫ = Backspace) also matches forward-delete
-        let ctrl_ok = if m.ctrl { modifiers.ctrl } else { !modifiers.ctrl || modifiers.command };
-        let cmd_ok = m.ctrl || modifiers.command == m.command;
+        // and a Ctrl+Cmd binding (⌃⌘F) wants both keys; on macOS ⌃⌘F is not ⌘F with Control held (there
+        // `mac_cmd` is ⌘, and Control held is no ⌘)
+        let ctrl_ok = if m.ctrl { modifiers.ctrl } else { !modifiers.ctrl || (modifiers.command && !modifiers.mac_cmd) };
+        // with ⌘ held on macOS (`mac_cmd`) a Control binding needs the ⌘ in it too; elsewhere Ctrl is Command
+        let cmd_ok = if m.ctrl && !modifiers.mac_cmd { !m.command || modifiers.command } else { modifiers.command == m.command };
         // winit can report shifted digits as punctuation (Shift+1 = `!`). Recognize the
         // physical number key for culling, without changing layout-aware letter shortcuts.
         let shifted_digit = m.shift
@@ -314,6 +366,63 @@ fn matches(i: &egui::InputState, m: Modifiers, k: Key) -> bool {
             && modifiers.shift == m.shift
             && modifiers.alt == m.alt
     })
+}
+
+/// The keys egui names for the punctuation a layout types: the ones a digit-row key can type instead of its digit.
+fn is_symbol(k: Key) -> bool {
+    matches!(
+        k,
+        Key::Colon
+            | Key::Comma
+            | Key::Backslash
+            | Key::Slash
+            | Key::Pipe
+            | Key::Questionmark
+            | Key::Exclamationmark
+            | Key::OpenBracket
+            | Key::CloseBracket
+            | Key::OpenCurlyBracket
+            | Key::CloseCurlyBracket
+            | Key::Backtick
+            | Key::Minus
+            | Key::Period
+            | Key::Plus
+            | Key::Equals
+            | Key::Semicolon
+            | Key::Quote
+    )
+}
+
+/// Whether a command has the plain key `k` as its shortcut or as an alias.
+fn claimed(keymap: &Keymap, k: Key) -> bool {
+    let plain = (Modifiers::NONE, k);
+    bindable().iter().any(|b| binding(keymap, b.id, b.default).and_then(parse) == Some(plain))
+        || ALIASES.iter().any(|(sc, ..)| parse(sc) == Some(plain))
+}
+
+/// A rating or color-label key at its digit, pressed on a layout that types punctuation there: French AZERTY types
+/// `&é"'(-è_çà` on the digit row and needs Shift for the digits. egui-winit names the typed character as the key when egui
+/// has a key for it (`'`, `-`, `!`, `+`) and keeps the key's place in `physical_key`, so the digit shortcut also matches
+/// the key by its place. Not when another command has the typed key (`-` is Decrease Grid Thumbnail Size's), when ⌘, ⌥ or ⌃
+/// is held, or for a key the user moved: only the digit defaults. A key whose character is no punctuation stays what it is:
+/// the numpad's arrows and Home with Num Lock off, over the 4 and the 7. On Windows and Linux AltGr reaches egui without ⌃ or
+/// ⌥ (winit drops them), so AltGr+4 (`{`) rates there too, as AltGr with the digit-row keys egui has no key for already did.
+fn digit_by_place(i: &egui::InputState, keymap: &Keymap, b: &Bindable, sc: &str, digit: Key) -> bool {
+    // the cheap checks first: this runs for every bound command, every frame
+    if b.default != Some(sc) || culling_key(b.id).is_none() {
+        return false;
+    }
+    let Some(typed) = i.events.iter().find_map(|e| match e {
+        egui::Event::Key { key, physical_key: Some(place), pressed: true, modifiers, .. }
+            if *place == digit && modifiers.is_none() && is_symbol(*key) =>
+        {
+            Some(*key)
+        }
+        _ => None,
+    }) else {
+        return false;
+    };
+    !claimed(keymap, typed)
 }
 
 /// Default brackets rate in grids, and the default backslash shows / hides the Filter Bar there
@@ -349,8 +458,9 @@ fn keyboard_owned(app: &LightcraftApp, ctx: &egui::Context) -> bool {
             [Key::ArrowLeft, Key::ArrowRight, Key::ArrowUp, Key::ArrowDown, Key::Enter, Key::Space].iter().any(|key| input.key_pressed(*key))
         });
     }
-    let chrome =
-        app.ui.docking.as_ref().is_some_and(|workspace| {
+    // a plain button (the welcome's) keeps what works it; the rest are shortcuts, as on dock chrome
+    let chrome = crate::widgets::plain_button_has_focus(ctx)
+        || app.ui.docking.as_ref().is_some_and(|workspace| {
             craft_ui::docking::DockArea::new(egui::Id::unique("lightcraft-docking")).chrome_has_focus(ctx, &workspace.layout)
         });
     if !chrome {
@@ -453,7 +563,7 @@ fn pressed_commands(app: &LightcraftApp, ctx: &egui::Context) -> (Vec<String>, V
     // which also closes dialogs) waits until nothing is open
     let popup_open = egui::Popup::is_any_open(ctx);
     // Esc that just took a text field's focus away (it gives back the field's text) does nothing else
-    let popup_open = popup_open || app.text_focus;
+    let popup_open = popup_open || app.text_focus || app.plain_button_focus;
     // a drag in progress: Esc gives it up (`LightcraftApp::end_drags`) and does nothing else, even when no
     // button is down any more (a hidden pass can take the release before `end_drags` sees it)
     let popup_open = popup_open || app.ui.drag_active();
@@ -475,7 +585,7 @@ fn pressed_commands(app: &LightcraftApp, ctx: &egui::Context) -> (Vec<String>, V
                 && let Some((m, k)) = parse(sc)
                 && !native(sc)
                 && !(k == Key::Escape && popup_open)
-                && matches(i, m, k)
+                && (matches(i, m, k) || digit_by_place(i, keymap, b, sc, k))
                 && let Some(id) = grid_key_command(keymap, grid, app.ui.fullscreen, b.id, (m, k))
             {
                 if id == "view.zoomToggle" && k == Key::Space {
@@ -485,7 +595,7 @@ fn pressed_commands(app: &LightcraftApp, ctx: &egui::Context) -> (Vec<String>, V
                         aliased.push(("view.zoomToggle", json!({})));
                     }
                 } else {
-                    fire.push(id.to_string());
+                    fire.push(culling_fire(id).unwrap_or_else(|| id.to_string()));
                 }
             }
         }
@@ -499,27 +609,18 @@ fn pressed_commands(app: &LightcraftApp, ctx: &egui::Context) -> (Vec<String>, V
                 aliased.push((id, serde_json::from_str(params).unwrap_or_default()));
             }
         }
-        fixed_photo_keys(i, &native, &taken, grid_navigation, &mut fire);
+        fixed_photo_keys(i, &taken, grid_navigation, &mut fire);
         h_press = matches(i, Modifiers::NONE, Key::H) && !native("H") && !taken.contains(&(Modifiers::NONE, Key::H));
     });
     (fire, aliased, h_press)
 }
 
-/// The fixed photo keys pressed: ratings 0-5, colour labels 6-9 (with Shift: and advance), and in a grid the
-/// navigation keys. Keys the user gave to a command (`taken`) and the native menu's (`native`) are left alone.
-fn fixed_photo_keys(i: &egui::InputState, native: &dyn Fn(&str) -> bool, taken: &[(Modifiers, Key)], grid_navigation: bool, fire: &mut Vec<String>) {
-    // rating 0-5, colour labels 6-9 (with Shift: and advance)
+/// The fixed photo keys pressed: the rating keys with Shift (rate and advance) and, in a grid, the navigation keys. The plain
+/// rating and color-label keys are commands of their own ([`CULLING_KEYS`]). Keys the user gave to a command (`taken`) are left alone.
+fn fixed_photo_keys(i: &egui::InputState, taken: &[(Modifiers, Key)], grid_navigation: bool, fire: &mut Vec<String>) {
     for (n, key) in [Key::Num0, Key::Num1, Key::Num2, Key::Num3, Key::Num4, Key::Num5].iter().enumerate() {
-        if matches(i, Modifiers::NONE, *key) && !native(&n.to_string()) && !taken.contains(&(Modifiers::NONE, *key)) {
-            fire.push(format!("rate:{n}:0"));
-        }
         if matches(i, Modifiers::SHIFT, *key) && !taken.contains(&(Modifiers::SHIFT, *key)) {
             fire.push(format!("rate:{n}:1"));
-        }
-    }
-    for (label, key, sc) in [("red", Key::Num6, "6"), ("yellow", Key::Num7, "7"), ("green", Key::Num8, "8"), ("blue", Key::Num9, "9")] {
-        if matches(i, Modifiers::NONE, key) && !native(sc) && !taken.contains(&(Modifiers::NONE, key)) {
-            fire.push(format!("label:{label}"));
         }
     }
     if !grid_navigation {
@@ -540,8 +641,9 @@ fn fixed_photo_keys(i: &egui::InputState, native: &dyn Fn(&str) -> bool, taken: 
 }
 
 /// Rating/flag/label keys: in Compare/Survey they act on the active photo only; `advance` (Shift+key) or
-/// Auto Advance then moves on (next candidate in Compare, next photo elsewhere). A key is a click by another
-/// name: refused, `act` says why, and the caller says its success only when this answers true.
+/// Auto Advance then moves on (next candidate in Compare, next photo elsewhere). The toast is the command's own
+/// (`app::cull_toast`, shown by `run`), made before the advance, so it names the photo that changed. A key is a
+/// click by another name: refused, `act` says why and there is no toast; this answers whether the command went through.
 fn cull(app: &mut LightcraftApp, id: &str, mut params: serde_json::Value, advance: bool) -> bool {
     use crate::panels::compare;
     compare::target_active(app, &mut params);
@@ -584,19 +686,6 @@ fn fire_alias(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, params: se
     }
 }
 
-/// The toast naming a flag.
-fn flag_toast(app: &mut LightcraftApp, ctx: &egui::Context, flag: lightcraft_catalog::Flag) {
-    use lightcraft_catalog::Flag;
-    app.toast(
-        ctx,
-        crate::i18n::tr(match flag {
-            Flag::Pick => "Flagged as Pick",
-            Flag::Reject => "Flagged as Reject",
-            Flag::None => "Unflagged",
-        }),
-    );
-}
-
 /// Run one fired command.
 fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fires: bool) {
     // a slideshow: ←/→ step (a cut)
@@ -604,7 +693,7 @@ fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fi
         app.act(if f == "library.next" { "slideshow.next" } else { "slideshow.previous" }, json!({}));
         return;
     }
-    if fire_rating_key(app, ctx, f) || fire_grid_key(app, f) || fire_flag_key(app, ctx, f) {
+    if fire_rating_key(app, f) || fire_grid_key(app, f) || fire_flag_key(app, f) {
         return;
     }
     // in the full-screen preview (no panels) I cycles the info overlay instead
@@ -619,15 +708,17 @@ fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fi
         up_down_key(app, ctx, f);
         return;
     }
+    // the Sort menus' rule for these two rows holds for the keys too (a native menu enforces it for its own keys)
+    if let Some(why) = sort_row_off(app, f) {
+        app.refuse(why);
+        return;
+    }
     // a command that can't run (an export with no folder, nothing to undo…) says why
     // instead of doing nothing; its success is said only when it went through
     let mut params = json!({});
     crate::menus::menubar::menu_defaults(f, &mut params);
     if app.act(f, params).is_some() {
         match f {
-            "photo.pick" => flag_toast(app, ctx, lightcraft_catalog::Flag::Pick),
-            "photo.reject" => flag_toast(app, ctx, lightcraft_catalog::Flag::Reject),
-            "photo.unflag" => flag_toast(app, ctx, lightcraft_catalog::Flag::None),
             "edit.undo" => app.toast(ctx, crate::i18n::tr("Undo")),
             "edit.redo" => app.toast(ctx, crate::i18n::tr("Redo")),
             _ => {}
@@ -635,18 +726,23 @@ fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fi
     }
 }
 
-/// Rating and colour label keys; whether `f` was one.
-fn fire_rating_key(app: &mut LightcraftApp, ctx: &egui::Context, f: &str) -> bool {
+/// Why Reshuffle and Previous Shuffle are off where the Sort menus turn them off, in the engine's
+/// words for the same refusals (`library.previousShuffle`); `None` when `f` is neither or its row is on.
+fn sort_row_off(app: &LightcraftApp, f: &str) -> Option<&'static str> {
+    let menu = crate::menus::sort_menu::SortMenu::of(&app.session);
+    match f {
+        "library.shuffle" if !menu.reshuffle_enabled() => Some("the view is not sorted at random"),
+        "library.previousShuffle" if !menu.reshuffle_enabled() => Some("the view is not sorted at random"),
+        "library.previousShuffle" if !menu.previous_enabled() => Some("no earlier shuffle"),
+        _ => None,
+    }
+}
+
+/// Rating and colour label keys; whether `f` was one. Their toast is the command's own (`app::cull_toast`).
+fn fire_rating_key(app: &mut LightcraftApp, f: &str) -> bool {
     if let Some(rest) = f.strip_prefix("rate:") {
         let (n, adv) = rest.split_once(':').unwrap_or(("0", "0"));
-        if cull(app, "photo.rate", json!({"rating": n.parse::<u8>().unwrap_or(0)}), adv == "1") {
-            let label = if n == "0" {
-                crate::i18n::tr("Rating cleared").to_string()
-            } else {
-                crate::i18n::tr_format!("Rated {}", "★".repeat(n.parse().unwrap_or(0)))
-            };
-            app.toast(ctx, label);
-        }
+        cull(app, "photo.rate", json!({"rating": n.parse::<u8>().unwrap_or(0)}), adv == "1");
     } else if matches!(f, "photo.decreaseRating" | "photo.increaseRating" | "photo.clearLabel") {
         cull(app, f, json!({}), false);
     } else if let Some(l) = f.strip_prefix("label:") {
@@ -701,26 +797,15 @@ fn extend_selection(app: &mut LightcraftApp, step: i64) {
     }
 }
 
-/// The flag keys; whether `f` was one.
-fn fire_flag_key(app: &mut LightcraftApp, ctx: &egui::Context, f: &str) -> bool {
-    if matches!(f, "photo.cycleFlag" | "photo.increaseFlag" | "photo.decreaseFlag") {
-        // `, ⌘↑, ⌘↓: step the flag; the toast names the active photo's new state (read before Auto Advance moves on).
-        // A refused step keeps the reason `act` gave on screen.
-        let active = app.session.active();
-        let flag = if cull(app, f, json!({}), false) { active.and_then(|id| app.session.catalog.photo(id)).map(|p| p.flag) } else { None };
-        if let Some(flag) = flag {
-            flag_toast(app, ctx, flag);
-        }
-        true
-    } else if matches!(f, "photo.pick" | "photo.reject" | "photo.unflag") && app.ui.right != crate::state::RightPanel::Crop {
-        if cull(app, f, json!({}), false) {
-            let flag = match f {
-                "photo.pick" => lightcraft_catalog::Flag::Pick,
-                "photo.reject" => lightcraft_catalog::Flag::Reject,
-                _ => lightcraft_catalog::Flag::None,
-            };
-            flag_toast(app, ctx, flag);
-        }
+/// The flag keys; whether `f` was one. Their toast is the command's own (`app::cull_toast`).
+fn fire_flag_key(app: &mut LightcraftApp, f: &str) -> bool {
+    if matches!(f, "photo.cycleFlag" | "photo.increaseFlag" | "photo.decreaseFlag")
+        || matches!(f, "photo.pick" | "photo.unflag")
+        // X with Crop open swaps the crop aspect (`context_key_skipped`, #1866); P and U are flag keys there too
+        || (f == "photo.reject" && app.ui.right != crate::state::RightPanel::Crop)
+    {
+        cull(app, f, json!({}), false);
+
         true
     } else {
         false
@@ -881,3 +966,10 @@ mod enable_filters_tests;
 #[cfg(test)]
 #[path = "shortcuts/tests_filter_bar_key.rs"]
 mod filter_bar_key_tests;
+
+#[cfg(test)]
+#[path = "shortcuts/tests_cull_feedback.rs"]
+mod cull_feedback_tests;
+#[cfg(test)]
+#[path = "shortcuts/tests_culling_keys.rs"]
+mod culling_key_tests;

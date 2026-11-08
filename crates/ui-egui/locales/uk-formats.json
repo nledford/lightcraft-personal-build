@@ -410,5 +410,18 @@
   "Show photos with {path} (includes the keywords below it)": "Показати фото з ключовим словом {path} (разом із ключовими словами нижче)",
   "Add {path} to the selected photos ({n})": "Додати {path} до вибраних фото ({n})",
   "Take {path} off the selected photos ({n})": "Вилучити {path} з вибраних фото ({n})",
-  "Stop showing only photos with {path}": "Більше не показувати лише фото з {path}"
+  "Stop showing only photos with {path}": "Більше не показувати лише фото з {path}",
+  "Added {n} sample photos, with albums under “{folder}” and keywords to try": "Додано зразки фото ({n}) з альбомами в «{folder}» і ключовими словами",
+  "Sort: {key}": "Сортування: {key}",
+  "Sort: {key}, {direction}": "Сортування: {key}, {direction}",
+  "Open the sample photo “{title}”": "Відкрити зразок фото «{title}»",
+  "Or explore LightCraft with {n} sample photos": "Або спробуйте LightCraft на зразках фото ({n})",
+  "Press {key} to compare before and after.": "Натисніть {key}, щоб порівняти до і після.",
+  "Press {key} to see it beside the original.": "Натисніть {key}, щоб побачити його поруч з оригіналом.",
+  "Removed {n} sample photos. Edit → Undo brings them back.": "Вилучено зразків фото: {n}. Редагування → Скасувати поверне їх.",
+  "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.": "Ще виконуються, і їх не можна зупинити: {names}. Вихід зараз не чекатиме на них.",
+  " · {} damaged": " · пошкоджено: {}",
+  "Copied {n} file paths": "Скопійовано шляхів до файлів: {n}",
+  "Photos waiting: {n}": "Фото в черзі: {n}",
+  "{toast} · {n} photos": "{toast} · фото: {n}"
 }

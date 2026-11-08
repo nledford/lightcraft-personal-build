@@ -136,6 +136,9 @@ fn fill_for_white(fill: Color32) -> Color32 {
     f
 }
 
+/// How much of a disabled button's colors stays.
+const DISABLED_FADE: f32 = 0.45;
+
 /// The colours of a `kind` button in `state` with the theme `t`.
 pub fn look(t: &Tokens, kind: Kind, state: State) -> Look {
     look_with_border(t, kind, state, t.button_border)
@@ -172,12 +175,14 @@ fn look_with_border(t: &Tokens, kind: Kind, state: State, secondary_border: Colo
                 State::Hovered => Some(t.hover),
                 State::Pressed => Some(t.pressed),
             },
-            border: None,
+            // an edge while pointed at or pressed: the hover fill alone hardly shows on a tinted
+            // band (the samples banner)
+            border: matches!(state, State::Hovered | State::Pressed).then_some(t.button_border),
             content: t.text,
         },
     };
     if state == State::Disabled {
-        let fade = |c: Color32| c.gamma_multiply(0.45);
+        let fade = |c: Color32| c.gamma_multiply(DISABLED_FADE);
         Look { fill: look.fill.map(fade), border: look.border.map(fade), content: fade(look.content) }
     } else {
         look
@@ -527,7 +532,14 @@ impl<'a> Button<'a> {
         if let Some(g) = galley {
             let at = pos2(x, rect.center().y - g.size().y / 2.0);
             x += g.size().x + self.size.gap();
-            p.galley_with_override_text_color(at, g, lk.content);
+            if enabled {
+                p.galley_with_override_text_color(at, g, lk.content);
+            } else {
+                // (the text as a whole is drawn fainter, as egui draws a disabled control's, so that it is
+                // known to be off: the contrast check leaves such text out)
+                let ink = look(&t, self.kind, State::Idle).content;
+                p.add(egui::epaint::TextShape::new(at, g, ink).with_override_text_color(ink).with_opacity_factor(DISABLED_FADE));
+            }
         }
         if self.trailing {
             if self.align_start {

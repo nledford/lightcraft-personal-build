@@ -255,8 +255,14 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
     for it in prepared.items {
         match it {
             PreparedItem::Promote(id) => {
-                if s.catalog.photo(id).is_some_and(|p| p.local) {
+                let promoted = s.catalog.photo(id);
+                if promoted.is_some_and(|p| p.local) {
                     ops.push(Op::SetLocal { id, local: false });
+                }
+                if let Some(p) = promoted.filter(|p| p.truncated)
+                    && let Source::File { path } = &p.source
+                {
+                    report.truncated.push(path.clone());
                 }
                 report.imported.push(id.0);
             }
@@ -344,6 +350,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 p.content_hash = hash;
                 p.embedded_lens = info.embedded_lens.map(Box::new);
                 p.set_preview_only(info.preview_only.clone());
+                p.truncated = info.truncated;
                 apply_import_defaults_beside(s, &mut p, own);
                 if let Some(sc) = &sidecar {
                     crate::sidecar::merge_into(&mut p, sc, &now);
@@ -383,6 +390,9 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                     p.history.push(lightcraft_catalog::HistoryStep { label: "Import adjustments".into(), settings: d });
                 }
                 report.imported.push(id.0);
+                if p.truncated {
+                    report.truncated.push(path.clone());
+                }
                 p.local = opts.local;
                 if opts.local {
                     // the state as browsed: a later change keeps the record from being forgotten

@@ -410,5 +410,18 @@
   "Show photos with {path} (includes the keywords below it)": "Mostrar fotos con {path} (incluye las palabras clave inferiores)",
   "Add {path} to the selected photos ({n})": "Añadir {path} a las fotos seleccionadas ({n})",
   "Take {path} off the selected photos ({n})": "Quitar {path} de las fotos seleccionadas ({n})",
-  "Stop showing only photos with {path}": "Dejar de mostrar solo las fotos con {path}"
+  "Stop showing only photos with {path}": "Dejar de mostrar solo las fotos con {path}",
+  "Added {n} sample photos, with albums under “{folder}” and keywords to try": "Se añadieron {n} fotos de muestra, con álbumes en «{folder}» y palabras clave para probar",
+  "Sort: {key}": "Orden: {key}",
+  "Sort: {key}, {direction}": "Orden: {key}, {direction}",
+  "Open the sample photo “{title}”": "Abrir la foto de muestra «{title}»",
+  "Or explore LightCraft with {n} sample photos": "O explora LightCraft con {n} fotos de muestra",
+  "Press {key} to compare before and after.": "Pulsa {key} para comparar el antes y el después.",
+  "Press {key} to see it beside the original.": "Pulsa {key} para verla junto al original.",
+  "Removed {n} sample photos. Edit → Undo brings them back.": "Fotos de muestra quitadas: {n}. Editar → Deshacer las recupera.",
+  "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.": "Siguen en curso y no se pueden detener: {names}. Salir ahora no las espera.",
+  " · {} damaged": " · dañadas: {}",
+  "Copied {n} file paths": "{n} rutas de archivo copiadas",
+  "Photos waiting: {n}": "Fotos en espera: {n}",
+  "{toast} · {n} photos": "{toast} · {n} fotos"
 }

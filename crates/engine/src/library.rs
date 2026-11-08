@@ -828,6 +828,8 @@ impl Session {
         self.active_mask = None;
         self.active_spot = None;
         self.before.clear();
+        // (the orders of the last library's shuffles don't exist in this one)
+        self.shuffle_history.clear();
         if report.created && seed_demo {
             crate::demo::load(self);
             journal.snapshot(&self.catalog)?;
@@ -941,7 +943,9 @@ impl Session {
             }
             self.sort = v.sort;
             self.selection = v.selection;
-            self.selection.ids.retain(|id| self.catalog.photo(*id).is_some());
+            // each photo once: the file is plain JSON, and a selection never repeats one
+            let mut seen = std::collections::HashSet::new();
+            self.selection.ids.retain(|id| self.catalog.photo(*id).is_some() && seen.insert(*id));
             self.selection.active = self.selection.active.filter(|id| self.catalog.photo(*id).is_some());
         }
         // the saved view may name an album the library no longer has

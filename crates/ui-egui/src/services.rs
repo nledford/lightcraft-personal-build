@@ -38,6 +38,12 @@ pub type ScreenProfileFn = Box<dyn FnMut() -> Option<Vec<u8>>>;
 /// Whether the system asks for reduced motion (`None`: not known).
 pub type SystemReduceMotionFn = Box<dyn FnMut() -> Option<bool>>;
 
+/// Whether the system asks for increased contrast (`None`: not known).
+pub type SystemIncreaseContrastFn = Box<dyn FnMut() -> Option<bool>>;
+
+/// Whether the system asks for reduced transparency (`None`: not known).
+pub type SystemReduceTransparencyFn = Box<dyn FnMut() -> Option<bool>>;
+
 /// Whether an external editor can be started (its name as in [`Services::open_with`]); the
 /// error says why not and what to do (e.g. PhotoCraft isn't installed).
 pub type CheckEditorFn = Box<dyn Fn(&str) -> Result<(), String>>;
@@ -56,10 +62,15 @@ pub type SystemThemeFn = Box<dyn Fn(&egui::Context) -> Option<egui::Theme>>;
 pub struct Services {
     /// Local's built-in places as (label, path). None uses the host's home folder.
     pub local_places: Option<Vec<(String, String)>>,
-    /// Native file dialogs for commands, shown off the UI thread and answered later
-    /// (`pick`; #191). With it, the synchronous pickers below serve only the buttons inside
-    /// dialogs; without it (the web, tests) they answer the commands too.
+    /// Native file dialogs for commands, shown without blocking the UI and answered later
+    /// (`pick`; #191): on a thread of their own, on macOS as a sheet of the window. With it, the
+    /// synchronous pickers below serve only the buttons inside dialogs; without it (the web,
+    /// tests) they answer the commands too.
     pub picker: Option<pick::Picker>,
+    /// Set where [`Services::picker`]'s dialogs are sheets of the window (macOS): a request made
+    /// while a dialog is up waits until it has closed, instead of a second dialog being shown
+    /// over the first (`pick`; #3735).
+    pub picker_one_at_a_time: bool,
     /// Show an open dialog for photos; returns paths.
     pub pick_files: Option<PickFiles>,
     /// Local ONNX model; a manifest must accompany it.
@@ -68,7 +79,7 @@ pub struct Services {
     pub pick_model_file: Option<PickFiles>,
     /// Open dialog for preset files (`.lcpreset`, `.xmp`, `.lrtemplate`, `.zip`, `.dng`, Luminar `.lmp` / `.mplumpack`).
     pub pick_preset_files: Option<PickFiles>,
-    /// Open dialog for a GPS track log (`.gpx`; Photo ▸ Auto-Tag from Tracklog…).
+    /// Open dialog for a GPS track log (`.gpx`; Photo ▸ Metadata ▸ Auto-Tag from Tracklog…).
     pub pick_tracklog: Option<PickFiles>,
     /// Open dialog for a monitor ICC profile (`.icc` / `.icm`; Settings ▸ Monitor; desktop only).
     pub pick_display_profile: Option<PickFiles>,
@@ -80,6 +91,12 @@ pub struct Services {
     /// has not been changed by the user; read at most once a second, on frames the app draws (an idle
     /// window notices on its next input), as people switch it while the app runs.
     pub system_reduce_motion: Option<SystemReduceMotionFn>,
+    /// The system's Increase Contrast setting (macOS), followed while Settings ▸ Interface ▸ Increase
+    /// contrast has not been changed by the user; read at most once a second, like Reduce Motion.
+    pub system_increase_contrast: Option<SystemIncreaseContrastFn>,
+    /// The system's Reduce Transparency setting (macOS), followed while Settings ▸ Interface ▸ Reduce
+    /// transparency has not been changed by the user; read at most once a second, like Reduce Motion.
+    pub system_reduce_transparency: Option<SystemReduceTransparencyFn>,
     /// Save dialog for an exported `.lcpreset` file.
     pub save_preset_file: Option<SaveFile>,
     /// Open dialog for a keyword list file (`.txt`, Photo Supreme's `.utf8`; File ▸ Import Keywords…).

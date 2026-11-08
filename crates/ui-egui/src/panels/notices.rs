@@ -1,6 +1,6 @@
 //! Things the user must not miss (issue #103): settings files that were damaged or unreadable when
 //! the library opened (and host warnings such as a damaged `ui.json`), and quitting while changes
-//! are only in memory or while tasks that would be cut short are running (issue #345). Also, once
+//! are only in memory or while tasks are running (issue #345). Also, once
 //! per session, that the drive holding the preview cache is running low ([`disk_space_notice`]).
 
 use egui::{Align2, RichText};
@@ -106,28 +106,53 @@ pub fn disk_space_notice(alert: &lightcraft_engine::disk_space::LowDiskAlert) ->
     )
 }
 
-/// The quit prompt's text while `count` cancellable tasks run (`names` lists them) and `waiting` tasks wait in line.
-fn tasks_message(count: usize, names: &str, waiting: usize) -> String {
-    let text = match count {
-        0 => String::new(),
-        1 => crate::i18n::tr_format!("1 task is still running: {names}. Quitting stops it.", names = names),
-        n => crate::i18n::tr_format!("{n} tasks are still running: {names}. Quitting stops them.", n = n, names = names),
-    };
-    if waiting == 0 {
-        return text;
+/// The quit prompt's text for the running tasks: the ones that stop when the app quits (`stops`) and the ones that can't
+/// be stopped and that quitting doesn't wait for (`unstoppable`), each a list of names; and `waiting` tasks waiting in
+/// line, which won't run.
+fn tasks_message(stops: &[String], unstoppable: &[String], waiting: usize) -> String {
+    let mut lines = Vec::new();
+    if let [one] = stops {
+        lines.push(crate::i18n::tr_format!("1 task is still running: {names}. Quitting stops it.", names = one));
+    } else if !stops.is_empty() {
+        lines.push(crate::i18n::tr_format!("{n} tasks are still running: {names}. Quitting stops them.", n = stops.len(), names = stops.join(", ")));
     }
-    // (nothing waits across a quit: the files may change before the next launch)
-    let line = if waiting == 1 {
-        crate::i18n::tr("1 task waiting in line won't run.").to_string()
-    } else {
-        crate::i18n::tr_format!("{n} tasks waiting in line won't run.", n = waiting)
-    };
-    // (sentences that end in a full-width stop are not followed by a space)
-    match text.chars().last() {
-        None => line,
-        Some('。') => format!("{text}{line}"),
-        Some(_) => format!("{text} {line}"),
+    if waiting > 0 {
+        // (nothing waits across a quit: the files may change before the next launch)
+        let line = if waiting == 1 {
+            crate::i18n::tr("1 task waiting in line won't run.").to_string()
+        } else {
+            crate::i18n::tr_format!("{n} tasks waiting in line won't run.", n = waiting)
+        };
+        match lines.last_mut() {
+            None => lines.push(line),
+            // (sentences that end in a full-width stop are not followed by a space)
+            Some(text) if text.ends_with('。') => text.push_str(&line),
+            Some(text) => {
+                text.push(' ');
+                text.push_str(&line);
+            }
+        }
     }
+    if !unstoppable.is_empty() {
+        lines.push(crate::i18n::tr_format!(
+            "Still running and can't be stopped: {names}. Quitting now doesn't wait for them.",
+            names = unstoppable.join(", ")
+        ));
+    }
+    lines.join("\n")
+}
+
+/// The quit goes through: the jobs that can stop are asked to, the ones that can't are what the prompt said it doesn't
+/// wait for, and files waiting for an import, or handed to one that has not started, are given up (the quit would
+/// otherwise start them). Not before: Cancel on a later prompt (the backup's) is back to work with everything still
+/// running and waiting.
+fn quit_now(app: &mut LightcraftApp) {
+    app.session.activity.cancel_all();
+    app.waiting_import = Default::default();
+    if app.import.as_ref().is_some_and(|t| !t.listed()) {
+        app.import = None;
+    }
+    app.ui.quit = true;
 }
 
 /// The quit prompt's text when `n` changes couldn't be written to disk, for the reason `e`.
@@ -137,31 +162,44 @@ fn unsaved_message(n: usize, e: &str) -> String {
     crate::i18n::tr_format!("{n} change{} couldn't be written to disk: {e}\nIf you quit now, {} lost.", s, lost, n = n, e = e)
 }
 
-/// The window may close now (`true`), or the quit prompt is shown (`false`). Running tasks that
-/// can be cancelled (an import, an export…) and tasks waiting in line (they would not run) are
-/// asked about first; then the library is backed up where that was chosen for quitting; then
-/// changes that couldn't be written are retried — the log, then a snapshot of everything in memory.
+/// The window may close now (`true`), or the quit prompt is shown (`false`). Every running task is asked about first (an
+/// import, an export… stop when the app quits; the ones with no ✕ are named as not waited for), with the tasks waiting
+/// in line (they would not run); then the library is backed up where that was chosen for quitting; then changes that
+/// couldn't be written are retried — the log, then a snapshot of everything in memory.
 pub fn may_close(app: &mut LightcraftApp) -> bool {
     if app.quit_confirmed {
         return true;
     }
-    // before the library is touched: a Cancel here keeps working with it
-    let running = tasks_quitting_would_stop(app);
-    let mut names = running.iter().map(|t| crate::i18n::tr(&t.label)).collect::<Vec<_>>();
+    // before the library is touched: a Cancel here keeps working with it; asked once per quit (Quit Anyway is the answer)
+    let running = if app.quit_tasks_answered { Vec::new() } else { tasks_quitting_would_stop(app) };
+    let (stops, unstoppable): (Vec<_>, Vec<_>) = running.iter().partition(|t| t.cancellable);
+    let names = |tasks: Vec<&lightcraft_engine::activity::TaskInfo>| tasks.iter().map(|t| crate::i18n::tr(&t.label).to_string()).collect::<Vec<_>>();
+    let (mut stops, unstoppable) = (names(stops), names(unstoppable));
     // an import handed its files this tick (files that waited for a library, #2779) is listed only
     // from its first tick on, and files still waiting will be imported too
-    let unlisted = app.import.as_ref().is_some_and(|t| !t.listed()) || !app.waiting_import.files.is_empty();
+    let unlisted = !app.quit_tasks_answered && (app.import.as_ref().is_some_and(|t| !t.listed()) || !app.waiting_import.files.is_empty());
     if unlisted && !running.iter().any(|t| t.kind == "import") {
-        names.push(crate::i18n::tr("Importing"));
+        stops.push(crate::i18n::tr("Importing").to_string());
     }
-    let waiting = app.session.activity.waiting().len();
-    if !names.is_empty() || waiting > 0 {
-        app.quit_prompt = Some(QuitPrompt::Tasks(tasks_message(names.len(), &names.join(", "), waiting)));
+    let waiting = if app.quit_tasks_answered { 0 } else { app.session.activity.waiting().len() };
+    if !stops.is_empty() || !unstoppable.is_empty() || waiting > 0 {
+        app.quit_prompt = Some(QuitPrompt::Tasks(tasks_message(&stops, &unstoppable, waiting)));
         return false;
     }
     if !backed_up_for_quitting(app) {
         return false;
     }
+    // the window closes: whoever answered the jobs prompt earlier (Quit Anyway) is still owed the stop it promised
+    let may = unsaved_may_close(app);
+    if may {
+        app.session.activity.cancel_all();
+    }
+    may
+}
+
+/// [`may_close`] for what is left once the running tasks were asked about and the backup is made: changes that couldn't
+/// be written.
+fn unsaved_may_close(app: &mut LightcraftApp) -> bool {
     // what the catalog log's thread was handed is written first, and what it holds read now: a
     // change it accepted but hasn't written yet must not pass for saved (review of #3557)
     let flushed = app.session.flush_log();
@@ -207,7 +245,7 @@ fn backup_is_ahead(app: &LightcraftApp) -> bool {
 /// one of them while this quit has its own backup ahead: it is the one the quit waits for. (A
 /// backup of another library, still running after a switch, is asked about like any task.)
 fn tasks_quitting_would_stop(app: &LightcraftApp) -> Vec<lightcraft_engine::activity::TaskInfo> {
-    let mut running = app.session.activity.running_cancellable();
+    let mut running = app.session.activity.running();
     if backup_is_ahead(app) && backup_under_way(app) {
         let awaited = lightcraft_engine::cmd::backup::status(&app.session).and_then(|b| app.session.activity.id_of(&b.cancel));
         running.retain(|t| Some(t.id) != awaited);
@@ -275,6 +313,8 @@ fn backup_failed(app: &mut LightcraftApp, why: &str) {
 fn quit_called_off(app: &mut LightcraftApp) {
     app.quit_prompt = None;
     app.quit_backup = QuitBackup::Undecided;
+    // back to work: the next quit asks about the jobs again
+    app.quit_tasks_answered = false;
 }
 
 /// Go on with a quit that waits for its backup ([`QuitBackup::Running`]) once the backup has
@@ -688,7 +728,7 @@ fn window(ctx: &egui::Context, id: &str, title: &str, text: &str, buttons: &[(&s
             ctx.request_discard("notice dim: settle the modal hit area before input");
         }
         ui.allocate_rect(screen, egui::Sense::click_and_drag());
-        ui.painter().rect_filled(screen, 0.0, egui::Color32::from_black_alpha(140));
+        ui.painter().rect_filled(screen, 0.0, crate::transparency::scrim(ui.ctx(), 140));
     });
     // The dim (with its full-screen hit area) is the modal scope; the prompt window below is moved
     // above it. Everything below the dim, including a Middle-order Settings dialog, is then
@@ -833,25 +873,13 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
         };
         app.quit_prompt = None;
         if buttons.get(i).is_some_and(|(_, _, choice)| *choice == Choice::QuitAnyway) {
-            // (not the backup this quit waits for: see `tasks_quitting_would_stop`)
-            for task in tasks_quitting_would_stop(app) {
-                // (one that ended meanwhile has nothing left to stop)
-                let _ = app.session.activity.cancel(task.id);
-            }
-            // tasks waiting in line would not run once the window closes (the question said so), and `may_close` would
-            // ask about them again; the backup this quit waits for is not in the line
-            for task in app.session.activity.waiting() {
-                let _ = app.session.activity.cancel(task.id);
-            }
-            // files waiting for an import, and one handed its files but not started, are given up
-            // too, or `may_close` would ask about them again
-            app.waiting_import = Default::default();
-            if app.import.as_ref().is_some_and(|t| !t.listed()) {
-                app.import = None;
-            }
-            // the backup and unsaved changes still get their own questions
+            // the jobs are not asked about again for this quit: the ones with no ✕ are still running when the window's
+            // close request or Try Saving Again comes back through `may_close`
+            app.quit_tasks_answered = true;
+            // the backup and unsaved changes still get their own questions; the jobs are asked to stop only once the
+            // quit goes through (not the backup this quit waits for: `tasks_quitting_would_stop`)
             if may_close(app) {
-                app.ui.quit = true;
+                quit_now(app);
             }
         } else {
             quit_called_off(app);
@@ -877,13 +905,13 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
                 app.notice_input.reset_to(None);
                 clear_prompt_focus(ctx);
                 if may_close(app) {
-                    app.ui.quit = true;
+                    quit_now(app);
                 }
             }
             Some(Choice::QuitAnyway) => {
                 app.quit_prompt = None;
                 app.quit_confirmed = true;
-                app.ui.quit = true;
+                quit_now(app);
             }
             Some(Choice::Cancel | Choice::Ok | Choice::Settings | Choice::BackUp | Choice::Skip) | None => quit_called_off(app),
         }

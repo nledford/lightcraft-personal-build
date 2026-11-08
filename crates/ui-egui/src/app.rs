@@ -5,12 +5,10 @@ use super::{
     AiModel, Caches, CommandError, ControlRequest, ControlResponse, ERROR_TOAST_SECONDS, ErrorKind, GESTURE_TIMEOUT_MS, LightcraftApp,
     MAX_PENDING_GESTURES, MAX_PENDING_SHOTS, MAX_SHOT_BYTES, MAX_SHOT_TOTAL_BYTES, MAX_TEXTURE_SIDE, PendingGesture, PendingShot, Perf, QuitBackup,
     REFUSAL_SECONDS, Receiver, Refusal, SCREEN_PROFILE, SCREENSHOT_FALLBACK_MS, SCREENSHOT_SETTLE_MS, SHOT_FORCE_BUSY_MS, SHOT_SETTLE_FRAMES,
-    SHOT_SETTLE_MS, Sender, Session, ShotGeometry, TOAST_SECONDS, UNDO_TOAST_SECONDS, UiState, Value, docking, drop_overlay, export_task, focus_scan,
-    frame_rate, headless, i18n, import, lightroom_import, menus, merge, panels, pick, recheck, refusal_toast, render, shortcuts, slideshow_export,
-    state, sync, tasks, theme, updates_ui, widgets,
-};
+    SHOT_SETTLE_MS, Sender, Session, ShotGeometry, TOAST_SECONDS, UNDO_TOAST_SECONDS, UiState, Value, docking, drop_overlay, export_task, focus_scan, frame_rate, headless, i18n, import, lightroom_import, menus, merge, panels, pick, recheck, refusal_toast, render, shortcuts, slideshow_export, state, sync, tasks, theme, updates_ui, widgets, TOAST_READ_SECONDS, };
 
 mod control;
+mod cull_toast;
 mod frame;
 mod input;
 mod prefs;
@@ -40,6 +38,7 @@ impl LightcraftApp {
             native_shortcuts: Default::default(),
             recording_shortcut: None,
             text_focus: false,
+            plain_button_focus: false,
             headless_host: false,
             backs_up_by_itself: true,
             notices: vec![],
@@ -51,6 +50,7 @@ impl LightcraftApp {
             quit_backup: QuitBackup::default(),
             egui_ctx: None,
             edit_saves_refused: (0, Vec::new()),
+            quit_tasks_answered: false,
             control_rx: None,
             pending_screenshots: vec![],
             pending_gestures: vec![],
@@ -154,6 +154,12 @@ impl LightcraftApp {
             screen_profile_read: None,
             system_reduce_motion: None,
             system_reduce_motion_read: None,
+            system_increase_contrast: None,
+            system_increase_contrast_read: None,
+            system_reduce_transparency: None,
+            system_reduce_transparency_read: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            sidecars_row: None,
             library_problem: None,
             library_window_input: Default::default(),
             alt_asks_for_library: false,
@@ -161,6 +167,14 @@ impl LightcraftApp {
             activity_open: false,
             activity_set: None,
             activity_failures: None,
+            samples_present: None,
+            welcome_seen: None,
+            welcome_samples: None,
+            welcome_drawn: false,
+            welcome_focused: false,
+            samples_landed: None,
+            samples_tour: Default::default(),
+            samples_tour_base: None,
         }
     }
 
@@ -243,14 +257,28 @@ impl LightcraftApp {
     pub(crate) fn act_told(&mut self, id: &str, params: Value) -> Result<Value, String> {
         let before = self.ui.toast.clone();
         self.run_told(id, params).map_err(|refusal| {
-            let now = self.tick_now();
-            // A toast the command made itself (a partial import report) says what did happen:
-            // keep it ahead of the reason rather than replacing it.
-            let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
-            let said = refusal_toast(made, &refusal);
-            self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
+            self.tell_refusal(before, &refusal);
             refusal.error
         })
+    }
+
+    /// Say why something the person asked for did not happen, as [`Self::act`] does for a refused
+    /// command: for a key whose menu row is off, which never reaches a command. `why` is a reason
+    /// in the engine's words; the toast says it as a sentence in the interface's language.
+    pub fn refuse(&mut self, why: &str) {
+        let before = self.ui.toast.clone();
+        let refusal = Refusal { why: crate::sentence(why), error: why.to_string(), kind: lightcraft_engine::ErrorKind::Other };
+        self.tell_refusal(before, &refusal);
+    }
+
+    /// The toast for `refusal`; `before` is the toast shown when the attempt began.
+    fn tell_refusal(&mut self, before: Option<crate::toast::Toast>, refusal: &Refusal) {
+        let now = self.tick_now();
+        // A toast the command made itself (a partial import report) says what did happen:
+        // keep it ahead of the reason rather than replacing it.
+        let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
+        let said = refusal_toast(made, refusal);
+        self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
     }
 
     /// Run a command whose refusal is expected here and means nothing to the person (it is
@@ -277,7 +305,23 @@ impl LightcraftApp {
         } else {
             params
         };
+        // the samples' folder named in the interface's language, unless the caller names it
+        let params = if id == "library.addSamples" && params.get("folder").is_none_or(Value::is_null) {
+            let mut p = if params.is_object() { params } else { serde_json::json!({}) };
+            p["folder"] = serde_json::json!(i18n::tr(lightcraft_engine::demo::SAMPLES_FOLDER));
+            p
+        } else {
+            params
+        };
+        // samples coming into an empty library, however they are asked for, land on one in Detail
+        // (the welcome showing: not a Local folder or Recently Deleted of an otherwise empty library)
+        let landing = id == "library.addSamples" && panels::empty_library::shown(&self.session);
+        // the photos a rating, flag or label command acts on, read before it moves the selection on
+        let cull_targets = cull_toast::targets(self, id, &params);
         let r = self.session.execute(id, &params).map_err(Refusal::from);
+        if r.is_ok() && landing {
+            panels::empty_library::land_on_samples(self);
+        }
         if r.is_ok() && matches!(id, "crop.aspect" | "crop.rotateAspect") {
             self.ui.crop_default_aspect = if id == "crop.aspect" && params.get("aspect").and_then(Value::as_str) == Some("original") {
                 Some(serde_json::json!("original"))
@@ -314,30 +358,31 @@ impl LightcraftApp {
         if r.is_ok() {
             // These commands finish synchronously, so their completion would otherwise
             // be invisible once the activity stack is gone. Never show success on error.
+            let added = r.as_ref().ok().filter(|_| id == "library.addSamples").map(|v| {
+                let n = v["added"].as_u64().unwrap_or(0);
+                let folder = v["folder"].as_str().unwrap_or_default();
+                i18n::tr_format!("Added {n} sample photos, with albums under “{folder}” and keywords to try", n = n, folder = folder)
+            });
             let completed = match id {
                 "library.compact" => Some(format!("✓ {}", i18n::tr("Optimize Library"))),
                 "library.clearPreviews" => Some(format!("✓ {}", i18n::tr("Discard Preview Cache"))),
                 "develop.autoSync" => Some(format!("{}: {}", i18n::tr("Auto Sync"), i18n::tr(if self.session.auto_sync { "On" } else { "Off" }))),
                 _ => None,
             };
-            if let Some(message) = completed {
+            // (where the samples' albums went is a message to read: it stays as long as one that
+            // says where to look)
+            let completed = completed.map(|m| (m, TOAST_SECONDS)).or(added.map(|m| (m, TOAST_READ_SECONDS)));
+            if let Some((message, secs)) = completed {
                 let now = self.tick_now();
-                self.ui.show_toast(now, message, TOAST_SECONDS, None);
+                self.ui.show_toast(now, message, secs, None);
             }
         }
-        if r.is_ok() && matches!(id, "photo.label" | "photo.clearLabel") {
-            // Clear Color Label takes no colour: whatever `label` it is given, the photo's label is cleared
-            let label = params.get("label").and_then(Value::as_str).and_then(lightcraft_catalog::ColorLabel::parse).filter(|_| id == "photo.label");
-            let text = match label {
-                Some(label) => {
-                    let name =
-                        self.session.catalog.custom_label_name(label).map(str::to_owned).unwrap_or_else(|| i18n::tr(&format!("{label:?}")).into());
-                    i18n::tr_format!("{name} Label", name = name)
-                }
-                None => i18n::tr("Color label cleared").into(),
-            };
+        if r.is_ok()
+            && let Some(targets) = cull_targets
+            && let Some((text, color)) = cull_toast::feedback(self, id, &params, &targets)
+        {
             let now = self.tick_now();
-            self.ui.show_toast(now, text, TOAST_SECONDS, label);
+            self.ui.show_toast(now, text, TOAST_SECONDS, color);
         }
         match &r {
             Err(refusal) => {
@@ -917,6 +962,20 @@ impl LightcraftApp {
         panels::left::follow_shown(self, ctx);
         self.logic_background(ctx);
         self.perf.logic_ms = monotonic_ms() - t0;
+    }
+
+    /// Who has the keyboard as the frame ends: a text field (`text_focus`: the native menu leaves it its letters and edit
+    /// keys) or a plain button (not a text field the person is typing in, but Esc there still only lets go).
+    /// The native menu reads `text_focus` in the next frame's `logic`, and egui draws no frame until the next
+    /// input when nothing asks for one: a change asks for it, so the menu's letters follow the focus now, not at
+    /// the key's release (Shift+Tab from a plain button into a field).
+    pub(crate) fn note_keyboard_owner(&mut self, ctx: &egui::Context) {
+        let before = self.text_focus;
+        self.plain_button_focus = widgets::plain_button_has_focus(ctx);
+        self.text_focus = ctx.egui_wants_keyboard_input() && !self.plain_button_focus;
+        if self.text_focus != before {
+            ctx.request_repaint();
+        }
     }
 
     /// Frame timings once layout is done (`t0`: when layout started).

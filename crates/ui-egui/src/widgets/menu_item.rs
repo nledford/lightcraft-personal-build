@@ -15,9 +15,9 @@ use crate::theme::Tokens;
 
 /// Height of every row.
 pub const ROW_H: f32 = 22.0;
-const PAD: f32 = 8.0;
-const SLOT: f32 = 16.0;
-const GAP: f32 = 6.0;
+pub(crate) const PAD: f32 = 8.0;
+pub(crate) const SLOT: f32 = 16.0;
+pub(crate) const GAP: f32 = 6.0;
 const KEYS_GAP: f32 = 24.0;
 const MARK: f32 = 13.0;
 
