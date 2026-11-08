@@ -44,6 +44,8 @@ mod scan;
 mod types;
 
 pub use commit::{batch_size, civil, commit_prepared, system_clock};
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use commit::workers;
 pub use defaults::{CameraDefault, ImportDefaults, ReadDialog, ReadLast, apply_import_defaults, has_import_look, import_defaults};
 #[cfg(test)]
 use files::expand_knowing;
