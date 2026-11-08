@@ -482,7 +482,12 @@ impl<'a> Button<'a> {
         // drawn outside the button (the painter above leaves room for it) because a button has its own
         // fill and border to keep whole; the plainer widget buttons draw theirs inside their rect.
         if resp.has_focus() {
-            p.rect_stroke(rect.expand(2.0), radius + 2.0, crate::widgets::focus_stroke(&t), StrokeKind::Outside);
+            if crate::widgets::in_text_focus_look(ui, &t) {
+                // (in Settings, whose focus has one look whatever the control, it is inside the rect, as round a tab or a choice)
+                crate::widgets::focus_ring_in(ui, &t, &resp, rect);
+            } else {
+                p.rect_stroke(rect.expand(2.0), radius + 2.0, crate::widgets::focus_stroke(&t), StrokeKind::Outside);
+            }
         }
         let galley = self.galley(ui);
         let icon_s = self.size.icon();

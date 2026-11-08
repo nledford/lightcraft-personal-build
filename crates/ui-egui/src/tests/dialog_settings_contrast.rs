@@ -220,20 +220,17 @@ fn the_lines_that_say_where_a_control_is_stand_out_in_every_theme() {
         );
         let share = edge_share(&image, edge, t.chrome, 3.0, true);
         assert!(share >= STRAIGHT, "{kind:?}: only {share:.2} of a button's border stands 3:1");
-        // A text button's border (the tab bar's, and a row of choices: Preview size), which are drawn by
-        // `widgets::text_button`, not by egui's button: the top edge of one that is not chosen
-        for (what, id) in [("a tab", "button:settingsTab-general"), ("a choice", "button:settingsPreview-1")] {
-            show(&mut h, "performance");
-            scroll_to_start(&mut h);
-            let image = h.paint();
-            let button = rect(&h, id);
-            let edge = egui::Rect::from_min_max(
-                egui::pos2(button.center().x - 12.0, button.top() - 1.0),
-                egui::pos2(button.center().x + 12.0, button.top() + 2.0),
-            );
-            let share = edge_share(&image, edge, t.chrome, 3.0, true);
-            assert!(share >= STRAIGHT, "{kind:?}: only {share:.2} of {what}'s border stands 3:1");
-        }
+        // A text button's border (a row of choices: Preview size), which is drawn by `widgets::text_button`,
+        // not by egui's button: the top edge of one that is not chosen. (A tab has none: it is its name on
+        // the window, with a line under it where it is open.)
+        show(&mut h, "performance");
+        scroll_to_start(&mut h);
+        let image = h.paint();
+        let button = rect(&h, "button:settingsPreview-1");
+        let edge =
+            egui::Rect::from_min_max(egui::pos2(button.center().x - 12.0, button.top() - 1.0), egui::pos2(button.center().x + 12.0, button.top() + 2.0));
+        let share = edge_share(&image, edge, t.chrome, 3.0, true);
+        assert!(share >= STRAIGHT, "{kind:?}: only {share:.2} of a choice's border stands 3:1");
         // A checkbox's border: the left edge of its box (unticked: the GPU is off here)
         show(&mut h, "performance");
         let image = h.paint();
