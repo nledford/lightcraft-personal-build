@@ -78,7 +78,7 @@ from the checklist sections and the deep-dive documents.
 | Merge and HDR | 3% | 85% | 60% | 20–35 h | merge 88% (HDR merge 🟡: AI Denoise on merged DNGs, JPEG response, memory; gap 29), HDR 70% (no HDR display) |
 | Views, compare, zoom, culling | 5% | 90% | 70% | 15–30 h | zoom detail P0 gap |
 | Classic output modules (Map, Book, Slideshow, Print, Web, publish, tethering) | 4% | 15% | 10% | 90–150 h | Classic extras 48% counts many small keys; the modules themselves are mostly ⬜ |
-| Video | 1% | 0% | 0% | 25–45 h | catalogued only |
+| Video | 1% | 10% | 10% | 20–40 h | imported and catalogued (kind, duration, dimensions, date, camera/GPS), with format/duration badges and a loupe card; no playback, trim, edits or export |
 | **Weighted** | 100% | **~77%** | **~62%** (62.2%) | **600–1,100 h** | |
 
 ## AI
@@ -301,8 +301,13 @@ P2 items 12–25 h; look tuning, performance, packaging, hardening 25–45 h.
 |---|---|---|
 | 2026-11-07 | correction | Compressed ORF sensor support withdrawn pending provenance review; embedded preview fallback remains. Coverage regenerated without the removed decoder: 557 verified, 665 unverified, 187 preview-only, 37 unsupported; 94% use-weighted coverage. |
 | 2026-11-04 | minor | Compressed ORF support was introduced in #3775; subsequently withdrawn pending provenance review. Earlier clean-room and verification claims are withdrawn; compressed files use embedded previews when available. See [ORF status](orf-compression.md). |
+| 2026-11-01 | patch | Gap 18 review: Remove Location reads the QuickTime metadata layouts the catalog reads (`trak`/`mdia` `udta`, mdta `meta`), treats cleared location atoms as no location, and refuses an XMP property inventory a size limit cut short (video and image Originals) instead of reading the omission as absence. Scope, hours and headline counts unchanged |
 | 2026-10-24 | patch | Stability, the stability discount, the Beta-needs list and the estimate history: tests run in CI on Linux x64 since #2667 (FreeBSD nightly), not on macOS or Windows (gap 9); percentages and hours unchanged |
 | 2026-10-23 | minor | AI Denoise runs without a model (built-in denoiser); percentages unchanged, since it is a classical filter and Bayer-only |
+| 2026-10-27 | patch | Original file admission is independent of cache budgets; physical/platform capacity and allocation checks replace the cache-derived threshold. Browser caching avoids the handoff copy. Breadth, readiness and hours unchanged |
+| 2026-10-27 | patch | Video review audit: content-based bounded probes, truthful CLI no-output errors and configurable buffering budgets without an arbitrary per-file limit. Breadth, readiness and hours unchanged |
+| 2026-10-27 | patch | Video: streamed Original copies and browser Blobs without a clip-size cap; location-free clips pass Remove Location verification, GPS-bearing or unverifiable metadata fails; legacy filtering fixed. Breadth, readiness, remaining work and hours unchanged |
+| 2026-10-23 | minor | Video: MP4/MOV/M4V import and cataloguing (duration, dimensions, capture date, camera/GPS), grid format/duration badges and a loupe card; Video breadth and readiness 0% → 10%, remaining 25–45 → 20–40 h; headline numbers unchanged |
 | 2026-10-13 | minor | Canon CRW decoded (clean-room, craft-libs `crates/crw/clean-room/`): 551 models verified with the coverage sweep (557 with MRW after merging main), Canon preview rows 21 → 6; RAW decoding unchanged |
 | 2026-10-19 | patch | Stability note: tests run in CI on Linux x64 (every PR) as well as FreeBSD; macOS and Windows remain (gap 9) |
 | 2026-10-19 | minor | Localization ~55% → ~64% (mean of the 12 key languages): Indonesian (`id`) catalog, every message but What's New; full target 61.2% → 61.5% (still ~61%) |

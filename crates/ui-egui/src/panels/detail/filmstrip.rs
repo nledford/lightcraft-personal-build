@@ -130,6 +130,8 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
             crate::panels::grid::request_thumb(app, *id, (256.0 * ppp.min(2.0) / 2.0) as usize * 2, 8);
             let mut badge = None;
             if let Some(photo) = app.session.catalog.photo(*id).cloned() {
+                // a catalogued clip has no frame to decode: its tile is not a failed photo's
+                let is_video = photo.is_video();
                 let (photo_rect, failure) = if let Some(tex) = app.renderer.thumb(*id) {
                     let [tw, th] = tex.size;
                     let s = (img_area.width() / tw as f32).min(img_area.height() / th as f32);
@@ -139,9 +141,9 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                     (fr, None)
                 } else {
                     let ph = crate::thumb::placeholder_rect(img_area, crate::panels::grid::photo_aspect(Some(&*photo)));
-                    crate::thumb::paint_placeholder(p, ph, &t);
+                    paint_missing_frame(p, &t, ph, is_video);
                     crate::panels::grid::selection_ring(p, &t, ph, state);
-                    (ph, app.renderer.failure(crate::render::Slot::Thumb(*id)).map(str::to_owned))
+                    (ph, app.renderer.failure(crate::render::Slot::Thumb(*id)).filter(|_| !is_video).map(str::to_owned))
                 };
                 let stack = app.session.catalog.stack_of(*id).map(|st| (st.id, st.position(*id).unwrap_or(0)));
                 let overlay = crate::thumb::Thumb {
@@ -156,6 +158,30 @@ pub(crate) fn filmstrip(app: &mut LightcraftApp, ui: &mut egui::Ui, r: Rect) {
                     surround: true,
                 };
                 badge = crate::thumb::overlay(app, ui, &overlay);
+            }
+            // A catalogued video has no frame yet: its icon and running time read it at a glance
+            // in the strip too (the grid and the loupe show the same badges and card).
+            if let Some(ph) = app.session.catalog.photo(*id).filter(|p| p.is_video()) {
+                let p = ui.painter();
+                if app.renderer.thumb(*id).is_none() {
+                    crate::icons::paint(p, Rect::from_center_size(img_area.center(), vec2(24.0, 24.0)), crate::icons::Icon::Video, t.text_dim);
+                }
+                if let Some(d) = ph.duration {
+                    let text = crate::widgets::format_duration(d);
+                    if !text.is_empty() {
+                        let g = p.layout_no_wrap(text, t.semibold(9.0), Color32::WHITE);
+                        let w = g.size().x + 20.0;
+                        let br = Rect::from_min_size(pos2(img_area.right() - w - 2.0, img_area.bottom() - 16.0), vec2(w, 14.0));
+                        p.rect_filled(br, 3.0, Color32::from_black_alpha(175));
+                        crate::icons::paint(
+                            p,
+                            Rect::from_center_size(pos2(br.left() + 8.0, br.center().y), vec2(9.0, 9.0)),
+                            crate::icons::Icon::Video,
+                            Color32::WHITE,
+                        );
+                        p.galley(pos2(br.left() + 14.0, br.center().y - g.size().y / 2.0), g, Color32::WHITE);
+                    }
+                }
             }
             if resp.clicked() {
                 let m = ui.input(|i| i.modifiers);
@@ -207,5 +233,16 @@ pub(crate) fn film_spoken(file_name: &str, failed: bool) -> String {
         (_, false) => file_name.to_string(),
         (true, true) => crate::i18n::tr("This photo can't be opened").to_string(),
         (false, true) => format!("{file_name}, {}", crate::i18n::tr("This photo can't be opened")),
+    }
+}
+
+/// The placeholder a cell shows while its frame is not ready: a catalogued clip's dark tile, which
+/// has no frame to decode yet and must not read as a failed photo, or a photo's skeleton (the
+/// overlay marks a failed thumbnail).
+fn paint_missing_frame(p: &egui::Painter, t: &Tokens, rect: Rect, video: bool) {
+    if video {
+        p.rect_filled(rect, 0.0, Color32::from_gray(30));
+    } else {
+        crate::thumb::paint_placeholder(p, rect, t);
     }
 }
