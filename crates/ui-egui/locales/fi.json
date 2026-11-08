@@ -2501,5 +2501,9 @@
   "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.": "Pikkukuvat ja esikatselut tehdään uudelleen selatessasi, mikä kestää hetken suuressa kirjastossa. Kuviasi ja muokkauksiasi ei kosketa.",
   "Model installation failed": "Mallin asennus epäonnistui",
   "starting…": "käynnistyy…",
-  "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Kuva > Muokkaa ohjelmassa > Muokkaa PhotoCraftissa (⇧⌘E tai napsauta kuvaa hiiren kakkospainikkeella) renderöi kopion muokkauksineen, pinoaa sen alkuperäisen kanssa ja avaa sen PhotoCraftissa. Tallenna siellä, niin kopio päivittyy täällä. PSD-muodossa PhotoCraft tallentaa suoraan siihen. Jätä sijainti tyhjäksi, ellet käytä kannettavaa kopiota."
+  "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Kuva > Muokkaa ohjelmassa > Muokkaa PhotoCraftissa (⇧⌘E tai napsauta kuvaa hiiren kakkospainikkeella) renderöi kopion muokkauksineen, pinoaa sen alkuperäisen kanssa ja avaa sen PhotoCraftissa. Tallenna siellä, niin kopio päivittyy täällä. PSD-muodossa PhotoCraft tallentaa suoraan siihen. Jätä sijainti tyhjäksi, ellet käytä kannettavaa kopiota.",
+  "No photo in this folder is in the library yet": "Tämän kansion kuvia ei ole vielä kirjastossa",
+  "Select the photos to move in the grid first": "Valitse ensin siirrettävät kuvat ruudukosta",
+  "This place is kept in Local already": "Tämä paikka on jo säilytetty Paikallisessa",
+  "Only a place at the top of Local can be removed from it": "Paikallisesta voi poistaa vain sen ylimmän tason paikan"
 }

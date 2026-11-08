@@ -2829,5 +2829,9 @@
   "Thumbnails and previews are made again as you browse, which takes a while in a large library. Your photos and edits are not touched.": "Hình thu nhỏ và bản xem trước được tạo lại khi bạn duyệt, việc này mất một lúc với thư viện lớn. Ảnh và chỉnh sửa của bạn không bị ảnh hưởng.",
   "Model installation failed": "Cài đặt mô hình thất bại",
   "starting…": "đang khởi động…",
-  "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Ảnh > Chỉnh trong > Chỉnh trong PhotoCraft (⇧⌘E, hoặc nhấp phải ảnh) kết xuất bản sao kèm chỉnh sửa, xếp chồng với bản gốc và mở trong PhotoCraft. Lưu ở đó thì bản sao cập nhật tại đây. Dạng PSD, PhotoCraft lưu thẳng lại. Để trống vị trí trừ khi dùng bản portable."
+  "Photo > Edit In > Edit in PhotoCraft (⇧⌘E, or right-click a photo) renders a copy with your edits, stacks it with the original and opens it in PhotoCraft. Save there and the copy updates here. As PSD, PhotoCraft saves straight back to it. Leave the location empty unless you use a portable copy.": "Ảnh > Chỉnh trong > Chỉnh trong PhotoCraft (⇧⌘E, hoặc nhấp phải ảnh) kết xuất bản sao kèm chỉnh sửa, xếp chồng với bản gốc và mở trong PhotoCraft. Lưu ở đó thì bản sao cập nhật tại đây. Dạng PSD, PhotoCraft lưu thẳng lại. Để trống vị trí trừ khi dùng bản portable.",
+  "No photo in this folder is in the library yet": "Chưa có ảnh nào trong thư mục này nằm trong thư viện",
+  "Select the photos to move in the grid first": "Trước tiên hãy chọn trên lưới các ảnh cần di chuyển",
+  "This place is kept in Local already": "Nơi này đã được giữ trong Cục bộ",
+  "Only a place at the top of Local can be removed from it": "Chỉ có thể gỡ khỏi Cục bộ một nơi ở cấp trên cùng của Cục bộ"
 }

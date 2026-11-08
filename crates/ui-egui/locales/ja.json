@@ -2563,5 +2563,9 @@
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "キーはサイドバーにあります。矢印で移動、Enter で開く、入力で検索、Esc で写真に戻ります",
   "This row has no name to change": "この行には変更できる名前がありません",
   "Keyboard in Sidebar": "サイドバーでキーボードを使う",
-  "Sorting the library": "ライブラリを並べ替え中"
+  "Sorting the library": "ライブラリを並べ替え中",
+  "No photo in this folder is in the library yet": "このフォルダの写真はまだライブラリにありません",
+  "Select the photos to move in the grid first": "先にグリッドで移動する写真を選択してください",
+  "This place is kept in Local already": "この場所はすでにローカルに残されています",
+  "Only a place at the top of Local can be removed from it": "ローカルから除けるのは、ローカルの最上位にある場所だけです"
 }
