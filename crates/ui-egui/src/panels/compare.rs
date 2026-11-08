@@ -533,8 +533,8 @@ pub fn show_compare(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         }
         // Compare's own rows first, in the same bounded menu as the photo's
         crate::widgets::context_menu(&resp, |ui| {
-            crate::photo_menu::show(app, ui, id, crate::photo_menu::Lead::Rows(&["compare.swap", "compare.makeSelect"]));
-        });
+        crate::photo_menu::show(app, ui, id, crate::photo_menu::Lead::Rows(&["compare.swap", "compare.makeSelect"]));
+    });
     }
     let mid = area.center().x;
     ui.painter().line_segment([pos2(mid, area.top()), pos2(mid, area.bottom())], Stroke::new(1.0, Tokens::get(ui.ctx()).divider));

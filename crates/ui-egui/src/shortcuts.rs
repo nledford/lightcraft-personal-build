@@ -797,9 +797,12 @@ fn extend_selection(app: &mut LightcraftApp, step: i64) {
 /// The flag keys; whether `f` was one. Their toast is the command's own (`app::cull_toast`).
 fn fire_flag_key(app: &mut LightcraftApp, f: &str) -> bool {
     if matches!(f, "photo.cycleFlag" | "photo.increaseFlag" | "photo.decreaseFlag")
-        || (matches!(f, "photo.pick" | "photo.reject" | "photo.unflag") && app.ui.right != crate::state::RightPanel::Crop)
+        || matches!(f, "photo.pick" | "photo.unflag")
+        // X with Crop open swaps the crop aspect (`context_key_skipped`, #1866); P and U are flag keys there too
+        || (f == "photo.reject" && app.ui.right != crate::state::RightPanel::Crop)
     {
         cull(app, f, json!({}), false);
+
         true
     } else {
         false

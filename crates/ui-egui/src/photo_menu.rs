@@ -375,6 +375,9 @@ fn export_note(app: &LightcraftApp, id: &str, params: &Value) -> Option<String> 
 fn alias(n: &MenuNode) -> Option<String> {
     match n {
         MenuNode::Submenu { label, .. } if label == "Add to Album" => Some("button:contextAddToAlbum".into()),
+        MenuNode::Submenu { label, .. } if label == "Set Rating" => Some("button:contextSetRating".into()),
+        MenuNode::Submenu { label, .. } if label == "Set Flag" => Some("button:contextSetFlag".into()),
+        MenuNode::Submenu { label, .. } if label == "Set Color Label" => Some("button:contextSetLabel".into()),
         MenuNode::Item { id, params, .. } => match id.as_str() {
             "album.addPhotos" => Some(match params.get("id") {
                 Some(a) => format!("button:contextAlbum:{a}"),
@@ -383,6 +386,10 @@ fn alias(n: &MenuNode) -> Option<String> {
             "dialog.newAlbum" => Some("button:contextNewAlbum".into()),
             "photo.setMeta" if params.get("addKeywords").is_some() => Some("button:contextAddKeywordShortcut".into()),
             "photo.delete" => Some("button:contextDeletePhoto".into()),
+            "photo.rate" => params["rating"].as_u64().map(|r| format!("button:contextRate:{r}")),
+            "photo.flag" => params["flag"].as_str().map(|f| format!("button:contextFlag:{f}")),
+            "photo.label" => params["label"].as_str().map(|l| format!("photoLabel:{l}")),
+            "photo.clearLabel" => Some("photoLabel:none".into()),
             _ => None,
         },
         _ => None,

@@ -135,6 +135,16 @@
   `+` (the 1 key of Czech and Slovak keyboards) stays Increase Grid Thumbnail Size; on those layouts give the label or
   rating another key in Help ▸ Keyboard Shortcuts.
 
+### Rating and flagging from the right-click menu, and P / U in the Crop panel, follow the culling rules
+- In Compare and Survey, choosing Set Rating or Set Flag from a photo's right-click menu changed every selected
+  photo, and Set Color Label the active photo, which was not always the one you clicked. All three now change only the
+  photo you right-clicked, in the pane or tile and in the filmstrip: a right-click on a selected photo there makes it
+  the active one and keeps the selection, as the keys, the bottom bar and the Info panel judge the active photo. The
+  three rows now go the way the Photo menu's rows do, so Auto Advance moves on after them, once, as it does after a
+  key; in the grid they still change every selected photo.
+- With the Crop panel open, P (Pick) and U (Unflag) skipped the culling rules: Auto Advance did not move on and in
+  Compare both photos were flagged. They now behave as with the panel closed. X still swaps the crop's aspect there.
+
 ## 2026-11-02
 
 ### The Windows title bar is readable from the moment the window opens
