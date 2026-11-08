@@ -37,7 +37,11 @@
 //! What this build's reader doesn't know of a newer or other build's catalog is the one thing it
 //! can't carry: [`read`] looks for such fields in the library's records and reports each one it
 //! finds as a loss (`input:…`).
+//!
+//! [`census`] is the proof step beside it: a read-only manifest of what a library holds (above all the color labels and
+//! keywords of photos and folders) and the comparison of two manifests, for a library and its copy, or before and after a swap.
 
+pub mod census;
 mod files;
 mod read;
 pub(crate) mod strip;

@@ -26,10 +26,10 @@ use crate::{
 // ---- folders and files
 
 /// A folder under the temp dir, removed when it goes out of scope.
-struct Scratch(PathBuf);
+pub(crate) struct Scratch(PathBuf);
 
 impl Scratch {
-    fn new(tag: &str) -> Scratch {
+    pub(crate) fn new(tag: &str) -> Scratch {
         static NEXT: AtomicU32 = AtomicU32::new(0);
         let dir = std::env::temp_dir().join(format!("lc-convert-{tag}-{}-{}", std::process::id(), NEXT.fetch_add(1, Ordering::Relaxed)));
         let _ = fs::remove_dir_all(&dir);
@@ -37,11 +37,11 @@ impl Scratch {
         Scratch(dir)
     }
 
-    fn join(&self, name: &str) -> PathBuf {
+    pub(crate) fn join(&self, name: &str) -> PathBuf {
         self.0.join(name)
     }
 
-    fn path(&self) -> &Path {
+    pub(crate) fn path(&self) -> &Path {
         &self.0
     }
 }
@@ -64,7 +64,7 @@ fn put(dir: &Path, files: &[(&str, &[u8])]) {
 }
 
 /// The files of a store (what a build saved) as a library folder at `dir`.
-fn put_store(dir: &Path, m: &MemStore) {
+pub(crate) fn put_store(dir: &Path, m: &MemStore) {
     let files: Vec<(String, Vec<u8>)> = m.files.lock().unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect();
     put(dir, &files.iter().map(|(k, v)| (k.as_str(), v.as_slice())).collect::<Vec<_>>());
 }
@@ -93,9 +93,9 @@ fn read_lib(dir: &Path) -> (Catalog, LoadReport) {
 }
 
 /// Every file and folder under `dir` with its bytes and modification time: the library as seen from outside.
-type Tree = BTreeMap<String, (Vec<u8>, Option<SystemTime>)>;
+pub(crate) type Tree = BTreeMap<String, (Vec<u8>, Option<SystemTime>)>;
 
-fn tree(dir: &Path) -> Tree {
+pub(crate) fn tree(dir: &Path) -> Tree {
     fn walk(dir: &Path, rel: &str, out: &mut Tree) {
         for entry in fs::read_dir(dir).unwrap() {
             let entry = entry.unwrap();
@@ -128,7 +128,7 @@ fn run(library: &Path, out: &Path, target: Target) -> Result<Report, ConvertErro
 }
 
 /// A conversion that goes on whatever is lost.
-fn run_lossy(library: &Path, out: &Path, target: Target) -> Report {
+pub(crate) fn run_lossy(library: &Path, out: &Path, target: Target) -> Report {
     convert::convert(library, out, target, Options { allow_loss: true, ..Options::default() }).unwrap_or_else(|e| panic!("{target:?}: {e}"))
 }
 
@@ -330,7 +330,7 @@ fn keyword_info() -> KeywordInfo {
 
 /// The changes that build a catalog with every kind of data this build keeps, and one photo for each thing a target can't
 /// hold. Folder records: two with a label (one of them with a `made` too) and one with only a `made`.
-fn personal_ops() -> Vec<Op> {
+pub(crate) fn personal_ops() -> Vec<Op> {
     let add = |p: Photo| Op::AddPhoto { photo: Box::new(p) };
     let words = |words: &[&str]| words.iter().map(|w| w.to_string()).collect::<Vec<_>>();
     let record = |folder: &str, label: Option<ColorLabel>, made: Option<&str>| Op::SetFolderRecord {
@@ -382,7 +382,7 @@ fn personal_ops() -> Vec<Op> {
 
 /// Changes made after the snapshot, as the log of a library that was not closed holds them: a label, a rating, keywords, a
 /// folder's label and a label's name.
-fn later_ops() -> Vec<Op> {
+pub(crate) fn later_ops() -> Vec<Op> {
     vec![
         Op::SetLabel { id: PhotoId(8), label: Some(ColorLabel::Yellow) },
         Op::SetRating { id: PhotoId(8), rating: 5 },
@@ -403,7 +403,7 @@ fn personal() -> Catalog {
 
 /// A library as this build saves it: `first` in the snapshot (in segments of `per` photos, or all in the one file), `later`
 /// in the log after it.
-fn saved(first: &[Op], later: &[Op], one_file: bool, per: usize) -> MemStore {
+pub(crate) fn saved(first: &[Op], later: &[Op], one_file: bool, per: usize) -> MemStore {
     let m = MemStore { single_file: one_file, ..MemStore::new() };
     let (mut j, mut c, _) = Journal::open(Box::new(m.clone())).unwrap();
     j.policy.segment_photos = per;
@@ -421,14 +421,14 @@ fn saved(first: &[Op], later: &[Op], one_file: bool, per: usize) -> MemStore {
 }
 
 /// The layouts a personal build leaves a library in: photos in several segments or one file, with the log empty or not.
-const LAYOUTS: [(&str, bool, usize, bool); 4] = [
+pub(crate) const LAYOUTS: [(&str, bool, usize, bool); 4] = [
     ("segments, closed", false, 4, false),
     ("segments, log tail", false, 4, true),
     ("one file, closed", true, 4096, false),
     ("one file, log tail", true, 4096, true),
 ];
 
-fn personal_library(dir: &Path, one_file: bool, per: usize, tail: bool) {
+pub(crate) fn personal_library(dir: &Path, one_file: bool, per: usize, tail: bool) {
     let later = if tail { later_ops() } else { Vec::new() };
     put_store(dir, &saved(&personal_ops(), &later, one_file, per));
 }

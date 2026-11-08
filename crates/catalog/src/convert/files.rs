@@ -31,15 +31,7 @@ pub(super) fn check_out(library: &Path, out: &Path) -> Result<PathBuf, ConvertEr
     let library = fs::canonicalize(library).map_err(|e| refused(format!("can't resolve the library {}: {e}", library.display())))?;
     let wanted = std::path::absolute(out).map_err(|e| refused(format!("can't make {} absolute: {e}", out.display())))?;
     let out = resolve(&wanted)?;
-    for at in out.ancestors() {
-        match same_file_strict(at, &library) {
-            Ok(false) if at != library => {}
-            Ok(_) => {
-                return Err(refused(format!("{} is in the library {}: the copy goes in a new folder elsewhere", out.display(), library.display())));
-            }
-            Err(e) => return Err(refused(format!("can't tell whether {} is the library or in it ({e}): refused", at.display()))),
-        }
-    }
+    refuse_inside(&library, &out, "the copy goes in a new folder elsewhere")?;
     match fs::symlink_metadata(&out) {
         Ok(m) if m.is_dir() => {
             let mut entries = fs::read_dir(&out).map_err(|e| refused(format!("can't list {}: {e}", out.display())))?;
@@ -52,6 +44,34 @@ pub(super) fn check_out(library: &Path, out: &Path) -> Result<PathBuf, ConvertEr
         Err(e) => return Err(refused(format!("can't look at {}: {e}", out.display()))),
     }
     Ok(out)
+}
+
+/// Where `out` is, if a file may be written there: not in the library (by any name for it) and not existing yet. Nothing is
+/// created. Used by the census, which never writes over anything.
+pub(super) fn check_file(library: &Path, out: &Path) -> Result<PathBuf, ConvertError> {
+    let library = fs::canonicalize(library).map_err(|e| refused(format!("can't resolve the library {}: {e}", library.display())))?;
+    let wanted = std::path::absolute(out).map_err(|e| refused(format!("can't make {} absolute: {e}", out.display())))?;
+    let out = resolve(&wanted)?;
+    refuse_inside(&library, &out, "the census goes in a file elsewhere")?;
+    match fs::symlink_metadata(&out) {
+        Ok(_) => Err(refused(format!("{} exists: a census is never written over anything", out.display()))),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(out),
+        Err(e) => Err(refused(format!("can't look at {}: {e}", out.display()))),
+    }
+}
+
+/// Refuse an `out` that is the (canonical) `library` or lies in it, however it is spelled.
+fn refuse_inside(library: &Path, out: &Path, goes: &str) -> Result<(), ConvertError> {
+    for at in out.ancestors() {
+        match same_file_strict(at, library) {
+            Ok(false) if at != library => {}
+            Ok(_) => {
+                return Err(refused(format!("{} is in the library {}: {goes}", out.display(), library.display())));
+            }
+            Err(e) => return Err(refused(format!("can't tell whether {} is the library or in it ({e}): refused", at.display()))),
+        }
+    }
+    Ok(())
 }
 
 /// `path` with every link on the part of it that exists resolved, and the part that doesn't yet exist plain names (a
