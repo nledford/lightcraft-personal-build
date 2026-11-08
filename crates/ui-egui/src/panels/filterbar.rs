@@ -120,7 +120,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     ui.painter().rect_filled(bar, 0.0, t.chrome);
     ui.painter().line_segment([bar.left_bottom(), bar.right_bottom()], Stroke::new(1.0, t.divider));
     register(ui, "filterbar", bar);
-    let f = app.session.filter.clone();
+    let f = app.session.filter().clone();
     let row = |ui: &mut egui::Ui, i: f32| {
         let r = Rect::from_min_size(bar.min + vec2(16.0, 4.0 + i * (HEIGHT - 8.0)), vec2(bar.width() - 32.0, HEIGHT - 8.0));
         let mut c = ui.new_child(egui::UiBuilder::new().max_rect(r).layout(egui::Layout::left_to_right(egui::Align::Center)));
@@ -156,30 +156,33 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
 
     // flags: several can be on at once (any of them matches), as in Lightroom Classic
     caption(ui, "Flag");
+    // (Picks shown: the source is the flag, and `library.filter` refuses another)
     let chosen: Vec<Flag> = f.flags_shown().unwrap_or_default();
-    for (id, icon, flag, tip) in [
-        ("pick", Icon::FlagPick, Flag::Pick, "Picked"),
-        ("reject", Icon::FlagReject, Flag::Reject, "Rejected"),
-        ("none", Icon::Circle, Flag::None, "Unflagged"),
-    ] {
-        let on = chosen.contains(&flag);
-        let color = match flag {
-            Flag::Pick if on => t.pick,
-            Flag::Reject if on => t.reject,
-            _ => Color32::TRANSPARENT,
-        };
-        let icon = if on && flag == Flag::Pick { Icon::FlagPickFilled } else { icon };
-        let resp = toggle(ui, id, on, tip, |p, r, c| paint(p, r, icon, if color == Color32::TRANSPARENT { c } else { color }));
-        if resp.clicked() {
-            // in the bar's order, so the chip reads the same whichever was clicked first
-            let names: Vec<String> = [Flag::Pick, Flag::Reject, Flag::None]
-                .into_iter()
-                .filter(|x| if *x == flag { !on } else { chosen.contains(x) })
-                .map(|x| format!("{x:?}").to_lowercase())
-                .collect();
-            filter(app, json!({"flag": Value::Null, "flags": names}));
+    ui.add_enabled_ui(app.session.source != lightcraft_engine::LibrarySource::Picks, |ui| {
+        for (id, icon, flag, tip) in [
+            ("pick", Icon::FlagPick, Flag::Pick, "Picked"),
+            ("reject", Icon::FlagReject, Flag::Reject, "Rejected"),
+            ("none", Icon::Circle, Flag::None, "Unflagged"),
+        ] {
+            let on = chosen.contains(&flag);
+            let color = match flag {
+                Flag::Pick if on => t.pick,
+                Flag::Reject if on => t.reject,
+                _ => Color32::TRANSPARENT,
+            };
+            let icon = if on && flag == Flag::Pick { Icon::FlagPickFilled } else { icon };
+            let resp = toggle(ui, id, on, tip, |p, r, c| paint(p, r, icon, if color == Color32::TRANSPARENT { c } else { color }));
+            if resp.clicked() {
+                // in the bar's order, so the chip reads the same whichever was clicked first
+                let names: Vec<String> = [Flag::Pick, Flag::Reject, Flag::None]
+                    .into_iter()
+                    .filter(|x| if *x == flag { !on } else { chosen.contains(x) })
+                    .map(|x| format!("{x:?}").to_lowercase())
+                    .collect();
+                filter(app, json!({"flag": Value::Null, "flags": names}));
+            }
         }
-    }
+    });
     ui.add_space(14.0);
 
     // colour labels
@@ -283,7 +286,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
 
     // save / clear
     ui.add_space(14.0);
-    let filtering = app.session.filter != Default::default();
+    let filtering = *app.session.filter() != Default::default();
     // (a view that can't be saved as rules greys this out, and says why on hover)
     let why_not = app.session.view_save_refusal();
     let save = crate::button::Button::new("Save as Smart Album…").small().enabled(filtering && why_not.is_none()).widget("button:filterSave");

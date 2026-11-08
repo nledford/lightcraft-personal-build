@@ -174,10 +174,12 @@ pub fn apply(s: &mut Session, search: &Search) -> Result<Value> {
     }
     hits.sort_by(|a, b| b.1.total_cmp(&a.1));
     if search.filter {
-        s.shelved_filter = None;
-        s.filter.only = hits.iter().map(|h| h.0).collect();
-        // an empty `only` means "no constraint": no hits is its own state that shows no photos
-        s.filter.only_none = s.filter.only.is_empty();
+        let only: Vec<PhotoId> = hits.iter().map(|h| h.0).collect();
+        s.filters.change(s.source, |f| {
+            // an empty `only` means "no constraint": no hits is its own state that shows no photos
+            f.only_none = only.is_empty();
+            f.only = only;
+        });
     }
     Ok(json!({"photos": hits.iter().map(|(i, v)| json!({"id": i.0, "similarity": (v * 1000.0).round() / 1000.0})).collect::<Vec<_>>()}))
 }
@@ -320,7 +322,7 @@ mod tests {
         assert!(e.to_string().contains("can't read the photo"), "{e}");
         assert_eq!(files.reads(), 1, "only the searched photo");
         assert!(s.signatures.is_empty());
-        assert_eq!(s.filter, Default::default(), "the view stays as it was");
+        assert_eq!(*s.filter(), Default::default(), "the view stays as it was");
     }
 
     #[test]
@@ -354,7 +356,7 @@ mod tests {
         let read = found.len();
         assert!((1..64).contains(&read), "stopped along the way: {read}");
         keep(&mut s, found);
-        assert_eq!(s.filter, Default::default());
+        assert_eq!(*s.filter(), Default::default());
         let (_, rest) = plan(&mut s, &json!({"id": 1})).unwrap();
         assert_eq!(rest.len(), 64 - read);
     }

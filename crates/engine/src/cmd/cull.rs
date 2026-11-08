@@ -105,6 +105,7 @@ fn burst_params(p: &Value) -> Result<(f64, f32)> {
     Ok((num("burstGap", BURST_GAP, MAX_GAP)?, num("similarity", SAME, 1.0)? as f32))
 }
 
+
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(

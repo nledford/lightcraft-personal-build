@@ -123,7 +123,7 @@ fn an_album_that_comes_back_is_not_shown_again_by_itself() {
     // this undoes the album
     run(&mut s, "edit.undo", json!({}));
     assert!(s.catalog.album(AlbumId(id)).is_none(), "the album's creation was undone");
-    assert_eq!((s.source, s.filter.album), (LibrarySource::All, None));
+    assert_eq!((s.source, s.filter().album), (LibrarySource::All, None));
     run(&mut s, "edit.redo", json!({}));
     assert!(s.catalog.album(AlbumId(id)).is_some(), "and redone");
     shows_all(&mut s, "the album came back");
@@ -131,9 +131,9 @@ fn an_album_that_comes_back_is_not_shown_again_by_itself() {
     run(&mut s, "library.filter", json!({"album": id}));
     // the filter is no undo step: this undoes the album
     run(&mut s, "edit.undo", json!({}));
-    assert_eq!((s.source, s.filter.album), (LibrarySource::All, None));
+    assert_eq!((s.source, s.filter().album), (LibrarySource::All, None));
     run(&mut s, "edit.redo", json!({}));
-    assert_eq!(s.filter.album, None);
+    assert_eq!(s.filter().album, None);
     // nor does the next album made take its place
     run(&mut s, "edit.undo", json!({}));
     let second = run(&mut s, "album.create", json!({"name": "Second"}))["id"].as_u64().unwrap();
@@ -172,18 +172,18 @@ fn a_filter_lets_go_of_an_album_that_went_away() {
     let id = run(&mut s, "album.create", json!({"name": "Named"}))["id"].as_u64().unwrap();
     let other = run(&mut s, "album.create", json!({"name": "Other"}))["id"].as_u64().unwrap();
     run(&mut s, "library.filter", json!({"album": id, "rating": 0}));
-    assert_eq!(s.filter.album, Some(AlbumId(id)));
+    assert_eq!(s.filter().album, Some(AlbumId(id)));
     // another album going away changes nothing
     run(&mut s, "album.delete", json!({"id": other}));
-    assert_eq!(s.filter.album, Some(AlbumId(id)));
+    assert_eq!(s.filter().album, Some(AlbumId(id)));
     run(&mut s, "album.delete", json!({"id": id}));
-    assert_eq!(s.filter.album, None);
+    assert_eq!(s.filter().album, None);
     assert_eq!(s.visible_cloned().len(), 3, "the filter hides nothing behind an album that is gone");
     // the step functions themselves check, not only the commands round them
     s.undo_step().unwrap();
     run(&mut s, "library.filter", json!({"album": id}));
     s.redo_step().unwrap();
-    assert_eq!(s.filter.album, None);
+    assert_eq!(s.filter().album, None);
 }
 
 /// The view can come to name a missing album with the library unchanged: a saved filter applied
@@ -200,17 +200,17 @@ fn a_filter_naming_a_missing_album_is_not_taken_up() {
     run(&mut s, "album.delete", json!({"id": id}));
     // nothing changes in the library from here on
     let r = run(&mut s, "filter.applyPreset", json!({"name": "In Named"}));
-    assert_eq!((s.filter.album, r["photos"].as_u64()), (None, Some(3)), "applied without the album that is gone");
+    assert_eq!((s.filter().album, r["photos"].as_u64()), (None, Some(3)), "applied without the album that is gone");
     let e = s.execute("library.filter", &json!({"album": 77, "rating": 4})).unwrap_err().to_string();
     assert!(e.contains("no such album"), "{e}");
-    assert_eq!((s.filter.album, s.filter.rating), (None, 0), "nothing of the call was taken up");
+    assert_eq!((s.filter().album, s.filter().rating), (None, 0), "nothing of the call was taken up");
     assert_eq!(s.source_total(), Some(3));
     // an album that is there can be named, and cleared
     let kept = run(&mut s, "album.create", json!({"name": "Kept"}))["id"].as_u64().unwrap();
     run(&mut s, "library.filter", json!({"album": kept}));
-    assert_eq!(s.filter.album, Some(AlbumId(kept)));
+    assert_eq!(s.filter().album, Some(AlbumId(kept)));
     run(&mut s, "library.filter", json!({"album": null}));
-    assert_eq!(s.filter.album, None);
+    assert_eq!(s.filter().album, None);
 }
 
 /// The counted total is a look at the grid too.
@@ -291,18 +291,25 @@ fn another_library_starts_without_this_ones_album_filter_and_target() {
     run(&mut s, "library.filter", json!({"album": ours, "rating": 0}));
     // and what else names this library's albums and photos by number
     run(&mut s, "library.filter", json!({"ruleSet": {"match": "all", "rules": [{"field": "album", "op": "is", "value": ours}]}}));
-    s.filter.only = vec![PhotoId(2)];
+    s.filters.change(s.source, |f| f.only = vec![PhotoId(2)]);
     s.previous_active = Some(PhotoId(3));
     s.active_mask = Some(1);
-    // a filter put aside by Enable Filters names this library's albums too
-    s.shelved_filter = Some(s.filter.clone());
     s.open_library(&dirs[1].0, false).unwrap();
     assert_eq!(s.catalog.album(AlbumId(theirs)).unwrap().name, "B's album");
     assert_eq!(s.target_album, None);
-    assert_eq!(s.filter, lightcraft_catalog::Filter::default(), "no filter left over, as after a restart");
+    assert_eq!(*s.filter(), lightcraft_catalog::Filter::default(), "no filter left over, as after a restart");
     assert!(!s.filters_off(), "and none put aside to come back with Enable Filters");
     assert_eq!((s.previous_active, s.active_mask), (None, None));
     assert_eq!(s.visible_cloned().len(), 3);
+    // a filter put aside by Enable Filters names this library's albums too
+    s.open_library(&dirs[0].0, false).unwrap();
+    run(&mut s, "library.filter", json!({"album": ours, "rating": 0}));
+    s.filters.change(s.source, |f| f.only = vec![PhotoId(2)]);
+    run(&mut s, "library.toggleFilters", json!({}));
+    assert!(s.filters_off(), "the filter is put aside");
+    s.open_library(&dirs[1].0, false).unwrap();
+    assert_eq!(*s.filter(), lightcraft_catalog::Filter::default());
+    assert!(!s.filters_off(), "none put aside to come back with Enable Filters");
 }
 
 #[test]

@@ -74,30 +74,18 @@ pub(super) fn several_smart_refused(s: &Session, cmd: &str) -> Result<()> {
     s.view_save_refusal().map_or(Ok(()), |why| Err(bad(cmd, why)))
 }
 
-/// Drops the filter put aside by Enable Filters when a deletion emptied it: nothing is left to bring back, and
-/// Enable Filters must not stay off for it. `before` is what was put aside before the deletion, so a filter the
-/// deletion did not touch stays put aside, whatever it holds. The rating operator filters nothing without stars,
-/// so it alone does not count (`keyword.delete` reads it the same way).
-pub(super) fn drop_emptied_shelf(s: &mut Session, before: Option<&lightcraft_catalog::Filter>) {
-    use lightcraft_catalog::Filter;
-    let emptied = |f: &Filter| (Filter { rating_op: Default::default(), ..f.clone() }) == Filter::default();
-    if s.shelved_filter.as_ref() != before && s.shelved_filter.as_ref().is_some_and(emptied) {
-        s.shelved_filter = None;
-    }
-}
-
 impl Session {
     /// Why the current view can't be saved as smart-album rules (Create Smart Album from Filter,
     /// Update Rules from Current Filter), or `None` when it can. The one check behind the menu
     /// item's grey-out and the refusal of `album.createSmart` / `album.setRules {fromView}`.
     pub fn view_save_refusal(&self) -> Option<String> {
         // (asked every frame by the menus: most views name no album beyond the source's own, so say so without a list)
-        if self.also_albums.is_empty() && self.filter.album.is_none() && self.filter.albums.is_empty() {
+        if self.also_albums.is_empty() && self.filter().album.is_none() && self.filter().albums.is_empty() {
             return None;
         }
         let smart_among = |albums: &[AlbumId]| albums.iter().find_map(|a| self.catalog.album(*a).filter(|a| a.is_smart()));
         // an album the filter names is saved as the rules' album, one smart album alone as well
-        if let Some(smart) = smart_among(&self.filter.albums_wanted()) {
+        if let Some(smart) = smart_among(&self.filter().albums_wanted()) {
             return Some(format!(
                 "the filter names \"{}\", a smart album: smart album rules can't test another smart album. Take it out of the filter, or show it and save its own view",
                 smart.name
@@ -127,7 +115,7 @@ pub(super) fn view_rules(s: &Session) -> lightcraft_catalog::Filter {
     let mut rules = match smart {
         Some(base) => {
             // overlay the fields the filter bar changed
-            let cur = serde_json::to_value(&s.filter).unwrap_or_default();
+            let cur = serde_json::to_value(s.filter()).unwrap_or_default();
             let def = serde_json::to_value(Filter::default()).unwrap_or_default();
             let mut patch = serde_json::Map::new();
             if let (Some(c), Some(d)) = (cur.as_object(), def.as_object()) {
@@ -142,7 +130,7 @@ pub(super) fn view_rules(s: &Session) -> lightcraft_catalog::Filter {
             merge_filter(&base, &Value::Object(patch), "").unwrap_or(base)
         }
         None => {
-            let mut f = s.source.to_filter(&s.filter, &s.catalog);
+            let mut f = s.source.to_filter(s.filter(), &s.catalog);
             f.deleted = false;
             match s.source {
                 LibrarySource::LibraryFolder => {

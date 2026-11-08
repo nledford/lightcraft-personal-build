@@ -103,7 +103,7 @@ fn a_search_from_the_menu_reads_off_the_ui_thread_and_the_window_goes_on() {
     }
     // nothing has been read yet: the command and the frames waited for none of it
     assert!(t0.elapsed() < FRAMES, "the window waited for the files: {:?}", t0.elapsed());
-    assert_eq!(h.app.session.filter, Default::default(), "no answer before the files are read");
+    assert_eq!(*h.app.session.filter(), Default::default(), "no answer before the files are read");
     // the worker sets the row's total when it starts, which a loaded machine can leave for later
     let waited = Instant::now();
     while rows(&h)[0].total == 0 && waited.elapsed() < T {
@@ -120,7 +120,7 @@ fn a_search_from_the_menu_reads_off_the_ui_thread_and_the_window_goes_on() {
     assert_eq!(drive.on_ui.load(Ordering::SeqCst), 0, "a file was read on the UI thread");
     assert_eq!(drive.reads.load(Ordering::SeqCst), PHOTOS as usize);
     assert!(rows(&h).is_empty(), "the row goes with the search");
-    let shown = h.app.session.filter.only.len();
+    let shown = h.app.session.filter().only.len();
     assert_eq!(shown, PHOTOS as usize / 2, "the photos alike are shown");
     assert_eq!(h.app.ui.view, ViewMode::PhotoGrid);
     let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
@@ -143,7 +143,7 @@ fn a_second_search_waits_for_the_first() {
     drive.open.store(true, Ordering::SeqCst);
     until_done(&mut h);
     assert!(row_is_on(&h));
-    assert!(h.app.session.filter.only.contains(&PhotoId(1)), "the first search answered");
+    assert!(h.app.session.filter().only.contains(&PhotoId(1)), "the first search answered");
 }
 
 /// ✕ on the row: the view stays as it was, nothing is said, and the next search doesn't read again
@@ -159,7 +159,7 @@ fn stopping_leaves_the_view_alone_and_the_next_search_reads_only_the_rest() {
     drive.open.store(true, Ordering::SeqCst);
     until_done(&mut h);
     assert!(rows(&h).is_empty());
-    assert_eq!(h.app.session.filter, Default::default());
+    assert_eq!(*h.app.session.filter(), Default::default());
     assert_eq!(h.app.ui.view, ViewMode::Detail);
     assert!(h.app.ui.toast.is_none(), "{:?}", h.app.ui.toast);
     assert_eq!(drive.reads.load(Ordering::SeqCst), 1);
@@ -168,7 +168,7 @@ fn stopping_leaves_the_view_alone_and_the_next_search_reads_only_the_rest() {
     assert_eq!(r["count"], PHOTOS - 1, "what was read isn't read again");
     until_done(&mut h);
     assert_eq!(drive.reads.load(Ordering::SeqCst), PHOTOS as usize);
-    assert_eq!(h.app.session.filter.only.len(), PHOTOS as usize / 2);
+    assert_eq!(h.app.session.filter().only.len(), PHOTOS as usize / 2);
 }
 
 /// Nothing to read: the answer comes on the next frames, with no photo read.
@@ -183,7 +183,7 @@ fn a_search_of_what_is_known_reads_nothing() {
     assert_eq!(r["count"], 0);
     until_done(&mut h);
     assert_eq!(drive.reads.load(Ordering::SeqCst), reads);
-    assert!(h.app.session.filter.only.contains(&PhotoId(2)));
+    assert!(h.app.session.filter().only.contains(&PhotoId(2)));
 }
 
 /// A refusal comes at once and starts nothing (no photo active, a photo the library doesn't have).
@@ -206,7 +206,7 @@ fn a_photo_that_cannot_be_read_says_so() {
     until_done(&mut h);
     let toast = h.app.ui.toast.as_ref().map(|t| t.text.clone()).unwrap_or_default();
     assert!(toast.contains("can't read the photo"), "{toast}");
-    assert_eq!(h.app.session.filter, Default::default());
+    assert_eq!(*h.app.session.filter(), Default::default());
 }
 
 /// A control request is answered when the search ends, with the command's `{photos}`, and the window
@@ -248,7 +248,7 @@ fn stopping_answers_the_request_with_an_error() {
     let reply = answer(&mut h, &rx);
     assert_eq!(reply["ok"], false, "{reply}");
     assert!(reply["error"].as_str().is_some_and(|e| e.contains("stopped")), "{reply}");
-    assert_eq!(h.app.session.filter, Default::default());
+    assert_eq!(*h.app.session.filter(), Default::default());
 }
 
 /// A request that comes while a search runs is refused at once, not left to wait.
@@ -302,6 +302,6 @@ fn another_library_stops_the_search_and_gets_nothing_from_it() {
     let read = drive.reads.load(Ordering::SeqCst);
     assert!(read < PHOTOS as usize, "it stopped reading: {read}");
     assert!(h.app.session.signatures.is_empty());
-    assert_eq!(h.app.session.filter, Default::default());
+    assert_eq!(*h.app.session.filter(), Default::default());
     let _ = std::fs::remove_dir_all(dir);
 }

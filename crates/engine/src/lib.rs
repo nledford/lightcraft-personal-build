@@ -42,6 +42,7 @@ mod faces_index;
 #[cfg(not(target_arch = "wasm32"))]
 mod faces_worker;
 pub mod files;
+pub mod filter_state;
 #[cfg(not(target_arch = "wasm32"))]
 mod focus_scan;
 pub mod fonts;
@@ -250,9 +251,9 @@ pub struct Session {
     pub auto_sync: bool,
     pub catalog: Catalog,
     pub source: LibrarySource,
-    pub filter: Filter,
-    /// The filter `library.toggleFilters` put aside (Library > Enable Filters off); not persisted.
-    pub(crate) shelved_filter: Option<Filter>,
+    /// The filter bar's filter and the one `library.toggleFilters` put aside (Library > Enable Filters off); not
+    /// persisted. Written only through its methods, which keep it clear of what the source shown owns.
+    pub(crate) filters: filter_state::FilterState,
     pub sort: Sort,
     pub selection: Selection,
     /// See [`Session::selection_facts`].
@@ -524,8 +525,7 @@ impl Session {
             auto_sync: false,
             catalog: Catalog::new(),
             source: LibrarySource::All,
-            filter: Filter::default(),
-            shelved_filter: None,
+            filters: Default::default(),
             sort: Sort::default(),
             selection: Selection::default(),
             selection_cache: Default::default(),
@@ -1357,9 +1357,21 @@ impl Session {
 
     // ---------------------------------------------------------------- library view
 
+    /// The filter bar's filter. It changes through the commands (`library.filter`, `filter.applyPreset`,
+    /// `library.clearFilter`, `library.toggleFilters`, `library.source`…), never beside them.
+    pub fn filter(&self) -> &Filter {
+        self.filters.current()
+    }
+
+    /// Show `f` as the filter bar's filter, over the source shown: what that source owns is left out
+    /// ([`LibrarySource::reconcile`]) and returned. Setting a filter forgets the one Enable Filters put aside.
+    pub fn set_filter(&mut self, f: Filter) -> Vec<filter_state::SourceOwned> {
+        self.filters.set(self.source, f)
+    }
+
     /// Library > Enable Filters is off: a filter is put aside (`library.toggleFilters`).
     pub fn filters_off(&self) -> bool {
-        self.shelved_filter.is_some()
+        self.filters.is_off()
     }
 
     /// Makes the view show only albums the library holds: one that is gone is no longer the
@@ -1378,11 +1390,7 @@ impl Session {
         // (the source's albums: another album shown takes the place of one that is gone, else All Photos does)
         self.reconcile_sources();
         let cat = &self.catalog;
-        let gone = |a: &lightcraft_catalog::AlbumId| cat.album(*a).is_none();
-        if self.filter.album.as_ref().is_some_and(gone) {
-            self.filter.album = None;
-        }
-        self.filter.albums.retain(|a| !gone(a));
+        self.filters.retain_albums(|a| cat.album(*a).is_some());
     }
 
     /// Photos shown in the grid/filmstrip for the current source, filter and sort.
@@ -1392,7 +1400,13 @@ impl Session {
             self.catalog.revision,
             format!(
                 "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
-                self.source, self.filter, self.sort, self.browse, self.library_folder, self.also_albums, self.also_library_folders
+                self.source,
+                self.filters.current(),
+                self.sort,
+                self.browse,
+                self.library_folder,
+                self.also_albums,
+                self.also_library_folders
             ),
         );
         // What a held view is told apart by: what is shown and how, and for a smart album its rules (rules that were
@@ -1424,14 +1438,14 @@ impl Session {
                 // one of several folders shown lost its last photo: the others stay
                 return self.visible();
             }
-            let f = self.view_filter(self.source, &self.filter);
+            let f = self.view_filter(self.source, self.filters.current());
             // A held view keeps the photos it shows that stopped matching what is asked of them (a smart album's
             // rules, a flag, the filter bar), as long as they are still where the view looks: in the library for
             // a view that is only a question, else in the album or folder shown. Taking a photo out of an album
             // or the library takes it out of the view at once, held or not.
             // (only a view that asks something can lose a photo to an edit: the others are queried as ever, at no
             // cost for the hold)
-            let holds = self.hold_view && (asks || self.filter != Filter::default());
+            let holds = self.hold_view && (asks || *self.filters.current() != Filter::default());
             let within = holds.then(|| {
                 if asks && self.also_albums.is_empty() {
                     self.view_filter(LibrarySource::All, &Filter::default())
@@ -1445,7 +1459,7 @@ impl Session {
             // Views whose order or photos are not the query's alone are worked out whole each time: an album in
             // its own order, Recently Added (how far back it reaches moves with every import), Missing Photos.
             let own_order = matches!(self.source, LibrarySource::Album(a) if self.sort.key == lightcraft_catalog::SortKey::CaptureDate
-                && self.filter == Filter::default()
+                && *self.filters.current() == Filter::default()
                 && self.also_albums.is_empty()
                 && self.catalog.album(a).is_some_and(|al| !al.is_smart() && !al.folder));
             let whole = own_order || matches!(self.source, LibrarySource::RecentlyAdded | LibrarySource::Missing);
@@ -1485,9 +1499,6 @@ impl Session {
                 self.source = LibrarySource::All;
                 self.library_folder = None;
                 self.also_library_folders.clear();
-                // folders of the filter were ignored while the folder was shown: they would narrow All Photos now
-                self.filter.library_folder = None;
-                self.filter.library_folders.clear();
                 return self.visible();
             }
             if matches!(self.source, LibrarySource::Album(_))
@@ -1499,7 +1510,7 @@ impl Session {
                 // an album's own order; a smart album and a folder of albums have none
                 && !al.is_smart()
                 && !al.folder
-                && self.filter == Filter::default()
+                && *self.filters.current() == Filter::default()
             {
                 // each photo's place looked up, not searched for (a big album sorted in O(n log n))
                 let mut place: std::collections::HashMap<PhotoId, usize> = std::collections::HashMap::with_capacity(al.photos.len());
@@ -1683,7 +1694,7 @@ impl Session {
         if self.source == LibrarySource::Missing {
             return None;
         }
-        if self.filter == Filter::default() && !self.hold_view {
+        if *self.filters.current() == Filter::default() && !self.hold_view {
             // nothing narrows the source: what the view lists is all of it, and is counted already (not a view
             // that holds photos that stopped matching: those are not of the source any more)
             let _ = self.visible();
