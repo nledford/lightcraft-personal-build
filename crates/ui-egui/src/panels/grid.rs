@@ -314,13 +314,13 @@ fn show_inner(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             let (hr, _) = ui.allocate_exact_size(vec2(ui.available_width(), 44.0), Sense::hover());
             ui.painter().rect_filled(hr, 0.0, t.canvas);
             let full = crate::i18n::source_title(&app.session);
-            let count_w = ui.painter().layout_no_wrap(cnt.clone(), t.font(12.5), t.text_dim).size().x;
+            let count_w = ui.painter().layout_no_wrap(cnt.clone(), t.label(), t.text_dim).size().x;
             // the title gives way to the count: a long album or folder name is trimmed, in full on hover
             let room = (hr.width() - 20.0 - count_w - 36.0).max(0.0);
-            let font = t.semibold(17.0);
+            let font = t.display_strong();
             let title = crate::widgets::elide_head(&full, room, |s| ui.painter().layout_no_wrap(s.to_string(), font.clone(), t.text).size().x);
             let title_rect = ui.painter().text(pos2(hr.left() + 20.0, hr.center().y), Align2::LEFT_CENTER, &title, font, t.text);
-            let count_rect = ui.painter().text(pos2(hr.right() - 20.0, hr.center().y), Align2::RIGHT_CENTER, cnt, t.font(12.5), t.text_dim);
+            let count_rect = ui.painter().text(pos2(hr.right() - 20.0, hr.center().y), Align2::RIGHT_CENTER, cnt, t.label(), t.text_dim);
             crate::widgets::register(ui, "grid:title", title_rect);
             crate::widgets::register(ui, "grid:count", count_rect);
             if title != full {
@@ -705,7 +705,7 @@ fn group_header(app: &mut LightcraftApp, ui: &mut egui::Ui, run: &DateRun, ids: 
     let x = r.left() + 8.0;
     let gw = g.size().x;
     p.galley(pos2(x, r.center().y - g.size().y / 2.0), g, t.text);
-    p.text(pos2(x + gw + 10.0, r.center().y), Align2::LEFT_CENTER, count, t.font(12.5), t.text_dim);
+    p.text(pos2(x + gw + 10.0, r.center().y), Align2::LEFT_CENTER, count, t.label(), t.text_dim);
     if resp.clicked() {
         let group: Vec<u64> = ids[run.start..(run.start + run.count).min(ids.len())].iter().map(|p| p.0).collect();
         let m = ui.input(|i| i.modifiers);
@@ -902,10 +902,12 @@ fn paint_cell_caption(app: &LightcraftApp, p: &egui::Painter, t: &Tokens, photo:
             "date" => photo.captured.as_deref().map(crate::i18n::display_time).unwrap_or_else(|| crate::i18n::tr("No date").into()),
             _ => photo.file_name.rsplit_once('.').map(|(n, _)| n.to_string()).unwrap_or(photo.file_name.clone()),
         };
-        p.text(pos2(r.left() + 8.0, r.top() + 12.0), Align2::LEFT_CENTER, name, t.font(10.5), t.text_dim);
         let fmt = photo.format.clone();
-        let g = p.layout_no_wrap(fmt, t.semibold(9.0), t.text_label);
+        let g = p.layout_no_wrap(fmt, t.micro_strong(), t.text_label);
         let br = Rect::from_min_size(pos2(r.right() - g.size().x - 14.0, r.top() + 5.0), g.size() + vec2(8.0, 3.0));
+        // (the line ends before the format: it used to run on under it)
+        let line = crate::widgets::one_line(p, &name, t.caption(), t.text_dim, br.left() - 6.0 - (r.left() + 8.0));
+        p.galley(pos2(r.left() + 8.0, r.top() + 12.0 - line.size().y / 2.0), line, t.text_dim);
         p.rect_filled(br, 2.0, Color32::from_gray(26));
         p.galley(br.min + vec2(4.0, 1.5), g, t.text_label);
     }
@@ -983,12 +985,12 @@ fn folder_header(app: &mut LightcraftApp, ui: &mut egui::Ui, b: &lightcraft_engi
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 8.0;
             let count_w =
-                ui.painter().layout_no_wrap(cnt.to_owned(), t.font(12.5), t.text_dim).size().x.ceil().min((ui.available_width() * 0.45).floor());
+                ui.painter().layout_no_wrap(cnt.to_owned(), t.label(), t.text_dim).size().x.ceil().min((ui.available_width() * 0.45).floor());
             let path_w = (ui.available_width() - count_w - 8.0).max(0.0).floor();
             ui.allocate_ui_with_layout(vec2(path_w, 24.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                 folder_breadcrumbs(app, ui, &b.path);
             });
-            let count = ui.add_sized(vec2(count_w, 24.0), egui::Label::new(egui::RichText::new(cnt).size(12.5).color(t.text_dim)).truncate());
+            let count = ui.add_sized(vec2(count_w, 24.0), egui::Label::new(egui::RichText::new(cnt).font(t.label()).color(t.text_dim)).truncate());
             register(ui, "grid:count", count.rect);
             count.on_hover_text(cnt);
         });
