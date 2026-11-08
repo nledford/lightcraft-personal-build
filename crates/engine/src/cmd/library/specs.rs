@@ -215,6 +215,10 @@ fn duplicate_albums(s: &mut Session, p: &Value) -> Result<Value> {
             }
             rules
         });
+        // one that is put into a folder its rules lead to would include itself (the check `album.move` makes)
+        if let (Some(rules), Place::Final(Some(target))) = (&smart, &place) {
+            smart_loop_in(&s.catalog, &name, rules, *target).map_or(Ok(()), |why| Err(bad(C, why)))?;
+        }
         // (there is one Quick Collection)
         ops.push(Op::AddAlbum { album: Album { id, name, parent, quick: false, order, smart, ..from } });
     }
