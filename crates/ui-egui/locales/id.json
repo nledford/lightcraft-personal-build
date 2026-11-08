@@ -2500,5 +2500,6 @@
   "Keyboard in Sidebar": "Keyboard di bilah samping",
   "Imports, exports and other long jobs show here while they run.": "Impor, ekspor, dan tugas panjang lainnya ditampilkan di sini selama berjalan.",
   "No tasks are running": "Tidak ada tugas yang berjalan",
-  "Tasks": "Tugas"
+  "Tasks": "Tugas",
+  "cancelled": "dibatalkan"
 }

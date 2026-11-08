@@ -2586,5 +2586,6 @@
   "Keyboard in Sidebar": "Tangentbord i sidofältet",
   "Imports, exports and other long jobs show here while they run.": "Importer, exporter och andra långa jobb visas här medan de pågår.",
   "No tasks are running": "Inga uppgifter körs",
-  "Tasks": "Uppgifter"
+  "Tasks": "Uppgifter",
+  "cancelled": "avbruten"
 }
