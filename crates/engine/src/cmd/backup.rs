@@ -615,6 +615,12 @@ pub fn status(s: &Session) -> Option<&Arc<BackupJob>> {
 }
 
 fn back_up(s: &mut Session, p: &Value) -> Result<Value> {
+    back_up_as(s, p, "backup")
+}
+
+/// [`back_up`] with the kind its activity row has: `scheduledBackup` for the one the schedule starts by itself, which
+/// is housekeeping (it neither badges the Dock nor keeps the Mac awake), `backup` for the one the person asks for.
+fn back_up_as(s: &mut Session, p: &Value, kind: &'static str) -> Result<Value> {
     const C: &str = "library.backup";
     let Some(library) = s.library.as_ref().filter(|l| l.on_disk).map(|l| l.dir.clone()) else {
         return Err(bad(C, "this library is not a folder on disk; there is nothing to back up to a folder"));
@@ -651,7 +657,7 @@ fn back_up(s: &mut Session, p: &Value) -> Result<Value> {
     let folder = s.opened_folder().cloned();
     let job = Arc::new(BackupJob { library, dest, started, own, keep_days, library_id, folder, ..Default::default() });
     s.backup = Some(job.clone());
-    let task = s.activity.start("backup", "Backing up the library", Cancel::Flag(job.cancel.clone()));
+    let task = s.activity.start(kind, "Backing up the library", Cancel::Flag(job.cancel.clone()));
     task.set_unit(Unit::Bytes);
     let hold = s.backup_hold.clone();
     if !background || cfg!(target_arch = "wasm32") {
@@ -1302,7 +1308,7 @@ pub fn back_up_if_due(s: &mut Session) -> std::result::Result<bool, String> {
         }
     }
     s.backup_tried = Some(now);
-    match back_up(s, &json!({"background": true})) {
+    match back_up_as(s, &json!({"background": true}), "scheduledBackup") {
         Ok(_) => Ok(true),
         Err(e) => {
             log::warn!("library: the backup that was due was not made: {e}");

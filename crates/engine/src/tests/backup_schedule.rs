@@ -118,6 +118,31 @@ fn a_library_is_backed_up_when_its_backup_is_due() {
     let _ = std::fs::remove_dir_all(dir);
 }
 
+/// A backup the schedule starts by itself is housekeeping: it has its row in the activity stack, but it is not a job
+/// the person started, so it neither badges the Dock nor holds the Mac awake nor is announced when it ends. One the
+/// person asks for (`library.backup`) is counted.
+#[test]
+fn a_scheduled_backup_is_not_a_job_the_person_started() {
+    use std::sync::atomic::Ordering;
+    let dir = temp_dir("not-person");
+    let (mut s, _now) = open(&dir);
+    prefs(&mut s, json!({"every": "day"}));
+    s.backup_hold.store(true, Ordering::SeqCst);
+    assert!(due_backup(&mut s));
+    assert_eq!(s.activity.list().len(), 1, "it has its row");
+    assert_eq!((s.activity.running_jobs(), s.activity.wake_reason(), s.activity.person_jobs().len()), (0, None, 0));
+    s.backup_hold.store(false, Ordering::SeqCst);
+    finish(&mut s);
+
+    s.backup_hold.store(true, Ordering::SeqCst);
+    s.execute("library.backup", &json!({"background": true})).unwrap();
+    assert_eq!((s.activity.running_jobs(), s.activity.wake_reason().as_deref()), (1, Some("Backing up the library")));
+    s.backup_hold.store(false, Ordering::SeqCst);
+    finish(&mut s);
+    drop(s);
+    let _ = std::fs::remove_dir_all(dir);
+}
+
 /// A week is seven days and a month thirty, counted from the last backup.
 #[test]
 fn a_week_is_seven_days_and_a_month_thirty() {

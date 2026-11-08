@@ -674,6 +674,20 @@ fn making_a_folder_keeps_the_photos_selected_to_move_into_it() {
 }
 
 #[test]
+fn a_background_move_with_nothing_to_move_answers_with_the_photos_it_left_out() {
+    let (root, trip, home) = folders("nothing-to-move");
+    let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
+    let (beach, garden) = (id_of(&h, "beach.png"), id_of(&h, "garden.png"));
+    // the garden is in Home already and the beach is told to stay: nothing moves
+    let r = h.app.run("photo.moveToFolder", json!({"ids": [garden, beach], "skip": [beach], "folder": home.to_string_lossy(), "background": true})).unwrap();
+    assert_eq!((r["moved"].as_u64(), r["of"].as_u64()), (Some(0), Some(0)), "{r}");
+    // as `photo.moveToFolder` says them elsewhere: the photo, its name and why, not the id that was asked for
+    assert_eq!(r["skipped"].as_array().map(|a| a.iter().map(|s| s["id"].as_u64()).collect::<Vec<_>>()), Some(vec![Some(beach)]), "{r}");
+    assert!(trip.join("beach.png").is_file());
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
 fn a_background_move_has_a_cancellable_row_and_holds_back_other_moves_until_it_ends() {
     let (root, trip, home) = folders("background");
     let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
@@ -929,6 +943,21 @@ fn with_nothing_that_can_move_the_question_offers_only_cancel() {
     assert!(widget(&h, "button:dialogCancel").is_some());
     click(&mut h, "button:dialogCancel");
     assert!(h.app.ui.dialog.is_none() && trip.join("beach.png").is_file() && trip.join("dunes.png").is_file());
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn a_control_confirm_of_a_question_with_nothing_that_can_move_is_refused() {
+    let (root, trip, home, mut h, beach, _) = trip_with_two("confirm-all-problems");
+    for f in ["beach.png", "dunes.png"] {
+        std::fs::copy(trip.join(f), home.join(f)).unwrap();
+    }
+    drop_both(&mut h, beach, &home);
+    // the dialog has no Move button, so the control channel can't press it either
+    let r = h.request("ui.dialog.confirm", json!({}), std::time::Duration::from_secs(10));
+    assert_eq!(r["ok"], false, "{r}");
+    assert!(matches!(h.app.ui.dialog, Some(crate::state::Dialog::MovePhotos { .. })), "the question stays: {:?}", h.app.ui.dialog);
+    assert!(trip.join("beach.png").is_file() && trip.join("dunes.png").is_file());
     let _ = std::fs::remove_dir_all(&root);
 }
 

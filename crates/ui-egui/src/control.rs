@@ -458,6 +458,10 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context, req: &ControlRequest
             }
         }
         "ui.dialog.confirm" => match app.ui.dialog.clone() {
+            // a question with no Move button (every photo has a problem) is not answered by the control channel either
+            Some(crate::state::Dialog::MovePhotos { problems, movable: 0, .. }) if !problems.is_empty() => {
+                err("Move Photos: nothing can move (every photo has a problem). Cancel the question")
+            }
             Some(d) => {
                 // the dialog is open while its action runs, as when its button is pressed: an
                 // action may ask whether it is (`folder.locate` scans the folder afterwards only

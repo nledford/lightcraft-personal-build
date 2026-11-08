@@ -142,15 +142,31 @@ pub(crate) fn plan(s: &Session, p: &Value) -> Result<Planned> {
     Ok(Planned { folder: folder.to_string(), plans: sorted.plans, movable: sorted.movable, skipped })
 }
 
-/// Plan the move `p` asks for (`{folder, ids?, skip?}`; the selection by default). `None` when
-/// every photo is in that folder already, or skipped. `cancellable`: the activity row gets ✕ (only
-/// where something can press it while the work runs: the app's background move).
-pub fn start(s: &mut Session, p: &Value, cancellable: bool) -> Result<Option<(MoveWork, MoveFinish)>> {
+/// What [`start_or_answer`] made of a move.
+pub enum Started {
+    /// The work to run (on a worker thread, or here) and what finishes it.
+    Work(MoveWork, MoveFinish),
+    /// Every photo is in that folder already, or left out: `photo.moveToFolder`'s answer, with the photos left out.
+    Nothing(Value),
+}
+
+/// Plan the move `p` asks for (`{folder, ids?, skip?}`; the selection by default) and take the session for it, or
+/// answer that nothing moves (every photo is in that folder already, or skipped). `cancellable`: the activity row
+/// gets ✕ (only where something can press it while the work runs: the app's background move).
+pub fn start_or_answer(s: &mut Session, p: &Value, cancellable: bool) -> Result<Started> {
     let planned = plan(s, p)?;
     if planned.is_empty() {
-        return Ok(None);
+        return Ok(Started::Nothing(planned.nothing_moved()));
     }
-    begin(s, planned, cancellable).map(Some)
+    begin(s, planned, cancellable).map(|(work, finish)| Started::Work(work, finish))
+}
+
+/// [`start_or_answer`] without the answer: `None` when nothing moves.
+pub fn start(s: &mut Session, p: &Value, cancellable: bool) -> Result<Option<(MoveWork, MoveFinish)>> {
+    Ok(match start_or_answer(s, p, cancellable)? {
+        Started::Work(work, finish) => Some((work, finish)),
+        Started::Nothing(_) => None,
+    })
 }
 
 /// Take the session for a move [`plan`] sorted (not empty).

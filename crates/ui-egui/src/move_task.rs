@@ -74,12 +74,15 @@ fn start_inner(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value, sto
     let raw = params.get("folder").and_then(Value::as_str).unwrap_or_default();
     let path = raw.trim_end_matches(['/', '\\']).to_string();
     let name = name_of(app, &path);
-    let started = lightcraft_engine::move_job::start(&mut app.session, params, true).map_err(|e| e.to_string())?;
-    let Some((work, finish)) = started else {
-        app.toast(ctx, crate::panels::left::moved_text(0, &name));
-        // (the photos told to be skipped are the ones left out: `start` doesn't say which of them it found)
-        let skipped = params.get("skip").filter(|s| s.is_array()).cloned().unwrap_or_else(|| json!([]));
-        return Ok(json!({"moved": 0, "of": 0, "folder": path, "stopped": false, "skipped": skipped}));
+    let started = lightcraft_engine::move_job::start_or_answer(&mut app.session, params, true).map_err(|e| e.to_string())?;
+    let (work, finish) = match started {
+        lightcraft_engine::move_job::Started::Work(work, finish) => (work, finish),
+        lightcraft_engine::move_job::Started::Nothing(mut answer) => {
+            app.toast(ctx, crate::panels::left::moved_text(0, &name));
+            // (the folder as the person's path names it, without a trailing separator)
+            answer["folder"] = json!(path);
+            return Ok(answer);
+        }
     };
     let files = finish.files();
     let (tx, rx) = std::sync::mpsc::channel();

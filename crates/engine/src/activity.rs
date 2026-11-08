@@ -210,7 +210,7 @@ pub struct TaskInfo {
     pub id: u64,
     /// A stable id: `import`, `export`, `scan`, `sync`, `move`, `previews`, `smartPreviews`, `backup`, `lightroom`,
     /// `merge`, `download`, `faces`, `facesGpu`, `denoise`, `findMissing`, `applePhotos`, `cache`, `focus`, `geocode`,
-    /// `recheck`, `reload`, `trash`.
+    /// `recheck`, `reload`, `trash`, `scheduledBackup` (a backup the schedule started by itself).
     pub kind: &'static str,
     /// English; the frontend translates it.
     pub label: String,
@@ -486,9 +486,9 @@ impl Activity {
 /// Whether a task of `kind` is work the person started, one they would not want cut short by the machine sleeping
 /// and would want counted in the Dock. The thumbnail cache tidy, the GPU check, the focus-point reading, the face
 /// scan and the checks of recent libraries and of raw files start by themselves (and the first can hang on an
-/// offline share).
+/// offline share), as does the backup the schedule starts.
 fn started_by_person(kind: &str) -> bool {
-    !matches!(kind, "cache" | "facesGpu" | "focus" | "faces" | "library" | "recheck")
+    !matches!(kind, "cache" | "facesGpu" | "focus" | "faces" | "library" | "recheck" | "scheduledBackup")
 }
 
 /// A task's place in the list, held by whoever owns the job; dropping it removes the row.
