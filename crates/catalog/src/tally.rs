@@ -315,12 +315,15 @@ pub struct FilterTally {
 impl FilterTally {
     /// Counted from every photo.
     pub fn of(cat: &Catalog, filter: &Filter) -> FilterTally {
-        let prepared = filter.prepare(cat);
-        let mut members = Members::none();
-        for p in cat.photos().filter(|p| filter.matches_in(p, cat, &prepared)) {
-            members.set(p.id, true);
-        }
-        FilterTally { revision: cat.revision, members }
+        // one pass: a folder of albums an `album is` rule is limited to is gathered once, not for every photo
+        crate::gathering(|| {
+            let prepared = filter.prepare(cat);
+            let mut members = Members::none();
+            for p in cat.photos().filter(|p| filter.matches_in(p, cat, &prepared)) {
+                members.set(p.id, true);
+            }
+            FilterTally { revision: cat.revision, members }
+        })
     }
 
     /// What a pass that already listed the photos matching the filter at `revision` knows: those photos, not asked
