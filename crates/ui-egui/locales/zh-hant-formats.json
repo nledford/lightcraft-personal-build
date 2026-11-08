@@ -362,5 +362,9 @@
   "Showing {what}": "正在顯示 {what}",
   "{title}, showing {what}": "{title}，正在顯示 {what}",
   "+{n} more": "還有 {n} 項",
-  "“{name}” is now a place in Local: open it there": "「{name}」現在是本機中的一個位置：請在那裡開啟"
+  "“{name}” is now a place in Local: open it there": "「{name}」現在是本機中的一個位置：請在那裡開啟",
+  "Move “{name}” into “{into}”": "將「{name}」移到「{into}」",
+  "Move “{name}” into “{into}”?": "將「{name}」移到「{into}」？",
+  "Photos in it and in the folders inside it: {count}": "其中及其子資料夾中的照片：{count}",
+  "“{name}” is no longer there: nothing was moved": "「{name}」已不存在：未移動任何內容"
 }

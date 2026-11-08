@@ -362,5 +362,9 @@
   "Showing {what}": "Affiche {what}",
   "{title}, showing {what}": "{title}, affiche {what}",
   "+{n} more": "+{n} autres",
-  "“{name}” is now a place in Local: open it there": "« {name} » est maintenant un emplacement dans Local : ouvrez-le là"
+  "“{name}” is now a place in Local: open it there": "« {name} » est maintenant un emplacement dans Local : ouvrez-le là",
+  "Move “{name}” into “{into}”": "Déplacer « {name} » dans « {into} »",
+  "Move “{name}” into “{into}”?": "Déplacer « {name} » dans « {into} » ?",
+  "Photos in it and in the folders inside it: {count}": "Photos qu'il contient et dans les dossiers à l'intérieur : {count}",
+  "“{name}” is no longer there: nothing was moved": "« {name} » est introuvable : rien n’a été déplacé"
 }

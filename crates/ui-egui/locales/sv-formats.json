@@ -361,5 +361,9 @@
   "took {n} s": "tog {n} s",
   "took {n} min": "tog {n} min",
   "took {h} h {m} min": "tog {h} h {m} min",
-  "“{name}” is now a place in Local: open it there": "“{name}” är nu en plats i Lokalt: öppna den där"
+  "“{name}” is now a place in Local: open it there": "“{name}” är nu en plats i Lokalt: öppna den där",
+  "Move “{name}” into “{into}”": "Flytta ”{name}” till ”{into}”",
+  "Move “{name}” into “{into}”?": "Flytta ”{name}” till ”{into}”?",
+  "Photos in it and in the folders inside it: {count}": "Foton i den och i mapparna i den: {count}",
+  "“{name}” is no longer there: nothing was moved": "”{name}” finns inte längre: inget flyttades"
 }

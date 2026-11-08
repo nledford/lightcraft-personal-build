@@ -30,7 +30,10 @@ pub(crate) use folders::follow_shown;
 pub(crate) use folders::folder_moved_message;
 #[cfg(test)]
 pub(crate) use folders::move_folder_to;
-pub(crate) use folders::{FolderPlace, created_text, folder_place, folder_row_of, move_photos, moved_text};
+pub(crate) use folders::{FolderPlace, created_text, folder_place, folder_row_of, move_photos, moved_text, run_folder_move, toast_folder_moved};
+pub use folders::folder_drag_feedback;
+#[cfg(test)]
+pub(crate) use folders::folder_drop_refusal;
 use folders::{folder_rows, reveal_chosen};
 use keywords::keyword_rows;
 #[cfg(test)]
