@@ -1244,6 +1244,9 @@ fn trip_with_two(tag: &str) -> (PathBuf, PathBuf, PathBuf, Headless, u64, u64) {
 
 /// Drag the selection by the beach onto the Home row and let go.
 fn drop_both(h: &mut Headless, beach: u64, home: &Path) {
+    // the Folders rows move while their listings arrive (a slow runner shows it): the Home row is looked up once they are in,
+    // else the drop lands on the row that took its place (the folder above it)
+    assert!(h.settle(std::time::Duration::from_secs(20)), "the sidebar settled");
     let target = folder_row(h, home).expect("the Home row");
     drop_beach(h, beach, target);
 }
