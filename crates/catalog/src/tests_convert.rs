@@ -20,8 +20,8 @@ use crate::lock::LibraryLock;
 use crate::rules::{self, FIELDS, Kind};
 use crate::tests_stored::{edited, fixture_library, full, plain};
 use crate::{
-    Album, AlbumId, Catalog, ColorLabel, Filter, Flag, FolderRecord, HistoryStep, Journal, LeftInFile, LoadReport, MemStore, Meta, Op, Photo, PhotoId,
-    Stack, StackId, Version, stored,
+    Album, AlbumId, Catalog, ColorLabel, Filter, Flag, FolderRecord, HistoryStep, Journal, LeftInFile, LoadReport, MemStore, Meta, Op, Photo,
+    PhotoId, Stack, StackId, Version, stored,
 };
 
 // ---- folders and files
@@ -625,7 +625,7 @@ fn a_personal_library_converts_to_7248_in_every_layout() {
             ("embedded_lens.source", having(&|p| p["embedded_lens"]["source"] == "database")),
             ("settings.detail.nr_outliers", outliers),
             ("settings.masks.on_photo", on_photo),
-        // (`truncated`, `left_in_file` and a smart album's `albums`, `dates`, `libraryFolders` and `keywords` are not here: build 7248 has them, so the diff below must not show them)
+            // (`truncated`, `left_in_file` and a smart album's `albums`, `dates`, `libraryFolders` and `keywords` are not here: build 7248 has them, so the diff below must not show them)
         ]
         .into();
         assert_eq!(ids, want, "{name}");

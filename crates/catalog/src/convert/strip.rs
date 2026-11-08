@@ -422,9 +422,10 @@ pub(crate) fn prefs(bytes: &[u8], target: Target) -> Prefs {
             id: PRESET_UNREADABLE.to_string(),
             what: format!("the saved filter presets of prefs.json, which this tool could not read ({why})"),
             records: 1,
-            effect: "prefs.json is copied as it is: official LightCraft would ignore a preset's lists of albums, dates, library folders and keywords \
+            effect:
+                "prefs.json is copied as it is: official LightCraft would ignore a preset's lists of albums, dates, library folders and keywords \
                      and flag a rule on a field it lacks as unknown, so such a preset shows other photos there than it did"
-                .to_string(),
+                    .to_string(),
         })
     };
     let Ok(mut root) = serde_json::from_slice::<Value>(bytes) else { return unreadable("not JSON") };
