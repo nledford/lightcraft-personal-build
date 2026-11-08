@@ -398,7 +398,7 @@ fn a_store_that_keeps_files_tells_of_a_kept_damaged_log() {
     assert!(told.iter().any(|w| w.contains("upgraded") && w.contains("catalog.log.damaged-")), "{told:?}");
 }
 
-/// A library in the one-file format (10) that could not keep its files at open: a directory sits where the
+/// A library in the one-file format (14) that could not keep its files at open: a directory sits where the
 /// first kept file goes.
 fn library_that_could_not_keep_its_files(name: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(format!("lightcraft-{name}-{}", std::process::id()));

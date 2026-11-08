@@ -1095,7 +1095,8 @@ fn kind_text(kind: Kind) -> String {
 /// The rule fields and operators of main (`fixtures/main-rule-table.txt`: `field <id> <kind>[:<choices>]` and `ops <kind>
 /// <ids>`, copied from main's `rules.rs`) against this build's. A field main lacks must be named in `RULE_FIELDS` (so the
 /// converter leaves its rules out of the official copy); a field of main this build lacks, a kind or choice that differs, and any
-/// operator that differs would silently change what official LightCraft reads, so each fails here until it is classified.
+/// operator that differs would silently change what official LightCraft reads, so each fails here until it is classified. The
+/// fixture is a static copy of main's table as it was when it was written: refresh it when main's `rules.rs` changes.
 #[test]
 fn rule_fields_are_classified() {
     let table = include_str!("fixtures/main-rule-table.txt");
@@ -1522,6 +1523,108 @@ fn catalog_only_leaves_the_caches_and_originals_out() {
     );
     for name in ["thumbs/", "Smart Previews/", "Originals/", "Interop/"] {
         assert!(report.left_out.iter().any(|l| l.starts_with(&format!("{name}:")) && l.contains("--catalog-only")), "{name}");
+    }
+}
+
+// ---- prefs.json: the saved filter presets
+
+/// The losses a conversion lists for `prefs.json`, with how many records hold each.
+fn prefs_losses(report: &Report) -> Vec<(&str, u64)> {
+    report.losses.iter().filter(|l| l.id.starts_with("prefs.")).map(|l| (l.id.as_str(), l.records)).collect()
+}
+
+/// The `prefs.json` of a library with three saved filter presets: two that hold what official LightCraft lacks (the lists of
+/// albums, dates, library folders and keywords, and rules on fields it lacks, in a group too) and one that holds nothing of it.
+fn prefs_with_presets() -> Value {
+    let rule = |field: &str, op: &str, value: Value| json!({"field": field, "op": op, "value": value});
+    json!({
+        "cacheMb": 512,
+        "filterPresets": [
+            {"name": "Sea", "filter": {"rating": 4, "keywords": ["sea", "sky"], "albums": [3], "dates": []}},
+            {"name": "Old", "filter": {
+                "dates": ["2019-05"],
+                "libraryFolders": ["/pictures/2019"],
+                "keywords": ["sea"],
+                "ruleSet": {"match": "any", "rules": [
+                    rule("sameContent", "is", json!(true)),
+                    {"group": {"match": "all", "rules": [rule("truncated", "is", json!(true)), rule("sameContent", "is", json!(false))]}},
+                    rule("rating", "gte", json!(4)),
+                ]},
+            }},
+            {"name": "Plain", "filter": {"text": "x", "flags": ["pick"]}},
+        ],
+    })
+}
+
+/// Official LightCraft has no place for the lists and rule fields a filter preset holds: its copy's `prefs.json` is written
+/// without them (every other setting and preset as it was), each loss counted and refused without `--allow-loss`; a preset
+/// that holds none of it, and the library's own file, are untouched. Build 7248 has them all, so its copy is the file as it is.
+#[test]
+fn filter_presets_lose_what_official_lacks_in_prefs_json_and_only_there() {
+    let scratch = Scratch::new("prefs-presets");
+    let library = scratch.join("library");
+    personal_library(&library, false, 4, false);
+    let prefs = serde_json::to_vec_pretty(&prefs_with_presets()).unwrap();
+    put(&library, &[("prefs.json", &prefs)]);
+
+    let Err(ConvertError::Losses(refused)) = run(&library, &scratch.join("refused"), Target::Official) else { panic!("the losses are refused") };
+    let want = [
+        ("prefs.filter_presets.albums", 1),
+        ("prefs.filter_presets.dates", 1),
+        ("prefs.filter_presets.keywords", 2),
+        ("prefs.filter_presets.library_folders", 1),
+        ("prefs.filter_presets.rule_field:sameContent", 2),
+        ("prefs.filter_presets.rule_field:truncated", 1),
+    ];
+    assert_eq!(prefs_losses(&refused), want);
+    assert!(!scratch.join("refused").exists(), "nothing is written for a refusal");
+
+    let official = scratch.join("official");
+    let report = run_lossy(&library, &official, Target::Official);
+    assert_eq!(prefs_losses(&report), want);
+    let rule = |field: &str, op: &str, value: Value| json!({"field": field, "op": op, "value": value});
+    let mut expected = prefs_with_presets();
+    expected["filterPresets"][0]["filter"] = json!({"rating": 4, "dates": []});
+    expected["filterPresets"][1]["filter"] = json!({"ruleSet": {"match": "any", "rules": [rule("rating", "gte", json!(4))]}});
+    let copy: Value = serde_json::from_slice(&fs::read(official.join("prefs.json")).unwrap()).unwrap();
+    assert_eq!(copy, expected);
+    assert!(report.rewritten.iter().any(|r| r.starts_with("prefs.json:")), "{:?}", report.rewritten);
+    assert!(!report.copied.iter().any(|c| c.starts_with("prefs.json")), "{:?}", report.copied);
+    assert_eq!(fs::read(library.join("prefs.json")).unwrap(), prefs, "the library's file is only read");
+
+    let old = scratch.join("old");
+    let report = run_lossy(&library, &old, Target::Build7248);
+    assert!(prefs_losses(&report).is_empty(), "{:?}", report.losses);
+    assert_eq!(fs::read(old.join("prefs.json")).unwrap(), prefs);
+    assert!(report.copied.iter().any(|c| c.starts_with("prefs.json:")), "{:?}", report.copied);
+}
+
+/// A `prefs.json` that holds nothing official LightCraft lacks is copied as it is (the bytes, not a rewrite), and one this tool
+/// can't read as presets is copied as it is too, listed as a loss for official LightCraft only (nothing says what it holds).
+#[test]
+fn a_prefs_json_without_the_lists_is_copied_and_an_unreadable_one_is_a_loss() {
+    let scratch = Scratch::new("prefs-plain");
+    let library = scratch.join("library");
+    personal_library(&library, false, 4, false);
+    let cases: [(&[u8], bool); 7] = [
+        (br#"{ "cacheMb": 1,   "filterPresets": [ {"name": "p", "filter": {"rating": 3, "keywords": []}} ] }"#, false),
+        (br#"{"filterPresets":[{"name":"p","filter":{"ruleSet":{"match":"all","rules":[{"field":"iso","op":"gt","value":1}]}}}]}"#, false),
+        (b"{}", false),
+        (b"not json", true),
+        (br#"["a list"]"#, true),
+        (br#"{"filterPresets": {"name": "p"}}"#, true),
+        (br#"{"filterPresets": [{"name": "no filter"}]}"#, true),
+    ];
+    for (n, (prefs, lost)) in cases.into_iter().enumerate() {
+        put(&library, &[("prefs.json", prefs)]);
+        for target in [Target::Official, Target::Build7248] {
+            let out = scratch.join(&format!("copy-{n}-{target:?}"));
+            let report = run_lossy(&library, &out, target);
+            assert_eq!(fs::read(out.join("prefs.json")).unwrap(), prefs, "{n} {target:?}: copied as it is");
+            assert!(report.copied.iter().any(|c| c.starts_with("prefs.json:")), "{n} {target:?}: {:?}", report.copied);
+            let want: &[(&str, u64)] = if lost && target == Target::Official { &[("prefs.filter_presets.unreadable", 1)] } else { &[] };
+            assert_eq!(prefs_losses(&report), want, "{n} {target:?}");
+        }
     }
 }
 

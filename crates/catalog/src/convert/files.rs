@@ -4,7 +4,7 @@ use std::fs::{self, FileType};
 use std::io;
 use std::path::{Path, PathBuf};
 
-use super::{ConvertError, Options, Report, Target};
+use super::{ConvertError, Loss, Options, Report, Target, strip};
 use crate::journal::{LOG, SNAPSHOT};
 use crate::lock::{LOCK, OWNER};
 use crate::safe_file::same_file_strict;
@@ -235,6 +235,32 @@ pub(super) fn describe(items: &[Item], report: &mut Report) {
             Action::Leave(why) => report.left_out.push(format!("{name}: {why}")),
         }
     }
+}
+
+/// The file this tool rewrites for a target when the library's holds what the target lacks.
+const PREFS: &str = "prefs.json";
+
+/// Look in the library's `prefs.json` (when it is to be copied) for what `target` can't hold. Returns the bytes the copy is
+/// written with and what they leave out; the item then counts as rewritten, not copied. An unreadable file is copied as it is, and
+/// its loss returned.
+pub(super) fn prefs(library: &Path, target: Target, items: &mut [Item]) -> Result<(Option<Vec<u8>>, Vec<Loss>), ConvertError> {
+    let Some(item) = items.iter_mut().find(|i| !i.dir && i.name == PREFS && i.action == Action::Copy) else { return Ok((None, Vec::new())) };
+    let path = library.join(PREFS);
+    let bytes = fs::read(&path).map_err(|e| io_error("can't read", &path, &e))?;
+    Ok(match strip::prefs(&bytes, target) {
+        strip::Prefs::AsIs => (None, Vec::new()),
+        strip::Prefs::Unreadable(loss) => (None, vec![loss]),
+        strip::Prefs::Rewritten { bytes, losses } => {
+            item.action = Action::Catalog("written again without what the target has no place for (the filter presets' lists and rules)");
+            (Some(bytes), losses)
+        }
+    })
+}
+
+/// Write the rewritten `prefs.json` into `staging`.
+pub(super) fn write_prefs(staging: &Path, bytes: &[u8]) -> Result<(), ConvertError> {
+    let path = staging.join(PREFS);
+    fs::write(&path, bytes).map_err(|e| io_error("can't write", &path, &e))
 }
 
 // ---- copying

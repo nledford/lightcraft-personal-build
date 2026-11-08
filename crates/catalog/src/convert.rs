@@ -32,7 +32,9 @@
 //! - **Files that were left out are listed.** The library's other files are copied (settings and
 //!   presets, thumbnails, smart previews, originals the library holds), except what the target
 //!   can't use, which is named in the report (the lock files, backups, older formats' kept
-//!   copies, and every file this tool doesn't know).
+//!   copies, and every file this tool doesn't know). `prefs.json` is copied as it is, except for
+//!   official LightCraft: its saved filter presets lose the lists and rule fields it has no place
+//!   for (a loss each, as in a smart album's rules).
 //!
 //! What this build's reader doesn't know of a newer or other build's catalog is the one thing it
 //! can't carry: [`read`] looks for such fields in the library's records and reports each one it
@@ -166,11 +168,12 @@ pub fn convert(library: &Path, out: &Path, target: Target, options: Options) -> 
     // (held until this returns: a program that opens the library meanwhile is refused)
     let held = read::lock(library)?;
     let source = read::open(library)?;
-    let items = files::survey(library, target, options)?;
+    let mut items = files::survey(library, target, options)?;
+    let (prefs, prefs_losses) = files::prefs(library, target, &mut items)?;
     let stripped = strip::for_target(&source.catalog, target);
     let mut report = Report::of(library, &out, target, &source, &items);
     report.notes.extend(held.note.clone());
-    report.losses = source.losses.iter().cloned().chain(stripped.losses).collect();
+    report.losses = source.losses.iter().cloned().chain(stripped.losses).chain(prefs_losses).collect();
     report.losses.sort_by(|a, b| a.id.cmp(&b.id));
     report.warnings.extend(stripped.warnings);
     if !report.losses.is_empty() && !options.allow_loss {
@@ -180,6 +183,9 @@ pub fn convert(library: &Path, out: &Path, target: Target, options: Options) -> 
     write::catalog(staging.path(), target, &stripped.catalog, source.seq, source.record_bytes)
         .map_err(|e| ConvertError::Io(format!("can't write the copy: {e}")))?;
     files::copy(library, staging.path(), &items, &mut report)?;
+    if let Some(bytes) = prefs {
+        files::write_prefs(staging.path(), &bytes)?;
+    }
     write::verify(staging.path(), target, &stripped.catalog, source.seq)?;
     report.written = write::listing(staging.path())?;
     staging.commit(&out)?;

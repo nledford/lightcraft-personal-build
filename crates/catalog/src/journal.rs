@@ -1097,7 +1097,7 @@ impl Journal {
             // A library in a format that writes compact records and states its defaults may go on
             // as it is when it can't be upgraded now (the next open tries again): what is appended
             // to it reads the same in every build that reads it. One before that (a build of those
-            // formats reads a missing value as its own default, and a library of format 9 that
+            // formats reads a missing value as its own default, and a library of format 13 that
             // states defaults is still read so by builds that don't know the statement), or one
             // that states other defaults, must not be appended to as it is: a record written from
             // here on leaves out what equals this build's defaults. (One that only lacks a setting
