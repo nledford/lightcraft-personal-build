@@ -360,5 +360,6 @@
   "Lists “{name}”, the folder this one is in": "Muestra “{name}”, la carpeta que contiene a esta",
   "Showing {what}": "Mostrando {what}",
   "{title}, showing {what}": "{title}, mostrando {what}",
-  "+{n} more": "+{n} más"
+  "+{n} more": "+{n} más",
+  "“{name}” is now a place in Local: open it there": "“{name}” ya es un lugar en Local: ábrela allí"
 }

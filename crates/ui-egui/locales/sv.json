@@ -2591,5 +2591,8 @@
   "Copy all": "Kopiera alla",
   "Finished": "Klara",
   "Needs attention": "Kräver uppmärksamhet",
-  "Running": "Pågår"
+  "Running": "Pågår",
+  "Go Deeper": "Gå djupare",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Så här djupa mappar listas inte här. Klicka för att lägga till den här mappen i Lokalt som en egen plats, så att du kan öppna den längre",
+  "Opens as its own place": "Öppnas som en egen plats"
 }

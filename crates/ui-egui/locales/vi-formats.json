@@ -356,5 +356,6 @@
   "{n} failed": "{n} thất bại",
   "took {n} s": "mất {n} giây",
   "took {n} min": "mất {n} phút",
-  "took {h} h {m} min": "mất {h} giờ {m} phút"
+  "took {h} h {m} min": "mất {h} giờ {m} phút",
+  "“{name}” is now a place in Local: open it there": "“{name}” giờ là một vị trí trong Cục bộ: hãy mở ở đó"
 }

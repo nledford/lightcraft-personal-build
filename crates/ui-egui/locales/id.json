@@ -2505,5 +2505,8 @@
   "Copy all": "Salin semua",
   "Finished": "Selesai",
   "Needs attention": "Perlu perhatian",
-  "Running": "Berjalan"
+  "Running": "Berjalan",
+  "Go Deeper": "Masuk lebih dalam",
+  "Folders this deep are not listed here. Click to add this folder to Local as a place of its own, so you can open it further": "Folder sedalam ini tidak dicantumkan di sini. Klik untuk menambahkan folder ini ke Lokal sebagai lokasi tersendiri, sehingga bisa dibuka lebih jauh",
+  "Opens as its own place": "Terbuka sebagai lokasi tersendiri"
 }
