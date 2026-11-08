@@ -1571,6 +1571,8 @@ pub fn specs() -> Vec<CommandSpec> {
                 "settingsWarnings": lib.settings_warnings,
                 // the drive holding the preview cache ran low this session (warned once)
                 "lowDiskSpace": s.disk_space_alert_raised(),
+                // moves an earlier run cut short, followed when the library opened (null: none)
+                "recoveredMoves": lib.recovered_moves,
                 // changes applied in memory whose write failed (retried by every save)
                 "unsavedOps": s.unsaved().map_or(0, |u| u.0),
                 "unsavedError": s.unsaved().map(|u| u.1),
