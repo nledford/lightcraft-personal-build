@@ -308,11 +308,6 @@ mod tests {
         assert_eq!(first, 0);
         assert!(last >= 2);
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::film_spoken;
 
     #[test]
     fn a_failed_thumbnail_says_why_it_has_no_picture_after_its_name_or_alone() {
