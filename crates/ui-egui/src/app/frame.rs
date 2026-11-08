@@ -97,7 +97,7 @@ impl LightcraftApp {
         // after the poll: a lookup that just finished is cleared, so photos queued meanwhile are looked up now
         crate::lens_db::tick(self);
         updates_ui::tick(self, ctx);
-        self.preview_build_status(ctx);
+        self.tick_preview_builds(ctx);
         self.backup_schedule(ctx);
         self.backup_status(ctx);
         panels::notices::quit_after_backup(self);
