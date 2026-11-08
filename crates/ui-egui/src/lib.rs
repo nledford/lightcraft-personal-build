@@ -98,6 +98,7 @@ mod app;
 mod auto_settings;
 mod caches;
 mod clock;
+mod readout;
 mod services;
 
 #[cfg(test)]
