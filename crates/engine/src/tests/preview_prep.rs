@@ -257,6 +257,25 @@ fn a_build_asked_for_replaces_the_background_one() {
     std::fs::remove_dir_all(&root).unwrap();
 }
 
+/// The background preparation giving way is routine, not something anyone stopped: its row does not stay in
+/// `activity.finished` as a stopped task (a view change, a build asked for and switching it off do the same).
+#[test]
+fn the_background_build_giving_way_leaves_no_row_among_the_finished() {
+    let (mut s, root, ids) = library("giveway", 3);
+    let hold = crate::prep::TestHold::new();
+    s.execute("library.buildPreviews", &json!({"ids": ids_json(&ids), "edge": 300, "background": true})).unwrap();
+    let bg = s.preview_build.clone().unwrap();
+    assert!(bg.background && bg.running());
+    s.execute("library.buildPreviews", &json!({"ids": ids_json(&ids), "edge": 300, "wait": true})).unwrap();
+    assert!(bg.cancel.load(Ordering::Relaxed), "the background build was stopped");
+    drop(hold);
+    assert!(wait_finished(&bg), "a cancelled build stops");
+    let rows: Vec<_> = s.activity.finished().into_iter().filter(|r| r.kind == "previews").collect();
+    assert!(rows.is_empty(), "no row for a build that only gave way: {rows:?}");
+    drop(s);
+    std::fs::remove_dir_all(&root).unwrap();
+}
+
 /// Note 48: the background preparation starts once the user steps through photos in the loupe
 /// (not when a library opens), builds the view's previews in one cancellable row, and a stop
 /// from that row holds for the view.

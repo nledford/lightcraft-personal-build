@@ -556,7 +556,7 @@ impl LightcraftApp {
         use std::sync::atomic::Ordering;
         let Some(b) = self.session.preview_build.clone() else { return };
         let key = std::sync::Arc::as_ptr(&b) as usize;
-        if b.finished.load(Ordering::Relaxed) {
+        if !b.running() {
             if self.ui.preview_build_seen != Some((key, true)) {
                 self.ui.preview_build_seen = Some((key, true));
                 let (done, failed) = (b.done.load(Ordering::Relaxed), b.failed.load(Ordering::Relaxed));
