@@ -2554,5 +2554,7 @@
   "Synchronize Folders": "Synkronoi kansiot",
   "Can't be synchronized with the others: synchronize it by itself": "Ei voi synkronoida muiden kanssa: synkronoi se erikseen",
   "Nothing to do with the choices ticked": "Ei tehtävää valituilla asetuksilla",
-  "Nothing was synchronized": "Mitään ei synkronoitu"
+  "Nothing was synchronized": "Mitään ei synkronoitu",
+  "By Keyword": "Avainsanan mukaan",
+  "Select photos to tick": "Valitse kuvia ruksataksesi"
 }

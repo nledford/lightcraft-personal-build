@@ -2600,5 +2600,7 @@
   "Synchronize Folders": "同步資料夾",
   "Can't be synchronized with the others: synchronize it by itself": "無法與其他資料夾一起同步：請單獨同步",
   "Nothing to do with the choices ticked": "依所勾選的選項無需操作",
-  "Nothing was synchronized": "沒有同步任何內容"
+  "Nothing was synchronized": "沒有同步任何內容",
+  "By Keyword": "依關鍵字",
+  "Select photos to tick": "選取照片後即可勾選"
 }

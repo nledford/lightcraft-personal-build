@@ -2571,5 +2571,7 @@
   "Synchronize Folders": "Sinkronkan folder",
   "Can't be synchronized with the others: synchronize it by itself": "Tidak bisa disinkronkan bersama yang lain: sinkronkan sendiri",
   "Nothing to do with the choices ticked": "Tidak ada yang perlu dilakukan dengan pilihan yang dicentang",
-  "Nothing was synchronized": "Tidak ada yang disinkronkan"
+  "Nothing was synchronized": "Tidak ada yang disinkronkan",
+  "By Keyword": "Menurut kata kunci",
+  "Select photos to tick": "Pilih foto untuk mencentang"
 }

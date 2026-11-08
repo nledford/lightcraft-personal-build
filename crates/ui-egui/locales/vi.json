@@ -2882,5 +2882,7 @@
   "Synchronize Folders": "Đồng bộ thư mục",
   "Can't be synchronized with the others: synchronize it by itself": "Không thể đồng bộ cùng các thư mục khác: hãy đồng bộ riêng",
   "Nothing to do with the choices ticked": "Không có gì để làm với các lựa chọn đã đánh dấu",
-  "Nothing was synchronized": "Không có gì được đồng bộ"
+  "Nothing was synchronized": "Không có gì được đồng bộ",
+  "By Keyword": "Theo từ khóa",
+  "Select photos to tick": "Chọn ảnh để đánh dấu"
 }

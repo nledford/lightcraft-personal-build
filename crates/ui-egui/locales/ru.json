@@ -2803,5 +2803,7 @@
   "Synchronize Folders": "Синхронизировать папки",
   "Can't be synchronized with the others: synchronize it by itself": "Нельзя синхронизировать вместе с остальными: синхронизируйте её отдельно",
   "Nothing to do with the choices ticked": "С отмеченными вариантами делать нечего",
-  "Nothing was synchronized": "Ничего не синхронизировано"
+  "Nothing was synchronized": "Ничего не синхронизировано",
+  "By Keyword": "По ключевому слову",
+  "Select photos to tick": "Выберите фото, чтобы отмечать"
 }

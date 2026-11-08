@@ -404,5 +404,10 @@
   "{n} new": "nya: {n}",
   "{n} moved": "flyttade: {n}",
   "{n} missing": "{n} saknas",
-  "{n} with changed sidecars": "med ändrade sidofiler: {n}"
+  "{n} with changed sidecars": "med ändrade sidofiler: {n}",
+  "Show photos with {path}": "Visa foton med {path}",
+  "Show photos with {path} (includes the keywords below it)": "Visa foton med {path} (inklusive nyckelorden under)",
+  "Add {path} to the selected photos ({n})": "Lägg till {path} i de markerade fotona ({n})",
+  "Take {path} off the selected photos ({n})": "Ta bort {path} från de markerade fotona ({n})",
+  "Stop showing only photos with {path}": "Sluta visa bara foton med {path}"
 }

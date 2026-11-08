@@ -405,5 +405,10 @@
   "{n} new": "新增 {n}",
   "{n} moved": "已移動 {n}",
   "{n} missing": "遺失 {n}",
-  "{n} with changed sidecars": "附屬檔案已變更 {n}"
+  "{n} with changed sidecars": "附屬檔案已變更 {n}",
+  "Show photos with {path}": "顯示含有 {path} 的照片",
+  "Show photos with {path} (includes the keywords below it)": "顯示含有 {path} 的照片（包含其下的關鍵字）",
+  "Add {path} to the selected photos ({n})": "將 {path} 加入選取的照片（{n}）",
+  "Take {path} off the selected photos ({n})": "將 {path} 從選取的照片移除（{n}）",
+  "Stop showing only photos with {path}": "不再只顯示含有 {path} 的照片"
 }

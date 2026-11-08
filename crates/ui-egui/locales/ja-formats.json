@@ -405,5 +405,10 @@
   "{n} new": "新規 {n}",
   "{n} moved": "移動 {n}",
   "{n} missing": "見つからない {n}",
-  "{n} with changed sidecars": "サイドカー変更 {n}"
+  "{n} with changed sidecars": "サイドカー変更 {n}",
+  "Show photos with {path}": "{path} の写真を表示",
+  "Show photos with {path} (includes the keywords below it)": "{path} の写真を表示（下位のキーワードを含む）",
+  "Add {path} to the selected photos ({n})": "選択した写真に {path} を追加（{n}）",
+  "Take {path} off the selected photos ({n})": "選択した写真から {path} を削除（{n}）",
+  "Stop showing only photos with {path}": "{path} の写真だけの表示をやめる"
 }

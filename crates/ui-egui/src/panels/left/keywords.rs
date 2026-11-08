@@ -3,9 +3,10 @@ use super::rows::{INDENT_STEP, Inside, Row, out_of_sight, tree_toggle};
 use super::{Branch, Icon, KeywordNode, LightcraftApp, Said, json};
 use crate::menu_item::MenuItem;
 
-/// "Keywords": the library's keyword tree with photo counts (`a|b|c` keywords nest). A click
-/// filters the grid by the keyword (children included), the triangle opens a level, and the
-/// context menu renames, merges or deletes the keyword across the library.
+/// "By Keyword": the library's keyword tree with photo counts (`a|b|c` keywords nest). A click
+/// shows the photos with the keyword (children included), the triangle opens a level, and the
+/// context menu renames, merges or deletes the keyword across the library. The right panel's
+/// Keyword List is the other list: its tick boxes give keywords to the selected photos.
 pub(super) fn keyword_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[KeywordNode], indent: f32, above: Option<Said>) {
     for n in nodes {
         // leaves (most keywords) have no open state to look up
@@ -50,7 +51,15 @@ fn keyword_row(
         let inside = if n.children.iter().any(|c| !c.children.is_empty()) { Inside::OpensAndFolds } else { Inside::Alone };
         tree_toggle(ui, &mut app.ui.sidebar_trees, &resp, indent, branch, open, format!("keywordToggle:{}", n.path), &n.name, inside);
     }
-    let resp = resp.on_hover_text(if n.children.is_empty() { n.path.clone() } else { format!("{} (includes the keywords below it)", n.path) });
+    let shown = n.path.replace('|', " › ");
+    let resp = resp.on_hover_text(if sel {
+        // the row is the filter now and a click clears it (below)
+        crate::i18n::tr_format!("Stop showing only photos with {path}", path = shown)
+    } else if n.children.is_empty() {
+        crate::i18n::tr_format!("Show photos with {path}", path = shown)
+    } else {
+        crate::i18n::tr_format!("Show photos with {path} (includes the keywords below it)", path = shown)
+    });
     if super::side_keys::chosen(ui, &resp) {
         crate::panels::side_select::keyword_clicked(app, ui, &n.path);
     }

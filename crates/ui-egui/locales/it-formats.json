@@ -404,5 +404,10 @@
   "{n} new": "nuove: {n}",
   "{n} moved": "spostate: {n}",
   "{n} missing": "mancanti: {n}",
-  "{n} with changed sidecars": "con file collaterale cambiato: {n}"
+  "{n} with changed sidecars": "con file collaterale cambiato: {n}",
+  "Show photos with {path}": "Mostra le foto con {path}",
+  "Show photos with {path} (includes the keywords below it)": "Mostra le foto con {path} (incluse le parole chiave al suo interno)",
+  "Add {path} to the selected photos ({n})": "Aggiungi {path} alle foto selezionate ({n})",
+  "Take {path} off the selected photos ({n})": "Rimuovi {path} dalle foto selezionate ({n})",
+  "Stop showing only photos with {path}": "Smetti di mostrare solo le foto con {path}"
 }

@@ -2598,5 +2598,7 @@
   "Synchronize Folders": "フォルダを同期",
   "Can't be synchronized with the others: synchronize it by itself": "他のフォルダと一緒には同期できません：個別に同期してください",
   "Nothing to do with the choices ticked": "選択した項目では何もすることはありません",
-  "Nothing was synchronized": "何も同期されませんでした"
+  "Nothing was synchronized": "何も同期されませんでした",
+  "By Keyword": "キーワード別",
+  "Select photos to tick": "チェックするには写真を選択してください"
 }

@@ -3864,5 +3864,7 @@
   "Synchronize Folders": "საქაღალდეების სინქრონიზაცია",
   "Can't be synchronized with the others: synchronize it by itself": "სხვებთან ერთად სინქრონიზაცია შეუძლებელია: მოახდინეთ მისი სინქრონიზაცია ცალკე",
   "Nothing to do with the choices ticked": "მონიშნული არჩევანით გასაკეთებელი არაფერია",
-  "Nothing was synchronized": "არაფრის სინქრონიზაცია არ მომხდარა"
+  "Nothing was synchronized": "არაფრის სინქრონიზაცია არ მომხდარა",
+  "By Keyword": "საკვანძო სიტყვით",
+  "Select photos to tick": "მონიშნეთ ფოტოები, რომ დაადოთ ნიშანი"
 }

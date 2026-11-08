@@ -2643,5 +2643,7 @@
   "Synchronize Folders": "Synchronizovat složky",
   "Can't be synchronized with the others: synchronize it by itself": "Nelze synchronizovat s ostatními: synchronizujte ji samostatně",
   "Nothing to do with the choices ticked": "Se zaškrtnutými volbami není co dělat",
-  "Nothing was synchronized": "Nic nebylo synchronizováno"
+  "Nothing was synchronized": "Nic nebylo synchronizováno",
+  "By Keyword": "Podle klíčového slova",
+  "Select photos to tick": "Chcete-li zaškrtávat, vyberte fotografie"
 }

@@ -2522,5 +2522,7 @@
   "Synchronize Folders": "Synchronizuj foldery",
   "Can't be synchronized with the others: synchronize it by itself": "Nie można go zsynchronizować z pozostałymi: zsynchronizuj go osobno",
   "Nothing to do with the choices ticked": "Przy zaznaczonych opcjach nie ma nic do zrobienia",
-  "Nothing was synchronized": "Nic nie zostało zsynchronizowane"
+  "Nothing was synchronized": "Nic nie zostało zsynchronizowane",
+  "By Keyword": "Według słowa kluczowego",
+  "Select photos to tick": "Zaznacz zdjęcia, aby zaznaczać pola"
 }

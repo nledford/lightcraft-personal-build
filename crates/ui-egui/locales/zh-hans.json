@@ -2599,5 +2599,7 @@
   "Synchronize Folders": "同步文件夹",
   "Can't be synchronized with the others: synchronize it by itself": "无法与其他文件夹一起同步：请单独同步",
   "Nothing to do with the choices ticked": "按所勾选的选项无需操作",
-  "Nothing was synchronized": "没有同步任何内容"
+  "Nothing was synchronized": "没有同步任何内容",
+  "By Keyword": "按关键字",
+  "Select photos to tick": "选择照片后即可勾选"
 }

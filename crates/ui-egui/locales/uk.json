@@ -2596,5 +2596,7 @@
   "Synchronize Folders": "Синхронізувати теки",
   "Can't be synchronized with the others: synchronize it by itself": "Не можна синхронізувати разом з іншими: синхронізуйте її окремо",
   "Nothing to do with the choices ticked": "З позначеними варіантами робити нічого",
-  "Nothing was synchronized": "Нічого не синхронізовано"
+  "Nothing was synchronized": "Нічого не синхронізовано",
+  "By Keyword": "За ключовим словом",
+  "Select photos to tick": "Виберіть фото, щоб ставити позначки"
 }

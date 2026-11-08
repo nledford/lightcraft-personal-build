@@ -2761,5 +2761,7 @@
   "Synchronize Folders": "Sincronizza cartelle",
   "Can't be synchronized with the others: synchronize it by itself": "Non si può sincronizzare con le altre: sincronizzala da sola",
   "Nothing to do with the choices ticked": "Niente da fare con le scelte spuntate",
-  "Nothing was synchronized": "Non è stato sincronizzato nulla"
+  "Nothing was synchronized": "Non è stato sincronizzato nulla",
+  "By Keyword": "Per parola chiave",
+  "Select photos to tick": "Seleziona delle foto per spuntare"
 }

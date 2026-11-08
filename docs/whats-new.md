@@ -103,6 +103,14 @@
 - With Keyboard in Sidebar off, nothing changes: a click on a row never takes the keys.
 - For agents: `view.sidebarKeys` `{on?}`; the ring is widget `sidebarCursor`.
 
+### The two keyword lists say what they do
+- The left sidebar's Keywords section is now called By Keyword: like By Date, it browses. Pointing at a keyword there
+  says "Show photos with …" (a keyword with others inside it says it includes them); on the keyword already chosen,
+  where a click clears the filter, it says "Stop showing only photos with …". Your saved sidebar arrangement
+  is unchanged.
+- In the Keyword List of the Keywords panel, pointing at a tick box says what a click does: "Add … to the selected
+  photos (3)", or "Take … off …" once all of them have it. With no photo selected it says "Select photos to tick".
+
 ## 2026-11-02
 
 ### The Windows title bar is readable from the moment the window opens

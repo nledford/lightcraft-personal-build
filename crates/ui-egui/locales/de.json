@@ -3678,5 +3678,7 @@
   "Synchronize Folders": "Ordner synchronisieren",
   "Can't be synchronized with the others: synchronize it by itself": "Nicht zusammen mit den anderen synchronisierbar: einzeln synchronisieren",
   "Nothing to do with the choices ticked": "Mit den gewählten Optionen ist nichts zu tun",
-  "Nothing was synchronized": "Nichts wurde synchronisiert"
+  "Nothing was synchronized": "Nichts wurde synchronisiert",
+  "By Keyword": "Nach Stichwort",
+  "Select photos to tick": "Zum Anhaken Fotos auswählen"
 }

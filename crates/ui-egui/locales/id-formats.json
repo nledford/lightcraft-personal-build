@@ -404,5 +404,10 @@
   "{n} new": "{n} baru",
   "{n} moved": "{n} dipindahkan",
   "{n} missing": "{n} hilang",
-  "{n} with changed sidecars": "{n} dengan sidecar berubah"
+  "{n} with changed sidecars": "{n} dengan sidecar berubah",
+  "Show photos with {path}": "Tampilkan foto dengan {path}",
+  "Show photos with {path} (includes the keywords below it)": "Tampilkan foto dengan {path} (termasuk kata kunci di bawahnya)",
+  "Add {path} to the selected photos ({n})": "Tambahkan {path} ke foto yang dipilih ({n})",
+  "Take {path} off the selected photos ({n})": "Hapus {path} dari foto yang dipilih ({n})",
+  "Stop showing only photos with {path}": "Berhenti hanya menampilkan foto dengan {path}"
 }
