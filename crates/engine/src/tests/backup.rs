@@ -227,6 +227,35 @@ fn a_backup_holds_what_was_not_saved_yet() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A change the catalog log's own thread was handed but has not written yet (a busy drive) is in
+/// the backup too: the backup reads the log's file by path, so the log is written first.
+#[test]
+fn a_backup_holds_what_the_logs_thread_has_not_written_yet() {
+    use lightcraft_catalog::fault::{self, Step};
+    let dir = temp_dir("slow-log");
+    let mut s = open(&dir);
+    let id = s.selection.active.unwrap();
+    s.execute("library.backupPreferences", &json!({"dir": null})).unwrap();
+    // (every write of the log waits: the rating below is handed to the thread and not on disk when the command returns)
+    fault::install(
+        &dir,
+        std::sync::Arc::new(|step| {
+            if step == Step::Write {
+                std::thread::sleep(std::time::Duration::from_millis(400));
+            }
+            Ok(())
+        }),
+    );
+    s.execute("photo.rate", &json!({"rating": 5})).unwrap();
+    let r = s.execute("library.backup", &json!({}));
+    fault::remove(&dir);
+    let made = PathBuf::from(r.unwrap()["report"]["dir"].as_str().unwrap());
+    let (back, _gone) = restored(&mut s, &made, "slow-log-restored");
+    assert_eq!(back.catalog.photo(id).unwrap().rating, 5);
+    drop(s);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// Parameters that aren't what they should be are an error, not a backup somewhere else: a
 /// folder that isn't a path, a relative one, a flag that isn't one.
 #[test]

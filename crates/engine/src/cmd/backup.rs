@@ -647,8 +647,10 @@ fn back_up_as(s: &mut Session, p: &Value, kind: &'static str) -> Result<Value> {
     };
     // (the library's id is in its preferences before they are backed up)
     let library_id = Some(library_id(s));
-    // everything changed so far is in the log before it is read
+    // everything changed so far is in the log before it is read (the log's own thread writes it after `persist` returns,
+    // and the backup reads the file by path)
     s.persist()?;
+    s.flush_log()?;
     let started = (s.clock)();
     let name = free_name(&dest, &started);
     let own = backup_folder(s).is_some_and(|(folder, _)| folder == dest);
