@@ -61,6 +61,7 @@ mod process;
 mod recheck;
 mod restore;
 mod segment;
+mod selection_facts;
 mod settings_files;
 mod shelved_folder;
 mod slide;
