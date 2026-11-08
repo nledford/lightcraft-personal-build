@@ -783,7 +783,8 @@ mod keep_awake_tests {
         let told = Arc::new(Mutex::new(Vec::new()));
         let sink = told.clone();
         let dock_badge: crate::DockBadgeFn = Box::new(move |n| sink.lock().unwrap().push(n));
-        let app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services { png: None, dock_badge: Some(dock_badge), ..Default::default() });
+        let app =
+            LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services { png: None, dock_badge: Some(dock_badge), ..Default::default() });
         (app, told)
     }
 
