@@ -291,8 +291,14 @@ fn a_sidecar_written_later_keeps_the_keyword_paths_that_were_left_in_it() {
     let sidecar = dir.join("one.xmp");
     let with_paths = std::fs::read_to_string(&sidecar)
         .unwrap()
-        .replace(r#"xmlns:dc="http://purl.org/dc/elements/1.1/""#, r#"xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:lr="http://ns.adobe.com/lightroom/1.0/""#)
-        .replace("</rdf:Description>", "<lr:hierarchicalSubject><rdf:Bag><rdf:li>Places|Lisbon</rdf:li></rdf:Bag></lr:hierarchicalSubject>\n</rdf:Description>");
+        .replace(
+            r#"xmlns:dc="http://purl.org/dc/elements/1.1/""#,
+            r#"xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:lr="http://ns.adobe.com/lightroom/1.0/""#,
+        )
+        .replace(
+            "</rdf:Description>",
+            "<lr:hierarchicalSubject><rdf:Bag><rdf:li>Places|Lisbon</rdf:li></rdf:Bag></lr:hierarchicalSubject>\n</rdf:Description>",
+        );
     std::fs::write(&sidecar, with_paths).unwrap();
     let mut s = Session::new().with_fs();
     s.execute("library.xmpPreferences", &json!({"autoWrite": true})).unwrap();

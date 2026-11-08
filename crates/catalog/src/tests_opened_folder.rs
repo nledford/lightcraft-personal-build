@@ -121,10 +121,7 @@ fn a_segment_is_neither_written_nor_removed_in_a_folder_that_replaced_the_one_it
     let away = put_another_folder_at(&dir);
     let theirs = files_in(&dir);
 
-    let results = [
-        ("write_new_with", store.write_new_with(&second, &mut |w| w.write_all(b"x")).map(|_| ())),
-        ("remove", store.remove(&first)),
-    ];
+    let results = [("write_new_with", store.write_new_with(&second, &mut |w| w.write_all(b"x")).map(|_| ())), ("remove", store.remove(&first))];
     for (what, r) in results {
         let e = r.expect_err(what);
         assert!(e.to_string().contains(REFUSED), "{what}: {e}");

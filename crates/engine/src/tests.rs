@@ -2,9 +2,9 @@ use serde_json::{Value, json};
 
 use crate::{Selection, Session, command_specs};
 
+mod album_folder_source;
 mod album_loops;
 mod album_missing;
-mod album_folder_source;
 mod album_order;
 mod album_remove;
 mod albums_local;
@@ -48,9 +48,9 @@ mod mask_effects;
 mod mask_geometry;
 mod merge;
 mod move_to_share;
+mod multi_source;
 #[cfg(unix)]
 mod opened_folder;
-mod multi_source;
 mod organize;
 mod persist;
 mod prefs;

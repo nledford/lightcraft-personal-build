@@ -343,7 +343,9 @@ fn a_folder_made_in_lightcraft_stays_a_row_when_its_photos_leave() {
         c.apply(op).unwrap();
     }
     let mut kept = Kept::new(&c);
-    let photo_in = |c: &Catalog, dir: &str| c.photos().find(|p| matches!(&p.source, Source::File { path } if path.starts_with(&format!("{dir}/IMG_")))).unwrap().id;
+    let photo_in = |c: &Catalog, dir: &str| {
+        c.photos().find(|p| matches!(&p.source, Source::File { path } if path.starts_with(&format!("{dir}/IMG_")))).unwrap().id
+    };
     // a folder nothing made leaves the tree when its last photo goes, patched, as before
     let id = photo_in(&c, "/Users/me/a");
     assert!(step(&mut c, &mut kept, Op::RemovePhoto { id }));

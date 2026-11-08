@@ -1824,9 +1824,9 @@ fn gathered(cat: &Catalog, id: AlbumId, gather: impl FnOnce() -> FolderPhotos) -
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
-mod tests_album_loops;
-#[cfg(test)]
 mod tests_album_folder_photos;
+#[cfg(test)]
+mod tests_album_loops;
 #[cfg(test)]
 mod tests_album_order;
 #[cfg(test)]
@@ -1858,27 +1858,27 @@ mod tests_lock;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests_log_thread;
 #[cfg(test)]
-mod tests_policy;
-#[cfg(test)]
 mod tests_opened_folder;
+#[cfg(test)]
+mod tests_policy;
 #[cfg(test)]
 mod tests_repair;
 #[cfg(test)]
-mod tests_rule_order;
-#[cfg(test)]
 mod tests_restore;
+#[cfg(test)]
+mod tests_rule_order;
 #[cfg(test)]
 mod tests_scale;
 #[cfg(test)]
+mod tests_search_text;
+#[cfg(test)]
 mod tests_segments;
+#[cfg(test)]
+mod tests_shared;
 #[cfg(test)]
 mod tests_stored;
 #[cfg(test)]
 mod tests_stored_settings;
-#[cfg(test)]
-mod tests_shared;
-#[cfg(test)]
-mod tests_search_text;
 #[cfg(test)]
 mod tests_tally;
 #[cfg(test)]

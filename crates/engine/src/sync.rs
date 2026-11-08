@@ -171,7 +171,14 @@ impl Default for SyncChoice {
     /// library already has), leave the rest to be looked at; and photos whose file moved follow it
     /// (nothing is lost, and undo puts them back).
     fn default() -> Self {
-        SyncChoice { import_new: true, import_duplicates: false, relink_moved: true, remove_missing: false, read_metadata: false, read: Default::default() }
+        SyncChoice {
+            import_new: true,
+            import_duplicates: false,
+            relink_moved: true,
+            remove_missing: false,
+            read_metadata: false,
+            read: Default::default(),
+        }
     }
 }
 

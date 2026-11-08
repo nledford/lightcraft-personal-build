@@ -366,7 +366,8 @@ fn it_refuses_where_there_is_no_sidebar_and_follows_clicks() {
     toggle(&mut h);
     assert!(h.app.ui.toast.is_none(), "the second time the ring says it");
     let generation = h.app.session.library_generation();
-    let keyword = h.app.caches.keyword_tree(&h.app.session.catalog, generation).first().map(|k| (k.path.clone(), k.name.clone())).expect("a demo keyword");
+    let keyword =
+        h.app.caches.keyword_tree(&h.app.session.catalog, generation).first().map(|k| (k.path.clone(), k.name.clone())).expect("a demo keyword");
     h.app.ui.sidebar_cursor = Some(format!("keyword:{}", keyword.0));
     h.step();
     key(&mut h, "F2");
