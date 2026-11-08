@@ -376,7 +376,7 @@ pub(crate) fn folders_menu(app: &mut LightcraftApp, ui: &mut egui::Ui, paths: &[
     ));
     if sync.clicked() {
         if let Err(e) = crate::sync::open_many(app, paths) {
-            app.toast(ui.ctx(), e);
+            app.toast_error(ui.ctx(), e);
         }
         ui.close();
     }

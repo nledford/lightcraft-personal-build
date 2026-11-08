@@ -644,6 +644,11 @@ impl Activity {
         self.inner.line_held.store(held, Ordering::Relaxed);
     }
 
+    /// Whether a question about the line is open ([`Activity::hold_line`]).
+    pub fn line_is_held(&self) -> bool {
+        self.inner.line_held.load(Ordering::Relaxed)
+    }
+
     /// [`Activity::take_ready`] among the tasks whose request `runs` can run: each frontend starts what it knows how to
     /// (the engine its commands, the app its own). Only the first in each lane's line is looked at: one the caller
     /// can't run holds its lane, as it would if it had started.
@@ -1223,10 +1228,13 @@ mod tests {
     fn a_held_line_hands_nothing_over_until_it_is_let_go() {
         let a = Activity::default();
         a.enqueue("previews", "P", request("engine")).unwrap();
+        assert!(!a.line_is_held());
         a.hold_line(true);
+        assert!(a.line_is_held());
         assert!(a.take_ready().is_none(), "the lane is free but the line is held");
         assert_eq!(a.waiting().len(), 1, "it stays in line");
         a.hold_line(false);
+        assert!(!a.line_is_held());
         assert!(a.take_ready().is_some());
     }
 

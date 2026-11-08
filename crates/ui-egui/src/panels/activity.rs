@@ -293,12 +293,12 @@ pub fn bell(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, icon: Rect, 
         }
         Some(Act::QueueScan) => {
             if let Err(e) = crate::import::queue_scan(app) {
-                app.toast(&ctx, e);
+                app.toast_error(&ctx, e);
             }
         }
         Some(Act::Review(id)) => {
             if let Err(e) = crate::import::review_queued(app, id) {
-                app.toast(&ctx, e);
+                app.toast_error(&ctx, e);
             }
         }
         None => {}
