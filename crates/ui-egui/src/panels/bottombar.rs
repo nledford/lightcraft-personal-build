@@ -333,8 +333,8 @@ fn click_zoom_menu(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     }
 }
 
-/// One row of the Sort popup, registered as `sortMenu:{id}`: a check row where `checked` is `Some`, a plain
-/// button where it is `None`; a row that is off can't be clicked.
+/// One row of the Sort popup, registered as `sortMenu:{id}`: a radio row (`MenuItem::selected`) where `checked`
+/// is `Some`, a plain button row (Reshuffle) where it is `None`; a row that is off can't be clicked.
 fn sort_row(ui: &mut egui::Ui, id: &str, label: &str, enabled: bool, checked: Option<bool>) -> bool {
     let row = MenuItem::new(crate::i18n::tr(label)).enabled(enabled).widget(format!("sortMenu:{id}"));
     let row = match checked {
