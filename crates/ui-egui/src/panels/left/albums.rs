@@ -65,7 +65,7 @@ fn albums_tree(app: &mut LightcraftApp, ui: &mut egui::Ui, all: &AlbumKids, pare
                 folder_menu(app, &tri, a);
             }
             // the row itself is the source: the photos of the albums inside the folder
-            if resp.clicked() {
+            if super::side_keys::chosen(ui, &resp) {
                 app.act("library.source", json!({"kind": "album", "id": a.id.0}));
             }
             folder_menu(app, &resp, a);
@@ -122,7 +122,7 @@ fn albums_tree(app: &mut LightcraftApp, ui: &mut egui::Ui, all: &AlbumKids, pare
                 }
                 resp = resp.on_hover_text(tip);
             }
-            if resp.clicked() {
+            if super::side_keys::chosen(ui, &resp) {
                 app.act("library.source", json!({"kind": "album", "id": a.id.0}));
             }
             folder_menu(app, &resp, a);

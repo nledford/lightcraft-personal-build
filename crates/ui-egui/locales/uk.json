@@ -2522,5 +2522,6 @@
   "Hides this row. Nothing on disk or in the library changes": "Ховає цей рядок. На диску й у бібліотеці нічого не змінюється",
   "This folder stays listed while the grid shows its photos": "Ця тека лишається у списку, доки сітка показує її фотографії",
   "Keys are in the sidebar: arrows move, Enter opens, type to find, Esc goes back to the photos": "Клавіші працюють у бічній панелі: стрілки переміщують, Enter відкриває, набір тексту шукає, Esc повертає до фотографій",
-  "This row has no name to change": "Цей рядок не має назви, яку можна змінити"
+  "This row has no name to change": "Цей рядок не має назви, яку можна змінити",
+  "Keyboard in Sidebar": "Клавіатура в бічній панелі"
 }
