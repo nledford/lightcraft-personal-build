@@ -309,3 +309,17 @@ mod tests {
         assert!(last >= 2);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::film_spoken;
+
+    #[test]
+    fn a_failed_thumbnail_says_why_it_has_no_picture_after_its_name_or_alone() {
+        let why = crate::i18n::tr("This photo can't be opened");
+        assert_eq!(film_spoken("a.jpg, 3 stars", false), "a.jpg, 3 stars", "a thumbnail that loaded is just its name");
+        assert_eq!(film_spoken("", false), "", "no name and nothing wrong: nothing to say");
+        assert_eq!(film_spoken("a.jpg, 3 stars", true), format!("a.jpg, 3 stars, {why}"), "the reason follows the name");
+        assert_eq!(film_spoken("", true), why, "a photo the catalog no longer has: the reason stands alone");
+    }
+}
