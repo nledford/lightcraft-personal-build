@@ -198,6 +198,16 @@ fn on_a_longer_ring_the_album_named_is_one_that_leads_back() {
     assert_eq!(c.album_loops_through(AlbumId(3)), Some(AlbumId(1)));
 }
 
+/// A smart album that tests the folder it is in loops through itself: the folder stands for the albums inside it.
+#[test]
+fn an_album_testing_the_folder_it_is_in_loops_through_itself() {
+    let mut c = Catalog::new();
+    add(&mut c, Album { folder: true, ..Album::new(AlbumId(10), "Trips") });
+    add(&mut c, Album { parent: Some(AlbumId(10)), ..any_of(11, serde_json::json!([in_album("is", 10)])) });
+    assert!(c.album_on_a_loop(AlbumId(11)));
+    assert_eq!(c.album_loops_through(AlbumId(11)), Some(AlbumId(11)));
+}
+
 /// Asking is cheap: the albums on a loop are worked out once, and again only after an op that adds
 /// or removes an album or changes rules, not after the edits to photos the library sees all day.
 #[test]

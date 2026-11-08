@@ -101,6 +101,29 @@ fn a_build_asked_for_while_one_runs_waits_behind_it_and_builds_the_photos_chosen
     assert_eq!(s.journal.iter().filter(|(c, _)| c == "library.buildPreviews").count(), 1, "{:?}", s.journal);
 }
 
+/// Given the background preparation building previews (it yields only inside its own work) and a build waiting in the
+/// line (it was put there while a build of the user's ran, and the preparation took the lane when that ended), when
+/// the line is looked at, then the preparation is told to stop and the build starts once its row is gone: it does
+/// not wait for the preparation to run through every photo.
+#[test]
+fn a_build_waiting_behind_the_background_preparation_stops_it_and_starts() {
+    let mut s = Session::with_demo();
+    let prep = Arc::new(PreviewBuild { background: true, ..Default::default() });
+    s.preview_build = Some(prep.clone());
+    let row = s.activity.start("previews", "Preparing photos in the background", Cancel::Flag(prep.cancel.clone()));
+    let ids = build_ids(&s, 2);
+    let request = Request { command: "library.buildPreviews".into(), params: json!({"edge": 256, "ids": ids}) };
+    s.activity.enqueue("previews", "Building previews", request).unwrap();
+    s.start_waiting();
+    assert!(prep.cancel.load(Ordering::Relaxed), "the preparation was told to stop");
+    // (it stops as a real one does: finished first, then its row goes)
+    prep.finished.store(true, Ordering::Release);
+    drop(row);
+    settle(&mut s);
+    let progress = s.execute("library.previewProgress", &json!({})).unwrap();
+    assert!(progress["total"].as_u64().is_some_and(|n| n > 0), "the waiting build ran: {progress}");
+}
+
 /// Given a preview build running, when a build is asked for without `queue`, then it is refused as before, and
 /// nothing waits.
 #[test]

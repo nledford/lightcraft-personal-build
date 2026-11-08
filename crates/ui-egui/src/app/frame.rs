@@ -123,7 +123,9 @@ impl LightcraftApp {
                 && !import::library_busy(self)
                 && !import::running(self)
                 && self.sync.is_none()
-                && self.lightroom.is_none() && !self.tasks.is_running(LABEL) {
+                && self.lightroom.is_none()
+                && !self.tasks.is_running(LABEL)
+            {
                 self.ui.auto_import_at = now;
                 let listed = folder.clone();
                 let watched = folder.clone();

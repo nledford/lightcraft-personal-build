@@ -1,6 +1,8 @@
 use super::scan::wait_in_line;
 use super::{
-    ImportDialog, ImportUprightMode, ImportWarning, ImportWarningCode, LightcraftApp, Ordering, Request, Value, drop_blocked, json, recipe_items, remember_read, library_busy, };
+    ImportDialog, ImportUprightMode, ImportWarning, ImportWarningCode, LightcraftApp, Ordering, Request, Value, drop_blocked, json, library_busy,
+    recipe_items, remember_read,
+};
 
 /// Files per batch in the browser build (each batch joins the catalog as it is ready, so the
 /// progress window updates); the desktop's worker uses [`lightcraft_engine::import::batch_size`].

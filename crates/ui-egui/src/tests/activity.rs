@@ -1346,9 +1346,11 @@ fn quitting_says_how_many_tasks_waiting_in_line_would_not_run() {
     assert!(!crate::panels::notices::may_close(&mut h.app));
     let Some(crate::QuitPrompt::Tasks(text)) = h.app.quit_prompt.clone() else { panic!("{:?}", h.app.quit_prompt) };
     assert_eq!(text, "1 task is still running: Building previews. Quitting stops it. 1 task waiting in line won't run.");
-    // (what Quit Anyway does)
-    h.app.session.activity.cancel_all();
+    h.step();
+    click(&mut h, "button:quitAnyway");
     assert!(running.is_cancelled() && h.app.session.activity.waiting().is_empty());
+    assert!(h.app.quit_prompt.is_none(), "not asked again: {:?}", h.app.quit_prompt);
+    assert!(h.quit_requested(), "the window closes");
     build.finished.store(true, std::sync::atomic::Ordering::Release);
     drop(running);
 }

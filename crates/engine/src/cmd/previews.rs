@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use serde_json::{Value, json};
 
 use super::{CommandSpec, always, bad, cmd, str_param};
-use crate::activity::{Cancel, Ending, Outcome, Lane, Request, TaskGuard};
+use crate::activity::{Cancel, Ending, Lane, Outcome, Request, TaskGuard};
 use crate::media::{RenderJob, THUMB_SIZES};
 use crate::{Result, Session};
 
@@ -690,8 +690,7 @@ fn build(s: &mut Session, p: &Value) -> Result<Value> {
             std::thread::Builder::new().name("lc-build-previews".into()).spawn(move || run_all(jobs, run, lanes, force))
         };
         #[cfg(not(test))]
-        let started =
-            std::thread::Builder::new().name("lc-build-previews".into()).spawn(move || run_all(jobs, run, lanes, force));
+        let started = std::thread::Builder::new().name("lc-build-previews".into()).spawn(move || run_all(jobs, run, lanes, force));
         if let Err(e) = started {
             // never started: not left "running", which would hold every later build back, and the
             // build it was to replace carries on

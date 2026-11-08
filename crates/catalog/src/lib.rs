@@ -624,7 +624,8 @@ impl Catalog {
         if !self.album_on_a_loop(id) {
             return None;
         }
-        let tested = self.albums.get(&id)?.smart.as_deref()?.albums_tested();
+        // (a folder tested stands for the albums inside it, as the loops are found)
+        let tested: Vec<AlbumId> = self.albums.get(&id)?.smart.as_deref()?.albums_tested().into_iter().flat_map(|t| self.album_members(t)).collect();
         tested
             .iter()
             .copied()
@@ -2031,11 +2032,11 @@ mod tests_lock;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests_log_thread;
 #[cfg(test)]
+mod tests_looping_albums;
+#[cfg(test)]
 mod tests_opened_folder;
 #[cfg(test)]
 mod tests_policy;
-#[cfg(test)]
-mod tests_looping_albums;
 #[cfg(test)]
 mod tests_repair;
 #[cfg(test)]

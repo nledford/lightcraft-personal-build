@@ -698,6 +698,13 @@ impl Session {
             return;
         }
         self.starting_waiting = true;
+        // the background preparation yields only inside its own work, so a build waiting behind its row would wait for
+        // every photo it has left: it is told to stop, as it is for a build asked for now
+        if self.activity.lane_waiting(activity::Lane::Previews)
+            && let Some(b) = self.preview_build.as_ref().filter(|b| b.background && b.running())
+        {
+            b.cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
         // (bounded: each turn takes one task out of a line that is at most this long)
         for _ in 0..activity::MAX_WAITING {
             let Some(w) = self.activity.take_ready_if(|r| find_command(&r.command).is_some()) else { break };
