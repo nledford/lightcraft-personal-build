@@ -670,6 +670,27 @@ fn an_orientation_only_the_xmp_states_leaves_stored_frame_regions_as_written() {
     let _ = std::fs::remove_dir_all(&src);
 }
 
+/// Review of #2822 (P3): a clip is shown as it was filmed, so a sidecar's `tiff:Orientation` must not turn the face
+/// boxes drawn on it: they stay as written. (A portrait clip has the size of the sideways photo's upright one: the
+/// sidecar's orientation would take it for a photo stored sideways.)
+#[test]
+fn a_sidecars_orientation_does_not_turn_the_regions_of_a_video() {
+    let src = temp_dir("regions-video-orientation");
+    std::fs::write(src.join("clip.mp4"), super::import::synthetic_mp4(1000, 5000, 24, 32, 0)).unwrap();
+    let packet = STORED_FRAME_REGIONS.replace(r#"rdf:about="""#, r#"rdf:about="" xmlns:tiff="http://ns.adobe.com/tiff/1.0/" tiff:Orientation="6""#);
+    std::fs::write(src.join("clip.xmp"), packet).unwrap();
+    let mut s = Session::new().with_fs();
+    let r = s.execute("library.import", &json!({"paths": [src.join("clip.mp4").to_string_lossy()]})).unwrap();
+    assert_eq!(r["imported"].as_array().map(Vec::len), Some(1), "{r}");
+    let p = s.catalog.photo(only(&s)).unwrap();
+    assert_eq!((p.width, p.height), (24, 32), "shown as filmed");
+    assert_eq!(p.meta.regions.len(), 1, "the sidecar's box is read");
+    let r = p.meta.regions[0].rect;
+    let (got, want) = ([r.x0, r.y0, r.x1, r.y1], [0.2, 0.325, 0.3, 0.475]);
+    assert!(got.iter().zip(want).all(|(g, w)| (g - w).abs() < 1e-9), "the box was turned by the sidecar's orientation: {got:?}");
+    let _ = std::fs::remove_dir_all(&src);
+}
+
 /// Review of #2857 (P2): a MEF keeps orientation on its raw IFD, not IFD0. Import turns face boxes by the decoder's
 /// orientation; Read Metadata from File must use the same source, or the boxes go back to the stored frame and
 /// Synchronize Folder reports changes every pass. The sidecar has no `tiff:Orientation`.

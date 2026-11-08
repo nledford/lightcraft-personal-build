@@ -269,24 +269,24 @@ pub fn poll_photos(app: &mut LightcraftApp, ctx: &egui::Context) {
 #[cfg(target_arch = "wasm32")]
 pub fn poll_photos(_: &mut LightcraftApp, _: &egui::Context) {}
 
+/// The first part of an export's account: what was done (photos exported, a contact sheet or a PDF printed).
+fn export_headline(files: &[Value], ok: usize, total: usize) -> String {
+    if let Some(sheet) = files.first().filter(|f| f["contactSheet"] == true) {
+        crate::i18n::tr_format!("Exported contact sheet: {photos} photos, {pages} pages", photos = sheet["photos"], pages = sheet["pages"])
+    } else if let Some(pdf) = files.first().filter(|f| f["print"] == true) {
+        crate::i18n::tr_format!("Printed to PDF: {photos} photos, {pages} pages", photos = pdf["photos"], pages = pdf["pages"])
+    } else {
+        crate::i18n::tr_format!("Exported {ok} of {total} photo{}", if total == 1 { "" } else { "s" }, ok = ok, total = total)
+    }
+}
+
 /// What a finished export says: how many files were written, skipped or failed, and the Apple Photos note; and
 /// its first part, what was done, which is the headline of the row the export leaves (translated like the toast).
 fn export_summary(files: &[Value], photos: Option<&Value>, total: usize, cancelled: bool) -> (String, String) {
-    let sheet = files.first().filter(|f| f["contactSheet"] == true);
     let failed: Vec<&Value> = files.iter().filter(|f| f.get("error").is_some()).collect();
     let ok = files.iter().filter(|f| f.get("path").is_some()).count();
-    // (a conflict leaves `skipped` as the taken path; a print or contact sheet reports its
-    // skipped photos as an array of {file, warning})
-    let skipped = files.iter().filter(|f| f.get("skipped").is_some_and(|v| !v.is_array())).count();
-    let warned = files.iter().filter(|f| f.get("warning").is_some()).count()
-        + files.iter().filter_map(|f| f.get("skipped").and_then(Value::as_array)).map(Vec::len).sum::<usize>();
-    let mut m = crate::i18n::tr_format!("Exported {ok} of {total} photo{}", if total == 1 { "" } else { "s" }, ok = ok, total = total);
-    if let Some(sheet) = sheet {
-        m = crate::i18n::tr_format!("Exported contact sheet: {photos} photos, {pages} pages", photos = sheet["photos"], pages = sheet["pages"]);
-    }
-    if let Some(pdf) = files.first().filter(|f| f["print"] == true) {
-        m = crate::i18n::tr_format!("Printed to PDF: {photos} photos, {pages} pages", photos = pdf["photos"], pages = pdf["pages"]);
-    }
+    let (skipped, warned) = not_written(files);
+    let mut m = export_headline(files, ok, total);
     let summary = m.clone();
     if skipped > 0 {
         m += &crate::i18n::tr_format!(" · {skipped} skipped (file exists)", skipped = skipped);
@@ -308,16 +308,28 @@ fn export_summary(files: &[Value], photos: Option<&Value>, total: usize, cancell
     (m, summary)
 }
 
+/// How many of an export's files were skipped (a name that exists keeps the taken path as `skipped`) and how many were
+/// not written with a warning (a clip a rendered export cannot make, a contact sheet's or print's skipped photos, which
+/// come as an array of {file, warning}).
+fn not_written(files: &[Value]) -> (usize, usize) {
+    let skipped = files.iter().filter(|f| f.get("skipped").is_some_and(|v| !v.is_array())).count();
+    let warned = files.iter().filter(|f| f.get("warning").is_some()).count()
+        + files.iter().filter_map(|f| f.get("skipped").and_then(Value::as_array)).map(Vec::len).sum::<usize>();
+    (skipped, warned)
+}
+
 /// How an export that ran ended, for the activity stack. Photos taking only some of the files is a warning, and
 /// Photos not asked at all (`skipped`: the export wrote no files, an earlier request still running…) is not an error
-/// either: not all went well in both cases.
-fn export_ending(cancelled: bool, ok: usize, failed: usize, photos: Option<&Value>) -> Ending {
+/// either: not all went well in both cases. Neither did an export that could not write some files without failing
+/// (`unwritten`: a rendered export of clips only ends with no file and no failure). A name that exists is not a
+/// problem: the person chose to skip it (the Skip collision policy).
+fn export_ending(cancelled: bool, ok: usize, failed: usize, unwritten: usize, photos: Option<&Value>) -> Ending {
     let photos_short = photos.is_some_and(|p| ["error", "warning", "skipped"].iter().any(|k| p.get(k).is_some()));
     if cancelled {
         Ending::Stopped
     } else if failed > 0 && ok == 0 {
         Ending::Failed
-    } else if failed > 0 || photos_short {
+    } else if failed > 0 || unwritten > 0 || photos_short {
         Ending::Problems
     } else {
         Ending::Done
@@ -330,7 +342,8 @@ fn export_ending(cancelled: bool, ok: usize, failed: usize, photos: Option<&Valu
 fn finished_outcome(files: &[Value], photos: Option<&Value>, cancelled: bool, folder: Option<String>, msg: &str, summary: String) -> Outcome {
     let failed: Vec<&Value> = files.iter().filter(|f| f.get("error").is_some()).collect();
     let ok = files.iter().filter(|f| f.get("path").is_some()).count();
-    let ending = export_ending(cancelled, ok, failed.len(), photos);
+    let (_, warned) = not_written(files);
+    let ending = export_ending(cancelled, ok, failed.len(), warned, photos);
     let path = files.iter().find_map(|f| f["path"].as_str()).map(str::to_string).or(folder);
     let failures = failed
         .iter()
@@ -577,12 +590,26 @@ mod tests {
     #[test]
     fn export_ending_counts_an_uncancelled_photos_skip_as_a_problem() {
         let skipped = json!({"skipped": "the export wrote no files"});
-        assert_eq!(export_ending(false, 3, 0, Some(&skipped)), Ending::Problems);
-        assert_eq!(export_ending(false, 3, 0, Some(&json!({"warning": "added 1 of 3"}))), Ending::Problems);
-        assert_eq!(export_ending(false, 3, 0, Some(&json!({"imported": 3}))), Ending::Done);
-        assert_eq!(export_ending(false, 3, 0, None), Ending::Done);
-        assert_eq!(export_ending(false, 0, 2, None), Ending::Failed);
-        assert_eq!(export_ending(true, 3, 0, Some(&json!({"skipped": "cancelled", "cancelled": true}))), Ending::Stopped);
+        assert_eq!(export_ending(false, 3, 0, 0, Some(&skipped)), Ending::Problems);
+        assert_eq!(export_ending(false, 3, 0, 0, Some(&json!({"warning": "added 1 of 3"}))), Ending::Problems);
+        assert_eq!(export_ending(false, 3, 0, 0, Some(&json!({"imported": 3}))), Ending::Done);
+        assert_eq!(export_ending(false, 3, 0, 0, None), Ending::Done);
+        assert_eq!(export_ending(false, 0, 2, 0, None), Ending::Failed);
+        assert_eq!(export_ending(true, 3, 0, 0, Some(&json!({"skipped": "cancelled", "cancelled": true}))), Ending::Stopped);
+    }
+
+    /// A rendered export of clips only writes nothing: each clip comes back as a warning, so it did not go well,
+    /// however few files failed (review of #2822). A name that exists is skipped by the person's choice: no problem.
+    #[test]
+    fn an_export_that_warned_files_ends_with_problems() {
+        let ending = |files: Vec<Value>| finished_outcome(&files, None, false, None, "", String::new()).ending;
+        let clip = json!({"photo": 1, "file": "a.mp4", "warning": "a video is not rendered"});
+        assert_eq!(ending(vec![clip.clone(), clip.clone()]), Ending::Problems);
+        assert_eq!(ending(vec![json!({"path": "/out/a.jpg"}), clip]), Ending::Problems);
+        assert_eq!(ending(vec![json!({"path": "/out/a.jpg"}), json!({"skipped": "/out/b.jpg"})]), Ending::Done);
+        // (a contact sheet's skipped photos are an array of warnings)
+        assert_eq!(ending(vec![json!({"path": "/out/s.pdf", "skipped": [{"file": "a.mp4", "warning": "no frame"}]})]), Ending::Problems);
+        assert_eq!(ending(vec![json!({"path": "/out/a.jpg"})]), Ending::Done);
     }
 
     /// The row of an export points at the folder its files go to, not at one it does not use.

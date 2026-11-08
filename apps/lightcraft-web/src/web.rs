@@ -887,7 +887,14 @@ impl WebApp {
         for m in bridge.take_incoming() {
             match m {
                 Incoming::Open { name, bytes } => {
-                    wasm_bindgen_futures::spawn_local(store_file(self.originals.clone(), self.backend.clone(), name, bytes, ctx.clone()));
+                    // as a dropped or picked file does: through the one-at-a-time read, so a clip sniffed
+                    // from its head goes to video storage and every original gets the size checks
+                    let parts = js_sys::Array::of1(&js_sys::Uint8Array::from(&bytes[..]));
+                    drop(bytes);
+                    match web_sys::File::new_with_u8_array_sequence(&parts, &name) {
+                        Ok(file) => queue_file(self.originals.clone(), self.backend.clone(), file, ctx.clone()),
+                        Err(e) => notice(format!("{name} was not added: can't hand the file to storage ({e:?})")),
+                    }
                 }
                 Incoming::Refused(error) => {
                     if !bridge.post(&Outgoing::Failed(error)) {
@@ -895,18 +902,21 @@ impl WebApp {
                     }
                 }
                 Incoming::Cmd { id, params } => {
-                    let r = match crate::automation::params(&params) {
-                        Err(e) => Err(format!("{id}: {e}")),
-                        Ok(_) if id == "web.stats" => Ok(self.web_stats()),
-                        Ok(params) => self.app.run(&id, params),
+                    // queued with the page's own commands, so an export waiting for its videos holds the
+                    // host's commands too, in order (`run_inbox`); the answer goes back as a `lightcraft:response`
+                    let reply = |ok: bool| {
+                        let bridge = bridge.clone();
+                        let id = id.clone();
+                        Closure::once_into_js(move |v: JsValue| {
+                            let response = Outgoing::Response { ok, value: v.as_string().unwrap_or_default() };
+                            if !bridge.post(&response) {
+                                log::warn!("lightcraft: the answer to {id} could not reach the page");
+                            }
+                        })
+                        .unchecked_into::<js_sys::Function>()
                     };
-                    let response = match r {
-                        Ok(v) => Outgoing::Response { ok: true, value: v.to_string() },
-                        Err(e) => Outgoing::Response { ok: false, value: e },
-                    };
-                    if !bridge.post(&response) {
-                        log::warn!("lightcraft: the answer to {id} could not reach the page");
-                    }
+                    PENDING_COMMANDS.with(|q| q.borrow_mut().push_back((id.clone(), params, (reply(true), reply(false)))));
+                    ctx.request_repaint();
                 }
             }
         }
@@ -1268,8 +1278,9 @@ impl eframe::App for WebApp {
             let now = self.app.tick_now();
             self.app.ui.show_toast(now, text, NOTICE_SECS, None);
         }
-        self.run_inbox(ctx);
+        // (the host's commands join the queue first, so `run_inbox` runs them in order with the page's own)
         self.run_host(ctx);
+        self.run_inbox(ctx);
         self.load_originals(ctx);
         if let Some(w) = &self.workers {
             // `library.preferences ▸ cacheMb` is read by the session; the worker index prunes on

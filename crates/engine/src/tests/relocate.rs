@@ -987,7 +987,10 @@ fn locating_a_folder_is_refused_while_a_move_runs() {
     let out = work.run();
     s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
     std::fs::rename(dir.path("trip"), &now).unwrap();
-    assert!(s.execute("folder.updateLocation", &json!({"folder": dir.path("trip/day1"), "path": dir.path("archive/journey/day1")})).is_ok(), "once the move has ended Locate Folder works again");
+    assert!(
+        s.execute("folder.updateLocation", &json!({"folder": dir.path("trip/day1"), "path": dir.path("archive/journey/day1")})).is_ok(),
+        "once the move has ended Locate Folder works again"
+    );
 }
 
 #[test]

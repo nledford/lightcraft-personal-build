@@ -267,6 +267,27 @@ fn contents_already_held(cat: &lightcraft_catalog::Catalog, opts: &ImportOptions
     held
 }
 
+/// The content hash a new photo is stored under. Imported although another photo has this content (`import_duplicates`):
+/// a Duplicate's hash (`:dup<id>`), so the two photos can be told apart and neither is mistaken for the other.
+fn hash_of_import(
+    hash: Option<String>,
+    opts: &ImportOptions,
+    id: PhotoId,
+    new_hash: &HashMap<String, PhotoId>,
+    held: &std::collections::HashSet<String>,
+) -> Option<String> {
+    let h = hash?;
+    let again = opts.import_duplicates && (new_hash.get(h.as_str()).is_some_and(|first| *first != id) || held.contains(h.as_str()));
+    Some(if again { format!("{h}:dup{}", id.0) } else { h })
+}
+
+/// The orientation a sidecar's regions are turned by: the file's own, else the sidecar's. A clip is never turned (its
+/// size is as filmed; a sidecar's `tiff:Orientation` would take a portrait clip for a photo stored sideways), so its
+/// boxes stay as written.
+fn upright_by(info: &ProbeInfo, sidecar: Option<lightcraft_meta::Orientation>) -> Option<lightcraft_meta::Orientation> {
+    if info.kind == super::MediaKind::Video { None } else { info.orientation.or(sidecar) }
+}
+
 /// The catalog half of an import: add the photos [`ImportJob::prepare`] readied (one undoable op;
 /// a Move's sources are removed once it is saved). On a failed commit a Move's placed files are
 /// taken back.
@@ -369,15 +390,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                         purge.push(*old);
                     }
                 }
-                // imported although another photo has this content: a Duplicate's hash (`:dup<id>`),
-                // so the two photos can be told apart and neither is mistaken for the other
-                let mut hash = info.content_hash.clone();
-                if opts.import_duplicates
-                    && let Some(h) = &mut hash
-                    && (new_hash.get(h.as_str()).is_some_and(|first| *first != id) || held.contains(h.as_str()))
-                {
-                    *h = format!("{h}:dup{}", id.0);
-                }
+                let hash = hash_of_import(info.content_hash.clone(), opts, id, &new_hash, &held);
                 // the photo's own copyright and creator, read or not: the library's defaults are
                 // for photos that have none
                 let stated = |file: &str, sidecar: Option<&String>| !file.trim().is_empty() || sidecar.is_some_and(|s| !s.trim().is_empty());
@@ -389,7 +402,7 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                 let sidecar =
                     sidecar.map(|sc| read.of_the_sidecar(sc).resolve_label(&s.catalog)).filter(|sc| *sc != crate::sidecar::SidecarData::default());
                 // the photo is upright as the file's own orientation turns it, when the file states one
-                let sidecar = sidecar.map(|sc| crate::sidecar::SidecarData { orientation: info.orientation.or(sc.orientation), ..sc });
+                let sidecar = sidecar.map(|sc| crate::sidecar::SidecarData { orientation: upright_by(&info, sc.orientation), ..sc });
                 // a copy is catalogued under its new name
                 let name = Path::new(&stored).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.clone());
                 let mut p = Photo::new(id, Source::File { path: stored }, &name, &info.format, info.width, info.height, &now);

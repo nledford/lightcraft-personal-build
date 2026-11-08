@@ -642,16 +642,10 @@ fn folder_drop_target(
     // (the label, the confirmation and the toast say which folder when another row has the name)
     let name = crate::destination::folder(&app.caches.folder_tree(&app.session.catalog, app.session.library_generation()), &n.path);
     let photos: Vec<_> = ids.iter().filter_map(|id| app.session.catalog.photo(lightcraft_catalog::PhotoId(*id))).collect();
-    let refused = if !n.selectable {
-        Some(crate::i18n::tr("This row covers more than one disk: drop on a folder inside it"))
-    } else if photos.iter().any(|p| p.local) {
-        Some(crate::i18n::tr("Local photos aren't in the library yet: Add to My Photos first, then move them"))
-    } else if photos.iter().any(|p| !matches!(p.source, lightcraft_catalog::Source::File { .. })) {
-        // `photo.moveToFolder` refuses a photo with no file
-        Some(crate::i18n::tr("Demo photos have no file on disk, so they can't be moved"))
-    } else {
-        None
-    };
+    let any_local = photos.iter().any(|p| p.local);
+    // (`photo.moveToFolder` refuses a photo with no file)
+    let any_fileless = photos.iter().any(|p| !matches!(p.source, lightcraft_catalog::Source::File { .. }));
+    let refused = drop_refusal(n.selectable, any_local, any_fileless);
     let count = files_moved(&photos, &n.path);
     let all_here = !photos.is_empty() && photos.iter().all(|p| is_in_folder(p, &n.path));
     let released = ui.input(|i| i.pointer.primary_released());
@@ -689,10 +683,33 @@ fn folder_drop_target(
         // Selected Photos Here is asked for by name and goes at once
         if app.ui.settings.ask_before_move || !problems.is_empty() {
             let library = app.session.library_generation();
-            app.ui.dialog = Some(crate::state::Dialog::MovePhotos { ids, folder: n.path.clone(), name, files: count, dont_ask: false, library, problems, movable });
+            app.ui.dialog = Some(crate::state::Dialog::MovePhotos {
+                ids,
+                folder: n.path.clone(),
+                name,
+                files: count,
+                dont_ask: false,
+                library,
+                problems,
+                movable,
+            });
         } else {
             move_photos_here(app, ui.ctx(), Some(&ids), &n.path);
         }
+    }
+}
+
+/// Why photos can't be dropped on a Folders row, when they can't: the row covers several disks, a photo is Local (not
+/// in the library yet), or has no file on disk.
+fn drop_refusal(selectable: bool, any_local: bool, any_fileless: bool) -> Option<&'static str> {
+    if !selectable {
+        Some(crate::i18n::tr("This row covers more than one disk: drop on a folder inside it"))
+    } else if any_local {
+        Some(crate::i18n::tr("Local photos aren't in the library yet: Add to My Photos first, then move them"))
+    } else if any_fileless {
+        Some(crate::i18n::tr("Demo photos have no file on disk, so they can't be moved"))
+    } else {
+        None
     }
 }
 

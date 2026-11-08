@@ -636,7 +636,8 @@ pub(super) fn browsed_files_changed(files: &[(&str, u64)], cancel: &std::sync::a
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let asked: Vec<(String, u64)> = files.iter().filter(|(_, recorded)| *recorded > 0).map(|(path, recorded)| (path.to_string(), *recorded)).collect();
+        let asked: Vec<(String, u64)> =
+            files.iter().filter(|(_, recorded)| *recorded > 0).map(|(path, recorded)| (path.to_string(), *recorded)).collect();
         let names: Vec<String> = asked.iter().map(|(path, _)| shown(path)).collect();
         let work = |(path, recorded): (String, u64)| match std::fs::metadata(&path) {
             Ok(meta) if meta.is_file() && meta.len() != recorded => BrowsedFile::Changed,

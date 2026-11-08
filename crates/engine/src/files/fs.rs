@@ -184,6 +184,10 @@ pub(crate) fn read_video_metadata_from_with_fragments(
 
     while at < file_len && budget > 0 {
         budget -= 1;
+        // a clip of many small boxes scans for a while: every 1024th says the scan goes on
+        if budget.is_multiple_of(1024) {
+            crate::import::progressed();
+        }
         f.seek(SeekFrom::Start(at)).map_err(|e| format!("{path}: {e}"))?;
         let mut hdr = [0u8; 16];
         let avail = usize::try_from((file_len - at).min(16)).unwrap_or(16);
@@ -217,7 +221,10 @@ pub(crate) fn read_video_metadata_from_with_fragments(
             out.try_reserve_exact(box_len).map_err(|e| format!("{path}: can't allocate video metadata: {e}"))?;
             out.resize(len, 0);
             let dst = out.get_mut(start..len).ok_or_else(|| format!("{path}: invalid video metadata range"))?;
+            // (a box of tens of MiB from a slow drive: the read goes on before and after it)
+            crate::import::progressed();
             f.read_exact(dst).map_err(|e| format!("{path}: {e}"))?;
+            crate::import::progressed();
         }
 
         at = end;
@@ -253,12 +260,10 @@ fn hash_file_stream(f: &mut std::fs::File, path: &str) -> Result<(String, u64), 
             break;
         }
         hasher.update(buf.get(..n).unwrap_or(&[]));
-        let before = hashed >> 20;
         hashed = hashed.saturating_add(n as u64);
-        // a long clip hashes for a while: each MiB says the read goes on (see `import::progressed`)
-        if hashed >> 20 != before {
-            crate::import::progressed();
-        }
+        // a long clip hashes for a while, and a slow drive can hold one read for seconds: each read says the
+        // read goes on (see `import::progressed`)
+        crate::import::progressed();
     }
     Ok((hasher.finish().to_string(), hashed))
 }

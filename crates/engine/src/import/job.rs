@@ -326,31 +326,29 @@ impl ImportJob {
         Some(library)
     }
 
-    /// [`ImportJob::prepare`] for files [`ImportJob::expand`] returned.
-    pub fn prepare_files(&mut self, files: Vec<String>, cancel: &std::sync::atomic::AtomicBool) -> Prepared {
+    /// The first look at the files of [`ImportJob::prepare_files`]: those that need no read are decided here (promoted,
+    /// duplicates by path or content, failed) and put into `out`; the others are returned to be probed, with the browsed
+    /// files replaced since (their records are brought up to date as they join the library).
+    fn triage_files(
+        &mut self,
+        files: Vec<String>,
+        cancel: &std::sync::atomic::AtomicBool,
+        out: &mut Prepared,
+    ) -> (Vec<String>, HashMap<String, PhotoId>) {
         use std::sync::atomic::Ordering::Relaxed;
-        // the library as it was, kept for the ownership of the shared stem sidecars below
-        let library = self.look_up_library();
-        self.listed.new_batch();
-        let opts = self.opts.clone();
-        let mode = self.mode;
-        let mut out = Prepared { scanned: files.len(), cut_short: false, items: Vec::new(), stopped: None };
-        // ✕ stops the planning. An import that cannot go on does not: the reads that already returned are planned (the
-        // failures of the files skipped, and the files added in place), and the files it never reached are passed over.
-        let halted = || cancel.load(Relaxed);
+        let local = self.opts.local;
         let mut todo = Vec::new();
-        // browsed files replaced since: probed again with `todo`, their records brought up to date as they join the library
         let mut changed: HashMap<String, PhotoId> = HashMap::new();
         // the sizes of the browsed files this import would promote, looked at together before they are decided one by one
         // (a file promoted in an earlier batch isn't asked about again; one path twice in a batch is, and its second answer is unused)
-        let is_browsed = |f: &String| !opts.local && matches!(self.by_path.get(f.as_str()), Some((_, true, _)));
+        let is_browsed = |f: &String| !local && matches!(self.by_path.get(f.as_str()), Some((_, true, _)));
         let browsed: Vec<(&str, u64)> =
             files.iter().filter(|f| is_browsed(f)).map(|f| (f.as_str(), self.local_sizes.get(f.as_str()).copied().unwrap_or(0))).collect();
         let mut looked_at = browsed_files_changed(&browsed, cancel, &self.reads).into_iter();
         let verdicts: Vec<Option<BrowsedFile>> = files.iter().map(|f| is_browsed(f).then(|| looked_at.next()).flatten()).collect();
         for (f, verdict) in files.into_iter().zip(verdicts) {
             match self.by_path.get(f.as_str()).cloned() {
-                Some((id, true, hash)) if !opts.local => {
+                Some((id, true, hash)) if !local => {
                     match verdict {
                         // ✕ before its size was looked at: nothing is decided about it, so it isn't promoted
                         Some(BrowsedFile::Unchecked) => continue,
@@ -390,6 +388,23 @@ impl ImportJob {
                 None => todo.push(f),
             }
         }
+        (todo, changed)
+    }
+
+    /// [`ImportJob::prepare`] for files [`ImportJob::expand`] returned.
+    pub fn prepare_files(&mut self, files: Vec<String>, cancel: &std::sync::atomic::AtomicBool) -> Prepared {
+        use std::sync::atomic::Ordering::Relaxed;
+        // the library as it was, kept for the ownership of the shared stem sidecars below
+        let library = self.look_up_library();
+        self.listed.new_batch();
+        let opts = self.opts.clone();
+        let mode = self.mode;
+        let mut out = Prepared { scanned: files.len(), cut_short: false, items: Vec::new(), stopped: None };
+        // ✕ stops the planning. An import that cannot go on does not: the reads that already returned are planned (the
+        // failures of the files skipped, and the files added in place), and the files it never reached are passed over.
+        let halted = || cancel.load(Relaxed);
+        // browsed files replaced since: probed again with `todo`, their records brought up to date as they join the library
+        let (todo, mut changed) = self.triage_files(files, cancel, &mut out);
 
         // files a preceding scan already probed are not read again (a network share is slow to read),
         // as long as they are still there, as they were: a file gone or changed since is probed again.

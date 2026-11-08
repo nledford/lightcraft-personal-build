@@ -679,7 +679,10 @@ fn a_background_move_with_nothing_to_move_answers_with_the_photos_it_left_out() 
     let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
     let (beach, garden) = (id_of(&h, "beach.png"), id_of(&h, "garden.png"));
     // the garden is in Home already and the beach is told to stay: nothing moves
-    let r = h.app.run("photo.moveToFolder", json!({"ids": [garden, beach], "skip": [beach], "folder": home.to_string_lossy(), "background": true})).unwrap();
+    let r = h
+        .app
+        .run("photo.moveToFolder", json!({"ids": [garden, beach], "skip": [beach], "folder": home.to_string_lossy(), "background": true}))
+        .unwrap();
     assert_eq!((r["moved"].as_u64(), r["of"].as_u64()), (Some(0), Some(0)), "{r}");
     // as `photo.moveToFolder` says them elsewhere: the photo, its name and why, not the id that was asked for
     assert_eq!(r["skipped"].as_array().map(|a| a.iter().map(|s| s["id"].as_u64()).collect::<Vec<_>>()), Some(vec![Some(beach)]), "{r}");
