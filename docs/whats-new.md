@@ -295,6 +295,11 @@
 
 ## 2026-10-27
 
+### The app and Help menus follow the Mac's order
+- On macOS, Check for Updates… is in the LightCraft menu right under About LightCraft, as in other Mac apps. It stays in Help on Windows, Linux and the web.
+- Help opens with LightCraft Help, then What's New and Keyboard Shortcuts, then Send Feedback… and the ArtCraft Discord, the websites, and System Info, Open Log Folder and Debug. Join the ArtCraft Discord… no longer leads the menu, and LightCraft Help is no longer the last row.
+- LightCraft Help is ⇧⌘? on macOS, where F1 needs the fn key. Windows, Linux and the web keep F1.
+
 ### A folder made with New Folder on Disk… appears in Folders at once
 - Right-click a folder, choose New Folder on Disk…, name it and Create: the new folder now has its own row in Folders
   straight away, with 0 photos, and the sidebar scrolls to it (it is not chosen, so the photos you selected to move

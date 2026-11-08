@@ -22,7 +22,7 @@ use std::sync::mpsc::{Receiver, channel};
 
 use lightcraft_ui_egui::LightcraftApp;
 use lightcraft_ui_egui::menubar::{
-    MenuNode, menu_bar, native_item_presentation, native_menu_delivers as menu_delivers, native_menu_structure as structure_of,
+    MenuNode, menu_bar, native_item_presentation, native_menu_delivers as menu_delivers, native_menu_split, native_menu_structure as structure_of,
 };
 use muda::accelerator::{Accelerator, Code, Modifiers};
 use muda::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
@@ -390,13 +390,6 @@ fn tidy_separators(nodes: Vec<MenuNode>) -> Vec<MenuNode> {
     out
 }
 
-/// The model's rows of one menu as the native menu installs them: About, Settings and Quit live in
-/// the app menu on macOS.
-fn install_nodes(nodes: &[MenuNode]) -> Vec<MenuNode> {
-    let kept = nodes.iter().filter(|n| !matches!(n, MenuNode::Item { id, .. } if id == "app.about" || id == SETTINGS || id == QUIT));
-    tidy_separators(kept.cloned().collect())
-}
-
 /// Native (muda) ids, one per menu row. muda ids must be unique, but the model may hold the same
 /// command and params twice (`dialog.export` is File ▸ Export… and Export with Preset ▸ Custom…;
 /// `dialog.newAlbum` is in File and in Photo ▸ Add to Album), so a repeated key gets an occurrence
@@ -463,17 +456,23 @@ impl NativeMenu {
     fn rebuild(&mut self, app: &mut LightcraftApp) {
         let bar = menu_bar(app);
         self.structure = structure_of(&bar, &app.ui.settings.keymap);
+        let (app_rows, menus) = native_menu_split(bar);
         self.menu = Menu::new();
         self.items.clear();
         self.app_items.clear();
 
-        // the application menu
+        // the application menu (its Check for Updates… row has a unique key, so walking it first agrees with
+        // the per-frame sync, which walks the whole bar)
+        let mut ids = RowIds::default();
         let app_menu = Submenu::new("LightCraft", true);
         let about = MenuItem::with_id("app.about", lightcraft_ui_egui::i18n::tr("About LightCraft"), true, None);
         let settings = MenuItem::with_id(SETTINGS, lightcraft_ui_egui::i18n::tr("Settings…"), true, accelerator(SETTINGS_KEY));
         let quit = MenuItem::with_id(QUIT, lightcraft_ui_egui::i18n::tr("Quit LightCraft"), true, accelerator("Cmd+Q"));
+        let _ = app_menu.append(&about);
+        // Check for Updates… follows About LightCraft (Help keeps it on other platforms)
+        let update_rows: Vec<MenuNode> = app_rows.into_iter().filter(|n| !matches!(n, MenuNode::Item { id, .. } if id == "app.about")).collect();
+        self.append_nodes(&app_menu, &update_rows, &app.ui.settings.keymap, true, &mut ids);
         let _ = app_menu.append_items(&[
-            &about,
             &PredefinedMenuItem::separator(),
             &settings,
             &PredefinedMenuItem::separator(),
@@ -503,9 +502,8 @@ impl NativeMenu {
         }
         let _ = self.menu.append(&app_menu);
 
-        let mut ids = RowIds::default();
         let mut help_menu = None;
-        for (title, nodes) in &bar {
+        for (title, nodes) in &menus {
             let sub = Submenu::new(label_text(title), true);
             if title == "Window" {
                 let _ = sub.append_items(&[
@@ -514,7 +512,7 @@ impl NativeMenu {
                     &PredefinedMenuItem::separator(),
                 ]);
             }
-            let nodes = install_nodes(nodes);
+            let nodes = tidy_separators(nodes.clone());
             // Swapping an item in the Help menu leaves the old row in place and adds a second one
             // (measured on macOS 27 with muda 0.21): the Help menu is not addressed row for row.
             self.append_nodes(&sub, &nodes, &app.ui.settings.keymap, title != "Help", &mut ids);
@@ -727,12 +725,14 @@ mod tests {
         assert_eq!(rows.len(), count(&all));
         let ids: HashSet<&str> = rows.iter().map(|(id, _)| id.as_str()).collect();
         assert_eq!(ids.len(), rows.len(), "a native id per row");
-        // The install walks each menu as `install_nodes` leaves it, the per-frame sync walks the whole
-        // bar: a row the menu has must get the same id, so the same node (label, command, params),
-        // from both, and a click on its id runs that row's command.
+        // The install walks the app menu's rows, then each menu as `native_menu_split` and `tidy_separators`
+        // leave it; the per-frame sync walks the whole bar: a row the menu has must get the same id, so the
+        // same node (label, command, params), from both, and a click on its id runs that row's command.
         let mut installed = Vec::new();
         let mut install_ids = RowIds::default();
-        let menus: Vec<Vec<MenuNode>> = bar.iter().map(|(_, nodes)| install_nodes(nodes)).collect();
+        let (app_rows, split) = native_menu_split(bar.clone());
+        native_rows(&app_rows, &mut install_ids, &mut installed);
+        let menus: Vec<Vec<MenuNode>> = split.into_iter().map(|(_, nodes)| tidy_separators(nodes)).collect();
         for nodes in &menus {
             native_rows(nodes, &mut install_ids, &mut installed);
         }

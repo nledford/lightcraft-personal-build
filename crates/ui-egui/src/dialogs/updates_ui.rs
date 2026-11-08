@@ -109,7 +109,9 @@ pub(crate) fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
             Action::Close => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
             Action::None => {}
         }
-        // A found update opens the startup prompt and leaves the status idle, which ends the result dialog.
+        // The window answers Check for Updates (Help, or the LightCraft menu on macOS), so it follows the
+        // updater's status. A found update opens the startup prompt and leaves the status idle, which ends the
+        // result dialog.
         let rt = &mut app.updates_rt;
         if rt.manual_window_open {
             let dialog = CheckResultDialog::new(&crate::UPDATE_APP, env!("CARGO_PKG_VERSION"));
