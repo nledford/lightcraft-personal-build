@@ -91,6 +91,7 @@ impl std::fmt::Debug for MoveFinish {
 pub fn start(s: &mut Session, p: &Value, cancellable: bool) -> Result<Option<(MoveWork, MoveFinish)>> {
     let folder = crate::cmd::browse::folder_param(p, "folder").ok_or_else(|| bad(C, "missing folder"))?;
     let dir = Path::new(folder);
+    s.refuse_while_trashing(C)?;
     s.refuse_while_moving()?;
     // refused before anything touches the disk, as it always was (one look at one folder; the
     // worker looks again before the first file moves)
