@@ -740,6 +740,7 @@ mod prepared_tests {
         };
         let mut prepared = Prepared {
             scanned: 2,
+            cut_short: false,
             items: vec![PreparedItem::Ready(Box::new(ready(&existing_path))), PreparedItem::Ready(Box::new(ready(&other_path)))],
             stopped: None,
         };
@@ -766,7 +767,7 @@ mod prepared_tests {
             sidecar_too_large: false,
             placed: None,
         };
-        let mut prepared = Prepared { scanned: 1, items: vec![PreparedItem::Ready(Box::new(ready))], stopped: None };
+        let mut prepared = Prepared { scanned: 1, cut_short: false, items: vec![PreparedItem::Ready(Box::new(ready))], stopped: None };
         prepared.revalidate_add(&s);
         assert!(matches!(prepared.items.first(), Some(PreparedItem::Duplicate { reason: "content", existing: Some(PhotoId(7)), .. })));
     }
@@ -780,7 +781,7 @@ mod prepared_tests {
         twin.content_hash = Some("abc123:dup5".into());
         s.commit("twin", Op::AddPhoto { photo: Box::new(twin) }).unwrap();
         let dup = PreparedItem::Duplicate { path: "/new/c.jpg".into(), existing: None, reason: "content", hash: Some("abc123".into()), file: None };
-        let prepared = Prepared { scanned: 1, items: vec![dup], stopped: None };
+        let prepared = Prepared { scanned: 1, cut_short: false, items: vec![dup], stopped: None };
         let r = commit_prepared(&mut s, &ImportOptions::default(), "now", prepared).unwrap();
         assert_eq!(r.duplicates.first().map(|d| d.existing), Some(Some(7)), "{:?}", r.duplicates);
     }

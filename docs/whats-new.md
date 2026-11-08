@@ -96,6 +96,11 @@
 - With Keyboard in Sidebar off, nothing changes: a click on a row never takes the keys.
 - For agents: `view.sidebarKeys` `{on?}`; the ring is widget `sidebarCursor`.
 
+### A synchronize canceled at the very end says it finished
+- Canceling Synchronize Folder when it had already handed over its last piece of work still showed "Stopped · Imported N",
+  although every photo had come in. "Stopped" now appears only when something was left undone; a Cancel that
+  arrives too late to stop anything shows the normal result.
+
 ## 2026-11-02
 
 ### The Windows title bar is readable from the moment the window opens

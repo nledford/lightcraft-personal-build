@@ -72,6 +72,9 @@ pub struct ImportJob {
 #[derive(Debug, Default)]
 pub struct Prepared {
     pub scanned: usize,
+    /// A Cancel left files of the batch undone (they have no item): the batch is not the whole of
+    /// what was asked. A Cancel that came after the last file was prepared leaves this `false`.
+    pub cut_short: bool,
     pub(super) items: Vec<PreparedItem>,
     /// Why the import cannot go on, when it ended early for a reason of its own (the drive stopped answering).
     pub(super) stopped: Option<String>,
@@ -318,7 +321,7 @@ impl ImportJob {
         self.listed.new_batch();
         let opts = self.opts.clone();
         let mode = self.mode;
-        let mut out = Prepared { scanned: files.len(), items: Vec::new(), stopped: None };
+        let mut out = Prepared { scanned: files.len(), cut_short: false, items: Vec::new(), stopped: None };
         // ✕ stops the planning. An import that cannot go on does not: the reads that already returned are planned (the
         // failures of the files skipped, and the files added in place), and the files it never reached are passed over.
         let halted = || cancel.load(Relaxed);
@@ -367,6 +370,7 @@ impl ImportJob {
         self.read_done.fetch_sub(reused, Relaxed);
         for (path, Read { info, sidecars, unreached, .. }) in todo.into_iter().zip(read) {
             if halted() {
+                out.cut_short = true;
                 break;
             }
             if unreached {
@@ -394,6 +398,7 @@ impl ImportJob {
             {
                 self.run_plan(&mut plan, &mut out, cancel);
                 if halted() {
+                    out.cut_short = true;
                     break;
                 }
                 // (a skipped transfer can have ended the run: this file is passed over, as the ones read after it)
@@ -480,6 +485,7 @@ impl ImportJob {
                     if plan.pending_families.contains(&family) {
                         self.run_plan(&mut plan, &mut out, cancel);
                         if halted() {
+                            out.cut_short = true;
                             break;
                         }
                         // (a skipped transfer can have ended the run: this file is passed over, as the ones read after it)
@@ -532,6 +538,8 @@ impl ImportJob {
         }
         self.run_plan(&mut plan, &mut out, cancel);
         out.stopped = self.reads.ended();
+        // (`cut_short` says whether a Cancel stopped a file from being prepared: the flag itself may
+        // have been set after the last one was)
         out
     }
 
@@ -546,7 +554,10 @@ impl ImportJob {
                 Slot::Item(it) => it,
                 Slot::Transfer => match done.next().flatten() {
                     Some(it) => it,
-                    None => continue,
+                    None => {
+                        out.cut_short = true;
+                        continue;
+                    }
                 },
             };
             if let PreparedItem::Ready(r) = &item
