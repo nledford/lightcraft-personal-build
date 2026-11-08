@@ -350,6 +350,16 @@
 ### Screen readers tell buttons, switches and choices apart
 - With VoiceOver, a button that does something (Reset, Auto, Choose…, Create Album, Back) is now a button, not a check box that is "unchecked". A button that is on or off (B&W, HDR) says whether it is on, and one of several choices (Format, Color space, Sharpen, a language, the view buttons: Photo Grid, Square Grid, Detail, Compare, Survey and People) is a radio button that says which one is chosen.
 
+### Previous Shuffle brings back the order a Reshuffle replaced
+- Both Sort menus (the bottom bar's popup and View ▸ Sort) have a new Previous Shuffle row under Reshuffle. It goes back to
+  the exact random order the last Reshuffle replaced, and again for the one before, up to 32 steps in this session. It is
+  on only while you sort at random and a Reshuffle has replaced something; the steps are forgotten when you leave Random
+  or open another library, and are never saved with it. Reshuffle is now ⌘⌥⇧R (Ctrl+Alt+Shift+R) and Previous Shuffle ⌘⌥⇧P
+  (Ctrl+Alt+Shift+P); both rows show their keys.
+
+### Emoji are in color on macOS
+- Emoji anywhere LightCraft shows text, whether typed into a field (for example with Edit ▸ Emoji & Symbols) or shown in a name, look like they do in other Mac apps: 👀 has its eyes, 🔥 is a flame, and ❤️ and ⚠️ (with the emoji selector that Emoji & Symbols adds) and 👍 are in color. Before, LightCraft drew them with its own flat black-and-white emoji, and ❤️ and ⚠️ as plain outlines. A symbol that is text unless the selector asks for emoji, such as ★, ✓, ▶ or ❤ on its own, stays text, like in other apps. A character in a script LightCraft doesn't bundle a font for now draws with a macOS font instead of a box. Other systems and the web version still use the bundled flat emoji.
+
 ## 2026-10-27
 
 ### Increase contrast
@@ -521,18 +531,6 @@
   thumbnail badges and the frame-rate overlay. On macOS it follows System Settings ▸
   Accessibility ▸ Display ▸ Reduce transparency until you change it in Settings; **Use the system setting** beside the
   tick box hands the choice back. On Windows, Linux and the web version it is manual for now (off by default).
-
-### Previous Shuffle brings back the order a Reshuffle replaced
-- Both Sort menus (the bottom bar's popup and View ▸ Sort) have a new Previous Shuffle row under Reshuffle. It goes back to
-  the exact random order the last Reshuffle replaced, and again for the one before, up to 32 steps in this session. It is
-  on only while you sort at random and a Reshuffle has replaced something; the steps are forgotten when you leave Random
-  or open another library, and are never saved with it. Reshuffle is now ⌘⌥⇧R (Ctrl+Alt+Shift+R) and Previous Shuffle ⌘⌥⇧P
-  (Ctrl+Alt+Shift+P); both rows show their keys.
-
-## 2026-10-28
-
-### Emoji are in color on macOS
-- Emoji anywhere LightCraft shows text, whether typed into a field (for example with Edit ▸ Emoji & Symbols) or shown in a name, look like they do in other Mac apps: 👀 has its eyes, 🔥 is a flame, and ❤️ and ⚠️ (with the emoji selector that Emoji & Symbols adds) and 👍 are in color. Before, LightCraft drew them with its own flat black-and-white emoji, and ❤️ and ⚠️ as plain outlines. A symbol that is text unless the selector asks for emoji, such as ★, ✓, ▶ or ❤ on its own, stays text, like in other apps. A character in a script LightCraft doesn't bundle a font for now draws with a macOS font instead of a box. Other systems and the web version still use the bundled flat emoji.
 
 ## 2026-10-24
 
