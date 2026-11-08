@@ -718,6 +718,7 @@ fn move_selected_photos_here_is_grayed_out_until_photos_are_selected() {
     h.app.run("library.select", json!({"ids": [garden], "active": garden})).unwrap();
     h.step();
     menu_item(&mut h);
+    settle(&mut h);
     assert!(trip.join("garden.png").is_file() && !home.join("garden.png").exists(), "the selected photo's file moved");
     let path = h.app.session.catalog.photo(lightcraft_catalog::PhotoId(garden)).map(|p| p.source.clone());
     assert!(
