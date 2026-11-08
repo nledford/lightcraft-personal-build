@@ -153,6 +153,7 @@ impl LightcraftApp {
             recent_checks: Default::default(),
             activity_open: false,
             activity_set: None,
+            activity_failures: None,
         }
     }
 
