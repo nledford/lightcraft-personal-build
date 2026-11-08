@@ -799,6 +799,20 @@ fn measure_off_screen<S>(h: &mut Harness<'_, S>, shows: &mut Shows) {
     }
 }
 
+/// Whether the control with the id `id` is a member of a tab bar or a group of radio buttons that is
+/// one Tab stop (`widgets::Roving`): a sibling of its role that Tab cannot take the focus to, as only
+/// the member that holds the stop takes it. A row of controls that are Tab stops each (the Crop
+/// panel's overlay and upright rows) is no such row: there Tab visits every member, and the arrow
+/// keys are not a way along it.
+fn in_roving_row<S>(h: &Harness<'_, S>, id: u64) -> bool {
+    let nodes: Vec<_> = h.root().children_recursive().map(|n| n.accesskit_node()).collect();
+    let Some(me) = nodes.iter().find(|n| n.locate().0.0 == id) else { return false };
+    let (role, parent) = (me.role(), me.parent_id());
+    nodes.iter().any(|n| {
+        n.locate().0.0 != id && n.role() == role && n.parent_id() == parent && !n.data().is_disabled() && !n.data().supports_action(Action::Focus)
+    })
+}
+
 /// The focus is on `entry`, a tab or a radio button. Where it is a member of a tab bar or a group of
 /// radio buttons that is one Tab stop, the arrow keys visit the others (from the first to the last:
 /// Home, then →), and each is checked as a control Tab reached is. The focus ends on the last
@@ -850,7 +864,10 @@ fn tab_round<S>(h: &mut Harness<'_, S>) -> Result<(Vec<u64>, Shows), String> {
         if order.contains(&focus.value()) {
             return Ok((order, shows));
         }
-        if let Some(role) = visit(h, focus, &mut order, &mut shows).filter(|role| matches!(role, Role::Tab | Role::RadioButton)) {
+        let row = visit(h, focus, &mut order, &mut shows)
+            .filter(|role| matches!(role, Role::Tab | Role::RadioButton))
+            .filter(|_| in_roving_row(h, focus.value()));
+        if let Some(role) = row {
             visit_row(h, role, &mut order, &mut shows);
         }
     }
@@ -1040,6 +1057,55 @@ mod checker {
         let keys = keyboard_keys_of(|ui| {
             let _ = ui.button("Save");
             ui.add_enabled(false, egui::Button::new("Greyed"));
+        });
+        assert!(keys.is_empty(), "{keys:?}");
+    }
+
+    /// [`keyboard_keys_of`] with the app's fonts and theme, for the app's own widgets. (The harness
+    /// draws a frame as it is built: that one installs them and draws nothing, the next has them.)
+    fn themed_keyboard_keys_of(mut ui: impl FnMut(&mut egui::Ui) + 'static) -> Vec<String> {
+        let mut ready = false;
+        let mut h = Harness::builder().with_accessibility_check(false).build_ui(move |u| {
+            if ready {
+                ui(u);
+            } else {
+                lightcraft_ui_egui::theme::install_fonts(u.ctx());
+                lightcraft_ui_egui::theme::apply(u.ctx());
+                ready = true;
+            }
+        });
+        h.run();
+        let (keys, _) = keyboard_problems(&mut h).expect("the Tab round ends");
+        keys.into_iter().map(|p| p.0).collect()
+    }
+
+    /// Radio buttons that are a Tab stop each (the Crop panel's `widgets::segmented` rows): the round
+    /// goes through every one and on to what follows the row, instead of coming back to a member that
+    /// the arrow keys visited and ending there.
+    #[test]
+    fn radio_buttons_that_are_stops_of_their_own_are_each_reached_and_the_round_goes_on() {
+        let keys = themed_keyboard_keys_of(|ui| {
+            let items = [("Thirds", "a"), ("Grid", "b"), ("Golden", "c"), ("Diagonal", "d"), ("Triangle", "e"), ("Spiral", "f"), ("None", "g")];
+            let _ = lightcraft_ui_egui::widgets::segmented(ui, "overlay", &items, Some(0), 4);
+            let _ = ui.button("Save");
+            let _ = ui.button("Cancel");
+        });
+        assert!(keys.is_empty(), "{keys:?}");
+    }
+
+    /// A group of radio buttons that is one Tab stop (`widgets::Roving`): the arrow keys visit the
+    /// members Tab does not, and the round goes on from the last.
+    #[test]
+    fn a_roving_row_has_its_members_visited_by_the_arrow_keys_and_the_round_goes_on() {
+        let keys = themed_keyboard_keys_of(|ui| {
+            use lightcraft_ui_egui::widgets::{Roving, choice_button_in};
+            let mut row = Roving::new(ui, "sizes", Some(0));
+            for (i, label) in ["Automatic", "1600 px", "2048 px", "4096 px"].into_iter().enumerate() {
+                let _ = choice_button_in(ui, &mut row, &format!("size-{i}"), label, i == 0);
+            }
+            row.end(ui);
+            let _ = ui.button("Save");
+            let _ = ui.button("Cancel");
         });
         assert!(keys.is_empty(), "{keys:?}");
     }
