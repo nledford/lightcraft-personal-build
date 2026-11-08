@@ -156,6 +156,7 @@ pub fn confirm_dialog(app: &mut LightcraftApp, dlg: &Dialog) -> Result<serde_jso
                 }
             }
         }
+        Dialog::Several { rows, library } => crate::panels::side_select::several_run(app, rows, *library),
         Dialog::DeleteKeyword { keyword, .. } => app.run("keyword.delete", json!({"keyword": keyword})),
         Dialog::KeywordSet { replaces, name, slots, as_new } => {
             use lightcraft_catalog::keywords::same;

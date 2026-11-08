@@ -227,19 +227,23 @@ impl LightcraftApp {
     /// It flags `let _ = app.session.execute(…)`, which goes round this, too, unless a comment
     /// on its line or the one above says why (`// refusal expected: <reason>`).
     pub fn act(&mut self, id: &str, params: Value) -> Option<Value> {
+        self.act_told(id, params).ok()
+    }
+
+    /// Run a command for the person at the interface, as [`Self::act`], for a caller that hands the refusal on
+    /// (a dialog's confirm, which the control channel answers with it): the toast says the reason, the `Err` is
+    /// the whole error.
+    pub(crate) fn act_told(&mut self, id: &str, params: Value) -> Result<Value, String> {
         let before = self.ui.toast.clone();
-        match self.run_told(id, params) {
-            Ok(v) => Some(v),
-            Err(refusal) => {
-                let now = self.tick_now();
-                // A toast the command made itself (a partial import report) says what did happen:
-                // keep it ahead of the reason rather than replacing it.
-                let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
-                let said = refusal_toast(made, &refusal);
-                self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
-                None
-            }
-        }
+        self.run_told(id, params).map_err(|refusal| {
+            let now = self.tick_now();
+            // A toast the command made itself (a partial import report) says what did happen:
+            // keep it ahead of the reason rather than replacing it.
+            let made = self.ui.toast.take().filter(|t| Some(t) != before.as_ref()).map(|t| t.text);
+            let said = refusal_toast(made, &refusal);
+            self.ui.show_toast(now, said, REFUSAL_SECONDS, None);
+            refusal.error
+        })
     }
 
     /// Run a command whose refusal is expected here and means nothing to the person (it is

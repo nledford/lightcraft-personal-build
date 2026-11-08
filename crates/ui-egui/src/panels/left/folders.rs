@@ -158,6 +158,11 @@ fn deeper_row(app: &mut LightcraftApp, ui: &mut egui::Ui, name: &str, path: &str
 
 pub(super) fn folder_menu(app: &mut LightcraftApp, resp: &egui::Response, a: &Album) {
     crate::widgets::context_menu(resp, |ui| {
+        // one of several albums chosen: what can be done to them all
+        let several = crate::panels::side_select::album_targets(app, a.id);
+        if several.len() > 1 {
+            return crate::panels::side_select::albums_menu(app, ui, &several);
+        }
         if a.folder {
             // the same commands as File ▸ New…, aimed at this folder
             MenuItem::new(crate::i18n::tr("New")).submenu(ui, |ui| {
@@ -556,8 +561,7 @@ fn folder_row(
     open: &mut bool,
     parents: FolderParents,
     sel: bool,
-    said: Option<Said>,
-) {
+    said: Option<Said>,) {
     // the label is said with the name, as it is shown beside it
     let spoken = match n.label {
         Some(l) => format!("{name}, {}", crate::i18n::color_label(&app.session.catalog, l)),
@@ -572,6 +576,7 @@ fn folder_row(
         .sense(Sense::click_and_drag())
         .mark(mark)
         .show(app, ui);
+    crate::panels::side_select::outline(app, ui, crate::panels::side_select::SideList::Folders, sel, resp.rect, 8.0);
     // a folder inside a disk can be picked up (egui starts the drag after a few points of
     // movement, so a click still chooses the row); a disk, or a row covering several, can't be moved
     if resp.drag_started_by(egui::PointerButton::Primary) && n.selectable && !n.volume {
@@ -1008,6 +1013,12 @@ pub(crate) fn move_folder_to(app: &mut LightcraftApp, ctx: &egui::Context, path:
 /// The context menu of a Folders row: a folder's own, a disk's (remove it), none for the
 /// startup disk.
 fn row_menu(app: &mut LightcraftApp, resp: &egui::Response, n: &FolderNode, parents: FolderParents) {
+    // one of several folders chosen: what can be done to them all
+    let several = crate::panels::side_select::folder_targets(app, &n.path);
+    if several.len() > 1 {
+        crate::widgets::context_menu(resp, |ui| crate::panels::side_select::folders_menu(app, ui, &several));
+        return;
+    }
     if !n.volume {
         folder_menu_for_library(app, resp, n, parents);
     } else if n.path != "/" {

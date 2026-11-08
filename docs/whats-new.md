@@ -362,10 +362,23 @@
   inside a folder that is closed. The grid shows the photos of any of them, each once, and the title says how many
   albums or folders are shown. A plain click chooses one row alone, as before.
 - In the Keyword List (right panel, Keywords) the same clicks pick several keywords. Picking does not change the grid.
-- With several albums shown, Remove from Album is not offered and the Delete key is the photos' Delete (it asks first
-  while Settings ▸ Confirm before moving photos to Recently Deleted is on), because there is no telling which album is meant.
-- Menus, dragging and the Keyword List's − button still act on one row; choosing several rows for those comes in a
-  later change. When several albums are shown, Delete stays the photos' Delete, as above.
+- With several albums shown, Remove from Album is not offered and the Delete key is the photos' Delete once you click
+  elsewhere (it asks first while Settings ▸ Confirm before moving photos to Recently Deleted is on), because there is no
+  telling which album is meant.
+- Right-click one of several rows chosen to act on them all: move albums into a folder, export them, or delete them;
+  give folders a color label or remove them from the library; give keywords to the selected photos, take them away,
+  merge them or delete them. Each change is one step to undo; exporting writes files and is not an undo step.
+  Deleting or removing several asks first and says what goes; if another library is opened while it asks, OK changes
+  nothing and says so. Right-click a row that is not among them and you get that row's own menu; the others stay
+  chosen.
+- Dragging one of several albums or keywords moves them all (albums go into the folder they are dropped in or
+  beside; dropped beside a row, the one you dragged is placed there and the others come into that folder).
+- Right after choosing several rows with Cmd or Shift, the Delete key asks about those rows. Click anywhere else,
+  or select photos or change what is shown in any other way, and Delete is about the photos again; after a plain
+  click on an album it always was.
+- For agents: `album.delete` and `album.move` take `ids`, `keyword.delete` and `keyword.move` take `keywords`,
+  `library.removeFolder` and `folder.label` take `paths`, as one undo step each; `album.reorder` takes `with`, the
+  albums chosen beside the one it places, which come to the same folder in the same step.
 
 ## 2026-10-25
 
@@ -418,6 +431,7 @@
   about 18 ms to about 10 ms between a frame being handed to macOS and macOS compositing it, with the same 120 frames
   a second. On a Mac the window also holds one drawable less: its width × height × 4 bytes, 15–22 MB for a
   1200–1500-point-wide window on a Retina display.
+
 
 ## 2026-10-24
 
@@ -1301,9 +1315,10 @@
 - `library.source` takes `ids` (albums) or `paths` (folders of the library, as `library.folders` lists them, not a
   browsed Local folder) and shows the photos of any of them, each once; `library.filter` takes `keywords`, `dates`,
   `libraryFolders` and `albums`. The single fields stay and count as one
-  more of them. `library.state` lists `albums` and `libraryFolders`. When the albums shown include a smart album,
-  New Smart Album from Filter… is grayed out and says why, as `album.createSmart` does. So does a filter that names a
-  smart album.
+  more of them. `library.state` lists `albums` and `libraryFolders`. New Smart Album from Filter… is grayed out and
+  says why when several albums are shown and one of them is a smart album, or when the filter names a smart album
+  (one smart album shown alone can still be saved). `album.createSmart` refuses the same views, but only when it is
+  called without `rules`: given `rules`, it does not look at the view.
 - With View ▸ Hold View Until Refreshed on, a view of several albums holds a photo only while one of them has it: a
   photo that stops matching the rules of a smart album among them goes at once, unless another album shown has it.
 - `library.filter` refuses an album that is not there (`no such album N`), as `library.source` does. Deleting a shown
