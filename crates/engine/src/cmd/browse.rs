@@ -933,14 +933,6 @@ pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result:
     // photos are stored under the spelling they were added with: the folder as written, or as the disk has it
     // (a link in the path to the folder, or to its parent, resolved); each keeps the spelling it has
     let (real_src, real_dst) = (resolved(src), resolved(dst));
-    // (the photos of the library that went along: not browsed-only ones in Local, not the ones in Recently Deleted,
-    // and a virtual copy shares its original's file, so it is not another photo)
-    let in_library = s
-        .catalog
-        .photos()
-        .filter(|p| p.in_library() && p.copy_of.is_none())
-        .filter(|p| matches!(&p.source, lightcraft_catalog::Source::File { path } if Path::new(path).starts_with(src) || Path::new(path).starts_with(&real_src)))
-        .count();
     let mut ops: Vec<Op> = s
         .catalog
         .photos()
@@ -969,6 +961,16 @@ pub(crate) fn move_folder(s: &mut Session, from: &str, to: &str) -> std::result:
         })
         .collect();
     let n = ops.len();
+    // (the photos of the library that went along, counted from the photos relinked just above: not browsed-only ones
+    // in Local, not the ones in Recently Deleted, and a virtual copy shares its original's file, so it is not another photo)
+    let in_library = ops
+        .iter()
+        .filter_map(|o| match o {
+            Op::Relink { id, .. } => s.catalog.photo(*id),
+            _ => None,
+        })
+        .filter(|p| p.in_library() && p.copy_of.is_none())
+        .count();
     // what the library knows about the folder (and those inside it) goes along, in the same step
     let records = s.catalog.folder_records_follow(from, to);
     // (the second pass may clear what the first already cleared at the destination, after the first carried

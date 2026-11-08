@@ -234,6 +234,37 @@ fn the_album_and_the_card_of_a_scan_survive_queueing_and_review() {
     assert_eq!(waiting_params(&h)["album"], Value::Null, "no album of another library");
 }
 
+/// Given a scan that "Import to This Folder…" started, when it is queued without review, then the import copies into
+/// that folder, all of it in the folder itself (as its review would have been opened), and the row says where; and when
+/// Review… is clicked the new scan has the folder back.
+#[test]
+fn a_scan_for_a_chosen_folder_queues_into_that_folder_and_keeps_it_for_review() {
+    let mut h = demo();
+    let lane = busy(&h);
+    let scan = crate::import::stall_scan_in(&mut h.app, vec!["/nowhere/trip".into()], false);
+    if let Some(t) = h.app.scan.as_mut() {
+        t.destination = Some("/Volumes/Photos/Trip".into());
+    }
+    crate::import::queue_scan(&mut h.app).expect("queued");
+    drop(scan);
+    assert_eq!(h.app.unreviewed.len(), 1);
+    assert_eq!(h.app.unreviewed[0].transfer, crate::import_queue::Transfer::Copy(Some("/Volumes/Photos/Trip".into())));
+    let id = h.app.session.activity.waiting()[0].id;
+    crate::import::review_queued(&mut h.app, id).unwrap();
+    let t = h.app.scan.as_ref().expect("its review scan runs");
+    assert_eq!(t.destination.as_deref(), Some("/Volumes/Photos/Trip"));
+    // the same scan, left queued: what the engine is asked
+    h.app.scan = None;
+    let scan = crate::import::stall_scan_in(&mut h.app, vec!["/nowhere/trip".into()], false);
+    if let Some(t) = h.app.scan.as_mut() {
+        t.destination = Some("/Volumes/Photos/Trip".into());
+    }
+    crate::import::queue_scan(&mut h.app).expect("queued");
+    drop(scan);
+    drop(lane);
+    assert_eq!(waiting_params(&h), json!({"mode": "copy", "destination": "/Volumes/Photos/Trip", "organize": "flat"}));
+}
+
 /// Given a finished scan's review that waits for a dialog to close, when Review… is called, then it is refused before
 /// the folder leaves the line: the row stays.
 #[test]

@@ -272,7 +272,8 @@ pub fn open(app: &mut LightcraftApp, paths: Vec<String>) -> Result<Value, String
     app.scan = Some(ScanTask {
         progress,
         rx,
-        copy: false, destination: None,
+        copy: false,
+        destination: None,
         album: None,
         browse: false,
         sources,
@@ -645,8 +646,18 @@ fn scan_by_hand_in(app: &mut LightcraftApp, sources: Vec<String>, browse: bool) 
     let progress = std::sync::Arc::new(ScanProgress::default());
     let (tx, rx) = std::sync::mpsc::channel::<ScanEnd>();
     let guard = scan_guard(app, &progress, false);
-    app.scan =
-        Some(ScanTask { progress, rx, copy: false, destination: None, album: None, browse, sources, library: app.session.library_generation(), guard, resolved: None });
+    app.scan = Some(ScanTask {
+        progress,
+        rx,
+        copy: false,
+        destination: None,
+        album: None,
+        browse,
+        sources,
+        library: app.session.library_generation(),
+        guard,
+        resolved: None,
+    });
     tx
 }
 
@@ -692,6 +703,8 @@ pub struct Unreviewed {
     sources: Vec<String>,
     /// Open the review with "copy into the library" checked (a camera / card).
     card: bool,
+    /// The folder the review would have copied into, all of it in the folder itself (Import to This Folder…).
+    destination: Option<String>,
     /// The album the review would have offered.
     album: Option<u64>,
     /// How it brings its files in.
@@ -711,7 +724,15 @@ pub fn queue_scan(app: &mut LightcraftApp) -> Result<Value, String> {
         return Err("no folder scan is waiting for the library".into());
     }
     let Some(task) = app.scan.take() else { return Err("no folder scan is running".into()) };
-    let plan = import_queue::plan(app.last_import.as_ref(), task.copy);
+    let mut plan = import_queue::plan(app.last_import.as_ref(), task.copy || task.destination.is_some());
+    // "Import to This Folder…" asked for that folder, with no subfolders in it: as its review would have been opened
+    // (what else the last review chose, a rename or a conversion, still applies)
+    if let Some(dest) = &task.destination {
+        let mut params = if plan.params["mode"] == "copy" { plan.params } else { json!({"mode": "copy"}) };
+        params["destination"] = json!(dest);
+        params["organize"] = json!("flat");
+        plan = import_queue::Plan { params, transfer: Transfer::Copy(Some(dest.clone())) };
+    }
     let mut params = plan.params;
     // the album an Import into this album chose is part of what was asked (of this library: another one opened since
     // has other albums under the same numbers, and no review shows the person which one)
@@ -736,6 +757,7 @@ pub fn queue_scan(app: &mut LightcraftApp) -> Result<Value, String> {
             id,
             sources: task.sources.clone(),
             card: task.copy,
+            destination: task.destination.clone(),
             album: params["album"].as_u64(),
             transfer: plan.transfer,
         });
@@ -759,6 +781,7 @@ pub fn review_queued(app: &mut LightcraftApp, id: u64) -> Result<(), String> {
     open(app, u.sources)?;
     if let Some(t) = app.scan.as_mut() {
         t.copy = u.card;
+        t.destination = u.destination;
         t.album = u.album;
     }
     Ok(())
