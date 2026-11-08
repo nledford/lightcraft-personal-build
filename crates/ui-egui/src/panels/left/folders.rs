@@ -793,6 +793,7 @@ pub(crate) fn created_text(path: &str, parent: &str) -> String {
 /// [`move_photos`], saying how it went in a toast.
 fn move_photos_here(app: &mut LightcraftApp, ctx: &egui::Context, ids: Option<&[u64]>, path: &str, name: &str) {
     match move_photos(app, ids, path) {
+        Ok(n) if n > 0 => app.toast_undoable(ctx, moved_text(n, name)),
         Ok(n) => app.toast(ctx, moved_text(n, name)),
         Err(e) => app.toast_error(ctx, e),
     }
