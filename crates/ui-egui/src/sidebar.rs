@@ -333,7 +333,7 @@ mod tests {
         assert_eq!(Keywords.id(), "keywords");
         assert_eq!(SidebarSection::from_id("keywords"), Some(Keywords));
         let layout = read(json!([{"id": "keywords", "hidden": true, "collapsed": true}, {"id": "albums"}]));
-        assert_eq!(order(&layout), [Keywords, Albums, Local, ByDate, Folders]);
+        assert_eq!(order(&layout), [Keywords, Albums, Folders, Local, ByDate]);
         assert!(layout.is_hidden(Keywords) && layout.is_collapsed(Keywords));
     }
 
