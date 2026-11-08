@@ -14,6 +14,8 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 pub mod backup;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod convert;
 pub mod dates;
 #[cfg(not(target_arch = "wasm32"))]
 #[doc(hidden)]
@@ -2114,6 +2116,10 @@ mod tests_b7248_library;
 mod tests_background;
 #[cfg(test)]
 mod tests_backup;
+#[cfg(test)]
+mod tests_census;
+#[cfg(test)]
+mod tests_convert;
 #[cfg(test)]
 mod tests_folder_index;
 #[cfg(test)]
