@@ -1353,6 +1353,11 @@ pub fn specs() -> Vec<CommandSpec> {
             always,
             |s, p| {
                 let Some(folder) = s.import_defaults.auto_folder.clone() else { return Ok(json!({"imported": [], "folder": null})) };
+                // files arriving from a move in the background aren't new photos (the library follows them when it ends);
+                // nothing is marked seen, so the next scan looks again
+                if s.move_running() {
+                    return Ok(json!({"imported": [], "folder": folder}));
+                }
                 // only files that stopped growing: a file still being written is left for later
                 let known: std::collections::HashSet<String> = s
                     .catalog

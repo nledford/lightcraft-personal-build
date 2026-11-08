@@ -473,14 +473,15 @@ fn dont_ask_again_is_kept_only_when_the_move_began() {
     click(&mut h, &format!("libraryFolderToggle:{}", folder_key(&root)));
     let target = folder_row(&h, &home).unwrap();
     let beach = id_of(&h, "beach.png");
-    // a file of that name is in the folder already (not in the library): the move is refused
-    std::fs::copy(trip.join("beach.png"), home.join("beach.png")).unwrap();
     drop_beach(&mut h, beach, target);
     click(&mut h, "check:moveDontAsk");
     assert!(matches!(h.app.ui.dialog, Some(crate::state::Dialog::MovePhotos { dont_ask: true, .. })), "ticked");
+    // the question is refused before the move begins (another library opened meanwhile; a file already in the folder is
+    // only found by the worker, once the move has begun)
+    h.app.session.open_library(root.join("other-library").join("lib"), false).unwrap();
     click(&mut h, "button:dialogOk");
     assert!(h.app.ui.dialog.is_none(), "the refusal closes the question");
-    assert!(trip.join("beach.png").is_file(), "nothing moved");
+    assert!(trip.join("beach.png").is_file() && !home.join("beach.png").exists(), "nothing moved");
     assert!(h.app.ui.settings.ask_before_move, "a refused move leaves the question on");
     let _ = std::fs::remove_dir_all(&root);
 }
@@ -567,6 +568,7 @@ fn two_folders_with_one_name_are_told_apart_in_the_label_the_question_and_the_to
     // and so does the toast
     h.step();
     click(&mut h, "button:dialogOk");
+    settle(&mut h);
     assert!(toast(&h).starts_with("Moved 1 file to “home (") && toast(&h).contains("/b)”"), "{}", toast(&h));
     assert!(b.join("beach.png").is_file(), "moved into the one that was asked about");
     let _ = std::fs::remove_dir_all(&root);
@@ -624,6 +626,7 @@ fn a_folder_made_in_the_sidebar_has_its_row_at_once_and_takes_dropped_photos() {
     drop_beach(&mut h, beach, target);
     h.step();
     click(&mut h, "button:dialogOk");
+    settle(&mut h);
     assert!(made.join("beach.png").is_file() && !trip.join("beach.png").exists(), "moved on disk");
     assert_eq!(row_counts(&mut h, &made), vec![1], "one row, one photo");
     let _ = std::fs::remove_dir_all(&root);
@@ -681,7 +684,7 @@ fn a_background_move_shows_its_progress_and_holds_back_other_moves_until_it_ends
     let photo = h.app.session.catalog.photo(lightcraft_catalog::PhotoId(beach)).unwrap();
     assert!(matches!(&photo.source, lightcraft_catalog::Source::File { path } if Path::new(path) == home.join("beach.png")));
     assert!(h.app.session.activity.list().is_empty());
-    assert!(toast(&h).starts_with("Moved 1 photo to “home”."), "{}", toast(&h));
+    assert!(toast(&h).starts_with("Moved 1 file to “home”."), "{}", toast(&h));
     let inspect = crate::control::inspect(&h.app, &h.view.ctx);
     assert_eq!(inspect["move"]["running"], serde_json::Value::Null);
     assert_eq!(inspect["move"]["last"], json!({"moved": 1, "folder": home.to_string_lossy()}));
@@ -782,5 +785,22 @@ fn a_move_that_finished_as_the_app_exits_is_followed_by_the_library() {
     let photo = h.app.session.catalog.photo(lightcraft_catalog::PhotoId(beach)).unwrap();
     assert!(matches!(&photo.source, lightcraft_catalog::Source::File { path } if Path::new(path) == home.join("beach.png")), "{:?}", photo.source);
     assert!(h.app.move_run.is_none());
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn a_move_that_has_finished_is_followed_before_a_quit_asks_or_saves() {
+    let (root, trip, home) = folders("quit-done");
+    let mut h = app(&[(trip.join("beach.png"), false), (home.join("garden.png"), false)]);
+    let beach = id_of(&h, "beach.png");
+    h.app.run("photo.moveToFolder", json!({"ids": [beach], "folder": home.to_string_lossy(), "background": true})).unwrap();
+    // no frame runs `poll`: the worker has finished and its result waits
+    h.app.move_run.as_mut().unwrap().worker.take().unwrap().join().unwrap();
+    // When the window is asked to close, Then the library follows the files first, and the quit doesn't ask about a move that is over
+    assert!(crate::panels::notices::may_close(&mut h.app), "{:?}", h.app.quit_prompt);
+    assert!(h.app.move_run.is_none());
+    let photo = h.app.session.catalog.photo(lightcraft_catalog::PhotoId(beach)).unwrap();
+    assert!(matches!(&photo.source, lightcraft_catalog::Source::File { path } if Path::new(path) == home.join("beach.png")), "{:?}", photo.source);
     let _ = std::fs::remove_dir_all(&root);
 }

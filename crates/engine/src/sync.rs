@@ -203,6 +203,8 @@ impl SyncInput {
     /// whole disk or share, or a folder that holds disks (`/Volumes`, `/mnt`…), only with `disk`
     /// (as for Remove Disk from Library: its missing photos can be a whole disk's).
     pub fn new(s: &mut Session, path: &str, disk: bool) -> Result<SyncInput> {
+        // files that are on their way to this folder, or have just left it, would read as new and missing
+        s.refuse_while_moving()?;
         let path = path.trim();
         if path.is_empty() {
             return Err(invalid("missing `path`"));
@@ -769,6 +771,8 @@ pub enum SyncStep {
 impl SyncJob {
     /// Ready a synchronize of `changes` as `choice` says. Reads no file.
     pub fn start(s: &mut Session, changes: FolderChanges, choice: SyncChoice) -> Result<(SyncWork, SyncCommit)> {
+        // (a scan made before a move began is stale once the move ends; none is acted on while it runs)
+        s.refuse_while_moving()?;
         if changes.offline {
             return Err(not_there(&changes.path));
         }

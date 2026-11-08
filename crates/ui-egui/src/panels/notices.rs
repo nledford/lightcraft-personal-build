@@ -130,6 +130,11 @@ pub fn may_close(app: &mut LightcraftApp) -> bool {
     if app.quit_confirmed {
         return true;
     }
+    // a move whose worker has finished (its result waits for a frame that may not come) is followed now: it isn't
+    // asked about, and nothing below saves or closes the library before it, which would make the move's end find
+    // "the library changed" and leave its files in the new folder with the catalog at the old paths. (One still
+    // running is cut short.)
+    app.finish_ready_move();
     // before the library is touched: a Cancel here keeps working with it
     let running = tasks_quitting_would_stop(app);
     let mut names = running.iter().map(|t| crate::i18n::tr(&t.label)).collect::<Vec<_>>();

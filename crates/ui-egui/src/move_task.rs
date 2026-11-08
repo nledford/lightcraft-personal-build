@@ -47,10 +47,9 @@ pub(crate) fn stalled(app: &mut LightcraftApp) -> (std::sync::mpsc::Sender<MoveO
     (tx, guard)
 }
 
-/// The name a toast gives the folder `path`.
-fn name_of(path: &str) -> String {
-    let trimmed = path.trim_end_matches(['/', '\\']);
-    std::path::Path::new(trimmed).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.to_string())
+/// The name a toast gives the folder `path`: its row's name, with the folder it is in when another row has the same name.
+fn name_of(app: &mut LightcraftApp, path: &str) -> String {
+    crate::destination::folder(&app.caches.folder_tree(&app.session.catalog, app.session.library_generation()), path)
 }
 
 /// Start moving photos into a folder on disk: `params` as `photo.moveToFolder` takes them
@@ -69,7 +68,7 @@ pub fn start(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value) -> Re
 fn start_inner(app: &mut LightcraftApp, ctx: &egui::Context, params: &Value) -> Result<Value, String> {
     let raw = params.get("folder").and_then(Value::as_str).unwrap_or_default();
     let path = raw.trim_end_matches(['/', '\\']).to_string();
-    let name = name_of(raw);
+    let name = name_of(app, &path);
     let started = lightcraft_engine::move_job::start(&mut app.session, params).map_err(|e| e.to_string())?;
     let Some((work, finish)) = started else {
         app.toast(ctx, crate::panels::left::moved_text(0, &name));

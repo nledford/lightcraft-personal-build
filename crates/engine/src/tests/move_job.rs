@@ -4,7 +4,8 @@
 //! * while a move runs, nothing else moves files or opens another library, and the moving photos'
 //!   sidecars are written once they arrive, at the new place;
 //! * the checks that read the disk refuse on the worker, before anything moves;
-//! * a worker that dies leaves the library following the files that had arrived.
+//! * a worker that dies leaves the library following the files that had arrived;
+//! * the activity row ends as Failed (refused, failed, library changed) or Died (worker died).
 
 use std::path::{Path, PathBuf};
 
@@ -396,4 +397,140 @@ fn held_sidecars_are_not_written_when_auto_write_was_switched_off_during_the_mov
     s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
     assert!(!Path::new(&dir.path("share/a.xmp")).exists() && !Path::new(&dir.path("local/a.xmp")).exists());
     assert_eq!(s.unsaved_sidecars(), 0);
+}
+
+/// The disk when every move fails (a volume gone read-only, a share that dropped): what `Ran::Failed` is made of.
+struct NoMoves;
+
+impl crate::rename::MoveFs for NoMoves {
+    fn exists(&self, p: &Path) -> bool {
+        crate::rename::RealFs.exists(p)
+    }
+    fn is_file(&self, p: &Path) -> bool {
+        crate::rename::RealFs.is_file(p)
+    }
+    fn same_file(&self, a: &Path, b: &Path) -> bool {
+        crate::rename::RealFs.same_file(a, b)
+    }
+    fn rename_no_replace(&self, _: &Path, _: &Path) -> std::io::Result<()> {
+        Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "the volume is read-only"))
+    }
+    fn copy_no_replace(&self, _: &Path, _: &Path) -> std::io::Result<()> {
+        Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "the volume is read-only"))
+    }
+    fn remove_file(&self, p: &Path) -> std::io::Result<()> {
+        crate::rename::RealFs.remove_file(p)
+    }
+    fn stem_sibling(&self, sidecar: &Path) -> Option<String> {
+        crate::rename::RealFs.stem_sibling(sidecar)
+    }
+}
+
+/// How the one move of these tests ended, as `activity.finished` tells it: the ending and what it says.
+fn ending_of_the_move(s: &Session) -> (crate::activity::Ending, String) {
+    let row = s.activity.finished().into_iter().find(|f| f.kind == "move").expect("the move left a row");
+    (row.ending, row.detail)
+}
+
+#[test]
+fn a_move_the_worker_refuses_ends_its_row_as_failed() {
+    let dir = Scratch::new("end-refused");
+    let mut s = open(&dir);
+    let a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    std::fs::write(dir.path("share/a.jpg"), "someone else's").unwrap();
+    let out = work.run();
+    let e = s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap_err().to_string();
+    let (ending, detail) = ending_of_the_move(&s);
+    assert_eq!(ending, crate::activity::Ending::Failed);
+    assert_eq!(detail, e, "the row says what the error says");
+}
+
+#[test]
+fn a_move_whose_files_could_not_be_moved_ends_its_row_as_failed() {
+    let dir = Scratch::new("end-failed");
+    let mut s = open(&dir);
+    let a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    let out = work.run_with(&NoMoves);
+    let e = s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap_err().to_string();
+    let (ending, detail) = ending_of_the_move(&s);
+    assert_eq!(ending, crate::activity::Ending::Failed);
+    assert_eq!(detail, e, "the row says what the error says");
+    assert_eq!(file_of(&s, a), dir.path("local/a.jpg"));
+    assert!(Path::new(&dir.path("local/a.jpg")).is_file());
+}
+
+#[test]
+fn a_move_that_finishes_in_another_library_ends_its_row_as_failed() {
+    let dir = Scratch::new("end-changed");
+    let mut s = open(&dir);
+    let a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    let out = work.run();
+    // (the library was closed or replaced while the files moved)
+    s.library_identity = std::sync::Arc::new(());
+    let e = s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap_err().to_string();
+    assert!(e.contains("the library changed while photos were being moved"), "{e}");
+    let (ending, detail) = ending_of_the_move(&s);
+    assert_eq!(ending, crate::activity::Ending::Failed);
+    assert_eq!(detail, e);
+    assert_eq!(file_of(&s, a), dir.path("local/a.jpg"), "the library is not touched");
+    assert!(Path::new(&dir.path("share/a.jpg")).is_file());
+}
+
+#[test]
+fn a_move_whose_worker_dies_ends_its_row_as_died() {
+    let dir = Scratch::new("end-died");
+    let mut s = open(&dir);
+    let a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    std::fs::rename(dir.path("local/a.jpg"), dir.path("share/a.jpg")).unwrap();
+    drop(work);
+    s.execute_fn("photo.moveToFolder", |s| finish.abandon(s)).unwrap();
+    assert_eq!(ending_of_the_move(&s).0, crate::activity::Ending::Died);
+    assert_eq!(file_of(&s, a), dir.path("share/a.jpg"));
+}
+
+#[test]
+fn synchronize_folder_waits_for_a_running_move() {
+    let dir = Scratch::new("sync");
+    let mut s = open(&dir);
+    add(&mut s, &dir.path("share/g.jpg"), "G");
+    let a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    // a scan made before the move began
+    let changes = crate::sync::scan(&mut s, &dir.path("share"), false).unwrap();
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    // the file that arrives would read as a new photo, and the one that left as missing: no scan starts, none is acted on
+    let e = crate::sync::scan(&mut s, &dir.path("share"), false).unwrap_err().to_string();
+    assert!(e.contains("being moved"), "{e}");
+    let e = crate::sync::SyncJob::start(&mut s, changes, crate::sync::SyncChoice::default()).err().expect("refused").to_string();
+    assert!(e.contains("being moved"), "{e}");
+    let out = work.run();
+    s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
+    // once it ends, the library follows the file and a scan finds nothing new
+    let changes = crate::sync::scan(&mut s, &dir.path("share"), false).unwrap();
+    assert!(changes.new.is_empty() && changes.missing.is_empty(), "{:?} new, {:?} missing", changes.new.len(), changes.missing.len());
+}
+
+#[test]
+fn auto_import_leaves_the_watched_folder_alone_while_a_move_runs() {
+    let dir = Scratch::new("autoimport");
+    let mut s = open(&dir);
+    add(&mut s, &dir.path("share/g.jpg"), "G");
+    let a = add(&mut s, &dir.path("local/a.jpg"), "A");
+    s.execute("library.autoImport", &json!({"folder": dir.path("share")})).unwrap();
+    let (work, finish) = crate::move_job::start(&mut s, &json!({"ids": [a.0], "folder": dir.path("share")})).unwrap().unwrap();
+    let out = work.run();
+    // the file is in the watched folder and the library doesn't know it yet: it is not a new photo
+    let r = s.execute("library.autoImportScan", &json!({})).unwrap();
+    let r2 = s.execute("library.autoImportScan", &json!({})).unwrap();
+    assert_eq!((r["imported"].clone(), r2["imported"].clone()), (json!([]), json!([])));
+    assert!(s.auto_import_seen.is_empty(), "nothing was looked at: {:?}", s.auto_import_seen);
+    s.execute_fn("photo.moveToFolder", |s| finish.finish(s, out)).unwrap();
+    assert_eq!(s.catalog.len(), 2, "no photo was added");
+    // once it has ended the watched folder is looked at again, and the file is the library's own
+    s.execute("library.autoImportScan", &json!({})).unwrap();
+    s.execute("library.autoImportScan", &json!({})).unwrap();
+    assert_eq!(s.catalog.len(), 2, "still no photo added");
 }
