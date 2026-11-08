@@ -119,6 +119,22 @@
 - `Shift+X`, `Shift+Z`, `Shift+U` and `Shift+P` (in the grids) flagged the photo and moved on, and `[` / `]` changed its rating, without a word, so with the photo gone from the screen nothing confirmed it. They now show the same bottom toast as `X`, `U`, `P` and the number keys, naming the photo that changed, not the one you moved on to. The toast now comes from the change itself, so the Photo menu and the rating and flag buttons show it too.
 - When a change reaches several photos the toast says how many: "Rated ★★★ · 12 photos". The count is the photos the key acted on, including any that already had that value. A `[` / `]` or backtick step that leaves a mixed selection with different values says "Rating changed · 12 photos" or "Flag changed · 12 photos". A key that is refused no longer shows a success toast; the reason stays in the status line.
 
+### The rating and label keys can be remapped
+- The rating keys 0–5 and the color-label keys 6–9 are now rows of Help ▸ Keyboard Shortcuts: Clear rating, Rate ★ to
+  Rate ★★★★★, and the Red, Yellow, Green and Blue labels. Each starts on its digit and can be given another key like any
+  command, and Photo ▸ Set Rating and Set Color Label show the key each row has. A rating or label moved to another key
+  answers to that key alone; a digit given to another command is taken from its rating or label, and ↺ gives it back.
+  The new key does what the digit did: it rates or labels the selected photos (the active photo in Compare and Survey)
+  and moves on with Auto Advance. Shift with a digit still rates or labels and moves on, and stays a fixed key, listed
+  under Fixed keys.
+
+### The digit row of French AZERTY keyboards
+- On a French AZERTY keyboard the 4 key types `'` (the 8 key of the macOS French layout types `!`), and pressing it
+  without Shift did nothing: the digit shortcuts only knew the digit. These keys now rate and label like the digits,
+  without Shift and without moving on. `-` (the 6 key of a French PC keyboard) stays Decrease Grid Thumbnail Size and
+  `+` (the 1 key of Czech and Slovak keyboards) stays Increase Grid Thumbnail Size; on those layouts give the label or
+  rating another key in Help ▸ Keyboard Shortcuts.
+
 ## 2026-11-02
 
 ### The Windows title bar is readable from the moment the window opens
