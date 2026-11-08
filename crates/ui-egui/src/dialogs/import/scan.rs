@@ -116,8 +116,9 @@ fn scan_guard(app: &LightcraftApp, progress: &ScanProgress, browse: bool) -> lig
 }
 
 /// The command of an import's request ([`Request`]): the app runs it ([`start_request`]), with its files and its
-/// `library.import` params.
-pub const IMPORT_REQUEST: &str = "app:import";
+/// `library.import` params. The engine reads the files of an Auto Import's request back when it leaves the line
+/// unrun ([`lightcraft_engine::activity::Activity::take_untried`]): keep `paths` and `auto` where they are.
+pub const IMPORT_REQUEST: &str = lightcraft_engine::activity::IMPORT_REQUEST;
 
 /// `below`: the folders or files the import's unreadable files are named by where they are below
 /// ([`ImportTask::named_below`]); `sources`: the folders or files the person chose, which name the import in its row;

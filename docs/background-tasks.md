@@ -121,7 +121,9 @@ every command and the app every frame. `activity.list` shows a waiting task afte
 take it out of the line) and the line beside the bell counts them ("Building previews · 40 % · 2 waiting"). `activity.cancel` takes a waiting task out
 of the line, `activity.cancel {all: true}` empties it, and opening another library drops it: the photos it names
 belong to the old one, and so does a quit (the files may change before the next launch; the quit question says how
-many would not run). Opening another library while tasks wait asks first in the app (an agent says `dropWaiting: true` to agree; without it
+many would not run). An Auto Import's request (`app:import` with `auto: true`) that leaves the line this way, or whose start is refused (its album was deleted while it waited, say),
+gives its files back (`Activity::take_untried`, applied by `Session::untry_auto_imports`): `library.autoImportScan` had noted them
+as tried, so without it nothing would import them. Opening another library while tasks wait asks first in the app (an agent says `dropWaiting: true` to agree; without it
 `app.openLibrary` and `app.newLibrary` return `asked: true` and the question is up), and the switch says how many it
 dropped. While the question is up nothing leaves the line (the app holds it: a task that started then would refuse the
 switch (an import) or escape the drop the person is agreeing to (a build)), and a switch that fails opens the old library again with its line intact. At most `MAX_WAITING` (100) tasks wait, in all lanes together; a `queue: true` call that would wait while the line already holds that many is refused, not queued. The app's own refusals of a full line say so in the window's language,
