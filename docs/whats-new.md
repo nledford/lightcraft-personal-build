@@ -989,6 +989,19 @@
   undeclared references as an error, and keeps CDATA literal. Auto-Tag places photos at the track
   position represented by their capture time.
 
+### Move several folders into one in a single step
+- For agents: `folder.move {paths, into}` moves several folders on disk into one folder, with the photos in them
+  following, as one undo step: Undo moves them all back and Redo moves them all again. If any one can't move (a folder
+  into itself or into one inside it, a name already taken in the destination, one folder inside another of the list,
+  two folders with the same name, a folder that isn't there, the home folder or one of its Pictures, Desktop or
+  Downloads; or more than 200 folders) the whole move is refused with a plain sentence and
+  nothing moves. `folder.move {path, into}` still moves one folder, but it and `folder.rename` now spell the folder
+  plainly first: `.` and `..` in `path` are resolved (`/a/../b` is `/b`), and only the separators of the platform
+  are trimmed from its end (on macOS and Linux a trailing backslash stays part of the folder's name). The photos that
+  go along with a moved folder are those whose stored path, spelled plainly, lies inside it: a photo stored as
+  `a/../b/x` goes with folder `b`, not with `a`.
+- Move Folder To… in the folder menus now has a tooltip.
+
 ## 2026-10-21
 
 ### Text sizes

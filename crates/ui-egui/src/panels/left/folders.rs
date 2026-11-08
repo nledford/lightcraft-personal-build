@@ -844,7 +844,11 @@ fn move_folder_item(app: &mut LightcraftApp, ui: &mut egui::Ui, path: &str) {
     if app.services.pick_folder.is_none() && app.services.picker.is_none() {
         return;
     }
-    let r = MenuItem::new(crate::i18n::tr("Move Folder To…")).enabled(can_move_folder(app).is_ok()).widget("folderMoveTo").show(ui);
+    let r = MenuItem::new(crate::i18n::tr("Move Folder To…"))
+        .enabled(can_move_folder(app).is_ok())
+        .widget("folderMoveTo")
+        .show(ui)
+        .on_hover_text(crate::i18n::tr("Moves the folder on disk into the folder you choose; its photos follow. You can undo this."));
     if !r.clicked() {
         return;
     }
