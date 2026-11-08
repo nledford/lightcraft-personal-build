@@ -49,13 +49,13 @@ cited here still exists. Formerly docs/parity.md.
 | U. Map & location (MAP) | 0 | 1 | 1 | 0 | — | 0/1 (0%) |
 | V. Preferences (PREF) | 6 | 2 | 2 | 2 | 1/1 (100%) | 4/5 (80%) |
 | W. Cloud & AI infrastructure (CLOUD / AI) | 1 | 0 | 1 | 2 | — | — |
-| X. Cross-cutting behaviours (BEHAV) | 24 | 6 | 1 | 1 | 8/8 (100%) | 7/10 (70%) |
-| Y. Menus | 86 | 0 | 4 | 8 | 47/47 (100%) | 23/23 (100%) |
+| X. Cross-cutting behaviours (BEHAV) | 23 | 7 | 1 | 1 | 7/8 (88%) | 7/10 (70%) |
+| Y. Menus | 86 | 1 | 3 | 8 | 47/47 (100%) | 23/23 (100%) |
 | Z. Keyboard shortcuts (desktop) | 78 | 5 | 2 | 1 | 49/52 (94%) | 24/26 (92%) |
 | Lightroom Classic extras | 41 | 27 | 21 | 8 | — | 24/28 (86%) |
-| **Total** | 422 | 72 | 56 | 35 | 193/203 (95%) | 147/164 (90%) |
+| **Total** | 421 | 74 | 55 | 35 | 192/203 (95%) | 147/164 (90%) |
 
-Weighted completion (✅ = 1, 🟡 = ½, 🚫 left out): **83.3%** of 550 in-scope rows — P0 97.5% of 203 · P1 94.2% of 164 · P2 57.4% of 182.
+Weighted completion (✅ = 1, 🟡 = ½, 🚫 left out): **83.3%** of 550 in-scope rows — P0 97.3% of 203 · P1 94.2% of 164 · P2 57.7% of 182.
 <!-- /parity:summary -->
 
 ## Top gaps and shortcut notes
