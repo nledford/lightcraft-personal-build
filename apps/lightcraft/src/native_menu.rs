@@ -295,14 +295,6 @@ fn label_text(s: &str) -> String {
     lightcraft_ui_egui::i18n::tr(s).replace('&', "&&")
 }
 
-/// Drop a trailing separator (left behind when an item moved to the app menu).
-fn tidy_separators(mut nodes: Vec<MenuNode>) -> Vec<MenuNode> {
-    while matches!(nodes.last(), Some(MenuNode::Separator)) {
-        nodes.pop();
-    }
-    nodes
-}
-
 impl NativeMenu {
     /// Build the menu bar and install it as the application menu (main thread, after launch).
     pub fn install(app: &mut LightcraftApp, ctx: &egui::Context) -> NativeMenu {
@@ -384,10 +376,9 @@ impl NativeMenu {
                     &PredefinedMenuItem::separator(),
                 ]);
             }
-            let nodes = tidy_separators(nodes.clone());
             // Swapping an item in the Help menu leaves the old row in place and adds a second one
             // (measured on macOS 27 with muda 0.21): the Help menu is not addressed row for row.
-            self.append_nodes(&sub, &nodes, &app.ui.settings.keymap, title != "Help");
+            self.append_nodes(&sub, nodes, &app.ui.settings.keymap, title != "Help");
             if title == "File" {
                 // ⌘W, the system's own item
                 let _ = sub.append_items(&[
