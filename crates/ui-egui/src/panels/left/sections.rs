@@ -197,12 +197,22 @@ pub(crate) fn shown_in(app: &LightcraftApp, section: SidebarSection) -> Option<S
             let browsed = s.browse.as_ref().filter(|_| s.source == LibrarySource::Folder);
             browsed.map(|b| folder_label(&b.path))
         }
-        SidebarSection::Folders if s.source == LibrarySource::LibraryFolder => s.library_folder.as_deref().map(folder_label),
+        // several folders chosen at once: counted as the grid's title counts them
+        SidebarSection::Folders if s.source == LibrarySource::LibraryFolder && s.library_folder.is_some() => Some(crate::i18n::source_title(s)),
         SidebarSection::Folders => None,
         // the date in its dated form ("September 2026", as the Date chip and the grid header say it), not `2026-09`:
-        // the year and month rows that give a short label its context are folded away; a keyword by its own name, not its path
-        SidebarSection::ByDate => s.filter.date.as_deref().map(|d| crate::i18n::date_group_label(d, false)),
-        SidebarSection::Keywords => s.filter.keyword.as_deref().map(|k| k.rsplit('|').next().unwrap_or(k).to_string()),
+        // the year and month rows that give a short label its context are folded away; several are counted
+        SidebarSection::ByDate => match s.filter.dates_wanted().as_slice() {
+            [] => None,
+            [one] => Some(crate::i18n::date_group_label(one, false)),
+            many => Some(crate::i18n::tr_format!("{n} dates", n = many.len())),
+        },
+        // a keyword by its own name, not its path; several are counted
+        SidebarSection::Keywords => match s.filter.keywords_wanted().as_slice() {
+            [] => None,
+            [one] => Some(one.rsplit('|').next().unwrap_or(one).to_string()),
+            many => Some(crate::i18n::tr_format!("{n} keywords", n = many.len())),
+        },
     })
 }
 

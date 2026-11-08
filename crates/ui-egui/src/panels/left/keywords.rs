@@ -15,9 +15,9 @@ pub(super) fn keyword_rows(app: &mut LightcraftApp, ui: &mut egui::Ui, nodes: &[
         let sel_of = |app: &LightcraftApp| crate::panels::side_select::keyword_shown(app, &n.path);
         app.ui.side.keywords.saw(n.path.clone());
         if !out_of_sight(app, ui, &id, &n.name, Some(n.count), indent, false, || sel_of(app)) {
-        let sel = sel_of(app);
-        keyword_row(app, ui, n, &id, indent, branch.as_ref(), &mut open, sel);
-    }
+            let sel = sel_of(app);
+            keyword_row(app, ui, n, &id, indent, branch.as_ref(), &mut open, sel);
+        }
         if let Some(branch) = branch.as_ref().filter(|_| open) {
             let inside = app.ui.sidebar_trees.inside(branch, above);
             keyword_rows(app, ui, &n.children, indent + INDENT_STEP, inside);
@@ -37,7 +37,6 @@ fn keyword_row(
     open: &mut bool,
     sel: bool,
 ) {
-
     let resp = Row::new(id, Icon::Tag, &n.name).count(Some(n.count)).selected(sel).indent(indent).show(app, ui);
     refuse_photos(
         app,

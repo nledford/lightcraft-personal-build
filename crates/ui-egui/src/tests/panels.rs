@@ -2791,6 +2791,26 @@ fn what_is_shown_is_named_as_its_row_names_it() {
     assert_eq!(said(&h, S::Local).as_deref(), Some("Weddings"));
 }
 
+/// With several rows of a section chosen, the folded header counts them (as the grid's title does)
+/// instead of saying nothing, or naming only one.
+#[test]
+fn a_folded_header_counts_what_several_rows_show() {
+    use crate::panels::left::shown_in;
+    use crate::sidebar::SidebarSection as S;
+    let mut h = folders_app(&["/pics/trip/a.jpg", "/pics/home/b.jpg"]);
+    exec(&mut h, "library.source", json!({"kind": "libraryFolder", "paths": ["/pics/trip", "/pics/home"]}));
+    assert_eq!(shown_in(&h.app, S::Folders), Some(crate::i18n::source_title(&h.app.session)), "the grid's title says the count");
+    assert_eq!(shown_in(&h.app, S::Folders).as_deref(), Some("2 folders"));
+    exec(&mut h, "library.source", json!({"kind": "all"}));
+    exec(&mut h, "library.filter", json!({"keywords": ["travel|lisbon", "weddings"]}));
+    assert_eq!(shown_in(&h.app, S::Keywords).as_deref(), Some("2 keywords"));
+    exec(&mut h, "library.filter", json!({"keywords": [], "dates": ["2026-01", "2026-02"]}));
+    assert_eq!(shown_in(&h.app, S::ByDate).as_deref(), Some("2 dates"));
+    // one of each, whichever field holds it, is named as before
+    exec(&mut h, "library.filter", json!({"dates": [], "keywords": ["travel|lisbon"]}));
+    assert_eq!(shown_in(&h.app, S::Keywords).as_deref(), Some("lisbon"));
+}
+
 /// Select All in the loupe: every filmstrip cell of a selected photo is drawn selected, not just
 /// the active one (issue #298).
 #[test]
