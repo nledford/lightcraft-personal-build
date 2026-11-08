@@ -677,6 +677,48 @@ enum Notice {
     Dismiss,
 }
 
+/// What is said when a task is asked for and the line is full (the engine's own refusal is English only).
+pub fn line_full_text() -> String {
+    tr_format!("Too many tasks are waiting ({n}): wait for some to finish", n = lightcraft_engine::activity::MAX_WAITING)
+}
+
+/// What ✕ on a task waiting in line is called, for screen readers and its tooltip.
+pub(crate) fn cross_name(task: &TaskInfo) -> String {
+    tr_format!("Remove from Queue: {label}", label = waiting_name(task))
+}
+
+/// A task named for the person: its label, and what it works on (a folder's name) when it says.
+pub(crate) fn waiting_name(task: &TaskInfo) -> String {
+    if task.detail.is_empty() { tr(&task.label).to_string() } else { format!("{} · {}", tr(&task.label), task.detail) }
+}
+
+/// A waiting task's second line: what it works on and what else is known of it, then when it starts. The timing stays
+/// whole; the name and the facts are what give way when the line is too long.
+fn waiting_line(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) {
+    let starts = starts_text(task.place);
+    let head = [task.detail.as_str(), task.facts.as_str()].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" · ");
+    let font = t.font(11.0);
+    let at = format!("activity:starts:{}", task.id);
+    if head.is_empty() {
+        let r = ui.add(egui::Label::new(RichText::new(starts).font(font).color(t.text_dim)).truncate());
+        register(ui, at, r.rect);
+        return;
+    }
+    let tail = format!(" · {starts}");
+    let measure = |text: &str| ui.painter().layout_no_wrap(text.to_string(), font.clone(), t.text_dim).size().x;
+    let tail_w = measure(&tail);
+    let head_w = (measure(&head) + 1.0).min((width - tail_w - 2.0).max(40.0));
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 0.0;
+        ui.allocate_ui_with_layout(vec2(head_w, 14.0), Layout::left_to_right(Align::Center), |ui| {
+            ui.set_width(head_w);
+            ui.add(egui::Label::new(RichText::new(head).font(font.clone()).color(t.text_dim)).truncate());
+        });
+        let r = ui.add(egui::Label::new(RichText::new(tail).font(font).color(t.text_dim)).wrap_mode(egui::TextWrapMode::Extend));
+        register(ui, at, r.rect);
+    });
+}
+
 /// The notice of a Synchronize Folder scan that finished in the background (widgets
 /// `activity:scanReady`, its `:title`, `:review` and `:dismiss`): what it found and in which folder. A
 /// click on it opens the dialog with the result; ✕ lets go of it. It stays until one of
@@ -787,14 +829,15 @@ fn waiting_row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> bo
                 ui.add(egui::Label::new(RichText::new(tr(&task.label)).font(t.font(12.5)).color(t.text_label)).truncate());
             });
             let (rect, resp) = ui.allocate_exact_size(vec2(CROSS, CROSS), Sense::click());
-            crate::widgets::announce(&resp, format!("{}: {}", tr("Remove from Queue"), tr(&task.label)));
+            let name = cross_name(task);
+            crate::widgets::announce(&resp, name.clone());
             paint(ui.painter(), rect.shrink(2.0), Icon::Close, if resp.hovered() || resp.has_focus() { t.text } else { t.icon });
             if ui.is_rect_visible(rect) {
                 register(ui, format!("activity:cancel:{}", task.id), rect);
             }
-            clicked = resp.on_hover_text(tr("Remove from Queue")).clicked();
+            clicked = resp.on_hover_text(name).clicked();
         });
-        ui.add(egui::Label::new(RichText::new(starts_text(task.place)).font(t.font(11.0)).color(t.text_dim)).truncate());
+        waiting_line(ui, t, task, width);
     });
     if ui.is_rect_visible(r.response.rect) {
         register(ui, format!("activity:row:{}", task.id), r.response.rect);

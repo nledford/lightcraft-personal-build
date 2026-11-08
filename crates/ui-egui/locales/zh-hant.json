@@ -2237,9 +2237,7 @@
   "Drop to import": "放開滑鼠以匯入",
   "Dropped Files": "拖放的檔案",
   "Import dropped files without review": "不經檢查直接匯入拖放的檔案",
-  "An import is running": "正在匯入",
   "The photos are imported once it ends": "結束後即匯入這些照片",
-  "An import is running. Drop photos when it has finished": "正在匯入。匯入完成後再拖放照片",
   "Finish Lightroom catalog import before adding photos": "新增照片前，請先完成 Lightroom 目錄的匯入",
   "Camera preview": "相機預覽",
   "The camera's own JPEG, shown until LightCraft has rendered the raw. Judge colour and tone on the rendered photo.": "相機自己的 JPEG，在 LightCraft 算繪出原始檔之前顯示。請在算繪後的照片上判斷色彩與色調。",
@@ -2578,5 +2576,13 @@
   "Queued: it starts when the task ahead of it ends": "已加入佇列：前一個工作結束後開始",
   "1 task waiting in line won't run.": "佇列中等待的 1 個工作不會執行。",
   "Another library was opened: nothing was done": "已開啟另一個圖庫：未執行任何操作",
-  "Photos of the folder changed while it was read: nothing was done": "讀取期間資料夾中的照片發生了變化：未執行任何操作"
+  "Photos of the folder changed while it was read: nothing was done": "讀取期間資料夾中的照片發生了變化：未執行任何操作",
+  "Queue": "加入佇列",
+  "Queue Move": "加入佇列（移動）",
+  "Queue Synchronize": "加入佇列（同步）",
+  "A folder is still being scanned for the import review: drop photos when it has finished": "正在掃描資料夾以供匯入預覽。掃描完成後再拖放照片",
+  "A folder is still being read for the Local view: drop photos when it has finished": "正在讀取資料夾以供「本機」檢視使用。讀取完成後再拖放照片",
+  "An import review is waiting to open: drop photos when it is closed": "匯入預覽正等待開啟。關閉後再拖放照片",
+  "Switch library while tasks are waiting?": "要在有工作排隊等待時切換照片庫嗎？",
+  "Switch Library": "切換照片庫"
 }

@@ -46,6 +46,7 @@ impl LightcraftApp {
             updates_rt: Default::default(),
             quit_prompt: None,
             notice_input: Default::default(),
+            switch_prompt: None,
             quit_confirmed: false,
             quit_backup: QuitBackup::default(),
             control_rx: None,
@@ -374,6 +375,11 @@ impl LightcraftApp {
         } else {
             i18n::tr_format!("Queued: it starts after {n} more", n = place - 1)
         };
+        self.say(text);
+    }
+
+    /// A toast from code that has no frame context at hand.
+    pub(crate) fn say(&mut self, text: String) {
         let now = self.tick_now();
         self.ui.show_toast(now, text, TOAST_SECONDS, None);
     }
@@ -382,6 +388,11 @@ impl LightcraftApp {
     /// and the app's own (`app:import`, `app:synchronize`), each the way it was asked. One that can't start says why
     /// in a toast; the next in line goes on.
     fn start_waiting(&mut self, ctx: &egui::Context) {
+        // nothing leaves the line while the question about dropping it is open: a task started now would refuse the
+        // switch (an import) or escape the drop the person is agreeing to (a build). A question about a library no
+        // longer open is stale (the next drawn frame drops it; a hidden window draws none) and holds nothing.
+        let asked = self.switch_prompt.as_ref().is_some_and(|p| p.generation == self.session.library_generation());
+        self.session.activity.hold_line(asked);
         self.session.start_waiting();
         // The app's own wait while its slots are taken, row or no row yet: an import set this frame (Auto Import, its
         // row comes at the next tick), a synchronize, or a Local folder being read (it becomes an import when read).

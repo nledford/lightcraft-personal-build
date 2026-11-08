@@ -2281,9 +2281,7 @@
   "Drop to import": "Solte para importar",
   "Dropped Files": "Arquivos soltos",
   "Import dropped files without review": "Importar arquivos soltos sem revisão",
-  "An import is running": "Uma importação está em andamento",
   "The photos are imported once it ends": "As fotos serão importadas depois",
-  "An import is running. Drop photos when it has finished": "Uma importação está em andamento. Solte as fotos quando ela terminar",
   "Finish Lightroom catalog import before adding photos": "Conclua a importação do catálogo do Lightroom antes de adicionar fotos",
   "Camera preview": "Prévia da câmera",
   "The camera's own JPEG, shown until LightCraft has rendered the raw. Judge colour and tone on the rendered photo.": "O JPEG da própria câmera, mostrado até o LightCraft renderizar o RAW. Avalie cor e tom na foto renderizada.",
@@ -2422,5 +2420,13 @@
   "Queued: it starts when the task ahead of it ends": "Na fila: começa quando a tarefa anterior terminar",
   "1 task waiting in line won't run.": "1 tarefa na fila não será executada.",
   "Another library was opened: nothing was done": "Outra biblioteca foi aberta: nada foi feito",
-  "Photos of the folder changed while it was read: nothing was done": "As fotos da pasta mudaram durante a leitura: nada foi feito"
+  "Photos of the folder changed while it was read: nothing was done": "As fotos da pasta mudaram durante a leitura: nada foi feito",
+  "Queue": "Colocar na fila",
+  "Queue Move": "Colocar a movimentação na fila",
+  "Queue Synchronize": "Colocar a sincronização na fila",
+  "A folder is still being scanned for the import review: drop photos when it has finished": "Uma pasta ainda está sendo verificada para a revisão da importação. Solte as fotos quando terminar",
+  "A folder is still being read for the Local view: drop photos when it has finished": "Uma pasta ainda está sendo lida para a visualização Local. Solte as fotos quando terminar",
+  "An import review is waiting to open: drop photos when it is closed": "A revisão da importação está esperando para abrir. Solte as fotos quando ela for fechada",
+  "Switch library while tasks are waiting?": "Trocar de biblioteca com tarefas na fila?",
+  "Switch Library": "Trocar de biblioteca"
 }

@@ -159,7 +159,7 @@ impl LightcraftApp {
                     // migration that started while the folder was listed: scanning now would mark the new files as tried
                     // without importing them; the next listing picks them up. (An import or a synchronize that runs or
                     // waits in the library lane is no reason: the files wait in line behind it.)
-                    if import::drop_blocked(app) || app.sync.is_some() || app.lightroom.is_some() {
+                    if import::drop_refusal(app).is_some() || app.sync.is_some() || app.lightroom.is_some() {
                         return;
                     }
                     import::auto_import_listed(app, listing, &watched);

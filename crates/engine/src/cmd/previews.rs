@@ -303,7 +303,7 @@ fn request_for(command: &str, p: &Value, ids: &[lightcraft_catalog::PhotoId]) ->
         params.remove(key);
     }
     params.insert("ids".into(), ids.iter().map(|id| id.0).collect());
-    Request { command: command.into(), params: Value::Object(params) }
+    Request { command: command.into(), params: Value::Object(params), ..Default::default() }
 }
 
 /// The refusal of a build while another runs, unless the call asks to `queue`.
@@ -1215,7 +1215,7 @@ mod tests {
         let s = Session::with_demo();
         let state = Arc::new(super::PreviewBuild::default());
         let run = super::Running {
-            task: Some(super::task_for(&s, &state, crate::activity::Request { command: String::new(), params: serde_json::Value::Null })),
+            task: Some(super::task_for(&s, &state, crate::activity::Request { command: String::new(), params: serde_json::Value::Null, ..Default::default() })),
             state: state.clone(),
         };
         assert!(s.activity.lane_busy(crate::activity::Lane::Previews));
@@ -1238,7 +1238,7 @@ mod tests {
         let s = Session::with_demo();
         let state = Arc::new(super::PreviewBuild::default());
         let run = super::Running {
-            task: Some(super::task_for(&s, &state, crate::activity::Request { command: String::new(), params: serde_json::Value::Null })),
+            task: Some(super::task_for(&s, &state, crate::activity::Request { command: String::new(), params: serde_json::Value::Null, ..Default::default() })),
             state: state.clone(),
         };
         state.finished.store(true, Ordering::Relaxed);
