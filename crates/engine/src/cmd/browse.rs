@@ -398,11 +398,29 @@ fn folder_param<'a>(p: &'a Value, key: &str) -> Option<&'a str> {
     str_param(p, key).map(|x| x.trim_end_matches(['/', '\\'])).filter(|x| !x.is_empty())
 }
 
+/// `path` without the separators at its end, except that a root (`/`) stays one: a folder can be
+/// made in the root of a disk.
+pub(crate) fn without_trailing_separators(path: &str) -> &str {
+    let trimmed = path.trim_end_matches(['/', '\\']);
+    if trimmed.is_empty() { path.get(..1).unwrap_or("") } else { trimmed }
+}
+
+/// `parent` and `name` as one path. A bare drive (`D:`, a disk's row in Folders) gets `sep`:
+/// joining it as a path would make `D:name`, which lies in the drive's working directory. Any
+/// other parent is joined as the host joins paths.
+pub(crate) fn child_path(parent: &str, name: &str, sep: char) -> String {
+    if matches!(parent.as_bytes(), [d, b':'] if d.is_ascii_alphabetic()) {
+        format!("{parent}{sep}{name}")
+    } else {
+        Path::new(parent).join(name).to_string_lossy().to_string()
+    }
+}
+
 /// `folder.create`: a new folder on disk inside `parent`, listed in the library's folders at once
 /// (empty, see [`lightcraft_catalog::FolderRecord::made`]); undo removes it while it is empty.
 fn create_folder(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "folder.create";
-    let parent = folder_param(p, "parent").ok_or_else(|| bad(C, "missing parent"))?;
+    let parent = str_param(p, "parent").map(without_trailing_separators).filter(|x| !x.is_empty()).ok_or_else(|| bad(C, "missing parent"))?;
     let name = str_param(p, "name")
         .map(str::trim)
         .filter(|n| !n.is_empty() && !n.contains(['/', '\\']) && *n != "." && *n != "..")
@@ -410,9 +428,9 @@ fn create_folder(s: &mut Session, p: &Value) -> Result<Value> {
     if !Path::new(parent).is_dir() {
         return Err(bad(C, format!("{parent} is not a folder (offline, moved or deleted?)")));
     }
+    let path = child_path(parent, name, std::path::MAIN_SEPARATOR);
     // (the library keeps absolute paths only: a relative `parent` is taken from the working folder)
-    let parent = std::path::absolute(parent).map_err(|e| bad(C, format!("{parent}: {e}")))?;
-    let path = parent.join(name).to_string_lossy().to_string();
+    let path = std::path::absolute(&path).map_err(|e| bad(C, format!("{path}: {e}")))?.to_string_lossy().to_string();
     if Path::new(&path).exists() {
         return Err(bad(C, format!("{path} already exists: choose another name")));
     }
