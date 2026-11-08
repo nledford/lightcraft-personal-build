@@ -12,7 +12,7 @@
 //! defaults: about 3.2 kB each for a photo with no metadata, nearly all of it the default develop
 //! settings. Reading needs
 //! nothing of its own: both forms are read by the types' `Deserialize`, where a missing field
-//! takes its default, so libraries with full records (catalog formats up to 9) load as they are.
+//! takes its default, so libraries with full records (catalog formats up to 13) load as they are.
 //!
 //! **Settings are never stored in a form that reads back differently.** A value is left out only
 //! where leaving it out of the defaults reads back as the defaults. That is not so for `process`,
@@ -677,7 +677,7 @@ thread_local! {
 }
 
 /// While it lives, develop settings written on this thread are stored whole, as formats before
-/// 10 did, so a record reads back the same over whatever defaults its library states (a value the
+/// 14 did, so a record reads back the same over whatever defaults its library states (a value the
 /// settings' own JSON leaves out at its default is as in those formats): for a
 /// library whose header doesn't state every setting this build has yet, where a difference from
 /// this build's defaults would leave out what the header gives no default for.
