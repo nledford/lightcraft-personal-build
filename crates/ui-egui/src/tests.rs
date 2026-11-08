@@ -32,6 +32,8 @@ mod dialog_settings_groups;
 mod dialog_settings_contrast;
 mod dialog_settings_text;
 mod dialog_settings_trust;
+mod dialog_settings_keys;
+mod dialog_settings_tabs;
 mod dialog_tab;
 mod dialogs;
 mod disk_space;

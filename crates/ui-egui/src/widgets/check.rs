@@ -330,13 +330,19 @@ fn row(ui: &mut Ui, spec: Spec) -> (Response, bool) {
         }
     }
     if resp.has_focus() {
-        let ring = crate::widgets::focus_stroke(&t);
-        match shape {
-            Form::Box => {
-                p.rect_stroke(b.expand(2.0), 5.0, ring, StrokeKind::Outside);
-            }
-            Form::Round => {
-                p.circle_stroke(b.center(), BOX / 2.0 + 2.0, ring);
+        if crate::widgets::in_text_focus_look(ui, &t) {
+            // (in the Settings window, where the focus has one look whatever the control, the whole row is ringed,
+            // label and all, as it is round a button or a tab; elsewhere the ring is round the box alone)
+            crate::widgets::focus_ring_in(ui, &t, &resp, rect.expand2(vec2(3.0, 1.0)));
+        } else {
+            let ring = crate::widgets::focus_stroke(&t);
+            match shape {
+                Form::Box => {
+                    p.rect_stroke(b.expand(2.0), 5.0, ring, StrokeKind::Outside);
+                }
+                Form::Round => {
+                    p.circle_stroke(b.center(), BOX / 2.0 + 2.0, ring);
+                }
             }
         }
     }
