@@ -110,7 +110,7 @@ default, also some GNOME / Xfce setups) the window manager takes the drag first:
 
 ## Accessibility audit
 
-`crates/ui-egui/tests/it/accessibility.rs` walks the AccessKit tree egui hands to VoiceOver, Narrator and
+`crates/ui-egui/tests/a11y_audit/main.rs` (a test binary of its own, so the two whole-app audits do not run beside the short tests) walks the AccessKit tree egui hands to VoiceOver, Narrator and
 AT-SPI, headless, on 52 screens: Photo Grid, Square Grid, Detail, Compare, Survey, Reference and People (the cards, the
 cards with an unnamed face selected, and one person's page); each
 right panel (Edit, Profiles, Crop, Remove, Masking, Red Eye, Versions, Activity, Keywords, Info); 16
@@ -128,7 +128,7 @@ Today's gaps are listed in `crates/ui-egui/tests/a11y-gaps.json` (screen, the co
 of the windows around it, how many): a problem that is not listed fails the test, and so does a
 listed one that occurs more often than its count. A control that
 gets a name does not have to touch the file, and the test prints the entries that are fixed now.
-`LIGHTCRAFT_A11Y_BASELINE=shrink cargo test -p lightcraft-ui-egui --test it accessibility` removes
+`LIGHTCRAFT_A11Y_BASELINE=shrink cargo test -p lightcraft-ui-egui --test a11y_audit` removes
 them; `LIGHTCRAFT_A11Y_BASELINE=write` regenerates the file (a new screen needs it, once). Listed
 today, 48 controls on 21 of the 52 screens: dropdowns, spin boxes and fields with no caption (View
 Options, Export, Contact Sheet, Import review, Keyboard Shortcuts (its search field), Settings' Import and Slideshow tabs, Crop,
